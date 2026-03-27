@@ -1,0 +1,15 @@
+.strip {
+  padding: 12px 0 4px;
+}
+
+.row {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0 14px;
+}
+
+.row::-webkit-scrollbar {
+  display: none;
+}
