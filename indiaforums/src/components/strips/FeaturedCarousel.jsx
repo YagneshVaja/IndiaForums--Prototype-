@@ -6,7 +6,7 @@ import { FEATURED } from '../../data/featured';
 
 const CARD_WIDTH = 292; // 280px card + 12px gap
 
-export default function FeaturedCarousel() {
+export default function FeaturedCarousel({ onArticlePress }) {
   const scrollRef = useRef(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const rafRef = useRef(false);
@@ -34,7 +34,7 @@ export default function FeaturedCarousel() {
       <div className={styles.scroll} ref={scrollRef} onScroll={handleScroll}>
         <div className={styles.track}>
           {FEATURED.map((item) => (
-            <FeaturedCard key={item.id} {...item} />
+            <FeaturedCard key={item.id} {...item} onClick={() => onArticlePress && onArticlePress(item)} />
           ))}
         </div>
       </div>

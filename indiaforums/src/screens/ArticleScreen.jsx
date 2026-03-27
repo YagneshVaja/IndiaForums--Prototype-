@@ -10,8 +10,62 @@ const REACTIONS = [
   { id: 'lol',   emoji: '😂', label: 'LOL'   },
   { id: 'omg',   emoji: '😮', label: 'OMG'   },
   { id: 'cry',   emoji: '😢', label: 'Cry'   },
+  { id: 'fail',  emoji: '👎', label: 'Fail'  },
 ];
 
+// ── Static data ───────────────────────────────────────────────────────────────
+const SOCIAL_CHANNELS = [
+  { id: 'yt1', platform: 'YouTube',   handle: '@indiaforums',      count: '3.6M', bg: '#FF0000', abbr: 'YT' },
+  { id: 'yt2', platform: 'YouTube',   handle: '@indiaforumshindi', count: '1.2M', bg: '#FF0000', abbr: 'YT' },
+  { id: 'ig1', platform: 'Instagram', handle: '@indiaforums',      count: '1.1M', bg: 'linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)', abbr: 'IG' },
+  { id: 'ig2', platform: 'Instagram', handle: '@indiaforumsglitz', count: '58.8K',bg: 'linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)', abbr: 'IG' },
+  { id: 'fb1', platform: 'Facebook',  handle: '@indiaforums',      count: '2.5M', bg: '#1877F2', abbr: 'FB' },
+  { id: 'x1',  platform: 'X',         handle: '@indiaforums',      count: '280K', bg: '#000',    abbr: 'X'  },
+];
+
+const CATEGORY_ENTITIES = {
+  MOVIES: [
+    { id: 'srk',    name: 'Shah Rukh Khan',    role: 'Actor',           emoji: '🌟', bg: 'linear-gradient(135deg,#1a1a2e,#0f3460)' },
+    { id: 'dp',     name: 'Deepika Padukone',  role: 'Actress',         emoji: '✨', bg: 'linear-gradient(135deg,#831843,#db2777)' },
+    { id: 'stree3', name: 'Stree 3',           role: 'Movie · 2026',    emoji: '🎬', bg: 'linear-gradient(135deg,#7f1d1d,#ef4444)' },
+  ],
+  TV: [
+    { id: 'anupamaa', name: 'Anupamaa',      role: 'Star Plus',         emoji: '👑', bg: 'linear-gradient(135deg,#1c3a5e,#2563eb)' },
+    { id: 'yrkkh',    name: 'YRKKH',         role: 'Star Plus',         emoji: '📺', bg: 'linear-gradient(135deg,#4a1942,#7e22ce)' },
+    { id: 'bb18',     name: 'Bigg Boss 18',  role: 'Colors TV',         emoji: '🎤', bg: 'linear-gradient(135deg,#2d1b69,#7c3aed)' },
+  ],
+  SPORTS: [
+    { id: 'rohit',   name: 'Rohit Sharma',   role: 'Cricketer',         emoji: '🏏', bg: 'linear-gradient(135deg,#14532d,#16a34a)' },
+    { id: 'bumrah',  name: 'Jasprit Bumrah', role: 'Cricketer',         emoji: '🏆', bg: 'linear-gradient(135deg,#1e3a8a,#f97316)' },
+    { id: 'ipl',     name: 'IPL 2026',       role: 'Tournament',        emoji: '🥇', bg: 'linear-gradient(135deg,#7f1d1d,#f59e0b)' },
+  ],
+  DIGITAL: [
+    { id: 'netflix', name: 'Netflix India',  role: 'OTT Platform',      emoji: '🎞️', bg: 'linear-gradient(135deg,#7f1d1d,#b91c1c)' },
+    { id: 'prime',   name: 'Prime Video',    role: 'OTT Platform',      emoji: '📱', bg: 'linear-gradient(135deg,#1e293b,#334155)' },
+    { id: 'panchayat', name: 'Panchayat S4', role: 'Web Series',        emoji: '🌾', bg: 'linear-gradient(135deg,#3b2f04,#a16207)' },
+  ],
+  LIFESTYLE: [
+    { id: 'alia',    name: 'Alia Bhatt',     role: 'Actress · Fashion', emoji: '💄', bg: 'linear-gradient(135deg,#831843,#db2777)' },
+    { id: 'ranveer', name: 'Ranveer Singh',  role: 'Actor · Style Icon',emoji: '👗', bg: 'linear-gradient(135deg,#431407,#ea580c)' },
+    { id: 'deepika', name: 'Deepika Padukone',role:'Actress · Fashion', emoji: '✨', bg: 'linear-gradient(135deg,#831843,#db2777)' },
+  ],
+};
+
+const CAT_TAGS = {
+  TV:        ['Television', 'Hindi TV', 'Drama', 'TRP Watch', 'Star Plus', 'Colors TV'],
+  MOVIES:    ['Bollywood', 'Box Office', 'Hindi Cinema', 'Film Review', 'Celeb News'],
+  SPORTS:    ['Cricket', 'IPL 2026', 'Sports News', 'India Cricket', 'BCCI'],
+  DIGITAL:   ['OTT', 'Web Series', 'Streaming', 'Netflix', 'Prime Video', 'Hotstar'],
+  LIFESTYLE: ['Fashion', 'Bollywood Style', 'Celebrity', 'Trending', 'Wellness'],
+};
+
+const COMMENTS = [
+  { id: 1, user: 'FilmLover99',   av: 'F', color: '#3558F0', time: '2 hr ago', text: 'Absolutely love this! Cannot wait for more updates. This is exactly what fans have been wanting! Great reporting 🙌', likes: 24 },
+  { id: 2, user: 'TVAddict_2026', av: 'T', color: '#7c3aed', time: '3 hr ago', text: 'Saw this coming honestly — the hints were all there last week. Brilliant work by the IF team as always!', likes: 18 },
+  { id: 3, user: 'Bollywood_Fan', av: 'B', color: '#db2777', time: '5 hr ago', text: 'OMG!! Cannot believe this is happening! Already sharing with all my friends right now 😍🔥', likes: 31 },
+];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function seededN(seed, min, max) {
   const x = Math.sin(seed + 1) * 10000;
   return Math.floor((x - Math.floor(x)) * (max - min + 1)) + min;
@@ -21,42 +75,52 @@ function fmt(n) {
   return n >= 1000 ? (n / 1000).toFixed(1) + 'K' : String(n);
 }
 
-// ── Article body generator ────────────────────────────────────────────────────
+function getTopCat(article) {
+  return (article.cat || '').split('·')[0].trim().toUpperCase();
+}
+
+function getSubtitle(article) {
+  const cat = getTopCat(article);
+  const map = {
+    TV:        `The latest episode has sparked massive conversations online, with fans unable to stop discussing the unexpected twist that nobody saw coming.`,
+    MOVIES:    `In the middle of an already explosive buzz, this unexpected development has added a new layer to the film's already massive online presence.`,
+    SPORTS:    `This stunning moment has the entire nation talking, as fans celebrate one of the most memorable performances of the entire season.`,
+    DIGITAL:   `The OTT landscape just got a whole lot more exciting, as this announcement has fans eagerly counting down the days to release.`,
+    LIFESTYLE: `Once again setting the internet on fire, this revelation is being called one of the most talked-about moments of the year.`,
+  };
+  return map[cat] || `This story is rapidly gaining traction as social media buzzes non-stop about the latest twist in this unfolding narrative.`;
+}
+
 function buildBody(article) {
-  const cat = (article.cat || '').split('·')[0].trim().toUpperCase();
+  const cat = getTopCat(article);
   const t   = article.title;
   const src = article.source || 'IF News Desk';
 
   const intros = {
-    TV:        `In a development that has left fans completely stunned, ${t.toLowerCase().replace(/[!?]$/, '')}. The latest episode has become the talk of every household across the country.`,
-    MOVIES:    `The film industry is buzzing with excitement as ${t.toLowerCase().replace(/[!?]$/, '')}. The announcement has set social media on fire, with fans expressing their delight on every platform.`,
-    SPORTS:    `In a thrilling turn of events, ${t.toLowerCase().replace(/[!?]$/, '')}. The moment has already been replayed millions of times across social media platforms nationwide.`,
-    DIGITAL:   `The OTT world is witnessing a landmark moment as ${t.toLowerCase().replace(/[!?]$/, '')}. Viewers and critics alike are heaping praise on this latest development.`,
-    LIFESTYLE: `Setting new trends as always, ${t.toLowerCase().replace(/[!?]$/, '')}. The internet simply cannot stop talking about this latest revelation from the world of glamour.`,
+    TV:        `In a development that has left fans completely stunned, the latest episode brought major shocks as ${t.toLowerCase().replace(/[!?]$/, '')}. Audiences across the country are reacting with disbelief and excitement on every platform.`,
+    MOVIES:    `The film industry is buzzing with excitement as ${t.toLowerCase().replace(/[!?]$/, '')}. This announcement has set social media on fire, with fans expressing their delight across every corner of the internet.`,
+    SPORTS:    `In a thrilling turn of events, ${t.toLowerCase().replace(/[!?]$/, '')}. The moment has already been replayed millions of times and is being called one of the highlights of the entire season.`,
+    DIGITAL:   `The OTT world is witnessing a landmark moment as ${t.toLowerCase().replace(/[!?]$/, '')}. Viewers and critics alike are heaping praise on this latest development that took everyone by surprise.`,
+    LIFESTYLE: `Setting new trends as always, ${t.toLowerCase().replace(/[!?]$/, '')}. The internet simply cannot stop talking about this latest revelation from the world of glamour and lifestyle.`,
   };
-  const intro = intros[cat] || `In a major development, ${t.toLowerCase().replace(/[!?]$/, '')}. Fans and industry insiders are reacting with great enthusiasm across all platforms.`;
+  const intro = intros[cat] || `In a major development that has captured everyone's attention, ${t.toLowerCase().replace(/[!?]$/, '')}. Fans and industry insiders are reacting with enormous enthusiasm.`;
 
   return [
     { type: 'para',    text: intro },
-    { type: 'heading', text: 'What We Know So Far' },
+    { type: 'heading', text: 'What Started It All' },
     { type: 'para',    text: `According to sources close to ${src}, this has been in the works for quite some time. Multiple insiders have confirmed the development, lending credibility to what was previously only speculation. The response from the community has been overwhelmingly positive, with trending hashtags already making the rounds on X, Instagram, and WhatsApp groups across the country.` },
-    { type: 'para',    text: `This is not the first time we have seen such a development in this space. Over the past year, the entertainment industry has witnessed a series of surprises — but this one clearly stands out. Experts are calling it a "game changer" that could set the tone for the rest of 2026.` },
-    { type: 'heading', text: 'Fan Reactions' },
-    { type: 'para',    text: `Social media has exploded with reactions from fans all over the country. The hashtag has been trending nationwide since the news broke ${article.time}. Fans are expressing emotions ranging from pure joy to complete disbelief, with many saying they had been waiting for exactly this for a very long time.` },
+    { type: 'para',    text: `This is not the first time we have seen such a development in this space. Over the past year, the entertainment industry has witnessed a series of surprises — but this one clearly stands apart from the rest. Experts are already calling it a "game changer" that could define the direction for the rest of 2026.` },
+    { type: 'heading', text: 'The Internet Reacts' },
+    { type: 'para',    text: `Social media has exploded with reactions from fans all over the country and beyond. The hashtag has been trending nationwide since the news first broke ${article.time}. Fans are expressing emotions ranging from pure joy to complete disbelief, with many saying they had been waiting for exactly this moment for a very long time.` },
     { type: 'quote',   text: `"This is exactly what we needed! Absolutely cannot wait to see what happens next. India Forums breaking this first — as always!"`, author: 'Fan reaction on X (formerly Twitter)' },
-    { type: 'para',    text: `As more details continue to emerge, India Forums will keep you updated with every development. Stay tuned for exclusive insights, behind-the-scenes updates, and expert analysis on this story.` },
-    { type: 'tldr',    text: `${t} — reactions are pouring in and the internet is buzzing. Watch this space for more.` },
+    { type: 'heading', text: 'Silence From Both Sides' },
+    { type: 'para',    text: `Interestingly, neither side has issued an official statement at the time of writing. Sources suggest an announcement could be imminent, but for now the silence is speaking volumes. The internet, as always, is filling in the gaps with theories, memes, and speculation.` },
+    { type: 'para',    text: `As more details continue to emerge, India Forums will keep you updated with every single development. Stay tuned for exclusive insights, behind-the-scenes updates, and expert analysis on this story.` },
+    { type: 'tldr',    text: `${t} — reactions are pouring in from all corners and the internet is buzzing. Watch this space for the very latest.` },
   ];
 }
 
-// ── Dummy comments ────────────────────────────────────────────────────────────
-const COMMENTS = [
-  { id: 1, user: 'FilmLover99',   av: 'F', color: '#3558F0', time: '2 hr ago', text: 'Absolutely love this! Cannot wait for more updates. This is exactly what fans have been wanting! Great reporting 🙌', likes: 24 },
-  { id: 2, user: 'TVAddict_2026', av: 'T', color: '#7c3aed', time: '3 hr ago', text: 'Saw this coming honestly — the hints were all there last week. Brilliant work by the IF team as always!', likes: 18 },
-  { id: 3, user: 'Bollywood_Fan', av: 'B', color: '#db2777', time: '5 hr ago', text: 'OMG!! Cannot believe this is happening! Already sharing with all my friends right now 😍🔥', likes: 31 },
-];
-
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function ArticleScreen({ article, onBack, onArticlePress }) {
   const [reaction, setReaction] = useState(null);
   const scrollRef = useRef(null);
@@ -67,22 +131,31 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
   }, [article.id]);
 
   const counts = useMemo(() =>
-    REACTIONS.reduce((acc, r, i) => ({ ...acc, [r.id]: seededN(seed + i * 17, 200, 4200) }), {}),
+    REACTIONS.reduce((acc, r, i) => ({ ...acc, [r.id]: seededN(seed + i * 17, 0, 120) }), {}),
     [seed]
   );
 
-  const body     = useMemo(() => buildBody(article), [article]);
-  const related  = useMemo(() => getRelatedArticles(article), [article]);
-  const crumbs   = ['Home', ...(article.cat || '').split('·').map(s => s.trim()).filter(Boolean)];
-  const commentCount = seededN(seed * 3, 14, 297);
+  const viewCount    = useMemo(() => fmt(seededN(seed * 7,  4200, 98000)), [seed]);
+  const commentCount = useMemo(() => seededN(seed * 3, 14, 297), [seed]);
+  const body         = useMemo(() => buildBody(article), [article]);
+  const subtitle     = useMemo(() => getSubtitle(article), [article]);
+  const related      = useMemo(() => getRelatedArticles(article), [article]);
+  const topCat       = useMemo(() => getTopCat(article), [article]);
+  const tags         = useMemo(() => {
+    const base = CAT_TAGS[topCat] || CAT_TAGS.MOVIES;
+    const extra = article.tag ? [article.tag] : [];
+    return [...new Set([...extra, ...base])].slice(0, 6);
+  }, [topCat, article.tag]);
+  const entities     = useMemo(() => CATEGORY_ENTITIES[topCat] || CATEGORY_ENTITIES.MOVIES, [topCat]);
+  const crumbs       = ['Home', ...(article.cat || '').split('·').map(s => s.trim()).filter(Boolean)];
 
-  // Scroll back to top when article changes
+  // Scroll to top when article changes
   useMemo(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [article.id]);
 
   return (
     <div className={styles.screen}>
 
-      {/* ── Top bar ── */}
+      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
       <div className={styles.topBar}>
         <button className={styles.backBtn} onClick={onBack}>
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -107,7 +180,7 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
         </div>
       </div>
 
-      {/* ── Scrollable body ── */}
+      {/* ── Scroll ──────────────────────────────────────────────────────────── */}
       <div className={styles.scroll} ref={scrollRef}>
 
         {/* Hero */}
@@ -134,12 +207,30 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
           {/* Title */}
           <h1 className={styles.title}>{article.title}</h1>
 
-          {/* Author / meta */}
+          {/* Subtitle */}
+          <p className={styles.subtitle}>{subtitle}</p>
+
+          {/* Author + stats */}
           <div className={styles.metaRow}>
             <div className={styles.authorAv}>IF</div>
-            <div>
+            <div className={styles.metaInfo}>
               <div className={styles.authorName}>{article.source || 'IF News Desk'}</div>
               <div className={styles.authorMeta}>{article.time} · {article.readTime || '4 min read'}</div>
+            </div>
+            <div className={styles.statsRow}>
+              <div className={styles.statChip}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M1 6s2-4 5-4 5 4 5 4-2 4-5 4-5-4-5-4z" stroke="var(--text3)" strokeWidth="1.2"/>
+                  <circle cx="6" cy="6" r="1.5" stroke="var(--text3)" strokeWidth="1.2"/>
+                </svg>
+                {viewCount}
+              </div>
+              <div className={styles.statChip}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M1 1.5h10a.5.5 0 01.5.5v7a.5.5 0 01-.5.5H3l-2.5 2.5V2a.5.5 0 01.5-.5z" stroke="var(--text3)" strokeWidth="1.2" strokeLinejoin="round"/>
+                </svg>
+                {commentCount}
+              </div>
             </div>
           </div>
 
@@ -177,7 +268,7 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
                     onClick={() => setReaction(p => p === r.id ? null : r.id)}
                   >
                     <span className={styles.reactEmoji}>{r.emoji}</span>
-                    <span className={styles.reactCount}>{fmt(count)}</span>
+                    <span className={styles.reactCount}>{count}</span>
                     <span className={styles.reactName}>{r.label}</span>
                   </button>
                 );
@@ -190,10 +281,8 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
           {/* Article body */}
           <div className={styles.body}>
             {body.map((block, i) => {
-              if (block.type === 'heading') return (
-                <h2 key={i} className={styles.bHeading}>{block.text}</h2>
-              );
-              if (block.type === 'quote') return (
+              if (block.type === 'heading') return <h2 key={i} className={styles.bHeading}>{block.text}</h2>;
+              if (block.type === 'quote')   return (
                 <blockquote key={i} className={styles.bQuote}>
                   <p>{block.text}</p>
                   <cite>{block.author}</cite>
@@ -209,26 +298,64 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
             })}
           </div>
 
+          {/* Tags */}
+          <div className={styles.tagsRow}>
+            {tags.map(tag => (
+              <span key={tag} className={styles.tag}>{tag}</span>
+            ))}
+          </div>
+
           <div className={styles.divider} />
 
-          {/* Related articles */}
+          {/* WhatsApp channel widget */}
+          <div className={styles.waWidget}>
+            <div className={styles.waWidgetIcon}>
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                <circle cx="11" cy="11" r="10" fill="#25D366"/>
+                <path d="M6.5 7c.6-.6 1.5-.6 2 0l1.2 1.6c.3.4.2 1-.2 1.3l-.4.4c.6 1.1 1.5 2 2.6 2.6l.4-.4c.3-.3.9-.4 1.3-.2l1.6 1.2c.6.4.6 1.4 0 2-1.2 1.2-3 1.5-4.4.4C8.6 14.3 6.7 12.4 6.3 10.2c-.3-1.4.1-3 .2-3.2z" fill="white"/>
+              </svg>
+            </div>
+            <div className={styles.waWidgetText}>
+              <div className={styles.waWidgetTitle}>Join Our WhatsApp Channel</div>
+              <div className={styles.waWidgetSub}>Get breaking news instantly on your phone</div>
+            </div>
+            <button className={styles.waWidgetBtn}>Join Now</button>
+          </div>
+
+          <div className={styles.divider} />
+
+          {/* Related entities (people / movies / shows) */}
+          <div className={styles.entitiesSection}>
+            <div className={styles.sectionLabel}>People & Topics</div>
+            <div className={styles.entitiesRow}>
+              {entities.map(e => (
+                <div key={e.id} className={styles.entityCard}>
+                  <div className={styles.entityAvatar} style={{ background: e.bg }}>
+                    <span className={styles.entityEmoji}>{e.emoji}</span>
+                  </div>
+                  <div className={styles.entityName}>{e.name}</div>
+                  <div className={styles.entityRole}>{e.role}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.divider} />
+
+          {/* Related News */}
           {related.length > 0 && (
             <div className={styles.relatedSection}>
-              <div className={styles.relatedTitle}>Related News</div>
-              <div className={styles.relatedScroll}>
+              <div className={styles.sectionLabel}>Related News</div>
+              <div className={styles.relatedList}>
                 {related.map(a => (
-                  <div
-                    key={a.id}
-                    className={styles.relCard}
-                    onClick={() => onArticlePress && onArticlePress(a)}
-                  >
+                  <div key={a.id} className={styles.relCard} onClick={() => onArticlePress && onArticlePress(a)}>
                     <div className={styles.relThumb} style={{ background: a.bg }}>
                       <span className={styles.relEmoji}>{a.emoji}</span>
                       {a.breaking && <span className={styles.relBreaking}>BREAKING</span>}
                     </div>
                     <div className={styles.relBody}>
                       <div className={styles.relCat}>{a.cat}</div>
-                      <div className={styles.relTitle2}>{a.title}</div>
+                      <div className={styles.relTitle}>{a.title}</div>
                       <div className={styles.relTime}>{a.time}</div>
                     </div>
                   </div>
@@ -236,6 +363,25 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
               </div>
             </div>
           )}
+
+          <div className={styles.divider} />
+
+          {/* We're Everywhere */}
+          <div className={styles.socialSection}>
+            <div className={styles.sectionLabel}>We're Everywhere!</div>
+            <div className={styles.socialGrid}>
+              {SOCIAL_CHANNELS.map(ch => (
+                <div key={ch.id} className={styles.socialCard}>
+                  <div className={styles.socialIcon} style={{ background: ch.bg }}>{ch.abbr}</div>
+                  <div className={styles.socialInfo}>
+                    <div className={styles.socialPlatform}>{ch.platform}</div>
+                    <div className={styles.socialHandle}>{ch.handle}</div>
+                  </div>
+                  <div className={styles.socialCount}>{ch.count}</div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div className={styles.divider} />
 
