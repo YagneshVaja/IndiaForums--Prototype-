@@ -1,10 +1,10 @@
 export const NEWS_CATS = [
-  { id: 'all',       label: 'ALL'       },
-  { id: 'tv',        label: 'TV'        },
-  { id: 'movies',    label: 'MOVIES'    },
-  { id: 'digital',   label: 'DIGITAL'   },
-  { id: 'lifestyle', label: 'LIFESTYLE' },
-  { id: 'sports',    label: 'SPORTS'    },
+  { id: 'all',       label: 'ALL',       icon: 'grid'    },
+  { id: 'tv',        label: 'TV',        icon: 'tv'      },
+  { id: 'movies',    label: 'MOVIES',    icon: 'film'    },
+  { id: 'digital',   label: 'DIGITAL',   icon: 'digital' },
+  { id: 'lifestyle', label: 'LIFESTYLE', icon: 'heart'   },
+  { id: 'sports',    label: 'SPORTS',    icon: 'trophy'  },
 ];
 
 export const NS_LANGS = {
