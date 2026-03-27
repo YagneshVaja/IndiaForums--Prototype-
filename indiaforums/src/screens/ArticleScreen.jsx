@@ -254,9 +254,48 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
             </button>
           </div>
 
+          {/* Article body */}
+          <div className={styles.body}>
+            {body.map((block, idx) => {
+              if (block.type === 'heading') return <h2 key={idx} className={styles.bHeading}>{block.text}</h2>;
+              if (block.type === 'quote')   return (
+                <blockquote key={idx} className={styles.bQuote}>
+                  <p>{block.text}</p>
+                  <cite>{block.author}</cite>
+                </blockquote>
+              );
+              if (block.type === 'tldr') return (
+                <div key={idx} className={styles.tldr}>
+                  <span className={styles.tldrBadge}>TL;DR</span>
+                  <span className={styles.tldrText}>{block.text}</span>
+                </div>
+              );
+              return <p key={idx} className={styles.bPara}>{block.text}</p>;
+            })}
+          </div>
+
+          <div className={styles.divider} />
+
+          {/* WhatsApp channel widget */}
+          <div className={styles.waWidget}>
+            <div className={styles.waWidgetIcon}>
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                <circle cx="11" cy="11" r="10" fill="#25D366"/>
+                <path d="M6.5 7c.6-.6 1.5-.6 2 0l1.2 1.6c.3.4.2 1-.2 1.3l-.4.4c.6 1.1 1.5 2 2.6 2.6l.4-.4c.3-.3.9-.4 1.3-.2l1.6 1.2c.6.4.6 1.4 0 2-1.2 1.2-3 1.5-4.4.4C8.6 14.3 6.7 12.4 6.3 10.2c-.3-1.4.1-3 .2-3.2z" fill="white"/>
+              </svg>
+            </div>
+            <div className={styles.waWidgetText}>
+              <div className={styles.waWidgetTitle}>Join Our WhatsApp Channel</div>
+              <div className={styles.waWidgetSub}>Stay updated with the latest news, gossip, and hot discussions</div>
+            </div>
+            <button className={styles.waWidgetBtn}>Join Now</button>
+          </div>
+
+          <div className={styles.divider} />
+
           {/* Reactions */}
           <div className={styles.reactBox}>
-            <div className={styles.reactLabel}>How do you feel about this?</div>
+            <div className={styles.reactLabel}>Your reaction</div>
             <div className={styles.reactRow}>
               {REACTIONS.map((r, i) => {
                 const active = reaction === r.id;
@@ -278,48 +317,24 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
 
           <div className={styles.divider} />
 
-          {/* Article body */}
-          <div className={styles.body}>
-            {body.map((block, i) => {
-              if (block.type === 'heading') return <h2 key={i} className={styles.bHeading}>{block.text}</h2>;
-              if (block.type === 'quote')   return (
-                <blockquote key={i} className={styles.bQuote}>
-                  <p>{block.text}</p>
-                  <cite>{block.author}</cite>
-                </blockquote>
-              );
-              if (block.type === 'tldr') return (
-                <div key={i} className={styles.tldr}>
-                  <span className={styles.tldrBadge}>TL;DR</span>
-                  <span className={styles.tldrText}>{block.text}</span>
+          {/* We're Everywhere */}
+          <div className={styles.socialSection}>
+            <div className={styles.sectionLabel}>We're Everywhere!</div>
+            <div className={styles.socialGrid}>
+              {SOCIAL_CHANNELS.map(ch => (
+                <div key={ch.id} className={styles.socialCard}>
+                  <div className={styles.socialIcon} style={{ background: ch.bg }}>{ch.abbr}</div>
+                  <div className={styles.socialInfo}>
+                    <div className={styles.socialPlatform}>{ch.platform}</div>
+                    <div className={styles.socialHandle}>{ch.handle}</div>
+                  </div>
+                  <div className={styles.socialRight}>
+                    <div className={styles.socialCount}>{ch.count}</div>
+                    <button className={styles.socialFollowBtn}>+ Follow</button>
+                  </div>
                 </div>
-              );
-              return <p key={i} className={styles.bPara}>{block.text}</p>;
-            })}
-          </div>
-
-          {/* Tags */}
-          <div className={styles.tagsRow}>
-            {tags.map(tag => (
-              <span key={tag} className={styles.tag}>{tag}</span>
-            ))}
-          </div>
-
-          <div className={styles.divider} />
-
-          {/* WhatsApp channel widget */}
-          <div className={styles.waWidget}>
-            <div className={styles.waWidgetIcon}>
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <circle cx="11" cy="11" r="10" fill="#25D366"/>
-                <path d="M6.5 7c.6-.6 1.5-.6 2 0l1.2 1.6c.3.4.2 1-.2 1.3l-.4.4c.6 1.1 1.5 2 2.6 2.6l.4-.4c.3-.3.9-.4 1.3-.2l1.6 1.2c.6.4.6 1.4 0 2-1.2 1.2-3 1.5-4.4.4C8.6 14.3 6.7 12.4 6.3 10.2c-.3-1.4.1-3 .2-3.2z" fill="white"/>
-              </svg>
+              ))}
             </div>
-            <div className={styles.waWidgetText}>
-              <div className={styles.waWidgetTitle}>Join Our WhatsApp Channel</div>
-              <div className={styles.waWidgetSub}>Get breaking news instantly on your phone</div>
-            </div>
-            <button className={styles.waWidgetBtn}>Join Now</button>
           </div>
 
           <div className={styles.divider} />
@@ -342,45 +357,11 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
 
           <div className={styles.divider} />
 
-          {/* Related News */}
-          {related.length > 0 && (
-            <div className={styles.relatedSection}>
-              <div className={styles.sectionLabel}>Related News</div>
-              <div className={styles.relatedList}>
-                {related.map(a => (
-                  <div key={a.id} className={styles.relCard} onClick={() => onArticlePress && onArticlePress(a)}>
-                    <div className={styles.relThumb} style={{ background: a.bg }}>
-                      <span className={styles.relEmoji}>{a.emoji}</span>
-                      {a.breaking && <span className={styles.relBreaking}>BREAKING</span>}
-                    </div>
-                    <div className={styles.relBody}>
-                      <div className={styles.relCat}>{a.cat}</div>
-                      <div className={styles.relTitle}>{a.title}</div>
-                      <div className={styles.relTime}>{a.time}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className={styles.divider} />
-
-          {/* We're Everywhere */}
-          <div className={styles.socialSection}>
-            <div className={styles.sectionLabel}>We're Everywhere!</div>
-            <div className={styles.socialGrid}>
-              {SOCIAL_CHANNELS.map(ch => (
-                <div key={ch.id} className={styles.socialCard}>
-                  <div className={styles.socialIcon} style={{ background: ch.bg }}>{ch.abbr}</div>
-                  <div className={styles.socialInfo}>
-                    <div className={styles.socialPlatform}>{ch.platform}</div>
-                    <div className={styles.socialHandle}>{ch.handle}</div>
-                  </div>
-                  <div className={styles.socialCount}>{ch.count}</div>
-                </div>
-              ))}
-            </div>
+          {/* Tags */}
+          <div className={styles.tagsRow}>
+            {tags.map(tag => (
+              <span key={tag} className={styles.tag}>{tag}</span>
+            ))}
           </div>
 
           <div className={styles.divider} />
@@ -414,6 +395,30 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
               </div>
             ))}
           </div>
+
+          <div className={styles.divider} />
+
+          {/* Related News */}
+          {related.length > 0 && (
+            <div className={styles.relatedSection}>
+              <div className={styles.sectionLabel}>Related News</div>
+              <div className={styles.relatedList}>
+                {related.map(a => (
+                  <div key={a.id} className={styles.relCard} onClick={() => onArticlePress && onArticlePress(a)}>
+                    <div className={styles.relThumb} style={{ background: a.bg }}>
+                      <span className={styles.relEmoji}>{a.emoji}</span>
+                      {a.breaking && <span className={styles.relBreaking}>BREAKING</span>}
+                    </div>
+                    <div className={styles.relBody}>
+                      <div className={styles.relCat}>{a.cat}</div>
+                      <div className={styles.relTitle}>{a.title}</div>
+                      <div className={styles.relTime}>{a.time}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className={styles.endPad} />
         </div>
