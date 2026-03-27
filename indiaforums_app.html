@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IndiaForums — Mobile App Prototype</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap');
+
+:root {
+  --brand: #3558F0;
+  --brand-light: #EBF0FF;
+  --brand-glow: rgba(53,88,240,0.15);
+  --red: #EF4444;
+  --dark: #0C1024;
+  --text: #1A2038;
+  --text2: #4B5675;
+  --text3: #8B95B0;
+  --border: #E6EAF4;
+  --bg: #F4F6FC;
+  --card: #FFFFFF;
+  --font-display: 'Bricolage Grotesque', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: var(--font-body);
+  background: #E8ECF4;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.phone {
+  width: 393px; height: 852px; background: var(--bg); border-radius: 48px; border: 2px solid #D1D8EA;
+  overflow: hidden; display: flex; flex-direction: column; position: relative;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.03), 0 20px 60px rgba(12,16,36,0.18), 0 8px 20px rgba(12,16,36,0.08), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+.statusbar { display:flex; justify-content:space-between; align-items:center; padding:14px 28px 0; flex-shrink:0; z-index:10; background:var(--bg); }
+.sb-time { font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--dark); letter-spacing:-0.3px; }
+.sb-icons { display:flex; align-items:center; gap:5px; }
+.dynamic-island { width:126px; height:34px; background:#000; border-radius:20px; position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:100; }
+
+.topnav { display:flex; align-items:center; padding:6px 16px 10px; gap:10px; flex-shrink:0; background:var(--bg); }
+.tn-btn { width:40px; height:40px; border-radius:14px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; transition:all 0.15s; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+.tn-btn:active { transform:scale(0.92); background:#F0F2F8; }
+.tn-logo { flex:1; display:flex; align-items:center; justify-content:center; gap:8px; }
+.tn-logomark { width:32px; height:32px; border-radius:10px; background:linear-gradient(135deg,var(--brand),#6B7FFF); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(53,88,240,0.3); }
+.tn-wordmark { font-family:var(--font-display); font-size:19px; font-weight:800; color:var(--dark); letter-spacing:-0.8px; }
+.tn-wordmark span { color:var(--brand); }
+.tn-right { display:flex; gap:8px; }
+.notif-dot { position:absolute; top:7px; right:7px; width:8px; height:8px; border-radius:50%; background:var(--red); border:2px solid var(--bg); }
+
+.screen { display:none; flex:1; overflow-y:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+.screen::-webkit-scrollbar { display:none; }
+.screen.active { display:flex; flex-direction:column; }
+#screenExplore.active { display:block; }
+
+.stories-strip { padding:12px 0 4px; }
+.stories-row { display:flex; gap:4px; overflow-x:auto; scrollbar-width:none; padding:0 14px; }
+.stories-row::-webkit-scrollbar { display:none; }
+.story-item { display:flex; flex-direction:column; align-items:center; gap:5px; flex-shrink:0; cursor:pointer; width:68px; transition:transform 0.2s; }
+.story-item:active { transform:scale(0.94); }
+.story-ring { width:58px; height:58px; border-radius:50%; padding:2.5px; background:linear-gradient(145deg,var(--brand),#A78BFA,#F472B6); }
+.story-ring.no-story { background:var(--border); }
+.story-img { width:100%; height:100%; border-radius:50%; border:2.5px solid var(--bg); display:flex; align-items:center; justify-content:center; font-size:22px; }
+.story-lbl { font-size:10px; font-weight:600; color:var(--text2); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:68px; }
+
+.sec-hdr { display:flex; justify-content:space-between; align-items:center; padding:20px 16px 10px; }
+.sec-title { font-family:var(--font-display); font-size:17px; font-weight:800; color:var(--dark); letter-spacing:-0.5px; }
+.sec-link { font-size:12px; font-weight:700; color:var(--brand); padding:5px 14px; border-radius:10px; background:var(--brand-light); letter-spacing:0.2px; cursor:pointer; transition:all 0.15s; }
+.sec-link:active { transform:scale(0.95); }
+
+.featured-section { padding:0 16px; }
+.featured-scroll { overflow-x:auto; scrollbar-width:none; scroll-snap-type:x mandatory; }
+.featured-scroll::-webkit-scrollbar { display:none; }
+.featured-track { display:flex; gap:12px; width:max-content; }
+.featured-card { flex-shrink:0; width:280px; height:180px; border-radius:22px; overflow:hidden; position:relative; cursor:pointer; scroll-snap-align:start; transition:transform 0.2s; box-shadow:0 4px 20px rgba(0,0,0,0.12); }
+.featured-card:active { transform:scale(0.97); }
+.fc-bg { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:56px; }
+.fc-overlay { position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,0) 20%,rgba(0,0,0,0.75) 100%); }
+.fc-content { position:absolute; bottom:0; left:0; right:0; padding:16px; z-index:2; }
+.fc-tag { display:inline-block; font-size:9px; font-weight:800; padding:3px 8px; border-radius:6px; color:#fff; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:6px; }
+.fc-title { font-family:var(--font-display); font-size:15px; font-weight:700; color:#fff; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; letter-spacing:-0.2px; }
+.fc-meta { display:flex; align-items:center; gap:6px; margin-top:6px; }
+.fc-source { font-size:10px; font-weight:600; color:rgba(255,255,255,0.7); }
+.fc-dot { width:3px; height:3px; border-radius:50%; background:rgba(255,255,255,0.4); }
+.fc-time { font-size:10px; color:rgba(255,255,255,0.6); }
+.carousel-dots { display:flex; justify-content:center; gap:6px; padding:10px 0 2px; }
+.cdot { height:5px; border-radius:100px; cursor:pointer; transition:all 0.25s; }
+.cdot.on { width:20px; background:var(--brand); }
+.cdot.off { width:5px; background:#CBD5E1; }
+
+.chips-strip { padding:14px 0 6px; }
+.chips-row { display:flex; gap:8px; padding:0 16px; overflow-x:auto; scrollbar-width:none; }
+.chips-row::-webkit-scrollbar { display:none; }
+.chip { flex-shrink:0; padding:8px 18px; border-radius:100px; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap; transition:all 0.2s; }
+.chip.on { background:var(--dark); color:#fff; box-shadow:0 2px 8px rgba(12,16,36,0.2); }
+.chip.off { background:var(--card); color:var(--text2); border:1.5px solid var(--border); }
+.chip.off:active { background:var(--brand-light); color:var(--brand); border-color:var(--brand); }
+
+.articles { padding:4px 12px 0; }
+.art-card { display:flex; gap:12px; align-items:flex-start; padding:12px; border-radius:16px; cursor:pointer; transition:all 0.15s; margin-bottom:2px; }
+.art-card:active { background:rgba(53,88,240,0.04); }
+.art-thumb { width:84px; height:76px; border-radius:14px; overflow:hidden; flex-shrink:0; position:relative; }
+.art-thumb-inner { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:28px; }
+.art-badge { position:absolute; top:5px; left:5px; font-size:7.5px; font-weight:800; padding:2px 6px; border-radius:5px; color:#fff; letter-spacing:0.5px; text-transform:uppercase; }
+.art-body { flex:1; min-width:0; }
+.art-cat { font-size:10px; font-weight:800; color:var(--brand); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:4px; display:flex; gap:6px; align-items:center; }
+.art-breaking { font-size:8.5px; font-weight:800; color:var(--red); background:rgba(239,68,68,0.08); padding:1px 6px; border-radius:4px; }
+.art-title { font-family:var(--font-display); font-size:13.5px; font-weight:700; color:var(--text); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:5px; letter-spacing:-0.2px; }
+.art-time { font-size:11px; color:var(--text3); font-weight:500; display:flex; align-items:center; gap:4px; }
+
+/* Forum */
+.forum-wrap { padding:0 16px; }
+.forum-tabs { display:flex; border-bottom:2px solid #EEF1FA; margin-bottom:10px; }
+.ftab { flex:1; text-align:center; padding:11px 4px; font-size:13px; font-weight:700; color:var(--text3); cursor:pointer; position:relative; transition:color 0.15s; }
+.ftab.active { color:var(--dark); }
+.ftab.active::after { content:''; position:absolute; bottom:-2px; left:18%; right:18%; height:2.5px; background:var(--brand); border-radius:2px; }
+.thread { display:flex; gap:11px; align-items:flex-start; padding:12px 6px; border-radius:14px; cursor:pointer; transition:all 0.15s; margin-bottom:2px; }
+.thread:active { background:rgba(53,88,240,0.03); }
+.thread-av { width:44px; height:44px; border-radius:14px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 3px 10px rgba(0,0,0,0.1); }
+.thread-body { flex:1; min-width:0; }
+.thread-forum { font-size:10px; font-weight:800; color:var(--brand); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:3px; }
+.thread-title { font-family:var(--font-display); font-size:13.5px; font-weight:700; color:var(--text); line-height:1.38; margin-bottom:5px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.thread-poster { font-size:10.5px; color:var(--text3); margin-bottom:6px; }
+.thread-poster b { color:var(--text2); font-weight:700; }
+.thread-stats { display:flex; align-items:center; gap:10px; }
+.tstat { display:flex; align-items:center; gap:3px; font-size:10.5px; color:var(--text3); font-weight:600; }
+.thread-last { display:flex; align-items:center; gap:4px; margin-left:auto; font-size:9.5px; color:#B0BBC8; font-weight:600; white-space:nowrap; }
+.thread-arrow { width:22px; height:22px; border-radius:8px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:10px; }
+
+/* ═══ NEWS ═══ */
+.ns-tab-container { background:var(--card); flex-shrink:0; box-shadow:0 2px 12px rgba(0,0,0,0.06); z-index:5; position:relative; }
+
+/* Category bar — icon-pill tabs */
+.ns-cat-bar { display:flex; overflow-x:auto; scrollbar-width:none; padding:10px 12px 10px; gap:6px; border-bottom:1px solid var(--border); }
+.ns-cat-bar::-webkit-scrollbar { display:none; }
+.ns-cat-tab { flex-shrink:0; display:flex; align-items:center; gap:5px; padding:7px 13px; border-radius:12px; font-family:var(--font-display); font-size:11.5px; font-weight:800; color:var(--text3); cursor:pointer; letter-spacing:0.2px; text-transform:uppercase; transition:all 0.18s; white-space:nowrap; background:transparent; }
+.ns-cat-icon { flex-shrink:0; opacity:0.45; transition:opacity 0.18s; }
+.ns-cat-tab.active { background:var(--brand); color:#fff; box-shadow:0 3px 12px rgba(53,88,240,0.3); }
+.ns-cat-tab.active .ns-cat-icon { opacity:1; }
+.ns-cat-tab.active::after { display:none; }
+
+/* Language bar — scrollable pill chips */
+.ns-lang-bar { display:flex; overflow-x:auto; scrollbar-width:none; flex-shrink:0; padding:9px 12px 10px; gap:7px; background:var(--bg); align-items:center; }
+.ns-lang-bar::-webkit-scrollbar { display:none; }
+.ns-lang-tab { flex-shrink:0; padding:5px 14px; border-radius:100px; font-size:11px; font-weight:700; color:var(--text2); cursor:pointer; white-space:nowrap; border:1.5px solid var(--border); background:var(--card); transition:all 0.18s; letter-spacing:0.4px; text-transform:uppercase; }
+.ns-lang-tab.active { background:var(--brand); color:#fff; border-color:var(--brand); box-shadow:0 2px 8px rgba(53,88,240,0.25); font-weight:800; }
+.ns-lang-tab.active::after { display:none; }
+.ns-feed { flex:1; overflow-y:auto; scrollbar-width:none; background:var(--bg); }
+.ns-feed::-webkit-scrollbar { display:none; }
+.ns-articles { padding:10px 14px 20px; }
+.ns-art-card { display:flex; gap:12px; align-items:flex-start; padding:12px; border-radius:16px; cursor:pointer; transition:all 0.15s; margin-bottom:6px; background:var(--card); border:1px solid var(--border); box-shadow:0 1px 4px rgba(0,0,0,0.03); }
+.ns-art-card:active { border-color:rgba(53,88,240,0.15); }
+.ns-art-thumb { width:84px; height:76px; border-radius:14px; overflow:hidden; flex-shrink:0; position:relative; }
+.ns-art-thumb-img { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:28px; }
+.ns-art-tag { position:absolute; top:5px; left:5px; font-size:7.5px; font-weight:800; padding:2px 6px; border-radius:5px; color:#fff; letter-spacing:0.5px; text-transform:uppercase; }
+.ns-art-body { flex:1; min-width:0; }
+.ns-art-cat { font-size:10px; font-weight:800; color:var(--brand); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:4px; display:flex; gap:6px; align-items:center; }
+.ns-art-breaking { font-size:8.5px; font-weight:800; color:var(--red); background:rgba(239,68,68,0.08); padding:1px 6px; border-radius:4px; }
+.ns-art-title { font-family:var(--font-display); font-size:13px; font-weight:700; color:var(--text); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:5px; }
+.ns-art-time { font-size:10.5px; color:var(--text3); font-weight:500; display:flex; align-items:center; gap:4px; }
+.ns-empty { padding:50px 16px; text-align:center; color:var(--text3); font-size:13px; font-weight:600; }
+
+/* News Vertical Cards */
+.ns-vc-card { border-radius:18px; background:var(--card); overflow:hidden; margin-bottom:12px; cursor:pointer; box-shadow:0 2px 14px rgba(0,0,0,0.07); border:1px solid var(--border); transition:transform 0.15s, box-shadow 0.15s; }
+.ns-vc-card:active { transform:scale(0.98); box-shadow:0 1px 6px rgba(0,0,0,0.05); }
+.ns-vc-img { width:100%; height:168px; position:relative; display:flex; align-items:center; justify-content:center; font-size:56px; overflow:hidden; }
+.ns-vc-breaking { position:absolute; top:10px; left:10px; background:var(--red); color:#fff; font-size:8.5px; font-weight:800; padding:3px 9px; border-radius:6px; letter-spacing:0.6px; text-transform:uppercase; }
+.ns-vc-tag { position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.55); color:#fff; font-size:8px; font-weight:800; padding:3px 8px; border-radius:5px; letter-spacing:0.5px; text-transform:uppercase; }
+.ns-vc-body { padding:12px 14px 14px; }
+.ns-vc-cat { display:flex; align-items:center; gap:5px; font-size:10px; font-weight:800; color:var(--brand); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:7px; }
+.ns-vc-title { font-family:var(--font-display); font-size:14.5px; font-weight:700; color:var(--text); line-height:1.42; margin-bottom:11px; letter-spacing:-0.2px; }
+.ns-vc-footer { display:flex; align-items:center; gap:7px; }
+.ns-vc-av { width:22px; height:22px; border-radius:50%; background:var(--brand-light); display:flex; align-items:center; justify-content:center; font-size:8.5px; font-weight:800; color:var(--brand); flex-shrink:0; }
+.ns-vc-author { font-size:11px; font-weight:600; color:var(--text2); }
+.ns-vc-dot { width:3px; height:3px; border-radius:50%; background:var(--text3); flex-shrink:0; }
+.ns-vc-time { font-size:11px; color:var(--text3); }
+.ns-vc-read { font-size:11px; color:var(--text3); margin-left:auto; font-weight:500; }
+
+/* News Compact Horizontal Cards */
+.ns-hc-card { display:flex; gap:12px; align-items:flex-start; padding:12px; border-radius:16px; cursor:pointer; transition:transform 0.15s; margin-bottom:8px; background:var(--card); border:1px solid var(--border); box-shadow:0 1px 4px rgba(0,0,0,0.04); }
+.ns-hc-card:active { transform:scale(0.98); border-color:rgba(53,88,240,0.15); }
+.ns-hc-thumb { width:72px; height:72px; border-radius:14px; overflow:hidden; flex-shrink:0; position:relative; display:flex; align-items:center; justify-content:center; font-size:26px; }
+.ns-hc-tag { position:absolute; top:5px; left:5px; font-size:7.5px; font-weight:800; padding:2px 6px; border-radius:5px; color:#fff; letter-spacing:0.5px; text-transform:uppercase; background:rgba(0,0,0,0.55); }
+.ns-hc-body { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; }
+.ns-hc-cat { font-size:10px; font-weight:800; color:var(--brand); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+.ns-hc-title { font-family:var(--font-display); font-size:13.5px; font-weight:700; color:var(--text); line-height:1.38; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:5px; letter-spacing:-0.2px; }
+.ns-hc-meta { font-size:10.5px; color:var(--text3); font-weight:500; }
+
+/* Bottom Nav */
+.bottomnav { flex-shrink:0; background:rgba(255,255,255,0.92); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-top:1px solid var(--border); padding:8px 6px 28px; display:flex; justify-content:space-around; align-items:center; box-shadow:0 -2px 16px rgba(0,0,0,0.04); }
+.bn-item { display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; min-width:52px; position:relative; transition:transform 0.15s; }
+.bn-item:active { transform:scale(0.92); }
+.bn-pill { padding:7px 16px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:var(--brand); box-shadow:0 3px 12px rgba(53,88,240,0.3); }
+.bn-wrap { padding:7px 8px; display:flex; align-items:center; justify-content:center; }
+.bn-lbl { font-size:10px; font-weight:700; color:var(--text3); }
+.bn-active-lbl { font-size:10px; font-weight:800; color:var(--brand); }
+.bn-notif { position:absolute; top:2px; right:4px; width:6px; height:6px; border-radius:50%; background:var(--red); border:1.5px solid #fff; }
+
+@keyframes fadeInUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+.art-card, .ns-art-card, .ns-vc-card, .ns-hc-card, .thread, .featured-card { animation: fadeInUp 0.35s ease both; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="dynamic-island"></div>
+  <div class="statusbar">
+    <div class="sb-time">9:41</div>
+    <div class="sb-icons">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><rect x="0" y="4" width="3" height="8" rx="1" fill="#0C1024"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#0C1024"/><rect x="9" y="1" width="3" height="11" rx="1" fill="#0C1024"/><rect x="13.5" y="0" width="2.5" height="12" rx="1" fill="#CBD5E1"/></svg>
+      <svg width="15" height="12" viewBox="0 0 15 12" fill="none"><path d="M7.5 3C9.8 3 11.8 4 13.2 5.6L14.5 4.2C12.7 2.2 10.2 1 7.5 1S2.3 2.2.5 4.2L1.8 5.6C3.2 4 5.2 3 7.5 3z" fill="#0C1024"/><path d="M7.5 6c1.4 0 2.7.6 3.6 1.5L12.4 6C11.1 4.8 9.4 4 7.5 4S3.9 4.8 2.6 6l1.3 1.5C4.8 6.6 6.1 6 7.5 6z" fill="#0C1024"/><circle cx="7.5" cy="10" r="1.5" fill="#0C1024"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#0C1024" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#0C1024"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#0C1024" fill-opacity=".4"/></svg>
+    </div>
+  </div>
+  <div class="topnav">
+    <div class="tn-btn"><svg width="17" height="13" viewBox="0 0 17 13" fill="none"><rect y="0" width="17" height="2" rx="1" fill="#1A2038"/><rect y="5.5" width="11" height="2" rx="1" fill="#1A2038"/><rect y="11" width="7" height="2" rx="1" fill="var(--brand)"/></svg></div>
+    <div class="tn-logo">
+      <div class="tn-logomark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 12L8 3l5 9H3z" fill="#fff" fill-opacity=".9"/><circle cx="8" cy="7" r="1.5" fill="#3558F0"/></svg></div>
+      <div class="tn-wordmark">India<span>Forums</span></div>
+    </div>
+    <div class="tn-right">
+      <div class="tn-btn" style="position:relative"><svg width="17" height="17" viewBox="0 0 17 17" fill="none"><path d="M8.5 2a5.5 5.5 0 015.5 5.5c0 1.6.4 3 1 3.5H2c.6-.5 1-1.9 1-3.5A5.5 5.5 0 018.5 2z" stroke="#334155" stroke-width="1.5"/><path d="M6.5 14.5a2 2 0 004 0" stroke="#334155" stroke-width="1.5" stroke-linecap="round"/></svg><div class="notif-dot"></div></div>
+      <div class="tn-btn"><svg width="17" height="17" viewBox="0 0 17 17" fill="none"><circle cx="8.5" cy="6" r="3" stroke="#334155" stroke-width="1.5"/><path d="M2 15.5a6.5 6.5 0 0113 0" stroke="#334155" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    </div>
+  </div>
+
+  <!-- EXPLORE -->
+  <div class="screen active" id="screenExplore">
+    <div class="stories-strip">
+      <div class="stories-row">
+        <div class="story-item"><div class="story-ring"><div class="story-img" style="background:linear-gradient(135deg,#FFF7ED,#FED7AA);">⭐</div></div><div class="story-lbl">Celebrities</div></div>
+        <div class="story-item"><div class="story-ring"><div class="story-img" style="background:linear-gradient(135deg,#EFF6FF,#BFDBFE);">🎬</div></div><div class="story-lbl">Videos</div></div>
+        <div class="story-item"><div class="story-ring"><div class="story-img" style="background:linear-gradient(135deg,#F0FDF4,#BBF7D0);">🖼️</div></div><div class="story-lbl">Galleries</div></div>
+        <div class="story-item"><div class="story-ring"><div class="story-img" style="background:linear-gradient(135deg,#FDF4FF,#E9D5FF);">📖</div></div><div class="story-lbl">Fan Fictions</div></div>
+        <div class="story-item"><div class="story-ring"><div class="story-img" style="background:linear-gradient(135deg,#FFF1F2,#FECDD3);">❓</div></div><div class="story-lbl">Quizzes</div></div>
+        <div class="story-item"><div class="story-ring no-story"><div class="story-img" style="background:linear-gradient(135deg,#FFFBEB,#FDE68A);">⚡</div></div><div class="story-lbl">Shorts</div></div>
+        <div class="story-item"><div class="story-ring no-story"><div class="story-img" style="background:linear-gradient(135deg,#F0F9FF,#BAE6FD);">🌐</div></div><div class="story-lbl">Web Stories</div></div>
+      </div>
+    </div>
+
+    <div class="sec-hdr"><div class="sec-title">Trending Now</div><div class="sec-link">See all</div></div>
+    <div class="featured-section">
+      <div class="featured-scroll" id="featScroll">
+        <div class="featured-track">
+          <div class="featured-card"><div class="fc-bg" style="background:linear-gradient(135deg,#1a1a2e,#0f3460);">🎬</div><div class="fc-overlay"></div><div class="fc-content"><div class="fc-tag" style="background:rgba(239,68,68,0.9);">HOT</div><div class="fc-title">SRK's next film announced — fans can't stop talking about the surprise genre reveal</div><div class="fc-meta"><span class="fc-source">IF Exclusive</span><div class="fc-dot"></div><span class="fc-time">2h ago</span></div></div></div>
+          <div class="featured-card"><div class="fc-bg" style="background:linear-gradient(135deg,#0d1b2a,#40916c);">🏏</div><div class="fc-overlay"></div><div class="fc-content"><div class="fc-tag" style="background:rgba(22,101,52,0.9);">IPL 2026</div><div class="fc-title">MI vs CSK: Rohit's record-breaking innings steals the show at Wankhede</div><div class="fc-meta"><span class="fc-source">Sports Desk</span><div class="fc-dot"></div><span class="fc-time">45m ago</span></div></div></div>
+          <div class="featured-card"><div class="fc-bg" style="background:linear-gradient(135deg,#2d1b69,#7c3aed);">🎤</div><div class="fc-overlay"></div><div class="fc-content"><div class="fc-tag" style="background:rgba(124,58,237,0.9);">BB18</div><div class="fc-title">Bigg Boss 18 elimination shocker — house in total chaos after last night</div><div class="fc-meta"><span class="fc-source">Reality Hub</span><div class="fc-dot"></div><span class="fc-time">1h ago</span></div></div></div>
+          <div class="featured-card"><div class="fc-bg" style="background:linear-gradient(135deg,#7f1d1d,#ef4444);">💫</div><div class="fc-overlay"></div><div class="fc-content"><div class="fc-tag" style="background:rgba(185,28,28,0.9);">BOX OFFICE</div><div class="fc-title">Stree 3 crosses ₹500 crore in first week — Bollywood's biggest 2026 opener</div><div class="fc-meta"><span class="fc-source">Box Office</span><div class="fc-dot"></div><span class="fc-time">3h ago</span></div></div></div>
+        </div>
+      </div>
+      <div class="carousel-dots" id="featDots"><div class="cdot on" data-i="0"></div><div class="cdot off" data-i="1"></div><div class="cdot off" data-i="2"></div><div class="cdot off" data-i="3"></div></div>
+    </div>
+
+    <div class="chips-strip"><div class="chips-row">
+      <div class="chip on" data-cat="all">All</div>
+      <div class="chip off" data-cat="television">Television</div>
+      <div class="chip off" data-cat="movies">Movies</div>
+      <div class="chip off" data-cat="digital">Digital</div>
+      <div class="chip off" data-cat="lifestyle">Lifestyle</div>
+      <div class="chip off" data-cat="sports">Sports</div>
+    </div></div>
+
+    <div class="articles" id="articlesList"></div>
+
+    <!-- Forums — just title + thread list -->
+    <div class="sec-hdr"><div class="sec-title">Forums</div><div class="sec-link">See all</div></div>
+    <div class="forum-wrap">
+      <div class="forum-tabs">
+        <div class="ftab active" data-ftab="announcements">Announcements</div>
+        <div class="ftab" data-ftab="latest">Latest</div>
+        <div class="ftab" data-ftab="popular">Popular</div>
+      </div>
+      <div id="forumList"></div>
+    </div>
+    <div style="height:20px;"></div>
+  </div>
+
+  <!-- NEWS -->
+  <div class="screen" id="screenNews">
+    <div class="ns-tab-container">
+      <div class="ns-cat-bar" id="nsCatBar">
+        <div class="ns-cat-tab active" data-nscat="all">
+          <svg class="ns-cat-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5.5" height="5.5" rx="1.5" fill="currentColor"/><rect x="7.5" y="1" width="5.5" height="5.5" rx="1.5" fill="currentColor" fill-opacity=".6"/><rect x="1" y="7.5" width="5.5" height="5.5" rx="1.5" fill="currentColor" fill-opacity=".6"/><rect x="7.5" y="7.5" width="5.5" height="5.5" rx="1.5" fill="currentColor"/></svg>
+          ALL
+        </div>
+        <div class="ns-cat-tab" data-nscat="tv">
+          <svg class="ns-cat-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="8" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M7 10v2M4.5 12.5h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M3.5 5.5h7M3.5 7.5h4.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+          TV
+        </div>
+        <div class="ns-cat-tab" data-nscat="movies">
+          <svg class="ns-cat-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8.5" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M1 5.5h12M1 9h12" stroke="currentColor" stroke-width="1" stroke-opacity=".55"/><path d="M4 3v8.5M10 3v8.5" stroke="currentColor" stroke-width="1" stroke-opacity=".55"/><path d="M1.5 3.5l3-1.5M6.5 3l2.5-1.5M11 2.5l1.5 .5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          MOVIES
+        </div>
+        <div class="ns-cat-tab" data-nscat="digital">
+          <svg class="ns-cat-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="2" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 12.5h4M7 9v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4.5 5.5a3.2 3.2 0 015 0" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="7" cy="5.5" r=".8" fill="currentColor"/></svg>
+          DIGITAL
+        </div>
+        <div class="ns-cat-tab" data-nscat="lifestyle">
+          <svg class="ns-cat-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 12.5S1.5 8.8 1.5 5.2a3.6 3.6 0 016.5-2.1 3.6 3.6 0 016.5 2.1C14.5 8.8 7 12.5 7 12.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          LIFESTYLE
+        </div>
+        <div class="ns-cat-tab" data-nscat="sports">
+          <svg class="ns-cat-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 1.5h6v5a3 3 0 01-6 0v-5z" stroke="currentColor" stroke-width="1.4"/><path d="M4 3.5H2.5a1.5 1.5 0 000 3H4M10 3.5h1.5a1.5 1.5 0 010 3H10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M7 8.5v3.5M5 12.5h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          SPORTS
+        </div>
+      </div>
+      <div class="ns-lang-bar" id="nsLangBar"></div>
+    </div>
+    <div class="ns-feed"><div class="ns-articles" id="nsArticlesList"></div></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottomnav">
+    <div class="bn-item" id="bnExplore" onclick="switchScreen('explore')"></div>
+    <div class="bn-item" id="bnNews" onclick="switchScreen('news')"></div>
+    <div class="bn-item" style="position:relative">
+      <div class="bn-wrap"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2 2.5h16a1 1 0 011 1v11a1 1 0 01-1 1H5l-4 4V3.5a1 1 0 011-1z" stroke="#8B95B0" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 7.5h8M6 11h5" stroke="#8B95B0" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+      <div class="bn-lbl">Forums</div>
+      <div class="bn-notif"></div>
+    </div>
+    <div class="bn-item">
+      <div class="bn-wrap"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6.5" stroke="#8B95B0" stroke-width="1.5"/><path d="M14 14l4.5 4.5" stroke="#8B95B0" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <div class="bn-lbl">Search</div>
+    </div>
+    <div class="bn-item">
+      <div class="bn-wrap"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" rx="2" stroke="#8B95B0" stroke-width="1.5"/><rect x="11" y="2" width="7" height="7" rx="2" stroke="#8B95B0" stroke-width="1.5"/><rect x="2" y="11" width="7" height="7" rx="2" stroke="#8B95B0" stroke-width="1.5"/><rect x="11" y="11" width="7" height="7" rx="2" stroke="#8B95B0" stroke-width="1.5"/></svg></div>
+      <div class="bn-lbl">My Space</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ═══ EXPLORE: Articles ═══
+  var ARTICLES={all:[{cat:'DIGITAL',tag:'HINDI',breaking:true,title:'Celebrity Chef Ranveer Brar to be a part of The Traitors 2: Report',time:'3 hours ago',bg:'linear-gradient(135deg,#1e293b,#334155)',emoji:'👨‍🍳'},{cat:'TELEVISION',tag:'',breaking:false,title:'Yeh Rishta Kya Kehlata Hai: Abhira\'s shocking decision stuns the entire family',time:'1 hour ago',bg:'linear-gradient(135deg,#4a1942,#7e22ce)',emoji:'📺'},{cat:'MOVIES',tag:'BOX OFFICE',breaking:false,title:'Stree 3 crosses ₹500 crore in first week — Bollywood\'s biggest 2026 opener',time:'3 hours ago',bg:'linear-gradient(135deg,#7f1d1d,#ef4444)',emoji:'🎬'},{cat:'SPORTS',tag:'IPL',breaking:false,title:'MI vs CSK: Rohit\'s record-breaking innings steals the show at Wankhede',time:'45 min ago',bg:'linear-gradient(135deg,#14532d,#16a34a)',emoji:'🏏'},{cat:'LIFESTYLE',tag:'',breaking:false,title:'Alia Bhatt\'s minimalist skincare routine is breaking the internet this week',time:'5 hours ago',bg:'linear-gradient(135deg,#831843,#db2777)',emoji:'✨'}],television:[{cat:'TELEVISION',tag:'TRENDING',breaking:true,title:'Yeh Rishta Kya Kehlata Hai: Abhira\'s shocking decision stuns the family',time:'1 hour ago',bg:'linear-gradient(135deg,#4a1942,#7e22ce)',emoji:'📺'},{cat:'TELEVISION',tag:'BB18',breaking:false,title:'Bigg Boss 18 elimination shocker — house is in total chaos after last night',time:'2 hours ago',bg:'linear-gradient(135deg,#2d1b69,#7c3aed)',emoji:'🎤'},{cat:'TELEVISION',tag:'',breaking:false,title:'Anupamaa hits new ratings high — most-watched show three weeks in a row',time:'4 hours ago',bg:'linear-gradient(135deg,#1c3a5e,#2563eb)',emoji:'👑'}],movies:[{cat:'MOVIES',tag:'BOX OFFICE',breaking:false,title:'Stree 3 crosses ₹500 crore in first week — Bollywood\'s biggest 2026 opener',time:'3 hours ago',bg:'linear-gradient(135deg,#7f1d1d,#ef4444)',emoji:'🎬'},{cat:'MOVIES',tag:'',breaking:true,title:'SRK\'s next film officially announced — fans erupt after surprise genre reveal',time:'2 hours ago',bg:'linear-gradient(135deg,#1a1a2e,#0f3460)',emoji:'🌟'}],digital:[{cat:'DIGITAL',tag:'HINDI',breaking:true,title:'Celebrity Chef Ranveer Brar to be a part of The Traitors 2: Report',time:'3 hours ago',bg:'linear-gradient(135deg,#1e293b,#334155)',emoji:'👨‍🍳'},{cat:'DIGITAL',tag:'OTT',breaking:false,title:'Panchayat Season 4 officially confirmed; cast and shoot schedule revealed',time:'10 hours ago',bg:'linear-gradient(135deg,#3b2f04,#a16207)',emoji:'🌾'}],lifestyle:[{cat:'LIFESTYLE',tag:'',breaking:false,title:'Alia Bhatt\'s minimalist skincare routine is breaking the internet this week',time:'5 hours ago',bg:'linear-gradient(135deg,#831843,#db2777)',emoji:'✨'},{cat:'LIFESTYLE',tag:'TREND',breaking:false,title:'Deepika Padukone\'s Cannes 2026 gown by Sabyasachi is absolutely breathtaking',time:'3 hours ago',bg:'linear-gradient(135deg,#831843,#db2777)',emoji:'👗'}],sports:[{cat:'SPORTS',tag:'IPL',breaking:false,title:'MI vs CSK: Rohit\'s record-breaking innings steals the show at Wankhede',time:'45 min ago',bg:'linear-gradient(135deg,#14532d,#16a34a)',emoji:'🏏'},{cat:'SPORTS',tag:'BREAKING',breaking:true,title:'India wins the T20 series — Bumrah takes five wickets in a stunning finale',time:'1 hour ago',bg:'linear-gradient(135deg,#1e3a8a,#f97316)',emoji:'🏆'}]};
+
+  function renderArticles(cat){var list=document.getElementById('articlesList');var items=ARTICLES[cat]||ARTICLES.all;list.innerHTML=items.map(function(a,i){return '<div class="art-card" style="animation-delay:'+(i*0.06)+'s"><div class="art-thumb"><div class="art-thumb-inner" style="background:'+a.bg+';">'+a.emoji+'</div>'+(a.tag?'<div class="art-badge" style="background:rgba(0,0,0,0.55);">'+a.tag+'</div>':'')+'</div><div class="art-body"><div class="art-cat">'+a.cat+(a.breaking?' <span class="art-breaking">BREAKING</span>':'')+'</div><div class="art-title">'+a.title+'</div><div class="art-time"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#8B95B0" stroke-width="1.2"/><path d="M6 3.5v3l2 1.5" stroke="#8B95B0" stroke-width="1.2" stroke-linecap="round"/></svg>'+a.time+'</div></div></div>';}).join('');}
+  document.querySelectorAll('.chip').forEach(function(c){c.addEventListener('click',function(){document.querySelectorAll('.chip').forEach(function(x){x.className='chip off';});c.className='chip on';renderArticles(c.getAttribute('data-cat'));});});
+  renderArticles('all');
+
+  // Carousel dots
+  var fScroll=document.getElementById('featScroll'),fDots=document.querySelectorAll('.cdot'),fCur=0,fCardW=292,fTick=false;
+  function setFDot(i){fCur=i;fDots.forEach(function(d,j){d.className='cdot '+(j===i?'on':'off');});}
+  fDots.forEach(function(d,i){d.addEventListener('click',function(){fScroll.scrollTo({left:i*fCardW,behavior:'smooth'});setFDot(i);});});
+  fScroll.addEventListener('scroll',function(){if(!fTick){requestAnimationFrame(function(){var i=Math.max(0,Math.min(fDots.length-1,Math.round(fScroll.scrollLeft/fCardW)));if(i!==fCur)setFDot(i);fTick=false;});fTick=true;}});
+
+  // ═══ Forum Threads ═══
+  var FORUMS={announcements:[{forumName:'Current Affairs',bg:'linear-gradient(135deg,#1e3a8a,#3b82f6)',emoji:'🌐',title:'US & Israel vs Iran ongoing war discussion thread',poster:'Leprechaun',ago:'2 days ago',likes:'891',views:'9.8k',comments:'299',lastBy:'Cynical1',lastTime:'10 min ago'},{forumName:'Forum Games',bg:'linear-gradient(135deg,#7c3aed,#a78bfa)',emoji:'🎮',title:'Deal or No Deal Season 2 (R2 Leaderboard + R3 p25)',poster:'Minionite',ago:'10 days ago',likes:'426',views:'9.6k',comments:'244',lastBy:'Delusional_Minx',lastTime:'3 hours ago'},{forumName:'Suggestions',bg:'linear-gradient(135deg,#b45309,#fbbf24)',emoji:'💬',title:'Site Updates and Issues Discussions #9',poster:'vijay',ago:'1 year ago',likes:'2.6k',views:'381.7k',comments:'1.6k',lastBy:'gaadiglow',lastTime:'16 hours ago'}],latest:[{forumName:'Bollywood',bg:'linear-gradient(135deg,#7f1d1d,#ef4444)',emoji:'🎬',title:'SRK\'s new film title officially revealed — first look drops tonight!',poster:'FilmBuff_IN',ago:'18 min ago',likes:'142',views:'2.1k',comments:'67',lastBy:'SRKfan2026',lastTime:'2 min ago'},{forumName:'Cricket',bg:'linear-gradient(135deg,#14532d,#16a34a)',emoji:'🏏',title:'IPL 2026 — Match Day 18 live discussion: MI vs CSK',poster:'CricketMania',ago:'45 min ago',likes:'3.2k',views:'44k',comments:'891',lastBy:'WankhedeRoar',lastTime:'just now'},{forumName:'K-Drama',bg:'linear-gradient(135deg,#0c4a6e,#0ea5e9)',emoji:'📺',title:'Squid Game S3 episode 4 — unpacking that brutal finale twist',poster:'KDramaLover',ago:'2 hours ago',likes:'567',views:'8.9k',comments:'203',lastBy:'NetflixIndia_fan',lastTime:'12 min ago'}],popular:[{forumName:'Bigg Boss',bg:'linear-gradient(135deg,#4a2c8a,#7c3aed)',emoji:'👁️',title:'BB18 All-Time Ranking Megathread — vote for your winner',poster:'BBWatcher',ago:'5 days ago',likes:'12.4k',views:'2.1M',comments:'8.7k',lastBy:'Vote4Shilpa',lastTime:'1 min ago'},{forumName:'Celebrities',bg:'linear-gradient(135deg,#831843,#ec4899)',emoji:'⭐',title:'Deepika vs Alia — who is the true queen of Bollywood in 2026?',poster:'StargazerIN',ago:'3 days ago',likes:'9.1k',views:'890k',comments:'4.2k',lastBy:'BollyQueen',lastTime:'5 min ago'},{forumName:'Current Affairs',bg:'linear-gradient(135deg,#1e3a8a,#3b82f6)',emoji:'🌐',title:'US & Israel vs Iran ongoing war discussion thread',poster:'Leprechaun',ago:'2 days ago',likes:'891',views:'9.8k',comments:'299',lastBy:'Cynical1',lastTime:'10 min ago'}]};
+  function renderForum(tab){var list=document.getElementById('forumList');var threads=FORUMS[tab]||FORUMS.announcements;list.innerHTML=threads.map(function(t,i){return '<div class="thread" style="animation-delay:'+(i*0.06)+'s"><div class="thread-av" style="background:'+t.bg+';">'+t.emoji+'</div><div class="thread-body"><div class="thread-forum">'+t.forumName+'</div><div class="thread-title">'+t.title+'</div><div class="thread-poster">By <b>'+t.poster+'</b> · '+t.ago+'</div><div class="thread-stats"><div class="tstat"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 11s-5-3.5-5-7a5 5 0 0110 0c0 3.5-5 7-5 7z" stroke="#8B95B0" stroke-width="1.1"/></svg>'+t.likes+'</div><div class="tstat"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h9a1 1 0 011 1v5a1 1 0 01-1 1H4l-3 2.5V3a1 1 0 011-1z" stroke="#8B95B0" stroke-width="1.1" stroke-linejoin="round"/></svg>'+t.comments+'</div><div class="tstat"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><ellipse cx="6.5" cy="6.5" rx="5.5" ry="3.5" stroke="#8B95B0" stroke-width="1.1"/><circle cx="6.5" cy="6.5" r="1.5" stroke="#8B95B0" stroke-width="1.1"/></svg>'+t.views+'</div><div class="thread-last">'+t.lastTime+' · '+t.lastBy+'</div></div></div><div class="thread-arrow"><svg width="8" height="12" viewBox="0 0 8 12" fill="none"><path d="M1.5 1.5l5 5-5 5" stroke="#8B95B0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>';}).join('');}
+  document.querySelectorAll('.ftab').forEach(function(tab){tab.addEventListener('click',function(){document.querySelectorAll('.ftab').forEach(function(t){t.className='ftab';});tab.className='ftab active';renderForum(tab.getAttribute('data-ftab'));});});
+  renderForum('announcements');
+
+  // ═══════════════════════════════════════
+  // NEWS SCREEN
+  // ═══════════════════════════════════════
+  var NS_LANGS={all:['ALL','HINDI','ENGLISH','TAMIL','TELUGU','KOREAN'],tv:['ALL','HINDI','ENGLISH'],movies:['ALL','HINDI','ENGLISH','TAMIL','TELUGU','KANNADA'],digital:['ALL','HINDI','ENGLISH','KOREAN'],lifestyle:['ALL','FASHION','HEALTH','MAKEUP','FOOD'],sports:['ALL','CRICKET','FOOTBALL','WWE']};
+
+  var NS_DATA={
+    all:{hindi:[{cat:'TV · HINDI',tag:'TRENDING',breaking:true,title:'Yeh Rishta Kya Kehlata Hai: Abhira\'s shocking decision stuns the entire family',time:'1 hr ago',bg:'linear-gradient(135deg,#4a1942,#7e22ce)',emoji:'📺'},{cat:'MOVIES · HINDI',tag:'BOX OFFICE',breaking:false,title:'Stree 3 crosses ₹500 crore in first week — Bollywood\'s biggest 2026 opener',time:'3 hr ago',bg:'linear-gradient(135deg,#7f1d1d,#ef4444)',emoji:'🎬'},{cat:'DIGITAL · HINDI',tag:'OTT',breaking:false,title:'Panchayat Season 4 officially confirmed; cast and shoot schedule revealed',time:'10 hr ago',bg:'linear-gradient(135deg,#3b2f04,#a16207)',emoji:'🌾'},{cat:'TV · HINDI',tag:'BB18',breaking:false,title:'Bigg Boss 18 elimination shocker — house in total chaos after last night',time:'2 hr ago',bg:'linear-gradient(135deg,#2d1b69,#7c3aed)',emoji:'🎤'}],english:[{cat:'MOVIES · ENGLISH',tag:'',breaking:false,title:'Avatar 3 early screening reactions are overwhelmingly positive worldwide',time:'4 hr ago',bg:'linear-gradient(135deg,#0c4a6e,#0ea5e9)',emoji:'🌊'},{cat:'TV · ENGLISH',tag:'NEW',breaking:true,title:'HBO announces Game of Thrones prequel series set 300 years before original',time:'5 hr ago',bg:'linear-gradient(135deg,#0f172a,#1e3a5f)',emoji:'🐉'},{cat:'DIGITAL · ENGLISH',tag:'OTT',breaking:false,title:'Netflix India drops teaser for their most expensive original series yet',time:'1 hr ago',bg:'linear-gradient(135deg,#7f1d1d,#b91c1c)',emoji:'🎞️'}],tamil:[{cat:'MOVIES · TAMIL',tag:'',breaking:false,title:'Thalapathy 68 first look reveal breaks internet — fans go berserk online',time:'2 hr ago',bg:'linear-gradient(135deg,#14532d,#15803d)',emoji:'🎭'},{cat:'MOVIES · TAMIL',tag:'REVIEW',breaking:false,title:'Vettaiyan review: Rajinikanth at his absolute best in this gripping action thriller',time:'5 hr ago',bg:'linear-gradient(135deg,#431407,#c2410c)',emoji:'🔥'}],telugu:[{cat:'MOVIES · TELUGU',tag:'',breaking:true,title:'Pushpa 3 officially announced — Allu Arjun to start shoot by mid-2026',time:'1 hr ago',bg:'linear-gradient(135deg,#4a1942,#9333ea)',emoji:'🌺'},{cat:'MOVIES · TELUGU',tag:'REVIEW',breaking:false,title:'Kalki 2898 AD crosses ₹1000 crore globally — landmark for Telugu cinema',time:'3 hr ago',bg:'linear-gradient(135deg,#1e3a8a,#3b82f6)',emoji:'🤖'}],korean:[{cat:'DIGITAL · KOREAN',tag:'',breaking:false,title:'Squid Game S3 episode 4 — unpacking that brutal and emotional finale twist',time:'2 hr ago',bg:'linear-gradient(135deg,#0c4a6e,#0ea5e9)',emoji:'🎮'},{cat:'DIGITAL · KOREAN',tag:'NEW',breaking:false,title:'My Demon Season 2 officially greenlit — fans celebrate with trending hashtag',time:'5 hr ago',bg:'linear-gradient(135deg,#4a1942,#7e22ce)',emoji:'😈'},{cat:'DIGITAL · KOREAN',tag:'',breaking:true,title:'Queen of Tears 2026 becomes most-watched Korean drama of the year on Netflix',time:'7 hr ago',bg:'linear-gradient(135deg,#831843,#db2777)',emoji:'👑'}]},
+    tv:{hindi:[{cat:'TV · HINDI',tag:'TRENDING',breaking:true,title:'Yeh Rishta Kya Kehlata Hai: Abhira\'s shocking decision stuns the entire family',time:'1 hr ago',bg:'linear-gradient(135deg,#4a1942,#7e22ce)',emoji:'📺'},{cat:'TV · HINDI',tag:'BB18',breaking:false,title:'Bigg Boss 18 elimination shocker — house in total chaos after last night',time:'2 hr ago',bg:'linear-gradient(135deg,#2d1b69,#7c3aed)',emoji:'🎤'},{cat:'TV · HINDI',tag:'',breaking:false,title:'Anupamaa hits new ratings high — most-watched show three weeks in a row',time:'4 hr ago',bg:'linear-gradient(135deg,#1c3a5e,#2563eb)',emoji:'👑'}],english:[{cat:'TV · ENGLISH',tag:'NEW',breaking:true,title:'HBO announces Game of Thrones prequel series set 300 years before original',time:'5 hr ago',bg:'linear-gradient(135deg,#0f172a,#1e3a5f)',emoji:'🐉'},{cat:'TV · ENGLISH',tag:'',breaking:false,title:'The Crown Season 7 teaser drops — UK royal family drama returns this fall',time:'3 hr ago',bg:'linear-gradient(135deg,#1e293b,#334155)',emoji:'👸'}]},
+    movies:{hindi:[{cat:'MOVIES · HINDI',tag:'BOX OFFICE',breaking:false,title:'Stree 3 crosses ₹500 crore in first week — Bollywood\'s biggest 2026 opener',time:'3 hr ago',bg:'linear-gradient(135deg,#7f1d1d,#ef4444)',emoji:'🎬'},{cat:'MOVIES · HINDI',tag:'',breaking:true,title:'SRK\'s next film officially announced — fans erupt after surprise genre reveal',time:'2 hr ago',bg:'linear-gradient(135deg,#1a1a2e,#0f3460)',emoji:'🌟'},{cat:'MOVIES · HINDI',tag:'REVIEW',breaking:false,title:'Chhaava 2 gets a standing ovation at premiere — early reviews are glowing',time:'5 hr ago',bg:'linear-gradient(135deg,#3b1f04,#b45309)',emoji:'⚔️'}],english:[{cat:'MOVIES · ENGLISH',tag:'',breaking:false,title:'Avatar 3 early screening reactions are overwhelmingly positive worldwide',time:'4 hr ago',bg:'linear-gradient(135deg,#0c4a6e,#0ea5e9)',emoji:'🌊'},{cat:'MOVIES · ENGLISH',tag:'',breaking:true,title:'Marvel announces Phase 6 slate — three new Avengers films confirmed for 2027',time:'1 hr ago',bg:'linear-gradient(135deg,#7f1d1d,#b91c1c)',emoji:'🦸'}],tamil:[{cat:'MOVIES · TAMIL',tag:'',breaking:false,title:'Thalapathy 68 first look reveal breaks internet — fans go berserk online',time:'2 hr ago',bg:'linear-gradient(135deg,#14532d,#15803d)',emoji:'🎭'},{cat:'MOVIES · TAMIL',tag:'REVIEW',breaking:false,title:'Vettaiyan review: Rajinikanth at his absolute best in this gripping action thriller',time:'5 hr ago',bg:'linear-gradient(135deg,#431407,#c2410c)',emoji:'🔥'}],telugu:[{cat:'MOVIES · TELUGU',tag:'',breaking:true,title:'Pushpa 3 officially announced — Allu Arjun to start shoot by mid-2026',time:'1 hr ago',bg:'linear-gradient(135deg,#4a1942,#9333ea)',emoji:'🌺'},{cat:'MOVIES · TELUGU',tag:'REVIEW',breaking:false,title:'Kalki 2898 AD crosses ₹1000 crore globally — landmark for Telugu cinema',time:'3 hr ago',bg:'linear-gradient(135deg,#1e3a8a,#3b82f6)',emoji:'🤖'}],kannada:[{cat:'MOVIES · KANNADA',tag:'',breaking:false,title:'KGF Chapter 3 teaser confirmed for release on Yash\'s birthday next month',time:'4 hr ago',bg:'linear-gradient(135deg,#713f12,#d97706)',emoji:'💎'}]},
+    digital:{hindi:[{cat:'DIGITAL · HINDI',tag:'',breaking:true,title:'Celebrity Chef Ranveer Brar to be a part of The Traitors 2: Report',time:'3 hr ago',bg:'linear-gradient(135deg,#1e293b,#334155)',emoji:'👨‍🍳'},{cat:'DIGITAL · HINDI',tag:'OTT',breaking:false,title:'Panchayat Season 4 officially confirmed; cast and shoot schedule revealed',time:'10 hr ago',bg:'linear-gradient(135deg,#3b2f04,#a16207)',emoji:'🌾'}],english:[{cat:'DIGITAL · ENGLISH',tag:'OTT',breaking:false,title:'Netflix India drops teaser for their most expensive original series yet',time:'1 hr ago',bg:'linear-gradient(135deg,#7f1d1d,#b91c1c)',emoji:'🎞️'},{cat:'DIGITAL · ENGLISH',tag:'',breaking:false,title:'Apple TV+ India announces its biggest original slate of 2026',time:'6 hr ago',bg:'linear-gradient(135deg,#1e293b,#475569)',emoji:'📱'}],korean:[{cat:'DIGITAL · KOREAN',tag:'',breaking:false,title:'Squid Game S3 episode 4 — unpacking that brutal and emotional finale twist',time:'2 hr ago',bg:'linear-gradient(135deg,#0c4a6e,#0ea5e9)',emoji:'🎮'},{cat:'DIGITAL · KOREAN',tag:'NEW',breaking:false,title:'My Demon Season 2 officially greenlit — fans celebrate with trending hashtag',time:'5 hr ago',bg:'linear-gradient(135deg,#4a1942,#7e22ce)',emoji:'😈'},{cat:'DIGITAL · KOREAN',tag:'',breaking:true,title:'Queen of Tears 2026 becomes most-watched Korean drama of the year on Netflix',time:'7 hr ago',bg:'linear-gradient(135deg,#831843,#db2777)',emoji:'👑'}]},
+    lifestyle:{fashion:[{cat:'LIFESTYLE · FASHION',tag:'',breaking:false,title:'Ranveer Singh\'s bold Met Gala 2026 look has fans and critics completely divided',time:'7 hr ago',bg:'linear-gradient(135deg,#431407,#ea580c)',emoji:'👗'},{cat:'LIFESTYLE · FASHION',tag:'TREND',breaking:false,title:'Deepika Padukone\'s Cannes 2026 gown by Sabyasachi is absolutely breathtaking',time:'3 hr ago',bg:'linear-gradient(135deg,#831843,#db2777)',emoji:'✨'}],health:[{cat:'LIFESTYLE · HEALTH',tag:'',breaking:false,title:'Malaika Arora\'s morning yoga routine: the exact poses she swears by daily',time:'12 hr ago',bg:'linear-gradient(135deg,#4a1d96,#8b5cf6)',emoji:'🧘'},{cat:'LIFESTYLE · HEALTH',tag:'TIPS',breaking:false,title:'5 Ayurvedic habits Shilpa Shetty credits for her youthful skin and energy',time:'6 hr ago',bg:'linear-gradient(135deg,#14532d,#16a34a)',emoji:'🌿'}],makeup:[{cat:'LIFESTYLE · MAKEUP',tag:'',breaking:false,title:'Alia Bhatt\'s minimalist skincare routine is breaking the internet this week',time:'5 hr ago',bg:'linear-gradient(135deg,#831843,#db2777)',emoji:'💄'}],food:[{cat:'LIFESTYLE · FOOD',tag:'RECIPE',breaking:false,title:'Shilpa Shetty shares her go-to Sunday brunch recipe and it is absolutely delightful',time:'9 hr ago',bg:'linear-gradient(135deg,#14532d,#4ade80)',emoji:'🥗'}]},
+    sports:{cricket:[{cat:'SPORTS · CRICKET',tag:'IPL',breaking:false,title:'MI vs CSK: Rohit\'s record-breaking innings steals the show at Wankhede',time:'45 min ago',bg:'linear-gradient(135deg,#14532d,#16a34a)',emoji:'🏏'},{cat:'SPORTS · CRICKET',tag:'BREAKING',breaking:true,title:'India wins T20 series — Bumrah takes five wickets in stunning match finale',time:'1 hr ago',bg:'linear-gradient(135deg,#1e3a8a,#f97316)',emoji:'🏆'}],football:[{cat:'SPORTS · FOOTBALL',tag:'',breaking:false,title:'Sunil Chhetri comes out of retirement for a special farewell match in Mumbai',time:'3 hr ago',bg:'linear-gradient(135deg,#1c1917,#44403c)',emoji:'⚽'}],wwe:[{cat:'SPORTS · WWE',tag:'',breaking:true,title:'John Cena\'s surprise return at WrestleMania 42 sends the crowd into meltdown',time:'2 hr ago',bg:'linear-gradient(135deg,#7f1d1d,#ef4444)',emoji:'💪'}]}
+  };
+
+  var nsCurCat='all',nsCurLang='all';
+
+  var LANG_EMOJI={all:'🌐',hindi:'🇮🇳',english:'🌍',tamil:'🎭',telugu:'🌺',korean:'🇰🇷',kannada:'💎',cricket:'🏏',football:'⚽',wwe:'💪',fashion:'👗',health:'💚',makeup:'💄',food:'🥗'};
+
+  function nsRenderLangBar(cat){
+    var langs=NS_LANGS[cat]||[];
+    var bar=document.getElementById('nsLangBar');
+    bar.innerHTML=langs.map(function(l,i){
+      var key=l.toLowerCase().replace(/\s+/g,'');
+      var em=LANG_EMOJI[key]||'';
+      return '<div class="ns-lang-tab'+(i===0?' active':'')+'" data-lang="'+key+'">'+(em?em+' ':'')+l+'</div>';
+    }).join('');
+    bar.querySelectorAll('.ns-lang-tab').forEach(function(t){
+      t.addEventListener('click',function(){
+        bar.querySelectorAll('.ns-lang-tab').forEach(function(x){x.classList.remove('active');});
+        t.classList.add('active');
+        nsCurLang=t.getAttribute('data-lang');
+        nsRenderArticles(nsCurCat,nsCurLang);
+      });
+    });
+    nsCurLang='all';
+  }
+
+  function nsGetArticles(cat,lang){
+    var catData=NS_DATA[cat]||{};
+    if(lang==='all'){
+      var merged=[];
+      for(var key in catData){if(catData.hasOwnProperty(key))merged=merged.concat(catData[key]);}
+      return merged;
+    }
+    return catData[lang]||[];
+  }
+
+  function nsRenderArticles(cat,lang){
+    var list=document.getElementById('nsArticlesList');
+    var items=nsGetArticles(cat,lang);
+    if(!items.length){list.innerHTML='<div class="ns-empty">No articles found for this selection.</div>';return;}
+    list.innerHTML=items.map(function(a,i){
+      var src=a.source||'IF News Desk';
+      var rt=a.readTime||Math.floor(3+i%4+2)+' min read';
+      if(i===0){
+        // Featured full-width vertical card
+        return '<div class="ns-vc-card" style="animation-delay:0s">'
+          +'<div class="ns-vc-img" style="background:'+a.bg+';">'
+          +a.emoji
+          +(a.breaking?'<div class="ns-vc-breaking">Breaking</div>':'')
+          +(a.tag?'<div class="ns-vc-tag">'+a.tag+'</div>':'')
+          +'</div>'
+          +'<div class="ns-vc-body">'
+          +'<div class="ns-vc-cat"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="var(--brand)" stroke-width="1.3"/><path d="M6 3.5v3l2 1.5" stroke="var(--brand)" stroke-width="1.3" stroke-linecap="round"/></svg>'+a.cat+'</div>'
+          +'<div class="ns-vc-title">'+a.title+'</div>'
+          +'<div class="ns-vc-footer"><div class="ns-vc-av">IF</div><div class="ns-vc-author">'+src+'</div><div class="ns-vc-dot"></div><div class="ns-vc-time">'+a.time+'</div><div class="ns-vc-read">'+rt+'</div></div>'
+          +'</div>'
+          +'</div>';
+      } else {
+        // Compact horizontal card
+        var compSrc=a.source||(i%2===0?'Sports Desk':'Ent. Today');
+        return '<div class="ns-hc-card" style="animation-delay:'+(i*0.05)+'s">'
+          +'<div class="ns-hc-thumb" style="background:'+a.bg+';">'
+          +a.emoji
+          +(a.tag?'<div class="ns-hc-tag">'+a.tag+'</div>':'')
+          +(a.breaking?'<div class="ns-hc-tag" style="background:var(--red);">Breaking</div>':'')
+          +'</div>'
+          +'<div class="ns-hc-body">'
+          +'<div class="ns-hc-cat">'+a.cat+'</div>'
+          +'<div class="ns-hc-title">'+a.title+'</div>'
+          +'<div class="ns-hc-meta">'+compSrc+' · '+a.time+'</div>'
+          +'</div>'
+          +'</div>';
+      }
+    }).join('');
+  }
+
+  document.getElementById('nsCatBar').querySelectorAll('.ns-cat-tab').forEach(function(tab){
+    tab.addEventListener('click',function(){
+      document.getElementById('nsCatBar').querySelectorAll('.ns-cat-tab').forEach(function(t){t.classList.remove('active');});
+      tab.classList.add('active');
+      nsCurCat=tab.getAttribute('data-nscat');
+      nsRenderLangBar(nsCurCat);
+      nsRenderArticles(nsCurCat,'all');
+    });
+  });
+  nsRenderLangBar('all');
+  nsRenderArticles('all','all');
+
+  // ═══ Screen Switching ═══
+  var homeIcon='<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1z" fill="#fff" stroke="#fff" stroke-width=".5" stroke-linejoin="round"/><path d="M7 18v-6h6v6" stroke="#3558F0" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  var homeIconOff='<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1z" stroke="#8B95B0" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 18v-6h6v6" stroke="#8B95B0" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+  var newsIcon='<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="16" height="14" rx="2.5" stroke="#3558F0" stroke-width="1.5"/><path d="M2 7.5h16" stroke="#3558F0" stroke-width="1.5"/><path d="M6 2v3M14 2v3" stroke="#3558F0" stroke-width="1.5" stroke-linecap="round"/><path d="M5.5 11.5h9M5.5 14.5h6" stroke="#3558F0" stroke-width="1.3" stroke-linecap="round"/></svg>';
+  var newsIconOff='<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="16" height="14" rx="2.5" stroke="#8B95B0" stroke-width="1.5"/><path d="M2 7.5h16" stroke="#8B95B0" stroke-width="1.5"/><path d="M6 2v3M14 2v3" stroke="#8B95B0" stroke-width="1.5" stroke-linecap="round"/><path d="M5.5 11.5h9M5.5 14.5h6" stroke="#8B95B0" stroke-width="1.3" stroke-linecap="round"/></svg>';
+
+  window.switchScreen=function(name){
+    document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+    var eItem=document.getElementById('bnExplore'),nItem=document.getElementById('bnNews');
+    if(name==='explore'){
+      document.getElementById('screenExplore').classList.add('active');
+      eItem.innerHTML='<div class="bn-pill">'+homeIcon+'</div><div class="bn-active-lbl">Explore</div>';
+      nItem.innerHTML='<div class="bn-wrap">'+newsIconOff+'</div><div class="bn-lbl">News</div>';
+    } else if(name==='news'){
+      document.getElementById('screenNews').classList.add('active');
+      eItem.innerHTML='<div class="bn-wrap">'+homeIconOff+'</div><div class="bn-lbl">Explore</div>';
+      nItem.innerHTML='<div class="bn-pill" style="background:var(--brand-light);box-shadow:none;">'+newsIcon+'</div><div class="bn-active-lbl">News</div>';
+    }
+  };
+  switchScreen('explore');
+})();
+</script>
+</body>
+</html>
