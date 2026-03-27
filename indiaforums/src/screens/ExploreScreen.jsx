@@ -30,7 +30,7 @@ export default function ExploreScreen({ onArticlePress }) {
       <StoriesStrip />
 
       <SectionHeader title="Trending Now" />
-      <FeaturedCarousel />
+      <FeaturedCarousel onArticlePress={onArticlePress} />
 
       <ChipsRow chips={EXPLORE_CHIPS} activeId={activeCategory} onSelect={setActiveCategory} />
 
