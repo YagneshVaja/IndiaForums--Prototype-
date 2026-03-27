@@ -1,8 +1,8 @@
 import styles from './ArticleCard.module.css';
 
-export default function ArticleCard({ cat, tag, breaking, title, time, bg, emoji, delay = 0 }) {
+export default function ArticleCard({ cat, tag, breaking, title, time, bg, emoji, delay = 0, onClick }) {
   return (
-    <div className={styles.card} style={{ animationDelay: `${delay}s` }}>
+    <div className={styles.card} style={{ animationDelay: `${delay}s` }} onClick={onClick}>
       <div className={styles.thumb}>
         <div className={styles.thumbInner} style={{ background: bg }}>{emoji}</div>
         {tag && <div className={styles.badge}>{tag}</div>}

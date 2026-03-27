@@ -1,0 +1,612 @@
+/* ── Screen shell ──────────────────────────────────────────────────────────── */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* ── Top bar ───────────────────────────────────────────────────────────────── */
+.topBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.backBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.backBtn:active { transform: scale(0.92); }
+
+.topTitle {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--dark);
+  letter-spacing: -0.2px;
+}
+
+.topActions {
+  display: flex;
+  gap: 4px;
+}
+
+.iconBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.iconBtn:active { background: var(--border); }
+
+/* ── Scroll area ───────────────────────────────────────────────────────────── */
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.scroll::-webkit-scrollbar { display: none; }
+
+/* ── Hero ──────────────────────────────────────────────────────────────────── */
+.hero {
+  width: 100%;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.heroEmoji {
+  font-size: 72px;
+  filter: drop-shadow(0 4px 16px rgba(0,0,0,0.3));
+}
+
+.heroBadges {
+  position: absolute;
+  bottom: 12px;
+  left: 14px;
+  display: flex;
+  gap: 6px;
+}
+
+.badgeBreaking {
+  background: var(--red);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-family: var(--font-body);
+}
+
+.badgeTag {
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-family: var(--font-body);
+}
+
+/* ── Content padding ───────────────────────────────────────────────────────── */
+.content {
+  padding: 14px 14px 0;
+}
+
+/* ── Breadcrumb ────────────────────────────────────────────────────────────── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.bcLink {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand);
+  cursor: pointer;
+}
+
+.bcActive {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+}
+
+.bcSep {
+  font-size: 11px;
+  color: var(--text3);
+  margin: 0 3px;
+}
+
+/* ── Title ─────────────────────────────────────────────────────────────────── */
+.title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1.32;
+  margin: 0 0 14px;
+  letter-spacing: -0.4px;
+}
+
+/* ── Author meta ───────────────────────────────────────────────────────────── */
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  background: var(--card);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.authorAv {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.authorName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
+  font-family: var(--font-body);
+}
+
+.authorMeta {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
+  font-family: var(--font-body);
+}
+
+/* ── Share row ─────────────────────────────────────────────────────────────── */
+.shareRow {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.shareBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 9px 2px;
+  border-radius: 11px;
+  border: none;
+  cursor: pointer;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  color: #fff;
+  transition: transform 0.15s, opacity 0.15s;
+}
+.shareBtn:active { transform: scale(0.95); opacity: 0.85; }
+
+.fbBtn   { background: #1877F2; }
+.xBtn    { background: #000; }
+.waBtn   { background: #25D366; }
+.copyBtn { background: var(--card); color: var(--text2); border: 1.5px solid var(--border); }
+
+/* ── Reactions ─────────────────────────────────────────────────────────────── */
+.reactBox {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 14px 12px;
+  margin-bottom: 0;
+}
+
+.reactLabel {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text2);
+  text-align: center;
+  margin-bottom: 12px;
+  font-family: var(--font-body);
+}
+
+.reactRow {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.reactRow::-webkit-scrollbar { display: none; }
+
+.reactBtn {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 50px;
+}
+.reactBtn:active { transform: scale(0.92); }
+
+.reactActive {
+  background: var(--brand-light);
+  border-color: var(--brand);
+}
+
+.reactEmoji { font-size: 20px; line-height: 1; }
+
+.reactCount {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text2);
+  font-family: var(--font-body);
+}
+
+.reactName {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text3);
+  font-family: var(--font-body);
+}
+
+/* ── Divider ───────────────────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}
+
+/* ── Article body ──────────────────────────────────────────────────────────── */
+.body {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 16px;
+}
+
+.bPara {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--text);
+  margin: 0 0 14px;
+}
+.bPara:last-child { margin-bottom: 0; }
+
+.bHeading {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--dark);
+  margin: 18px 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--brand-light);
+  letter-spacing: -0.2px;
+}
+
+.bQuote {
+  border-left: 3px solid var(--brand);
+  margin: 14px 0;
+  padding: 10px 14px;
+  background: var(--brand-light);
+  border-radius: 0 12px 12px 0;
+}
+.bQuote p {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text);
+  line-height: 1.65;
+  margin: 0 0 6px;
+  font-family: var(--font-body);
+}
+.bQuote cite {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand);
+  font-style: normal;
+  font-family: var(--font-body);
+}
+
+.tldr {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: linear-gradient(135deg,#f0f4ff,#e8ecff);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 14px;
+  border: 1px solid #c7d2fe;
+}
+
+.tldrBadge {
+  flex-shrink: 0;
+  background: var(--brand);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  font-family: var(--font-body);
+  margin-top: 2px;
+}
+
+.tldrText {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text2);
+  line-height: 1.55;
+  font-family: var(--font-body);
+}
+
+/* ── Related articles ──────────────────────────────────────────────────────── */
+.relatedSection {
+  margin-bottom: 0;
+}
+
+.relatedTitle {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--dark);
+  margin-bottom: 12px;
+  letter-spacing: -0.2px;
+}
+
+.relatedScroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.relCard {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  background: var(--card);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.relCard:active { transform: scale(0.98); border-color: rgba(53,88,240,0.2); }
+
+.relThumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.relEmoji { font-size: 24px; }
+
+.relBreaking {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: var(--red);
+  color: #fff;
+  font-size: 7px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 4px;
+  letter-spacing: 0.4px;
+  font-family: var(--font-body);
+}
+
+.relBody { flex: 1; min-width: 0; }
+
+.relCat {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--brand);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  font-family: var(--font-body);
+}
+
+.relTitle2 {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.38;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.relTime {
+  font-size: 10.5px;
+  color: var(--text3);
+  font-family: var(--font-body);
+}
+
+/* ── Comments ──────────────────────────────────────────────────────────────── */
+.commentsBox {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 16px;
+}
+
+.commentsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.commentsTitle {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--dark);
+}
+
+.commentsCount {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  background: var(--bg);
+  padding: 3px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-family: var(--font-body);
+}
+
+.commentInput {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  margin-bottom: 14px;
+  cursor: text;
+}
+
+.inputAv {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.inputPlaceholder {
+  font-size: 12.5px;
+  color: var(--text3);
+  font-family: var(--font-body);
+}
+
+.comment {
+  display: flex;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.commentAv {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.commentContent { flex: 1; min-width: 0; }
+
+.commentTop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.commentUser {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--dark);
+  font-family: var(--font-body);
+}
+
+.commentTime {
+  font-size: 10.5px;
+  color: var(--text3);
+  font-family: var(--font-body);
+}
+
+.commentText {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text);
+  font-family: var(--font-body);
+  margin-bottom: 8px;
+}
+
+.commentActions {
+  display: flex;
+  gap: 12px;
+}
+
+.likeBtn, .replyBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text3);
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: color 0.15s;
+}
+.likeBtn:active, .replyBtn:active { color: var(--brand); }
+
+/* ── End padding ───────────────────────────────────────────────────────────── */
+.endPad { height: 24px; }
