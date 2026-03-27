@@ -1,8 +1,8 @@
 import styles from './NewsHorizontalCard.module.css';
 
-export default function NewsHorizontalCard({ cat, tag, breaking, title, time, bg, emoji, source, delay = 0 }) {
+export default function NewsHorizontalCard({ cat, tag, breaking, title, time, bg, emoji, source, delay = 0, onClick }) {
   return (
-    <div className={styles.card} style={{ animationDelay: `${delay}s` }}>
+    <div className={styles.card} style={{ animationDelay: `${delay}s` }} onClick={onClick}>
       <div className={styles.thumb} style={{ background: bg }}>
         {emoji}
         {tag && !breaking && <div className={styles.tag}>{tag}</div>}

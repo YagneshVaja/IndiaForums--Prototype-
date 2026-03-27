@@ -18,7 +18,7 @@ import {
 const BATCH_SIZE    = 4;
 const SECTION_CYCLE = ['videos', 'quiz', 'photos', 'stories'];
 
-export default function NewsScreen() {
+export default function NewsScreen({ onArticlePress }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeLang,     setActiveLang]     = useState('all');
   const [chunksLoaded,   setChunksLoaded]   = useState(1);
@@ -106,9 +106,10 @@ export default function NewsScreen() {
 
   function renderItem(item) {
     if (item.type === 'article') {
+      const handler = () => onArticlePress && onArticlePress(item.data);
       return item.isVertical
-        ? <NewsVerticalCard   key={item.key} {...item.data} />
-        : <NewsHorizontalCard key={item.key} {...item.data} delay={0.04} />;
+        ? <NewsVerticalCard   key={item.key} {...item.data} onClick={handler} />
+        : <NewsHorizontalCard key={item.key} {...item.data} delay={0.04} onClick={handler} />;
     }
 
     const pool = {

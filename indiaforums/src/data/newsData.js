@@ -140,6 +140,16 @@ export function getNewsArticles(cat, lang) {
   return catData[lang] || [];
 }
 
+// Returns up to 3 related articles from the same top-level category, excluding the current one.
+export function getRelatedArticles(article) {
+  const topCat = (article.cat || '').split('·')[0].trim().toLowerCase();
+  const catKey = Object.keys(NS_DATA).find(k => k === topCat || topCat.includes(k)) || 'all';
+  const pool   = Object.values(NS_DATA[catKey] || NS_DATA.all).flat();
+  return pool
+    .filter(a => String(a.id) !== String(article.id) && a.title !== article.title)
+    .slice(0, 3);
+}
+
 // Returns exactly `batchSize` articles for `chunkIdx`, cycling base data infinitely.
 const TIME_VARIANTS = ['just now', '30 min ago', '1 hr ago', '2 hr ago', '4 hr ago', '6 hr ago', '9 hr ago', '12 hr ago', '1 day ago', '2 days ago'];
 export function getArticleBatch(cat, lang, chunkIdx, batchSize) {

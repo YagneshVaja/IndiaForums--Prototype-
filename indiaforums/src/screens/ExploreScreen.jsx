@@ -11,7 +11,7 @@ import ThreadCard from '../components/cards/ThreadCard';
 import { ARTICLES, EXPLORE_CHIPS } from '../data/articles';
 import { FORUMS, FORUM_TABS } from '../data/forums';
 
-export default function ExploreScreen() {
+export default function ExploreScreen({ onArticlePress }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeForumTab, setActiveForumTab] = useState('announcements');
 
@@ -36,7 +36,7 @@ export default function ExploreScreen() {
 
       <div className={styles.articles}>
         {articles.map((a, i) => (
-          <ArticleCard key={a.id} {...a} delay={i * 0.06} />
+          <ArticleCard key={a.id} {...a} delay={i * 0.06} onClick={() => onArticlePress && onArticlePress(a)} />
         ))}
       </div>
 
