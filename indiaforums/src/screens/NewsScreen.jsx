@@ -44,14 +44,17 @@ export default function NewsScreen() {
       const batch = getArticleBatch(activeCategory, activeLang, chunk, BATCH_SIZE);
       if (batch.length === 0) break; // empty category/lang — stop
 
-      batch.forEach((a, i) =>
+      batch.forEach((a, i) => {
+        // First article of feed → big hero card
+        // 3rd article of every subsequent batch → big featured card break
+        const isVertical = (chunk === 0 && i === 0) || (chunk > 0 && i === 2);
         items.push({
-          type:   'article',
-          data:   a,
-          isHero: chunk === 0 && i === 0,
-          key:    `article-${a.id}`,
-        })
-      );
+          type:       'article',
+          data:       a,
+          isVertical,
+          key:        `article-${a.id}`,
+        });
+      });
 
       // Inject one section after each batch
       const sType = SECTION_CYCLE[cycleIdx % SECTION_CYCLE.length];
@@ -103,7 +106,7 @@ export default function NewsScreen() {
 
   function renderItem(item) {
     if (item.type === 'article') {
-      return item.isHero
+      return item.isVertical
         ? <NewsVerticalCard   key={item.key} {...item.data} />
         : <NewsHorizontalCard key={item.key} {...item.data} delay={0.04} />;
     }
