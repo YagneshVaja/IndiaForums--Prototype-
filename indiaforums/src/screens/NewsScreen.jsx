@@ -11,7 +11,7 @@ import PhotoGallerySection from '../components/sections/PhotoGallerySection';
 import VisualStoriesSection from '../components/sections/VisualStoriesSection';
 
 import {
-  NEWS_CATS, NS_LANGS, getInfiniteArticles,
+  NEWS_CATS, NS_LANGS, getNewsArticles, getArticleBatch,
   VIDEOS, QUIZZES, PHOTO_GALLERIES, VISUAL_STORIES,
 } from '../data/newsData';
 
@@ -28,21 +28,21 @@ export default function NewsScreen() {
   const sentinelRef = useRef(null);
   const loadingRef  = useRef(false);
 
-  const langs       = NS_LANGS[activeCategory] || [];
-  const allArticles = useMemo(
-    () => getInfiniteArticles(activeCategory, activeLang),
+  const langs      = NS_LANGS[activeCategory] || [];
+  const hasArticles = useMemo(
+    () => getNewsArticles(activeCategory, activeLang).length > 0,
     [activeCategory, activeLang]
   );
 
-  // Build interleaved feed: BATCH_SIZE articles → section → repeat
+  // Build interleaved feed: BATCH_SIZE articles → section → repeat (truly unlimited)
   const feedItems = useMemo(() => {
-    const items    = [];
+    const items      = [];
     const pageCounts = { videos: 0, quiz: 0, photos: 0, stories: 0 };
-    let cycleIdx   = 0;
+    let cycleIdx     = 0;
 
     for (let chunk = 0; chunk < chunksLoaded; chunk++) {
-      const batch = allArticles.slice(chunk * BATCH_SIZE, chunk * BATCH_SIZE + BATCH_SIZE);
-      if (batch.length === 0) break;
+      const batch = getArticleBatch(activeCategory, activeLang, chunk, BATCH_SIZE);
+      if (batch.length === 0) break; // empty category/lang — stop
 
       batch.forEach((a, i) =>
         items.push({
@@ -53,7 +53,7 @@ export default function NewsScreen() {
         })
       );
 
-      // Inject section after every chunk
+      // Inject one section after each batch
       const sType = SECTION_CYCLE[cycleIdx % SECTION_CYCLE.length];
       const pIdx  = pageCounts[sType];
       items.push({ type: sType, pageIdx: pIdx, key: `${sType}-${chunk}` });
@@ -62,9 +62,9 @@ export default function NewsScreen() {
     }
 
     return items;
-  }, [allArticles, chunksLoaded]);
+  }, [activeCategory, activeLang, chunksLoaded]);
 
-  // Infinite scroll via IntersectionObserver
+  // Infinite scroll — re-observe whenever new content is rendered
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
@@ -78,15 +78,15 @@ export default function NewsScreen() {
             setChunksLoaded(c => c + 1);
             setLoading(false);
             loadingRef.current = false;
-          }, 500);
+          }, 400);
         }
       },
-      { threshold: 0.1 }
+      { rootMargin: '100px', threshold: 0 }
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [chunksLoaded]); // re-attach when chunksLoaded changes (sentinel may re-render)
+  }, [chunksLoaded]);
 
   function handleCategoryChange(cat) {
     setActiveCategory(cat);
@@ -131,7 +131,7 @@ export default function NewsScreen() {
 
       <div className={styles.feed} ref={feedRef}>
         <div className={styles.articles}>
-          {allArticles.length === 0 ? (
+          {!hasArticles ? (
             <div className={styles.empty}>No articles found for this selection.</div>
           ) : (
             feedItems.map(item => renderItem(item))

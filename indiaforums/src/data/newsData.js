@@ -140,23 +140,21 @@ export function getNewsArticles(cat, lang) {
   return catData[lang] || [];
 }
 
-// Extends the base article list to ~40 items for infinite scroll demo
-const TIME_VARIANTS = ['just now', '30 min ago', '1 hr ago', '2 hr ago', '4 hr ago', '6 hr ago', '9 hr ago', '12 hr ago', '1 day ago'];
-export function getInfiniteArticles(cat, lang) {
+// Returns exactly `batchSize` articles for `chunkIdx`, cycling base data infinitely.
+const TIME_VARIANTS = ['just now', '30 min ago', '1 hr ago', '2 hr ago', '4 hr ago', '6 hr ago', '9 hr ago', '12 hr ago', '1 day ago', '2 days ago'];
+export function getArticleBatch(cat, lang, chunkIdx, batchSize) {
   const base = getNewsArticles(cat, lang);
   if (base.length === 0) return [];
   const result = [];
-  let t = 0;
-  while (result.length < 40) {
-    for (const a of base) {
-      if (result.length >= 40) break;
-      result.push({
-        ...a,
-        id: `${a.id}_${result.length}`,
-        time: result.length < base.length ? a.time : TIME_VARIANTS[t % TIME_VARIANTS.length],
-      });
-      t++;
-    }
+  const start = chunkIdx * batchSize;
+  for (let i = 0; i < batchSize; i++) {
+    const globalIdx = start + i;
+    const a = base[globalIdx % base.length];
+    result.push({
+      ...a,
+      id:   `${a.id}_${globalIdx}`,
+      time: globalIdx < base.length ? a.time : TIME_VARIANTS[globalIdx % TIME_VARIANTS.length],
+    });
   }
   return result;
 }
