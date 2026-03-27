@@ -5,6 +5,7 @@
   -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
+  background: var(--bg);
 }
 
 .screen::-webkit-scrollbar {
