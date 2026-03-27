@@ -640,29 +640,35 @@
 .socialGrid {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  overflow: hidden;
 }
 
 .socialCard {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: var(--card);
-  border-radius: 14px;
-  border: 1px solid var(--border);
+  gap: 11px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
 }
+.socialCard:last-child { border-bottom: none; }
+.socialCard:active { background: var(--bg); }
 
 .socialIcon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 900;
   color: #fff;
   font-family: var(--font-body);
 }
@@ -670,26 +676,52 @@
 .socialInfo { flex: 1; min-width: 0; }
 
 .socialPlatform {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--dark);
+  font-family: var(--font-body);
+  line-height: 1.2;
+}
+
+.socialHandle {
+  font-size: 10.5px;
+  color: var(--text3);
+  font-family: var(--font-body);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.socialRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.socialCount {
   font-size: 12px;
   font-weight: 800;
   color: var(--dark);
   font-family: var(--font-body);
 }
 
-.socialHandle {
-  font-size: 11px;
-  color: var(--text3);
-  font-family: var(--font-body);
-  margin-top: 1px;
-}
-
-.socialCount {
-  font-size: 13px;
+.socialFollowBtn {
+  padding: 4px 11px;
+  background: var(--brand-light);
+  border: 1.5px solid var(--brand);
+  border-radius: 20px;
+  font-size: 10.5px;
   font-weight: 800;
   color: var(--brand);
   font-family: var(--font-body);
-  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
 }
+.socialFollowBtn:active { background: var(--brand); color: #fff; }
 
 /* ── Comments ──────────────────────────────────────────────────────────────── */
 .commentsBox {
