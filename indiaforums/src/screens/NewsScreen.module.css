@@ -16,13 +16,11 @@
   scrollbar-width: none;
   background: var(--bg);
 }
+.feed::-webkit-scrollbar { display: none; }
 
-.feed::-webkit-scrollbar {
-  display: none;
-}
-
+/* Horizontal padding here; sections use negative margin -14px to break out */
 .articles {
-  padding: 10px 14px 20px;
+  padding: 10px 14px 0;
 }
 
 .empty {
@@ -31,4 +29,31 @@
   color: var(--text3);
   font-size: 13px;
   font-weight: 600;
+}
+
+.sentinel {
+  height: 1px;
+}
+
+.loadingRow {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 8px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.spacer {
+  height: 20px;
 }
