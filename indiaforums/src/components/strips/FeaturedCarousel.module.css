@@ -1,0 +1,19 @@
+.section {
+  padding: 0 16px;
+}
+
+.scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+}
+
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.track {
+  display: flex;
+  gap: 12px;
+  width: max-content;
+}

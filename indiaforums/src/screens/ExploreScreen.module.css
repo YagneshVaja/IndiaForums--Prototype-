@@ -1,0 +1,57 @@
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen::-webkit-scrollbar {
+  display: none;
+}
+
+.articles {
+  padding: 4px 12px 0;
+}
+
+.forumWrap {
+  padding: 0 16px;
+}
+
+.forumTabs {
+  display: flex;
+  border-bottom: 2px solid #EEF1FA;
+  margin-bottom: 10px;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 11px 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text3);
+  cursor: pointer;
+  position: relative;
+  transition: color 0.15s;
+}
+
+.tabActive {
+  color: var(--dark);
+}
+
+.tabActive::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 18%;
+  right: 18%;
+  height: 2.5px;
+  background: var(--brand);
+  border-radius: 2px;
+}
+
+.spacer {
+  height: 20px;
+}

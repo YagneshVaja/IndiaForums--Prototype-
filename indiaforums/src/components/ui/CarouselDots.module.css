@@ -1,0 +1,23 @@
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 0 2px;
+}
+
+.dot {
+  height: 5px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.active {
+  width: 20px;
+  background: var(--brand);
+}
+
+.inactive {
+  width: 5px;
+  background: #CBD5E1;
+}
