@@ -1,6 +1,6 @@
 import styles from './PhotoGallerySection.module.css';
 
-export default function PhotoGallerySection({ galleries }) {
+export default function PhotoGallerySection({ galleries, onSeeAll, onGalleryPress }) {
   return (
     <div className={styles.section}>
       <div className={styles.header}>
@@ -12,12 +12,12 @@ export default function PhotoGallerySection({ galleries }) {
           </svg>
           <span className={styles.title}>Photo Galleries</span>
         </div>
-        <span className={styles.seeAll}>See All →</span>
+        <span className={styles.seeAll} onClick={onSeeAll}>See All →</span>
       </div>
 
       <div className={styles.scroll}>
         {galleries.map(g => (
-          <div key={g.id} className={styles.card}>
+          <div key={g.id} className={styles.card} onClick={() => onGalleryPress && onGalleryPress(g)}>
             <div className={styles.thumb} style={{ background: g.bg }}>
               <span className={styles.emoji}>{g.emoji}</span>
               <div className={styles.countBadge}>
