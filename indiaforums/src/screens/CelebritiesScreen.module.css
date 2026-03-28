@@ -1,0 +1,857 @@
+/* ────────────────────────────────────────────────────────────────────────────
+   CELEBRITIES SCREEN  ·  8pt spacing grid  ·  tokens from tokens.css
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* ── Screen ─────────────────────────────────────────────────────────────────── */
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  position: relative;
+}
+.screen::-webkit-scrollbar { display: none; }
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+/*  gradient consistent with brand  */
+.header {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  height: 48px;               /* 6×8 = 48 — standard mobile nav bar */
+  background: linear-gradient(135deg, #1e3a8a 0%, #3558F0 55%, #6d28d9 100%);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  gap: 8px;
+}
+
+/* 44×44 tap target, visually 34×34 — centred in the 44 box */
+.backBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+.backBtn:active { opacity: 0.7; }
+
+.headerTitle {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.2px;
+}
+
+/* Exact same width as backBtn so title is optically centred */
+.headerSpacer {
+  width: 44px;
+  flex-shrink: 0;
+}
+
+/* ── Category row ────────────────────────────────────────────────────────────── */
+.catRow {
+  background: var(--card);
+  padding: 10px 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Segmented-control style — single pill that moves */
+.catSegment {
+  display: flex;
+  background: var(--bg);
+  border-radius: 22px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.catBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text3);
+  background: transparent;
+  border: none;
+  border-radius: 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.catBtnActive {
+  color: #fff;
+  background: linear-gradient(135deg, #3558F0, #6d28d9);
+  box-shadow: 0 2px 8px rgba(53,88,240,0.3);
+}
+
+/* Week context strip */
+.weekStrip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px 8px;
+}
+
+.weekDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;     /* live green */
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(34,197,94,0.25);
+}
+
+.weekText {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+}
+
+/* ── Podium section ──────────────────────────────────────────────────────────── */
+.podiumSection {
+  padding: 14px 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── #1 Hero Card ────────────────────────────────────────────────────────────── */
+.topOneCard {
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  height: 188px;             /* fixed height = stable layout, no magic margins */
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.22);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.topOneCard:active {
+  transform: scale(0.985);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+
+/* Single bottom-up scrim only */
+.topOneScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0) 55%);
+  pointer-events: none;
+}
+
+/* Top row: medal badge + trend */
+.topOneTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+}
+
+.topOneMedal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.topOneMedalEmoji { font-size: 18px; }
+.topOneMedalLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  background: rgba(255,255,255,0.2);
+  padding: 3px 9px;
+  border-radius: 20px;
+  backdrop-filter: blur(6px);
+}
+
+/* Flex spacer — pushes bottom content down cleanly */
+.topOneSpacer { flex: 1; }
+
+/* Emoji sits in the spacer area, absolutely centred horizontally */
+.topOneEmojiWrap {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 56px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,0.35));
+  pointer-events: none;
+}
+
+/* Bottom row: name left, buzz arc right */
+.topOneBottomRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  position: relative;
+  z-index: 2;
+}
+.topOneLeft  { flex: 1; min-width: 0; }
+
+.topOneName {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topOneRole {
+  font-size: 12px;
+  color: rgba(255,255,255,0.72);
+  margin-top: 1px;
+}
+.topOneMeta {
+  font-size: 11px;
+  color: rgba(255,255,255,0.65);
+  margin-top: 4px;
+}
+.topOneStars { color: #fde68a; font-weight: 700; }
+
+.topOneRight {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  flex-shrink: 0;
+}
+.topOneBuzzLabel {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.65);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+/* ── Podium row (#2 & #3) ────────────────────────────────────────────────────── */
+.podiumRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.podiumCard {
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--card);
+  border: 2px solid transparent;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s;
+}
+.podiumCard:active { transform: scale(0.97); }
+
+/* Silver and Bronze tint borders */
+.podiumSilver { border-color: #CBD5E1; }
+.podiumBronze { border-color: #D97706; border-color: rgba(217,119,6,0.4); }
+
+.podiumImg {
+  position: relative;
+  height: 104px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.podiumImgScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(0,0,0,0.32) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.podiumRankBadge {
+  position: absolute;
+  top: 7px;
+  left: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  background: rgba(0,0,0,0.28);
+  padding: 2px 7px;
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+
+.podiumEmoji {
+  font-size: 42px;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,0.3));
+  position: relative;
+  z-index: 1;
+}
+
+.podiumInfo {
+  padding: 8px 10px;          /* 8pt grid */
+  background: var(--card);
+}
+
+.podiumName {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.podiumBuzzRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+}
+.podiumBuzzBar {
+  flex: 1;
+  height: 5px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.podiumBuzzFill {
+  height: 100%;
+  background: linear-gradient(90deg, #3558F0, #A78BFA);
+  border-radius: 3px;
+}
+.podiumBuzzNum {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand);
+  width: 20px;
+  text-align: right;
+}
+
+.podiumMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+.podiumStars {
+  font-size: 11px;
+  font-weight: 700;
+  color: #f59e0b;
+}
+
+/* ── Trend badges ────────────────────────────────────────────────────────────── */
+.trend {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+.trendSmall {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 5px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+.trendUp     { color: #16a34a; background: #dcfce7; }
+.trendDown   { color: #dc2626; background: #fee2e2; }
+.trendStable { color: var(--text3); background: var(--border); }
+
+/* ── Rank 4+ section ─────────────────────────────────────────────────────────── */
+.rankSection {
+  padding: 0 14px;
+  margin-top: 8px;
+}
+
+.rankLabel {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 8px 0 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Rank card ───────────────────────────────────────────────────────────────── */
+.rankCard {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  /* Fix: use opacity, NOT border-radius on active */
+  transition: opacity 0.12s;
+}
+.rankCard:last-child { border-bottom: none; }
+.rankCard:active     { opacity: 0.75; }
+
+.rankNumCol {
+  width: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.rankNumText {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1;
+}
+
+/* Avatar — initials only (no ghost emoji) */
+.rankAvatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.rankAvatarInitials {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.35);
+}
+
+.rankInfo {
+  flex: 1;
+  min-width: 0;
+}
+.rankName {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rankRole {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Buzz bar */
+.rankBuzzRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+}
+.rankBuzzTrack {
+  flex: 1;
+  height: 6px;               /* 6px — readable without being oversized */
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.rankBuzzFill {
+  height: 100%;
+  background: linear-gradient(90deg, #3558F0, #A78BFA);
+  border-radius: 3px;
+}
+.rankBuzzNum {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand);
+  width: 20px;
+  text-align: right;
+}
+
+/* Stars — right side */
+.rankStars {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+/* ── Bottom sheet ─────────────────────────────────────────────────────────────── */
+.sheetOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(12,16,36,0.6);
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sheet {
+  width: 100%;
+  background: var(--card);
+  border-radius: 22px 22px 0 0;
+  max-height: 90%;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s cubic-bezier(0.32,0.72,0,1);
+  overflow: hidden;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ── Sheet hero ──────────────────────────────────────────────────────────────── */
+.sheetHero {
+  position: relative;
+  height: 196px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px 14px 16px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Drag pill ON the gradient */
+.sheetPill {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  background: rgba(255,255,255,0.45);
+  border-radius: 2px;
+  z-index: 5;
+  flex-shrink: 0;
+}
+
+.sheetHeroScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 50%);
+  pointer-events: none;
+}
+
+/* Shine overlay */
+.sheetHero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Top controls */
+.sheetHeroTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 3;
+  margin-top: 16px;           /* clear the pill */
+}
+
+.sheetCloseBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.22);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.sheetCloseBtn:active { background: rgba(255,255,255,0.35); }
+
+.sheetRankBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  background: rgba(255,255,255,0.22);
+  padding: 4px 10px;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+}
+
+/* Large emoji — centred, pointer-events off */
+.sheetHeroEmoji {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -54%);
+  font-size: 66px;
+  line-height: 1;
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,0.4));
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Name at bottom */
+.sheetHeroBottom {
+  position: relative;
+  z-index: 3;
+}
+.sheetHeroName {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  line-height: 1.1;
+}
+.sheetHeroRole {
+  font-size: 12px;
+  color: rgba(255,255,255,0.72);
+  margin-top: 2px;
+}
+
+/* ── Sheet body ──────────────────────────────────────────────────────────────── */
+.sheetBody {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 16px 14px 0;
+}
+.sheetBody::-webkit-scrollbar { display: none; }
+
+/* ── 3 equal-height stat tiles ───────────────────────────────────────────────── */
+.sheetStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+/* All tiles share min-height so they render equally tall */
+.sheetStatTile {
+  border-radius: 14px;
+  padding: 12px 8px 12px;
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.sheetStatVal {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1;
+}
+
+.sheetStatLbl {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+/* ── Section pattern ─────────────────────────────────────────────────────────── */
+.sheetSection {
+  margin-bottom: 20px;
+}
+
+.sheetSectionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.sheetSectionLabel {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.sheetSeeAll {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand);
+  cursor: pointer;
+}
+
+/* Bio */
+.bio {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text2);
+  margin: 0;
+}
+
+/* ── News cards ──────────────────────────────────────────────────────────────── */
+.newsCard {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--brand);
+}
+.newsCard:last-child { margin-bottom: 0; }
+
+.newsCardMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.newsCardCat {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--brand);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.newsCardTime {
+  font-size: 10px;
+  color: var(--text3);
+}
+.newsCardTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+/* ── Thread cards ────────────────────────────────────────────────────────────── */
+.threadCard {
+  display: flex;
+  align-items: center;
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  gap: 10px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s;
+}
+.threadCard:last-child { margin-bottom: 0; }
+.threadCard:active { background: var(--brand-light); }
+
+.threadCardBody { flex: 1; min-width: 0; }
+.threadCardTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+}
+.threadReplies {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 4px;
+}
+.threadDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--brand);
+  flex-shrink: 0;
+}
+.threadArrow {
+  font-size: 20px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+/* ── Primary CTA button ──────────────────────────────────────────────────────── */
+.ctaBtn {
+  position: relative;
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  overflow: hidden;
+  margin-top: 4px;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.ctaBtn:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
+/* White tint overlay so the gradient bg doesn't look too raw */
+.ctaBtnScrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.12);
+  pointer-events: none;
+}
+
+.ctaBtnText {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  letter-spacing: 0.3px;
+}
+
+/* ── Misc ────────────────────────────────────────────────────────────────────── */
+.sheetSpacer { height: 32px; }
+.spacer      { height: 24px; }
