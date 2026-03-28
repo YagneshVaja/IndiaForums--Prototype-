@@ -6,12 +6,14 @@ import StatusBar     from './components/layout/StatusBar';
 import TopNav        from './components/layout/TopNav';
 import BottomNav     from './components/layout/BottomNav';
 
-import ExploreScreen from './screens/ExploreScreen';
-import NewsScreen    from './screens/NewsScreen';
-import ForumScreen   from './screens/ForumScreen';
-import SearchScreen  from './screens/SearchScreen';
-import MySpaceScreen from './screens/MySpaceScreen';
-import ArticleScreen from './screens/ArticleScreen';
+import ExploreScreen      from './screens/ExploreScreen';
+import NewsScreen         from './screens/NewsScreen';
+import ForumScreen        from './screens/ForumScreen';
+import SearchScreen       from './screens/SearchScreen';
+import MySpaceScreen      from './screens/MySpaceScreen';
+import ArticleScreen      from './screens/ArticleScreen';
+import GalleryScreen      from './screens/GalleryScreen';
+import GalleryDetailScreen from './screens/GalleryDetailScreen';
 
 const SCREENS = {
   explore: ExploreScreen,
@@ -22,17 +24,57 @@ const SCREENS = {
 };
 
 export default function App() {
-  const [activeTab,       setActiveTab]       = useState('explore');
-  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [activeTab,        setActiveTab]        = useState('explore');
+  const [selectedArticle,  setSelectedArticle]  = useState(null);
+  const [showGalleries,    setShowGalleries]    = useState(false);
+  const [selectedGallery,  setSelectedGallery]  = useState(null);
 
   const ActiveScreen = SCREENS[activeTab];
 
-  function handleArticlePress(article) {
-    setSelectedArticle(article);
+  function handleGalleryPress(gallery) {
+    setSelectedGallery(gallery);
+    setShowGalleries(false);
   }
 
-  function handleBack() {
-    setSelectedArticle(null);
+  function handleGalleryBack() {
+    setSelectedGallery(null);
+    setShowGalleries(true);
+  }
+
+  function handleGalleriesOpen() {
+    setShowGalleries(true);
+  }
+
+  function handleGalleriesBack() {
+    setShowGalleries(false);
+  }
+
+  // Gallery detail takes highest priority
+  if (selectedGallery) {
+    return (
+      <PhoneShell>
+        <DynamicIsland />
+        <StatusBar />
+        <GalleryDetailScreen
+          gallery={selectedGallery}
+          onBack={handleGalleryBack}
+        />
+      </PhoneShell>
+    );
+  }
+
+  // Gallery list screen
+  if (showGalleries) {
+    return (
+      <PhoneShell>
+        <DynamicIsland />
+        <StatusBar />
+        <GalleryScreen
+          onBack={handleGalleriesBack}
+          onGalleryPress={handleGalleryPress}
+        />
+      </PhoneShell>
+    );
   }
 
   return (
@@ -43,13 +85,17 @@ export default function App() {
       {selectedArticle ? (
         <ArticleScreen
           article={selectedArticle}
-          onBack={handleBack}
-          onArticlePress={handleArticlePress}
+          onBack={() => setSelectedArticle(null)}
+          onArticlePress={setSelectedArticle}
         />
       ) : (
         <>
           <TopNav />
-          <ActiveScreen onArticlePress={handleArticlePress} />
+          <ActiveScreen
+            onArticlePress={setSelectedArticle}
+            onGalleryPress={handleGalleryPress}
+            onGalleriesOpen={handleGalleriesOpen}
+          />
           <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
         </>
       )}

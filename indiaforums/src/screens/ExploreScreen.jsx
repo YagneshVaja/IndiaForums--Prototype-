@@ -7,11 +7,17 @@ import ChipsRow from '../components/strips/ChipsRow';
 import SectionHeader from '../components/ui/SectionHeader';
 import ArticleCard from '../components/cards/ArticleCard';
 import ThreadCard from '../components/cards/ThreadCard';
+import PhotoGallerySection from '../components/sections/PhotoGallerySection';
 
 import { ARTICLES, EXPLORE_CHIPS } from '../data/articles';
 import { FORUMS, FORUM_TABS } from '../data/forums';
+import { GALLERIES } from '../data/galleryData';
 
-export default function ExploreScreen({ onArticlePress }) {
+const PREVIEW_GALLERIES = GALLERIES.slice(0, 4).map(g => ({
+  id: g.id, title: g.title, count: g.count, emoji: g.emoji, bg: g.bg,
+}));
+
+export default function ExploreScreen({ onArticlePress, onGalleryPress, onGalleriesOpen }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeForumTab, setActiveForumTab] = useState('announcements');
 
@@ -39,6 +45,13 @@ export default function ExploreScreen({ onArticlePress }) {
           <ArticleCard key={a.id} {...a} delay={i * 0.06} onClick={() => onArticlePress && onArticlePress(a)} />
         ))}
       </div>
+
+      {/* Galleries strip */}
+      <PhotoGallerySection
+        galleries={PREVIEW_GALLERIES}
+        onSeeAll={onGalleriesOpen}
+        onGalleryPress={onGalleryPress}
+      />
 
       <SectionHeader title="Forums" />
       <div className={styles.forumWrap}>
