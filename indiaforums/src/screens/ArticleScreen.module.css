@@ -72,17 +72,27 @@
 /* ── Hero ──────────────────────────────────────────────────────────────────── */
 .hero {
   width: 100%;
-  height: 220px;
+  height: 210px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .heroEmoji {
-  font-size: 72px;
-  filter: drop-shadow(0 4px 16px rgba(0,0,0,0.3));
+  font-size: 80px;
+  filter: drop-shadow(0 6px 20px rgba(0,0,0,0.35));
+  position: relative;
+  z-index: 1;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.45) 100%);
+  z-index: 0;
 }
 
 .heroBadges {
@@ -91,6 +101,18 @@
   left: 14px;
   display: flex;
   gap: 6px;
+  z-index: 2;
+}
+
+/* ── Hero caption ──────────────────────────────────────────────────────────── */
+.heroCaption {
+  padding: 5px 14px 0;
+  font-size: 10.5px;
+  color: var(--text3);
+  font-family: var(--font-body);
+  font-style: italic;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
 }
 
 .badgeBreaking {
@@ -235,32 +257,39 @@
 /* ── Share row ─────────────────────────────────────────────────────────────── */
 .shareRow {
   display: flex;
-  gap: 7px;
-  margin-bottom: 14px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
 }
 
-.shareBtn {
-  flex: 1;
+.shareLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text3);
+  font-family: var(--font-body);
+  flex-shrink: 0;
+}
+
+.shareCircle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 9px 2px;
-  border-radius: 11px;
   border: none;
   cursor: pointer;
-  font-size: 10.5px;
-  font-weight: 700;
-  font-family: var(--font-body);
-  color: #fff;
+  flex-shrink: 0;
   transition: transform 0.15s, opacity 0.15s;
 }
-.shareBtn:active { transform: scale(0.95); opacity: 0.85; }
+.shareCircle:active { transform: scale(0.9); opacity: 0.8; }
 
 .fbBtn   { background: #1877F2; }
 .xBtn    { background: #000; }
 .waBtn   { background: #25D366; }
-.copyBtn { background: var(--card); color: var(--text2); border: 1.5px solid var(--border); }
+.copyBtn { background: var(--card); border: 1.5px solid var(--border); }
 
 /* ── Reactions ─────────────────────────────────────────────────────────────── */
 .reactBox {
@@ -328,37 +357,37 @@
 
 /* ── Divider ───────────────────────────────────────────────────────────────── */
 .divider {
-  height: 1px;
+  height: 6px;
   background: var(--border);
-  margin: 16px 0;
+  margin: 20px -14px;
+  opacity: 0.5;
 }
 
 /* ── Article body ──────────────────────────────────────────────────────────── */
 .body {
-  background: var(--card);
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  padding: 16px;
+  background: transparent;
+  padding: 0;
 }
 
 .bPara {
   font-family: var(--font-body);
-  font-size: 13.5px;
-  line-height: 1.75;
+  font-size: 15px;
+  line-height: 1.8;
   color: var(--text);
-  margin: 0 0 14px;
+  margin: 0 0 16px;
 }
 .bPara:last-child { margin-bottom: 0; }
 
 .bHeading {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 800;
   color: var(--dark);
-  margin: 18px 0 10px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--brand-light);
-  letter-spacing: -0.2px;
+  margin: 22px 0 12px;
+  padding-left: 12px;
+  border-left: 3px solid var(--brand);
+  letter-spacing: -0.3px;
+  line-height: 1.3;
 }
 
 .bQuote {
@@ -494,11 +523,14 @@
 /* ── Shared section label ──────────────────────────────────────────────────── */
 .sectionLabel {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--dark);
-  margin-bottom: 12px;
-  letter-spacing: -0.2px;
+  margin-bottom: 14px;
+  letter-spacing: -0.3px;
+  padding-left: 11px;
+  border-left: 3px solid var(--brand);
+  line-height: 1.2;
 }
 
 /* ── Entities section ──────────────────────────────────────────────────────── */
@@ -576,8 +608,8 @@
 .relCard:active { transform: scale(0.98); border-color: rgba(53,88,240,0.2); }
 
 .relThumb {
-  width: 64px;
-  height: 64px;
+  width: 80px;
+  height: 80px;
   border-radius: 12px;
   flex-shrink: 0;
   display: flex;
@@ -617,7 +649,7 @@
 
 .relTitle {
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--text);
   line-height: 1.38;
@@ -856,4 +888,4 @@
 .likeBtn:active, .replyBtn:active { color: var(--brand); }
 
 /* ── End padding ───────────────────────────────────────────────────────────── */
-.endPad { height: 24px; }
+.endPad { height: 40px; }

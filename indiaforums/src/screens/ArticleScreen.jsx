@@ -186,10 +186,14 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
         {/* Hero */}
         <div className={styles.hero} style={{ background: article.bg }}>
           <span className={styles.heroEmoji}>{article.emoji}</span>
+          <div className={styles.heroOverlay} />
           <div className={styles.heroBadges}>
             {article.breaking && <span className={styles.badgeBreaking}>BREAKING</span>}
             {article.tag      && <span className={styles.badgeTag}>{article.tag}</span>}
           </div>
+        </div>
+        <div className={styles.heroCaption}>
+          <span>{article.source || 'India Forums'}</span> · Photo for representation
         </div>
 
         <div className={styles.content}>
@@ -236,21 +240,18 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
 
           {/* Share */}
           <div className={styles.shareRow}>
-            <button className={`${styles.shareBtn} ${styles.fbBtn}`}>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M7.5 2.2H9V.5H7.5C6.2.5 5.2 1.5 5.2 2.8v.9H3.8v2h1.4V12H7V5.7h1.4l.4-2H7V2.8c0-.33.27-.6.5-.6z" fill="white"/></svg>
-              <span>Facebook</span>
+            <span className={styles.shareLabel}>Share:</span>
+            <button className={`${styles.shareCircle} ${styles.fbBtn}`} title="Facebook">
+              <svg width="14" height="14" viewBox="0 0 13 13" fill="none"><path d="M7.5 2.2H9V.5H7.5C6.2.5 5.2 1.5 5.2 2.8v.9H3.8v2h1.4V12H7V5.7h1.4l.4-2H7V2.8c0-.33.27-.6.5-.6z" fill="white"/></svg>
             </button>
-            <button className={`${styles.shareBtn} ${styles.xBtn}`}>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 1l4.4 4.8L1 12h1.4l3.2-3.7 2.8 3.7H12L7.3 6.7 11.5 1h-1.4L6.3 4.4 4 1H1z" fill="white"/></svg>
-              <span>Post</span>
+            <button className={`${styles.shareCircle} ${styles.xBtn}`} title="X / Twitter">
+              <svg width="14" height="14" viewBox="0 0 13 13" fill="none"><path d="M1 1l4.4 4.8L1 12h1.4l3.2-3.7 2.8 3.7H12L7.3 6.7 11.5 1h-1.4L6.3 4.4 4 1H1z" fill="white"/></svg>
             </button>
-            <button className={`${styles.shareBtn} ${styles.waBtn}`}>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="white" strokeWidth="1.2"/><path d="M4 4.2c.4-.4.9-.4 1.2 0l.8 1c.2.3.1.6-.1.8l-.3.3c.4.7.9 1.3 1.7 1.7l.3-.3c.2-.2.5-.2.8-.1l1 .8c.4.3.4.8 0 1.2-.7.7-1.8.9-2.8.3C5.3 9 4 7.7 3.8 6.3c-.2-.9 0-1.8.2-2.1z" fill="white"/></svg>
-              <span>WhatsApp</span>
+            <button className={`${styles.shareCircle} ${styles.waBtn}`} title="WhatsApp">
+              <svg width="14" height="14" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="white" strokeWidth="1.2"/><path d="M4 4.2c.4-.4.9-.4 1.2 0l.8 1c.2.3.1.6-.1.8l-.3.3c.4.7.9 1.3 1.7 1.7l.3-.3c.2-.2.5-.2.8-.1l1 .8c.4.3.4.8 0 1.2-.7.7-1.8.9-2.8.3C5.3 9 4 7.7 3.8 6.3c-.2-.9 0-1.8.2-2.1z" fill="white"/></svg>
             </button>
-            <button className={`${styles.shareBtn} ${styles.copyBtn}`}>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="4" width="7" height="8" rx="1.3" stroke="currentColor" strokeWidth="1.2"/><path d="M4 4V3a1.3 1.3 0 011.3-1.3H11A1.3 1.3 0 0112.3 3v6A1.3 1.3 0 0111 10.3h-1" stroke="currentColor" strokeWidth="1.2"/></svg>
-              <span>Copy</span>
+            <button className={`${styles.shareCircle} ${styles.copyBtn}`} title="Copy link">
+              <svg width="14" height="14" viewBox="0 0 13 13" fill="none"><rect x="1" y="4" width="7" height="8" rx="1.3" stroke="currentColor" strokeWidth="1.2"/><path d="M4 4V3a1.3 1.3 0 011.3-1.3H11A1.3 1.3 0 0112.3 3v6A1.3 1.3 0 0111 10.3h-1" stroke="currentColor" strokeWidth="1.2"/></svg>
             </button>
           </div>
 
