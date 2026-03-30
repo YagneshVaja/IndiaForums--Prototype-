@@ -13,11 +13,9 @@ import { ARTICLES, EXPLORE_CHIPS } from '../data/articles';
 import { FORUMS, FORUM_TABS } from '../data/forums';
 import { GALLERIES } from '../data/galleryData';
 
-const PREVIEW_GALLERIES = GALLERIES.slice(0, 4).map(g => ({
-  id: g.id, title: g.title, count: g.count, emoji: g.emoji, bg: g.bg,
-}));
+const PREVIEW_GALLERIES = GALLERIES.slice(0, 4);
 
-export default function ExploreScreen({ onArticlePress, onGalleryPress, onGalleriesOpen }) {
+export default function ExploreScreen({ onArticlePress, onGalleryPress, onGalleriesOpen, onStoryPress }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeForumTab, setActiveForumTab] = useState('announcements');
 
@@ -33,7 +31,7 @@ export default function ExploreScreen({ onArticlePress, onGalleryPress, onGaller
 
   return (
     <div className={styles.screen}>
-      <StoriesStrip />
+      <StoriesStrip onItemPress={onStoryPress} />
 
       <SectionHeader title="Trending Now" />
       <FeaturedCarousel onArticlePress={onArticlePress} />
