@@ -394,6 +394,7 @@
   margin-top: 8px;
 }
 
+/* HT / NDTV: red rule underline = editorial authority */
 .rankLabel {
   font-family: var(--font-display);
   font-size: 10px;
@@ -402,7 +403,8 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   padding: 8px 0 6px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--red);
+  display: inline-block;
 }
 
 /* ── Rank card ───────────────────────────────────────────────────────────────── */
@@ -737,12 +739,13 @@
 }
 
 /* ── News cards ──────────────────────────────────────────────────────────────── */
+/* TOI / HT / NDTV: news accent = editorial red, not brand blue               */
 .newsCard {
   background: var(--bg);
   border-radius: 12px;
   padding: 10px 12px;
   margin-bottom: 8px;
-  border-left: 3px solid var(--brand);
+  border-left: 3px solid var(--red);
 }
 .newsCard:last-child { margin-bottom: 0; }
 
@@ -752,10 +755,11 @@
   gap: 8px;
   margin-bottom: 4px;
 }
+/* TOI / IE: tiny red ALL-CAPS category label above the headline */
 .newsCardCat {
   font-size: 9px;
   font-weight: 700;
-  color: var(--brand);
+  color: var(--red);
   text-transform: uppercase;
   letter-spacing: 0.6px;
 }
