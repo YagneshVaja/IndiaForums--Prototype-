@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import styles from './CelebritiesScreen.module.css';
+import SectionHeader from '../components/ui/SectionHeader';
 import { CELEBS, CELEB_CATEGORIES, WEEK_LABEL } from '../data/celebrities';
 
 // ── Trend badge ───────────────────────────────────────────────────────────────
@@ -55,14 +56,6 @@ function BuzzArc({ value, uid, size = 60, stroke = 5, textColor = '#fff', trackC
     </svg>
   );
 }
-
-// ── Back icon ─────────────────────────────────────────────────────────────────
-const BackIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <path d="M12.5 5L7.5 10L12.5 15" stroke="currentColor" strokeWidth="2.2"
-      strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
 
 // ── #1 Hero Card ──────────────────────────────────────────────────────────────
 function TopOneCard({ celeb, onPress }) {
@@ -296,7 +289,7 @@ function CelebDetail({ celeb, onClose }) {
 }
 
 // ── Main screen ───────────────────────────────────────────────────────────────
-export default function CelebritiesScreen({ onBack }) {
+export default function CelebritiesScreen() {
   const [activeCat,    setActiveCat]    = useState('bollywood');
   const [selectedCeleb, setSelectedCeleb] = useState(null);
 
@@ -306,19 +299,6 @@ export default function CelebritiesScreen({ onBack }) {
 
   return (
     <div className={styles.screen}>
-
-      {/* ── Header ── */}
-      <div className={styles.header}>
-        {/* Back button — 44×44 tap target */}
-        <button className={styles.backBtn} onClick={onBack} aria-label="Go back">
-          <BackIcon />
-        </button>
-
-        <span className={styles.headerTitle}>Celebrity Rankings</span>
-
-        {/* Right spacer matches back button width exactly for true centering */}
-        <div className={styles.headerSpacer} />
-      </div>
 
       {/* ── Category segmented control ── */}
       <div className={styles.catRow}>
@@ -358,7 +338,7 @@ export default function CelebritiesScreen({ onBack }) {
       {/* ── Rank 4+ ── */}
       {rest.length > 0 && (
         <div className={styles.rankSection}>
-          <div className={styles.rankLabel}>More Rankings</div>
+          <SectionHeader title="More Rankings" linkLabel={null} />
           {rest.map((c) => (
             <RankCard key={c.id} celeb={c} onPress={setSelectedCeleb} />
           ))}

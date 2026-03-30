@@ -500,13 +500,13 @@ export default function QuizzesScreen({ onBack }) {
     <div className={styles.screen}>
 
       {/* Header */}
-      <div className={styles.header}>
+      {/* <div className={styles.header}>
         <button className={styles.backBtn} onClick={onBack} aria-label="Go back">
           <BackIcon />
         </button>
         <span className={styles.headerTitle}>Fan Quizzes</span>
         <div className={styles.headerSpacer} />
-      </div>
+      </div> */}
 
       {/* Category segmented control */}
       <div className={styles.catRow}>
