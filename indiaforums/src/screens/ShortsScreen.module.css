@@ -1,0 +1,544 @@
+/* ────────────────────────────────────────────────────────────────────────────
+   SHORTS SCREEN  ·  8pt spacing grid  ·  tokens from tokens.css
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* ── Screen ──────────────────────────────────────────────────────────────────── */
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  position: relative;
+}
+.screen::-webkit-scrollbar { display: none; }
+
+/* ── Category tab bar ────────────────────────────────────────────────────────── */
+.catBar {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 14px;
+  flex-shrink: 0;
+}
+
+.catScroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 10px 0;
+}
+.catScroll::-webkit-scrollbar { display: none; }
+
+.catBtn {
+  flex-shrink: 0;
+  padding: 6px 18px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+
+.catActive {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+  font-weight: 700;
+}
+
+/* ── Feed header strip ───────────────────────────────────────────────────────── */
+.feedHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px 6px;
+}
+
+.feedDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  flex-shrink: 0;
+}
+
+.feedLabel {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.2px;
+  flex: 1;
+}
+
+.feedCount {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+}
+
+/* ── 2-column grid ───────────────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 0 12px;
+}
+
+/* ── Short card ──────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.card:active {
+  transform: scale(0.96);
+  box-shadow: none;
+}
+
+/* Thumbnail */
+.thumb {
+  position: relative;
+  height: 158px;
+  overflow: hidden;
+}
+
+.thumbEmoji {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  font-size: 52px;
+  opacity: 0.55;
+  line-height: 1;
+  user-select: none;
+}
+
+.thumbScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.05) 0%,
+    rgba(0,0,0,0.08) 40%,
+    rgba(0,0,0,0.65) 100%
+  );
+}
+
+/* Category chip — top left */
+.catChip {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+
+/* Duration badge — top right */
+.durBadge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  background: rgba(0,0,0,0.65);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+
+/* Play button — center */
+.playWrap {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Views — bottom */
+.viewsRow {
+  position: absolute;
+  bottom: 7px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: rgba(255,255,255,0.85);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Card body */
+.cardBody {
+  padding: 8px 9px 10px;
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.cardMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.cardAuthor {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--brand);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.cardTime {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+/* ── Bottom sheet overlay ────────────────────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  max-height: 88vh;
+  background: var(--card);
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sheet hero */
+.sheetHero {
+  position: relative;
+  height: 200px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 10px;
+}
+
+.sheetPill {
+  width: 36px;
+  height: 4px;
+  background: rgba(255,255,255,0.45);
+  border-radius: 2px;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.sheetHeroScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.45) 100%);
+  pointer-events: none;
+}
+
+.sheetTopRow {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 3;
+}
+
+.sheetCloseBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.4);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+.sheetCloseBtn:active { opacity: 0.7; }
+
+.sheetCatBadge {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
+}
+
+.sheetDurBadge {
+  margin-left: auto;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.sheetEmoji {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -58%);
+  font-size: 64px;
+  opacity: 0.45;
+  line-height: 1;
+  user-select: none;
+  z-index: 1;
+}
+
+.sheetPlayRow {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+}
+
+.sheetPlayBtn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.22);
+  border: 2px solid rgba(255,255,255,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.sheetPlayBtn:active { transform: scale(0.93); }
+
+/* Sheet body */
+.sheetBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 16px 0;
+  scrollbar-width: none;
+}
+.sheetBody::-webkit-scrollbar { display: none; }
+
+.sheetTitle {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.3;
+  margin-bottom: 12px;
+}
+
+/* Author row */
+.authorRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.authorAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.authorInitials {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.authorName {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.authorTime {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+
+/* Stats row — mirrors QuizzesScreen stat tiles */
+.statsRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.statTile {
+  flex: 1;
+  border-radius: 10px;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.statVal {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.statLbl {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--text3);
+}
+
+/* Description */
+.sheetDesc {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.6;
+  margin: 0 0 14px;
+}
+
+/* Tags */
+.tagsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.tag {
+  background: var(--brand-light);
+  color: var(--brand);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+/* Action row */
+.actionRow {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.ctaBtn {
+  flex: 1;
+  border: none;
+  border-radius: 12px;
+  height: 46px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+.ctaBtn:active { opacity: 0.85; }
+
+.ctaScrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.22);
+}
+
+.ctaText {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+
+.shareBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 16px;
+  height: 46px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--text2);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.shareBtn:active { background: var(--bg); }
+
+.spacer { height: 24px; }
+.sheetSpacer { height: 28px; }

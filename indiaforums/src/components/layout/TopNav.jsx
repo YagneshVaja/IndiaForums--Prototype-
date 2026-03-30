@@ -1,6 +1,23 @@
 import styles from './TopNav.module.css';
 
-export default function TopNav() {
+export default function TopNav({ title, onBack }) {
+  // ── Back-navigation mode ─────────────────────────────────────────────────────
+  if (onBack && title) {
+    return (
+      <div className={styles.topnav}>
+        <button className={styles.backBtn} onClick={onBack} aria-label="Go back">
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
+            <path d="M8 2L2 8l6 6" stroke="var(--dark)" strokeWidth="2.2"
+              strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        <div className={styles.screenTitle}>{title}</div>
+        <div className={styles.spacer} />
+      </div>
+    );
+  }
+
+  // ── Default brand nav ────────────────────────────────────────────────────────
   return (
     <div className={styles.topnav}>
       {/* Hamburger menu */}
