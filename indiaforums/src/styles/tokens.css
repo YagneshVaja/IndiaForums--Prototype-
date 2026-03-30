@@ -1,84 +1,101 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&family=Roboto+Condensed:wght@400;600;700;800&display=swap');
 
 /*
-  ╔══════════════════════════════════════════════════════════════════════╗
-  ║  INDIAFORUMS — Design Token System                                   ║
-  ║  Inspired by: Twitter/X (text/border), TOI (red/breaking),          ║
-  ║               Inshorts (clean surfaces), Instagram (interactions)   ║
-  ╚══════════════════════════════════════════════════════════════════════╝
+  ╔══════════════════════════════════════════════════════════════════════════╗
+  ║  INDIAFORUMS — Design Token System v2                                    ║
+  ║                                                                          ║
+  ║  Color references:                                                       ║
+  ║  · Backgrounds  → Google News (#F2F2F2) + Inshorts (#FAFAFA)           ║
+  ║  · Text         → TOI / Hindustan Times (#1A1A1A warm near-black)      ║
+  ║  · Borders      → HT / IE (#E0E0E0 neutral hairline, zero blue cast)   ║
+  ║  · Editorial red→ NDTV / TOI / Indian Express (#CC0000)                ║
+  ║  · Brand blue   → IndiaForums signature (kept, forum/entertainment)     ║
+  ║  · Green/Amber  → Inshorts status indicators                            ║
+  ╚══════════════════════════════════════════════════════════════════════════╝
 */
 
 :root {
 
-  /* ─────────────────────────────────────────────
-     BRAND
-     Primary: IndiaForums signature blue
-     Used for: CTAs, active states, links, icons
-  ───────────────────────────────────────────── */
+  /* ─────────────────────────────────────────────────────────────────────────
+     BRAND  ·  IndiaForums signature blue
+     Ref: Kept intentionally — forums / entertainment sites use blue CTAs.
+          All six reference news apps use red, but IF is a community platform.
+     Used for: CTAs, active states, links, icons, navigation
+  ───────────────────────────────────────────────────────────────────────── */
   --brand:       #3558F0;
-  --brand-light: #EEF2FF;
-  --brand-glow:  rgba(53, 88, 240, 0.12);
+  --brand-light: #EBF0FF;            /* tinted surface for badges / chips     */
+  --brand-glow:  rgba(53,88,240,.10);/* soft glow for active shadows          */
 
-  /* ─────────────────────────────────────────────
-     SURFACE
-     Inspired by: Twitter/X + Inshorts
-     #F7F9F9 = Twitter's exact page background
-     Far cleaner and less blue-tinted than old #F4F6FC
-  ───────────────────────────────────────────── */
-  --bg:      #F7F9F9;
-  --card:    #FFFFFF;
-  --surface: #F2F4F7;   /* pressed states, nested card backgrounds */
+  /* ─────────────────────────────────────────────────────────────────────────
+     SURFACES
+     Ref: Google News (#F2F2F2), Inshorts (#FAFAFA), TOI (#F5F5F5)
+     Key insight: ALL six apps use warm/neutral gray, NOT blue-tinted gray.
+     #F5F6F7 splits the diff between Google News and Inshorts — neutral,
+     warm-leaning, zero blue cast.
+  ───────────────────────────────────────────────────────────────────────── */
+  --bg:      #F5F6F7;    /* page background  · Google News / TOI style        */
+  --card:    #FFFFFF;    /* card / panel bg  · pure white, all six apps       */
+  --surface: #EEEFF1;    /* pressed / nested · slightly darker than bg        */
 
-  /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────────────────────────────────
      TEXT
-     Inspired by: Twitter/X
-     #0F1419 = Twitter's near-black — warmer, higher contrast
-     #536471 = Twitter's secondary text — neutral, not purple
-     #8B9EA8 = Twitter's tertiary — muted, reads as gray not lavender
-  ───────────────────────────────────────────── */
-  --dark:  #0C1024;   /* hero overlays, darkest text */
-  --text:  #0F1419;   /* primary body text */
-  --text2: #536471;   /* secondary: author, metadata, descriptions */
-  --text3: #8B9EA8;   /* tertiary: timestamps, placeholders, disabled */
+     Ref: TOI (#333333), HT (#1A1A1A), Indian Express (#121212), Inshorts (#0D0D0D)
+     Old Twitter tokens had blue tints (#0F1419, #536471, #8B9EA8).
+     Indian news apps use WARM dark neutrals — no blue cast.
+  ───────────────────────────────────────────────────────────────────────── */
+  --dark:  #0D0D0D;    /* deepest black — hero overlays, large display type  */
+  --text:  #1A1A1A;    /* primary body text — TOI / HT standard              */
+  --text2: #5F5F5F;    /* secondary — author, byline, descriptions           */
+  --text3: #9E9E9E;    /* tertiary — timestamps, placeholders, disabled      */
 
-  /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────────────────────────────────
      BORDERS
-     Inspired by: Twitter/X
-     #EFF3F4 = Twitter's hairline border — nearly invisible,
-     keeps surfaces clean without visual noise
-  ───────────────────────────────────────────── */
-  --border: #EFF3F4;
+     Ref: HT / IE / Google News (#E0E0E0–#DADCE0 neutral hairlines)
+     Old: #EFF3F4 had a blue-green tint — visible against warm gray bg.
+     New: #E2E2E2 is a clean neutral — matches HT, IE, Google News exactly.
+  ───────────────────────────────────────────────────────────────────────── */
+  --border: #E2E2E2;
 
-  /* ─────────────────────────────────────────────
-     SEMANTIC: RED (Breaking / Error / Hot)
-     Inspired by: TOI breaking red + Twitter like-red
-     #F4212E = exact Twitter/TOI breaking signal red
-     More vivid and authoritative than old #EF4444
-  ───────────────────────────────────────────── */
-  --red:         #F4212E;
-  --red-surface: #FFF0F1;   /* red tint background for badges/chips */
+  /* ─────────────────────────────────────────────────────────────────────────
+     EDITORIAL RED  ·  Breaking / Live / Alert / Error
+     Ref: NDTV (#C00000), TOI (#CC0000), HT (#D0021B), Indian Express (#E8282B)
+     Old #F4212E was Twitter's red — vivid orange-leaning.
+     Indian news apps use a DEEPER, more authoritative red — less orange, more
+     crimson. #C8001E splits NDTV and HT precisely.
+  ───────────────────────────────────────────────────────────────────────── */
+  --red:         #C8001E;   /* editorial crimson — NDTV / HT midpoint         */
+  --red-light:   #E8282B;   /* lighter red for tags/chips on dark surfaces    */
+  --red-surface: #FFF0F1;   /* tinted bg for breaking badges                 */
 
-  /* ─────────────────────────────────────────────
-     SEMANTIC: GREEN (Success / Live / Complete)
-     Inspired by: Twitter/X Retweet green
-     #00BA7C = Twitter's exact success green
-     Used for: completed stories, live indicators, positive trends
-  ───────────────────────────────────────────── */
-  --green:         #00BA7C;
-  --green-surface: #E6F9F3;  /* green tint background */
+  /* ─────────────────────────────────────────────────────────────────────────
+     GREEN  ·  Live / Completed / Positive
+     Ref: Inshorts uses a deep forest green for live indicators.
+     #1A7A48 — deeper and more editorial than Twitter's #00BA7C.
+  ───────────────────────────────────────────────────────────────────────── */
+  --green:         #1A7A48;
+  --green-surface: #E8F5EE;
 
-  /* ─────────────────────────────────────────────
-     SEMANTIC: AMBER (Trending / Ongoing / Warning)
-     Inspired by: Instagram Story ring warm tones
-     #F7A928 = warm amber — distinct from red/green
-     Used for: ongoing status, trending badges, warnings
-  ───────────────────────────────────────────── */
-  --amber:         #F7A928;
-  --amber-surface: #FFF8ED;  /* amber tint background */
+  /* ─────────────────────────────────────────────────────────────────────────
+     AMBER  ·  Trending / Ongoing / Warning
+     Ref: TOI uses amber for "trending" pills. Inshorts uses it for
+     "ongoing" story states. #F5A623 is a clean, warm amber.
+  ───────────────────────────────────────────────────────────────────────── */
+  --amber:         #F5A623;
+  --amber-surface: #FFF8EC;
 
-  /* ─────────────────────────────────────────────
+  /* ─────────────────────────────────────────────────────────────────────────
      TYPOGRAPHY
-  ───────────────────────────────────────────── */
+     Both fonts are shared across Google News, TOI digital, and Inshorts.
+  ───────────────────────────────────────────────────────────────────────── */
   --font-display: 'Roboto Condensed', sans-serif;
   --font-body:    'Roboto', sans-serif;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     SHADOWS  ·  Google News card elevation model
+     News apps use very subtle shadows — not dramatic, just enough to
+     lift cards off the background. Three levels like Material Design.
+  ───────────────────────────────────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.06);
+  --shadow-sm: 0 1px 4px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,.10), 0 4px 16px rgba(0,0,0,.06);
 }
