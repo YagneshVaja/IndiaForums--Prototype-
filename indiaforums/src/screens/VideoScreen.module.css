@@ -1,4 +1,10 @@
-/* ─── VideoScreen ──────────────────────────────────────────────────────────── */
+/*
+  VideoScreen — Design System
+  References: NDTV, Hindustan Times, Indian Express, Google News, Inshorts, TOI
+  8pt spacing grid. WCAG AA contrast on all text.
+*/
+
+/* ── Screen wrapper ──────────────────────────────────────────────────────────── */
 .screen {
   flex: 1;
   overflow-y: auto;
@@ -10,328 +16,454 @@
 }
 .screen::-webkit-scrollbar { display: none; }
 
-/* ── Header ─────────────────────────────────────────────────────────────────── */
+/* ── Header — clean white sticky bar (NDTV / HT style) ──────────────────────── */
 .header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 16px;
+  padding: 0 8px 0 6px;
   height: 56px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   flex-shrink: 0;
 }
 
-.backBtn {
+/* 44×44 tap target — WCAG 2.5.5 */
+.backBtn,
+.searchBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: none;
   background: transparent;
   color: var(--text);
   cursor: pointer;
+  transition: background 0.14s;
   flex-shrink: 0;
-  transition: background 0.15s;
-  margin-left: -8px;
 }
-.backBtn:hover  { background: var(--bg); }
-.backBtn:active { background: var(--border); }
+.backBtn:hover,
+.searchBtn:hover  { background: var(--bg); }
+.backBtn:active,
+.searchBtn:active { background: var(--border); }
+
+.headerMid {
+  flex: 1;
+  padding-left: 4px;
+}
 
 .headerTitle {
-  flex: 1;
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 800;
   color: var(--dark);
+  letter-spacing: -0.3px;
 }
 
-.headerActions {
-  display: flex;
-  gap: 4px;
-}
-
-.iconBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: var(--text2);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.iconBtn:hover  { background: var(--bg); }
-.iconBtn:active { background: var(--border); }
-
-/* ── Category tabs ──────────────────────────────────────────────────────────── */
+/* ── Category tabs — horizontal scroll with active underline ─────────────────── */
+/* Follows NDTV / Google News / Inshorts tab pattern */
 .catBar {
   display: flex;
-  gap: 0;
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 0 12px;
   background: var(--card);
-  border-bottom: 2px solid var(--border);
+  border-bottom: 1.5px solid var(--border);
   flex-shrink: 0;
+  padding: 0 8px;
+  gap: 0;
 }
 .catBar::-webkit-scrollbar { display: none; }
 
 .catTab {
   flex-shrink: 0;
-  padding: 12px 14px;
+  padding: 11px 13px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text3);
+  background: transparent;
+  border: none;
   cursor: pointer;
   position: relative;
-  transition: color 0.15s;
+  transition: color 0.14s;
   white-space: nowrap;
+  font-family: var(--font-body);
 }
-.catTab.active {
-  color: var(--brand);
+.catTab:hover { color: var(--text2); }
+
+/* TOI / HT: active tab = editorial red underline */
+.catActive {
+  color: var(--tab-color, var(--red)) !important;
+  font-weight: 700;
 }
-.catTab.active::after {
+.catActive::after {
   content: '';
   position: absolute;
-  bottom: -2px;
-  left: 14px;
-  right: 14px;
+  bottom: -1.5px;
+  left: 13px;
+  right: 13px;
   height: 2.5px;
-  background: var(--brand);
+  background: var(--tab-color, var(--red));
   border-radius: 2px;
 }
 
-/* ── Featured hero ──────────────────────────────────────────────────────────── */
-.featured {
-  margin: 14px 14px 0;
+/* ── Section divider — Hindustan Times / Indian Express accent-left style ─────── */
+.sectionDivider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 14px 9px;
+}
+
+/* HT / NDTV: section accent bar = editorial red */
+.dividerBar {
+  width: 3px;
+  height: 16px;
+  background: var(--accent, var(--red));
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.dividerLabel {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--dark);
+  letter-spacing: -0.1px;
+  text-transform: uppercase;
+}
+
+.dividerSeeAll {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--brand);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font-body);
+}
+
+/* ── Trending section ────────────────────────────────────────────────────────── */
+.trendSection {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+}
+
+/* Horizontal scroll strip — NDTV / HT "Top Stories" pattern */
+.trendStrip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0 14px;
+  /* Snap scroll for satisfying card swipe (Inshorts feeling) */
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.trendStrip::-webkit-scrollbar { display: none; }
+
+/* ── Trending card — Inshorts gradient-overlay style ────────────────────────── */
+/* Width ~78% so part of next card is visible (invitation to scroll) */
+.trendCard {
+  flex-shrink: 0;
+  width: 78%;
   border-radius: 14px;
   overflow: hidden;
-  position: relative;
-  flex-shrink: 0;
   cursor: pointer;
+  scroll-snap-align: start;
+  transition: transform 0.18s;
 }
+.trendCard:active { transform: scale(0.97); }
 
-.featuredThumb {
+.trendThumb {
   width: 100%;
-  height: 180px;
+  aspect-ratio: 16 / 9;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  overflow: hidden;
 }
 
-.featuredEmoji {
-  font-size: 52px;
-  opacity: 0.8;
+/* Decorative background emoji — faded, large (TOI / Inshorts feeling) */
+.trendEmoji {
+  font-size: 56px;
+  opacity: 0.55;
+  user-select: none;
+  pointer-events: none;
 }
 
-.featuredPlay {
+/* Inshorts-style bottom gradient scrim — makes text legible over any bg */
+.trendScrim {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.18);
-  transition: background 0.2s;
-}
-.featured:hover .featuredPlay { background: rgba(0,0,0,0.28); }
-
-.playCircle {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.92);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.28);
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 30%,
+    rgba(0,0,0,0.25) 55%,
+    rgba(0,0,0,0.80) 100%
+  );
 }
 
-.featuredTag {
+/* Category chip — top-left (NDTV badge style) */
+.trendCatChip {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  background: var(--brand);
-  color: #fff;
+  top: 9px;
+  left: 9px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
+  color: #fff;
   padding: 3px 7px;
   border-radius: 4px;
+  text-transform: uppercase;
+  font-family: var(--font-body);
 }
 
-.featuredDuration {
+/* LIVE badge — TOI red pulsing style */
+.liveChip {
+  background: #E11D48;
+  animation: livePulse 2s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.75; }
+}
+
+.liveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  display: inline-block;
+  animation: dotBlink 1.2s ease-in-out infinite;
+}
+@keyframes dotBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* Duration or LIVE label — bottom right */
+.trendDuration {
   position: absolute;
-  bottom: 10px;
-  right: 10px;
-  background: rgba(0,0,0,0.72);
+  bottom: 44px;
+  right: 9px;
+  background: rgba(0,0,0,0.7);
   color: #fff;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
-  letter-spacing: 0.3px;
+  font-family: var(--font-body);
 }
 
-.featuredInfo {
-  padding: 10px 12px 12px;
-  background: var(--card);
-}
-
-.featuredTitle {
-  font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--dark);
-  line-height: 1.25;
-  margin-bottom: 5px;
-}
-
-.featuredMeta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--text3);
-}
-
-.metaDot { font-size: 8px; }
-
-/* ── Section header ─────────────────────────────────────────────────────────── */
-.sectionHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 14px 8px;
-}
-
-.sectionTitle {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--dark);
-}
-
-.seeAll {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--brand);
-  cursor: pointer;
-}
-
-/* ── Video grid ─────────────────────────────────────────────────────────────── */
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 0 14px;
-}
-
-.card {
-  background: var(--card);
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: transform 0.18s, box-shadow 0.18s;
-  animation: fadeUp 0.3s both;
-}
-.card:active { transform: scale(0.97); }
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.thumb {
-  width: 100%;
-  aspect-ratio: 16/9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.thumbEmoji {
-  font-size: 28px;
-  opacity: 0.85;
-}
-
-.thumbPlay {
+/* Play button — centred on thumbnail (YouTube style) */
+.trendPlayWrap {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.15);
 }
 
-.playDot {
-  width: 28px;
-  height: 28px;
+.trendPlayBtn {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.9);
+  background: rgba(0,0,0,0.5);
+  border: 2px solid rgba(255,255,255,0.6);
   display: flex;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(4px);
+  padding-left: 2px; /* optical centering of triangle */
 }
 
-.thumbDuration {
+/* Title + meta overlaid at bottom — Inshorts / Reels card pattern */
+.trendContent {
   position: absolute;
-  bottom: 5px;
-  right: 5px;
-  background: rgba(0,0,0,0.72);
-  color: #fff;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 5px;
-  border-radius: 3px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 10px 10px;
 }
 
-.newBadge {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  background: var(--red);
-  color: #fff;
-  font-size: 8px;
+.trendTitle {
+  font-family: var(--font-display);
+  font-size: 13.5px;
   font-weight: 800;
-  padding: 2px 5px;
-  border-radius: 3px;
-  letter-spacing: 0.5px;
-}
-
-.cardBody {
-  padding: 8px 8px 10px;
-}
-
-.cardTitle {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.35;
+  color: #fff;
+  line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
   margin-bottom: 4px;
 }
 
-.cardMeta {
+.trendMeta {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 10px;
-  color: var(--text3);
+  color: rgba(255,255,255,0.75);
+  font-family: var(--font-body);
 }
 
-/* ── Spacer ─────────────────────────────────────────────────────────────────── */
-.spacer { height: 24px; }
+/* ── Video grid — 2-column (indiaforums / TOI / NDTV style) ─────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+}
+
+/* ── Grid card ───────────────────────────────────────────────────────────────── */
+.gridCard {
+  background: var(--card);
+  cursor: pointer;
+  transition: background 0.14s;
+  animation: fadeIn 0.25s both;
+}
+.gridCard:active { background: var(--bg); }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* 16:9 thumbnail */
+.gridThumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.gridEmoji {
+  font-size: 28px;
+  opacity: 0.72;
+  user-select: none;
+}
+
+/* Always-visible play overlay — darker on hover */
+.gridPlayOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.16s;
+}
+.gridCard:hover .gridPlayOverlay { background: rgba(0,0,0,0.32); }
+
+.gridPlayBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.52);
+  border: 1.5px solid rgba(255,255,255,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 1px;
+  backdrop-filter: blur(2px);
+}
+
+/* Duration — YouTube standard bottom-right chip */
+.gridDuration {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background: rgba(0,0,0,0.76);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.2px;
+  font-family: var(--font-body);
+}
+
+/* Card body — below thumbnail */
+.gridBody {
+  padding: 8px 9px 11px;
+}
+
+/* Category chip — Google News / Indian Express coloured label */
+.gridCatChip {
+  display: inline-block;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-bottom: 5px;
+  font-family: var(--font-body);
+}
+
+/* Title — 2-line clamp */
+.gridTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 5px;
+  font-family: var(--font-body);
+}
+
+/* Timestamp — Inshorts / Google News meta style */
+.gridTime {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--text3);
+  font-family: var(--font-body);
+}
+
+/* ── Load More — publication pagination feel ─────────────────────────────────── */
+.loadMore {
+  display: block;
+  width: calc(100% - 28px);
+  margin: 14px 14px 0;
+  padding: 12px;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand);
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.14s, border-color 0.14s;
+  font-family: var(--font-body);
+}
+.loadMore:hover  { background: var(--brand-light); border-color: var(--brand); }
+.loadMore:active { background: #dde5ff; }
+
+/* ── Bottom spacer ───────────────────────────────────────────────────────────── */
+.spacer { height: 28px; }
