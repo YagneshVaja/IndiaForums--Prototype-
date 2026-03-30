@@ -1,33 +1,12 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import styles from './VideoScreen.module.css';
+import SectionHeader from '../components/ui/SectionHeader';
 import { VIDEO_CATS, CAT_ACCENT, TRENDING_VIDEOS, VIDEOS } from '../data/videoData';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
-const BackIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <path d="M12.5 5L7.5 10L12.5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-const SearchIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-    <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.8"/>
-    <path d="M12.5 12.5l3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-  </svg>
-);
 const PlayFill = ({ size = 14 }) => (
   <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
     <path d="M4 2.5l8 4.5-8 4.5V2.5z" fill="white"/>
-  </svg>
-);
-const FireIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <path d="M6.5 1C6.5 1 9 3.5 9 6a2.5 2.5 0 01-5 0C4 4 5.5 2.5 5.5 2.5S4 4.5 4 6a2.5 2.5 0 005 0c0-2-2.5-5-2.5-5z"
-      fill="currentColor" opacity="0.9"/>
-  </svg>
-);
-const ChevronRight = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-    <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 const ClockIcon = () => (
@@ -133,23 +112,8 @@ function GridCard({ video, delay }) {
   );
 }
 
-// ─── Section divider — Hindustan Times / Indian Express accent-left style ─────
-function SectionDivider({ label, accent, onSeeAll }) {
-  return (
-    <div className={styles.sectionDivider} style={{ '--accent': accent }}>
-      <div className={styles.dividerBar} />
-      <span className={styles.dividerLabel}>{label}</span>
-      {onSeeAll && (
-        <button className={styles.dividerSeeAll} onClick={onSeeAll}>
-          See all <ChevronRight />
-        </button>
-      )}
-    </div>
-  );
-}
-
 // ─── Main screen ──────────────────────────────────────────────────────────────
-export default function VideoScreen({ onBack }) {
+export default function VideoScreen() {
   const [activeCat, setActiveCat] = useState('all');
   const [page, setPage] = useState(1);
   const PER_PAGE = 8;
@@ -168,23 +132,9 @@ export default function VideoScreen({ onBack }) {
   const hasMore     = gridVisible.length < filtered.length;
 
   const activeCatData = VIDEO_CATS.find(c => c.id === activeCat);
-  const accent        = getCatAccent(activeCat);
 
   return (
     <div className={styles.screen}>
-
-      {/* ── Sticky header ─────────────────────────────────────────────────── */}
-      <div className={styles.header}>
-        <button className={styles.backBtn} onClick={onBack} aria-label="Go back">
-          <BackIcon />
-        </button>
-        <div className={styles.headerMid}>
-          <span className={styles.headerTitle}>Videos</span>
-        </div>
-        <button className={styles.searchBtn} aria-label="Search">
-          <SearchIcon />
-        </button>
-      </div>
 
       {/* ── Category tabs — NDTV / Google News style ─────────────────────── */}
       <div className={styles.catBar}>
@@ -203,11 +153,7 @@ export default function VideoScreen({ onBack }) {
       {/* ── Trending strip — NDTV / HT "Top Stories" horizontal scroll ──── */}
       {trendingVisible.length > 0 && (
         <div className={styles.trendSection}>
-          <SectionDivider
-            label="Trending Now"
-            accent="#EF4444"
-            icon={<FireIcon />}
-          />
+          <SectionHeader title="Trending Now" linkLabel={null} />
           <div className={styles.trendStrip}>
             {trendingVisible.map(v => (
               <TrendingCard key={v.id} video={v} />
@@ -217,9 +163,9 @@ export default function VideoScreen({ onBack }) {
       )}
 
       {/* ── Latest videos grid ────────────────────────────────────────────── */}
-      <SectionDivider
-        label={activeCat === 'all' ? 'Latest Videos' : activeCatData?.label}
-        accent={accent.bar}
+      <SectionHeader
+        title={activeCat === 'all' ? 'Latest Videos' : activeCatData?.label}
+        linkLabel={null}
       />
 
       <div className={styles.grid}>

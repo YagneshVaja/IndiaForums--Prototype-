@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import styles from './GalleryScreen.module.css';
 import { GALLERIES, GALLERY_CATS } from '../data/galleryData';
 
-export default function GalleryScreen({ onBack, onGalleryPress }) {
+export default function GalleryScreen({ onGalleryPress }) {
   const [activeCat, setActiveCat] = useState('all');
 
   const filtered = useMemo(() =>
@@ -19,26 +19,6 @@ export default function GalleryScreen({ onBack, onGalleryPress }) {
 
   return (
     <div className={styles.screen}>
-      {/* ── Header ── */}
-      <div className={styles.header}>
-        <button className={styles.backBtn} onClick={onBack}>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M11 4L6 9l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        <div className={styles.headerTitle}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="1" y="3" width="14" height="11" rx="2.5" stroke="var(--brand)" strokeWidth="1.5"/>
-            <circle cx="5.5" cy="7" r="1.4" stroke="var(--brand)" strokeWidth="1.2"/>
-            <path d="M1 12l4-3.5 2.5 2.5 3-4L15 12" stroke="var(--brand)" strokeWidth="1.3" strokeLinejoin="round"/>
-          </svg>
-          <span>Photo Gallery</span>
-        </div>
-        <div className={styles.countPill}>
-          {isAll ? `${GALLERIES.length} albums` : `${filtered.length} of ${GALLERIES.length}`}
-        </div>
-      </div>
-
       {/* ── Category Tabs ── */}
       <div className={styles.catBar}>
         {GALLERY_CATS.map(c => (

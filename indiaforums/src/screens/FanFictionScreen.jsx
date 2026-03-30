@@ -171,7 +171,7 @@ function StoryCard({ story, delay = 0 }) {
 }
 
 // ─── Main Screen ───────────────────────────────────────────────────────────────
-export default function FanFictionScreen({ onBack }) {
+export default function FanFictionScreen() {
   const [activeGenre,   setActiveGenre]   = useState('all');
   const [activeShow,    setActiveShow]    = useState('all');
   const [activeSortTab, setActiveSortTab] = useState('trending');
@@ -202,24 +202,7 @@ export default function FanFictionScreen({ onBack }) {
   return (
     <div className={styles.screen}>
 
-      {/* ── 1. Header — sticky ── */}
-      <div className={styles.header}>
-        <button className={styles.backBtn} onClick={onBack} aria-label="Go back">
-          <BackIcon />
-        </button>
-        <div className={styles.headerTitle}>Fan Fictions</div>
-        <div className={styles.headerActions}>
-          <button className={styles.iconBtn} aria-label="Search">
-            <SearchIcon />
-          </button>
-          <button className={styles.writeBtn}>
-            <PlusIcon />
-            Write
-          </button>
-        </div>
-      </div>
-
-      {/* ── 2. Show / Fandom Filter — scrollable row with right fade ── */}
+      {/* ── 1. Show / Fandom Filter — scrollable row with right fade ── */}
       <div className={styles.showWrap}>
         <div className={styles.showScroll}>
           {FF_SHOWS.map(s => (
