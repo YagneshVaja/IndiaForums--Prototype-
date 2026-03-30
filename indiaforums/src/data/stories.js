@@ -4,6 +4,6 @@ export const STORIES = [
   { id: 3, label: 'Galleries',   emoji: '🖼️', bg: 'linear-gradient(135deg,#F0FDF4,#BBF7D0)', hasStory: true },
   { id: 4, label: 'Fan Fictions',emoji: '📖', bg: 'linear-gradient(135deg,#FDF4FF,#E9D5FF)', hasStory: true },
   { id: 5, label: 'Quizzes',     emoji: '❓', bg: 'linear-gradient(135deg,#FFF1F2,#FECDD3)', hasStory: true },
-  { id: 6, label: 'Shorts',      emoji: '⚡', bg: 'linear-gradient(135deg,#FFFBEB,#FDE68A)', hasStory: false },
-  { id: 7, label: 'Web Stories', emoji: '🌐', bg: 'linear-gradient(135deg,#F0F9FF,#BAE6FD)', hasStory: false },
+  { id: 6, label: 'Shorts',      emoji: '⚡', bg: 'linear-gradient(135deg,#FFFBEB,#FDE68A)', hasStory: true },
+  { id: 7, label: 'Web Stories', emoji: '🌐', bg: 'linear-gradient(135deg,#F0F9FF,#BAE6FD)', hasStory: true },
 ];
