@@ -1,206 +1,387 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   GALLERY SCREEN  ·  Color references:
+   · Header        → Inshorts / IE (white, hairline border, no gradient)
+   · Category tabs → TOI / HT (active = editorial red, not brand blue)
+   · Stats numbers → TOI / NDTV (editorial red for impact numbers)
+   · Section label → HT / NDTV (red rule underline = editorial authority)
+   · Cards         → Google News (white, subtle shadow, 12px radius)
+   · Card category → TOI / IE (small red all-caps label above title)
+   ───────────────────────────────────────────────────────────────────────────── */
+
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Screen ─────────────────────────────────────────────────────────────────── */
+/* NO overflow here — screen is just the outer flex column shell */
 .screen {
   flex: 1;
-  overflow-y: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   background: var(--bg);
+  min-height: 0;
 }
-.screen::-webkit-scrollbar { display: none; }
 
-/* ── Header ── */
+/* ── Header — sits outside scroll area, never moves ─────────────────────────── */
 .header {
   display: flex;
   align-items: center;
-  padding: 10px 14px;
+  height: 52px;
+  padding: 0 14px;
+  gap: 10px;
   border-bottom: 1px solid var(--border);
   background: var(--card);
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  flex-shrink: 0;
+  z-index: 20;
 }
 
+/* 44×44 tap target — WCAG 2.5.5 */
 .backBtn {
-  background: none;
+  width: 44px;
+  height: 44px;
   border: none;
-  padding: 4px;
+  background: transparent;
   cursor: pointer;
   color: var(--text);
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  transition: background 0.15s;
+  margin-left: -10px;
 }
+.backBtn:active { background: var(--surface); }
 
-.headerCenter {
+.headerTitle {
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 6px;
-}
-
-.headerIcon {
-  font-size: 16px;
-}
-
-.headerTitle {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
-  color: var(--dark);
-  letter-spacing: -0.3px;
+  color: var(--text);
 }
 
-.headerRight {
-  display: flex;
-  align-items: center;
-}
-
+/* Neutral count pill — not brand blue (news apps use neutral metadata) */
 .countPill {
-  background: var(--brand);
-  color: #fff;
   font-size: 10px;
   font-weight: 700;
-  padding: 2px 8px;
+  color: var(--text3);
+  background: var(--surface);
+  padding: 3px 9px;
   border-radius: 20px;
-  font-family: var(--font-body);
+  border: 1px solid var(--border);
+  white-space: nowrap;
 }
 
-/* ── Category chips ── */
-.catWrap {
-  border-bottom: 1px solid var(--border);
-  background: var(--card);
-}
-
-.catScroll {
+/* ── Category bar — sits outside scroll area, never moves ───────────────────── */
+.catBar {
   display: flex;
-  gap: 7px;
+  gap: 6px;
   overflow-x: auto;
   padding: 10px 14px;
   scrollbar-width: none;
-}
-.catScroll::-webkit-scrollbar { display: none; }
-
-.catChip {
-  flex-shrink: 0;
-  padding: 5px 14px;
-  border-radius: 20px;
-  border: 1.5px solid var(--border);
   background: var(--card);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text3);
-  cursor: pointer;
-  font-family: var(--font-body);
-  transition: all 0.15s;
-  text-transform: capitalize;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 19;
 }
+.catBar::-webkit-scrollbar { display: none; }
 
+.catTab {
+  flex-shrink: 0;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 13px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.catTab:active { transform: scale(0.95); }
+
+/* TOI / NDTV: active = editorial red, not brand blue */
 .catActive {
-  background: var(--brand);
-  border-color: var(--brand);
+  background: var(--red);
+  border-color: var(--red);
   color: #fff;
 }
 
-/* ── Grid ── */
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 12px;
+/* ── Scroll area — the ONLY thing that scrolls ──────────────────────────────── */
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 14px 0;
+  min-height: 0;
 }
+.scrollArea::-webkit-scrollbar { display: none; }
 
-/* ── Card ── */
-.card {
-  cursor: pointer;
-  animation: fadeInUp 0.3s ease both;
-}
-.card:active .thumb { transform: scale(0.97); }
-
-.thumb {
+/* ── Hero / Featured — NDTV / TOI large image with bottom scrim ─────────────── */
+.hero {
   position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1;
+  height: 200px;
   border-radius: 14px;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 7px;
-  transition: transform 0.15s;
+  cursor: pointer;
+  animation: fadeInUp 0.3s ease both;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-md);
 }
+.hero:active { transform: scale(0.99); }
 
-.thumbEmoji {
-  font-size: 40px;
+.heroEmoji {
+  font-size: 64px;
   z-index: 1;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
 }
 
-.thumbScrim {
+.heroOverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.45) 100%);
-}
-
-.countBadge {
-  position: absolute;
-  bottom: 7px;
-  right: 7px;
-  background: rgba(0,0,0,0.65);
-  color: #fff;
-  font-size: 9.5px;
-  font-weight: 700;
-  padding: 3px 6px;
-  border-radius: 6px;
-  font-family: var(--font-body);
+  background: linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.78) 100%);
   display: flex;
-  align-items: center;
-  gap: 3px;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 14px 14px 44px;
   z-index: 2;
 }
 
-.catTag {
-  position: absolute;
-  top: 7px;
-  left: 7px;
-  background: rgba(0,0,0,0.55);
-  color: #fff;
-  font-size: 8.5px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 10px;
+/* Tiny red category label — TOI / NDTV pattern */
+.heroCat {
+  font-size: 9px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-  font-family: var(--font-body);
-  z-index: 2;
+  letter-spacing: 1px;
+  color: #FF9999;
+  margin-bottom: 5px;
 }
 
-.cardMeta {
-  padding: 0 2px;
-}
-
-.cardTitle {
-  font-family: var(--font-body);
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.4;
-  margin: 0 0 3px;
+.heroTitle {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 6px;
+  line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.cardTime {
-  font-family: var(--font-body);
-  font-size: 10px;
-  color: var(--text3);
-  font-weight: 500;
+.heroMeta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
-.spacer { height: 20px; }
+.heroCount {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.82);
+}
+
+.heroDot  { color: rgba(255,255,255,0.4); font-size: 10px; }
+.heroTime { font-size: 11px; color: rgba(255,255,255,0.62); }
+
+/* Glassmorphism "View Gallery" pill — Inshorts floating action style */
+.heroViewBtn {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.28);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+
+/* ── Stats row — flat white card, red numbers (TOI / NDTV impact numbers) ────── */
+.statsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: var(--card);
+  border-radius: 12px;
+  padding: 12px 0;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  animation: fadeInUp 0.3s 0.05s ease both;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/* TOI / NDTV: key statistics in editorial red = authority + attention */
+.statNum {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--red);
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 9px;
+  color: var(--text3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statDivider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+}
+
+/* ── Section label — HT / NDTV: bold ALL-CAPS + red rule underline ─────────── */
+.sectionLabel {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  padding-bottom: 7px;
+  border-bottom: 2px solid var(--red);
+  display: inline-block;
+}
+
+/* ── 2-col grid — Google News card pattern ───────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* ── Gallery card — Google News: white, thin border, xs shadow, 12px radius ─── */
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  animation: fadeInUp 0.3s ease both;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.card:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+.cardThumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.cardEmoji {
+  font-size: 32px;
+  z-index: 1;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25));
+}
+
+.cardOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 35%, rgba(0,0,0,0.38) 100%);
+}
+
+/* Photo count badge — Inshorts dark pill, bottom-right */
+.cardCount {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(0,0,0,0.65);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-family: var(--font-body);
+}
+
+.cardBody {
+  padding: 8px 10px 10px;
+}
+
+/* TOI / NDTV / IE: category = tiny red ALL-CAPS label above the headline */
+.cardCat {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--red);
+  font-family: var(--font-body);
+}
+
+/* HT / IE headline style: semi-bold, tight line-height, 2-line clamp */
+.cardTitle {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.38;
+  margin: 3px 0 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* All six apps: timestamp = text3, smallest, no weight */
+.cardTime {
+  font-size: 10px;
+  color: var(--text3);
+  font-weight: 400;
+  font-family: var(--font-body);
+}
+
+.onlyOne {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text3);
+  text-align: center;
+  padding: 16px 0;
+}
+
+.spacer { height: 24px; }
