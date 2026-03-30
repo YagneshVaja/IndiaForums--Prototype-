@@ -14,6 +14,10 @@ import MySpaceScreen      from './screens/MySpaceScreen';
 import ArticleScreen      from './screens/ArticleScreen';
 import GalleryScreen      from './screens/GalleryScreen';
 import GalleryDetailScreen from './screens/GalleryDetailScreen';
+import CelebritiesScreen  from './screens/CelebritiesScreen';
+import VideoScreen        from './screens/VideoScreen';
+import FanFictionScreen   from './screens/FanFictionScreen';
+import QuizzesScreen      from './screens/QuizzesScreen';
 
 const SCREENS = {
   explore: ExploreScreen,
@@ -28,17 +32,17 @@ export default function App() {
   const [selectedArticle,  setSelectedArticle]  = useState(null);
   const [showGalleries,    setShowGalleries]    = useState(false);
   const [selectedGallery,  setSelectedGallery]  = useState(null);
+  const [activeStory,      setActiveStory]      = useState(null);
 
   const ActiveScreen = SCREENS[activeTab];
 
   function handleGalleryPress(gallery) {
     setSelectedGallery(gallery);
-    setShowGalleries(false);
   }
 
   function handleGalleryBack() {
     setSelectedGallery(null);
-    setShowGalleries(true);
+    // Stay in whichever gallery-listing context was active
   }
 
   function handleGalleriesOpen() {
@@ -49,7 +53,15 @@ export default function App() {
     setShowGalleries(false);
   }
 
-  // Gallery detail takes highest priority
+  function handleStoryPress(story) {
+    setActiveStory(story.label.toLowerCase());
+  }
+
+  function handleStoryBack() {
+    setActiveStory(null);
+  }
+
+  // Gallery detail — highest priority regardless of how we got here
   if (selectedGallery) {
     return (
       <PhoneShell>
@@ -63,16 +75,57 @@ export default function App() {
     );
   }
 
-  // Gallery list screen
-  if (showGalleries) {
+  // Gallery listing — from Stories strip OR from See All button
+  if (activeStory === 'galleries' || showGalleries) {
     return (
       <PhoneShell>
         <DynamicIsland />
         <StatusBar />
         <GalleryScreen
-          onBack={handleGalleriesBack}
+          onBack={showGalleries ? handleGalleriesBack : handleStoryBack}
           onGalleryPress={handleGalleryPress}
         />
+      </PhoneShell>
+    );
+  }
+
+  // Story screens take priority
+  if (activeStory === 'celebrities') {
+    return (
+      <PhoneShell>
+        <DynamicIsland />
+        <StatusBar />
+        <CelebritiesScreen onBack={handleStoryBack} />
+      </PhoneShell>
+    );
+  }
+
+  if (activeStory === 'videos') {
+    return (
+      <PhoneShell>
+        <DynamicIsland />
+        <StatusBar />
+        <VideoScreen onBack={handleStoryBack} />
+      </PhoneShell>
+    );
+  }
+
+  if (activeStory === 'fan fictions') {
+    return (
+      <PhoneShell>
+        <DynamicIsland />
+        <StatusBar />
+        <FanFictionScreen onBack={handleStoryBack} />
+      </PhoneShell>
+    );
+  }
+
+  if (activeStory === 'quizzes') {
+    return (
+      <PhoneShell>
+        <DynamicIsland />
+        <StatusBar />
+        <QuizzesScreen onBack={handleStoryBack} />
       </PhoneShell>
     );
   }
@@ -95,6 +148,7 @@ export default function App() {
             onArticlePress={setSelectedArticle}
             onGalleryPress={handleGalleryPress}
             onGalleriesOpen={handleGalleriesOpen}
+            onStoryPress={handleStoryPress}
           />
           <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
         </>
