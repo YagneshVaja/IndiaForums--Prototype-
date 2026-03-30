@@ -68,3 +68,38 @@
   background: var(--red);
   border: 2px solid var(--bg);
 }
+
+/* ── Back-navigation mode ───────────────────────────────────────────────────── */
+.backBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: var(--shadow-xs);
+}
+.backBtn:active {
+  transform: scale(0.92);
+  background: var(--surface);
+}
+
+.screenTitle {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--dark);
+  letter-spacing: -0.3px;
+  text-align: center;
+}
+
+.spacer {
+  width: 40px;
+  flex-shrink: 0;
+}
