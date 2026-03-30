@@ -5,9 +5,15 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   font-family: var(--font-body);
-  background: #E8ECF4;
+  /* Outer chrome — warm neutral, like TOI / HT desktop wrapper (#D6D6D6 range) */
+  background: #D8DADC;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -15,7 +21,13 @@ body {
   padding: 20px;
 }
 
+/* Shared entrance animation — subtle, Inshorts / Google News speed */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
