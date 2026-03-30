@@ -1,24 +1,63 @@
-<!-- VERCEL BEST PRACTICES START -->
-## Best practices for developing on Vercel
+# CLAUDE.md
 
-These defaults are optimized for AI coding agents (and humans) working on apps that deploy to Vercel.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-- Treat Vercel Functions as stateless + ephemeral (no durable RAM/FS, no background daemons), use Blob or marketplace integrations for preserving state
-- Edge Functions (standalone) are deprecated; prefer Vercel Functions
-- Don't start new projects on Vercel KV/Postgres (both discontinued); use Marketplace Redis/Postgres instead
-- Store secrets in Vercel Env Variables; not in git or `NEXT_PUBLIC_*`
-- Provision Marketplace native integrations with `vercel integration add` (CI/agent-friendly)
-- Sync env + project settings with `vercel env pull` / `vercel pull` when you need local/offline parity
-- Use `waitUntil` for post-response work; avoid the deprecated Function `context` parameter
-- Set Function regions near your primary data source; avoid cross-region DB/service roundtrips
-- Tune Fluid Compute knobs (e.g., `maxDuration`, memory/CPU) for long I/O-heavy calls (LLMs, APIs)
-- Use Runtime Cache for fast **regional** caching + tag invalidation (don't treat it as global KV)
-- Use Cron Jobs for schedules; cron runs in UTC and triggers your production URL via HTTP GET
-- Use Vercel Blob for uploads/media; Use Edge Config for small, globally-read config
-- If Enable Deployment Protection is enabled, use a bypass secret to directly access them
-- Add OpenTelemetry via `@vercel/otel` on Node; don't expect OTEL support on the Edge runtime
-- Enable Web Analytics + Speed Insights early
-- Use AI Gateway for model routing, set AI_GATEWAY_API_KEY, using a model string (e.g. 'anthropic/claude-sonnet-4.6'), Gateway is already default in AI SDK
-  needed. Always curl https://ai-gateway.vercel.sh/v1/models first; never trust model IDs from memory
-- For durable agent loops or untrusted code: use Workflow (pause/resume/state) + Sandbox; use Vercel MCP for secure infra access
-<!-- VERCEL BEST PRACTICES END -->
+## Commands
+
+```bash
+npm run dev       # Start dev server (Vite HMR)
+npm run build     # Production build to dist/
+npm run preview   # Preview production build
+npm run lint      # Run ESLint
+```
+
+No test runner is configured.
+
+## Architecture
+
+**Runtime**: React 19 + Vite 8 (Oxc transform). Pure JavaScript/JSX — no TypeScript. No routing library, no state management library, no UI framework.
+
+**Entry**: `src/main.jsx` → `src/App.jsx`
+
+### Navigation Model
+
+Navigation is entirely state-driven in `App.jsx` using `useState`. There is no React Router. The render tree uses a priority-based conditional rendering pattern:
+
+```
+GalleryDetailScreen (highest priority)
+  → GalleryScreen
+    → Story screens (CelebritiesScreen | VideoScreen | FanFictionScreen | QuizzesScreen)
+      → ArticleScreen
+        → Bottom tab screens (ExploreScreen | NewsScreen | ForumScreen | SearchScreen | MySpaceScreen)
+```
+
+State variables controlling navigation:
+- `activeTab` — which bottom nav tab is selected
+- `selectedArticle` — triggers ArticleScreen detail view
+- `showGalleries` / `selectedGallery` — gallery listing and detail views
+- `activeStory` — which story-type screen to show (`'celebrities'`, `'videos'`, `'fanFictions'`, `'quizzes'`, `'galleries'`)
+
+### Component Structure
+
+```
+src/components/
+  cards/     — ArticleCard, FeaturedCard, NewsHorizontalCard, NewsVerticalCard, ThreadCard, TopicCard
+  layout/    — PhoneShell (iPhone frame wrapper), DynamicIsland, StatusBar, TopNav, BottomNav
+  sections/  — PhotoGallerySection, QuizSection, VideoSection, VisualStoriesSection
+  strips/    — StoriesStrip, FeaturedCarousel, ChipsRow, CategoryBar, LanguageBar
+  ui/        — SectionHeader, CarouselDots, StoryItem
+```
+
+All screens live in `src/screens/`. All mock data lives in `src/data/` (no backend — everything is static JS objects).
+
+### Styling
+
+- CSS Modules (`.module.css`) per component for scoped styles
+- Design tokens in `src/styles/tokens.css` — import this for brand colors/spacing
+- `src/styles/global.css` — app-wide resets and base styles
+- Brand blue: `#3558F0`, background: `#F5F6F7`, text: `#1A1A1A`
+- Design references Indian news apps (TOI, HT, Inshorts, Google News)
+
+### Project Context
+
+This is a **web prototype** that renders inside a `PhoneShell` component mimicking an iPhone. It is a community + entertainment platform combining news, forums, fan fiction, galleries, videos, quizzes, and celebrity content. All data is mocked — no API calls, no persistence.
