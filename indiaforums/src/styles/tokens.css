@@ -99,3 +99,31 @@
   --shadow-sm: 0 1px 4px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04);
   --shadow-md: 0 2px 8px rgba(0,0,0,.10), 0 4px 16px rgba(0,0,0,.06);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DARK MODE  ·  Applied via data-theme="dark" on PhoneShell
+   Overrides all surface, text, and border tokens while keeping brand blue.
+──────────────────────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:      #0D0F14;
+  --card:    #181B22;
+  --surface: #22252E;
+
+  --dark:  #F8F9FA;
+  --text:  #E8E9EC;
+  --text2: #9AA0B0;
+  --text3: #5A6070;
+
+  --border: #2A2E3A;
+
+  --brand-light: rgba(53,88,240,.18);
+  --brand-glow:  rgba(53,88,240,.20);
+
+  --red-surface:   rgba(200,0,30,.15);
+  --green-surface: rgba(26,122,72,.15);
+  --amber-surface: rgba(245,166,35,.12);
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.25);
+  --shadow-sm: 0 1px 4px rgba(0,0,0,.30), 0 2px 8px rgba(0,0,0,.20);
+  --shadow-md: 0 2px 8px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.25);
+}

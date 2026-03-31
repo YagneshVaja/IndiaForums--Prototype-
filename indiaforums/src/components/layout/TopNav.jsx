@@ -1,6 +1,6 @@
 import styles from './TopNav.module.css';
 
-export default function TopNav({ title, onBack }) {
+export default function TopNav({ title, onBack, onMenuOpen }) {
   // ── Back-navigation mode ─────────────────────────────────────────────────────
   if (onBack && title) {
     return (
@@ -21,7 +21,7 @@ export default function TopNav({ title, onBack }) {
   return (
     <div className={styles.topnav}>
       {/* Hamburger menu */}
-      <div className={styles.btn}>
+      <div className={styles.btn} onClick={onMenuOpen} role="button" aria-label="Open menu">
         <svg width="17" height="13" viewBox="0 0 17 13" fill="none">
           <rect y="0" width="17" height="2" rx="1" fill="#1A2038"/>
           <rect y="5.5" width="11" height="2" rx="1" fill="#1A2038"/>
