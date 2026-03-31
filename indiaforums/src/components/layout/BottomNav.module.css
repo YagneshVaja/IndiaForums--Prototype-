@@ -1,6 +1,6 @@
 .bottomnav {
   flex-shrink: 0;
-  background: rgba(255,255,255,0.92);
+  background: var(--nav-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--border);
@@ -72,5 +72,5 @@
   height: 6px;
   border-radius: 50%;
   background: var(--red);
-  border: 1.5px solid #fff;
+  border: 1.5px solid var(--card);
 }

@@ -159,7 +159,7 @@
 }
 
 .toggleOn {
-  background: #E03A5C;
+  background: var(--toggle-on);
 }
 
 .toggleThumb {

@@ -19,5 +19,5 @@
 
 .inactive {
   width: 5px;
-  background: #CBD5E1;
+  background: var(--silver);
 }
