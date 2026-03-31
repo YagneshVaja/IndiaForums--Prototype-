@@ -2,7 +2,7 @@
 
 /*
   ╔══════════════════════════════════════════════════════════════════════════╗
-  ║  INDIAFORUMS — Design Token System v2                                    ║
+  ║  INDIAFORUMS — Design Token System v3                                    ║
   ║                                                                          ║
   ║  Color references:                                                       ║
   ║  · Backgrounds  → Google News (#F2F2F2) + Inshorts (#FAFAFA)           ║
@@ -18,82 +18,96 @@
 
   /* ─────────────────────────────────────────────────────────────────────────
      BRAND  ·  IndiaForums signature blue
-     Ref: Kept intentionally — forums / entertainment sites use blue CTAs.
-          All six reference news apps use red, but IF is a community platform.
-     Used for: CTAs, active states, links, icons, navigation
   ───────────────────────────────────────────────────────────────────────── */
-  --brand:       #3558F0;
-  --brand-light: #EBF0FF;            /* tinted surface for badges / chips     */
-  --brand-glow:  rgba(53,88,240,.10);/* soft glow for active shadows          */
+  --brand:         #3558F0;
+  --brand-hover:   #2946D4;            /* darker for hover states             */
+  --brand-light:   #EBF0FF;            /* tinted surface — badges / chips     */
+  --brand-lighter: #DDE6FF;            /* even lighter — backgrounds          */
+  --brand-border:  #B8CBFF;            /* blue-tinted border                  */
+  --brand-glow:    rgba(53,88,240,.10);/* soft glow for active shadows        */
 
   /* ─────────────────────────────────────────────────────────────────────────
      SURFACES
-     Ref: Google News (#F2F2F2), Inshorts (#FAFAFA), TOI (#F5F5F5)
-     Key insight: ALL six apps use warm/neutral gray, NOT blue-tinted gray.
-     #F5F6F7 splits the diff between Google News and Inshorts — neutral,
-     warm-leaning, zero blue cast.
   ───────────────────────────────────────────────────────────────────────── */
-  --bg:      #F5F6F7;    /* page background  · Google News / TOI style        */
-  --card:    #FFFFFF;    /* card / panel bg  · pure white, all six apps       */
-  --surface: #EEEFF1;    /* pressed / nested · slightly darker than bg        */
+  --bg:            #F5F6F7;
+  --card:          #FFFFFF;
+  --surface:       #EEEFF1;
+  --surface-raised:#FAFBFC;            /* slightly elevated surface           */
 
   /* ─────────────────────────────────────────────────────────────────────────
      TEXT
-     Ref: TOI (#333333), HT (#1A1A1A), Indian Express (#121212), Inshorts (#0D0D0D)
-     Old Twitter tokens had blue tints (#0F1419, #536471, #8B9EA8).
-     Indian news apps use WARM dark neutrals — no blue cast.
   ───────────────────────────────────────────────────────────────────────── */
-  --dark:  #0D0D0D;    /* deepest black — hero overlays, large display type  */
-  --text:  #1A1A1A;    /* primary body text — TOI / HT standard              */
-  --text2: #5F5F5F;    /* secondary — author, byline, descriptions           */
-  --text3: #9E9E9E;    /* tertiary — timestamps, placeholders, disabled      */
+  --dark:          #0D0D0D;
+  --text:          #1A1A1A;
+  --text2:         #5F5F5F;
+  --text3:         #9E9E9E;
+  --text-on-brand: #FFFFFF;            /* text placed on brand-colored bg     */
 
   /* ─────────────────────────────────────────────────────────────────────────
      BORDERS
-     Ref: HT / IE / Google News (#E0E0E0–#DADCE0 neutral hairlines)
-     Old: #EFF3F4 had a blue-green tint — visible against warm gray bg.
-     New: #E2E2E2 is a clean neutral — matches HT, IE, Google News exactly.
   ───────────────────────────────────────────────────────────────────────── */
-  --border: #E2E2E2;
+  --border:        #E2E2E2;
+  --border-strong: #CACACA;            /* more visible dividers               */
 
   /* ─────────────────────────────────────────────────────────────────────────
-     EDITORIAL RED  ·  Breaking / Live / Alert / Error
-     Ref: NDTV (#C00000), TOI (#CC0000), HT (#D0021B), Indian Express (#E8282B)
-     Old #F4212E was Twitter's red — vivid orange-leaning.
-     Indian news apps use a DEEPER, more authoritative red — less orange, more
-     crimson. #C8001E splits NDTV and HT precisely.
+     EDITORIAL RED  ·  Breaking / Alert / Error
   ───────────────────────────────────────────────────────────────────────── */
-  --red:         #C8001E;   /* editorial crimson — NDTV / HT midpoint         */
-  --red-light:   #E8282B;   /* lighter red for tags/chips on dark surfaces    */
-  --red-surface: #FFF0F1;   /* tinted bg for breaking badges                 */
+  --red:           #C8001E;
+  --red-light:     #E8282B;
+  --red-surface:   #FFF0F1;
 
   /* ─────────────────────────────────────────────────────────────────────────
      GREEN  ·  Live / Completed / Positive
-     Ref: Inshorts uses a deep forest green for live indicators.
-     #1A7A48 — deeper and more editorial than Twitter's #00BA7C.
   ───────────────────────────────────────────────────────────────────────── */
   --green:         #1A7A48;
   --green-surface: #E8F5EE;
+  --live:          #16A34A;            /* brighter green for LIVE dots/badges */
+  --live-surface:  #DCFCE7;
 
   /* ─────────────────────────────────────────────────────────────────────────
      AMBER  ·  Trending / Ongoing / Warning
-     Ref: TOI uses amber for "trending" pills. Inshorts uses it for
-     "ongoing" story states. #F5A623 is a clean, warm amber.
   ───────────────────────────────────────────────────────────────────────── */
-  --amber:         #F5A623;
-  --amber-surface: #FFF8EC;
+  --amber:         #D97706;            /* darker amber — readable on white     */
+  --amber-bright:  #F5A623;            /* bright amber — icons, highlights    */
+  --amber-surface: #FEF3C7;
+  --amber-border:  rgba(217,119,6,0.35);/* amber tint border                  */
+  --silver-border: #CBD5E1;            /* silver/grey borders, inactive UI    */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     SEMANTIC FEEDBACK COLORS  ·  Quiz states, difficulty, trending
+  ───────────────────────────────────────────────────────────────────────── */
+  --success:         #16A34A;          /* correct answer / positive state     */
+  --success-surface: #DCFCE7;
+  --error:           #DC2626;          /* wrong answer / negative state       */
+  --error-surface:   #FEE2E2;
+  --warning:         #D97706;          /* medium / caution state              */
+  --warning-surface: #FEF3C7;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     NEUTRALS  ·  Secondary UI chrome
+  ───────────────────────────────────────────────────────────────────────── */
+  --silver:  #CBD5E1;                  /* inactive dots, secondary badges     */
+  --slate:   #64748B;                  /* stronger neutral text               */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     TOGGLE  ·  Dark mode switch
+  ───────────────────────────────────────────────────────────────────────── */
+  --toggle-on:  #E03A5C;
+  --toggle-off: #D1D5DB;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     NAV GLASS  ·  Bottom nav frosted glass background
+  ───────────────────────────────────────────────────────────────────────── */
+  --nav-glass: rgba(255,255,255,0.92);
 
   /* ─────────────────────────────────────────────────────────────────────────
      TYPOGRAPHY
-     Both fonts are shared across Google News, TOI digital, and Inshorts.
   ───────────────────────────────────────────────────────────────────────── */
   --font-display: 'Roboto Condensed', sans-serif;
   --font-body:    'Roboto', sans-serif;
 
   /* ─────────────────────────────────────────────────────────────────────────
-     SHADOWS  ·  Google News card elevation model
-     News apps use very subtle shadows — not dramatic, just enough to
-     lift cards off the background. Three levels like Material Design.
+     SHADOWS
   ───────────────────────────────────────────────────────────────────────── */
   --shadow-xs: 0 1px 2px rgba(0,0,0,.06);
   --shadow-sm: 0 1px 4px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04);
@@ -102,28 +116,56 @@
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DARK MODE  ·  Applied via data-theme="dark" on PhoneShell
-   Overrides all surface, text, and border tokens while keeping brand blue.
+   Strategy: deeper navy-blacks, not pure black — reduces eye strain.
+   Brand blue is brightened slightly for better contrast on dark surfaces.
 ──────────────────────────────────────────────────────────────────────────── */
 [data-theme="dark"] {
-  --bg:      #0D0F14;
-  --card:    #181B22;
-  --surface: #22252E;
 
-  --dark:  #F8F9FA;
-  --text:  #E8E9EC;
-  --text2: #9AA0B0;
-  --text3: #5A6070;
+  /* Surfaces — layered dark navy palette */
+  --bg:            #0C0E14;
+  --card:          #161922;
+  --surface:       #1F2330;
+  --surface-raised:#242839;
 
-  --border: #2A2E3A;
+  /* Text — warm near-white for readability */
+  --dark:          #F2F3F7;
+  --text:          #E4E6EC;
+  --text2:         #8B93A8;
+  --text3:         #50596A;
 
-  --brand-light: rgba(53,88,240,.18);
-  --brand-glow:  rgba(53,88,240,.20);
+  /* Borders — subtle on dark */
+  --border:        #272C3A;
+  --border-strong: #353B4E;
 
-  --red-surface:   rgba(200,0,30,.15);
-  --green-surface: rgba(26,122,72,.15);
-  --amber-surface: rgba(245,166,35,.12);
+  /* Brand — slightly brighter blue for dark bg contrast */
+  --brand:         #4F6FFF;
+  --brand-hover:   #6B87FF;
+  --brand-light:   rgba(79,111,255,.16);
+  --brand-lighter: rgba(79,111,255,.10);
+  --brand-border:  rgba(79,111,255,.35);
+  --brand-glow:    rgba(79,111,255,.22);
 
-  --shadow-xs: 0 1px 2px rgba(0,0,0,.25);
-  --shadow-sm: 0 1px 4px rgba(0,0,0,.30), 0 2px 8px rgba(0,0,0,.20);
-  --shadow-md: 0 2px 8px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.25);
+  /* Semantic surfaces — translucent tints instead of opaque light colors */
+  --red-surface:     rgba(220,38,38,.18);
+  --green-surface:   rgba(22,163,74,.18);
+  --live-surface:    rgba(22,163,74,.18);
+  --amber-surface:   rgba(217,119,6,.18);
+  --success-surface: rgba(22,163,74,.18);
+  --error-surface:   rgba(220,38,38,.18);
+  --warning-surface: rgba(217,119,6,.18);
+
+  /* Neutrals */
+  --silver: #3A4155;
+  --slate:  #6B7490;
+
+  /* Toggle */
+  --toggle-off: #2E3445;
+
+  /* Nav glass — dark mode */
+  --nav-glass: rgba(22,25,34,0.94);
+
+  /* Shadows — heavier on dark (needed for card separation) */
+  --shadow-xs: 0 1px 3px rgba(0,0,0,.35);
+  --shadow-sm: 0 2px 6px rgba(0,0,0,.40), 0 1px 3px rgba(0,0,0,.30);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.50), 0 2px 6px rgba(0,0,0,.35);
 }

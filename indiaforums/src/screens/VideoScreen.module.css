@@ -235,7 +235,7 @@
 
 /* LIVE badge — TOI red pulsing style */
 .liveChip {
-  background: #E11D48;
+  background: var(--red);
   animation: livePulse 2s ease-in-out infinite;
 }
 @keyframes livePulse {

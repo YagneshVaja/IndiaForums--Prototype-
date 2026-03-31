@@ -164,7 +164,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #FF9999;
+  color: var(--red-light);
   margin-bottom: 5px;
 }
 

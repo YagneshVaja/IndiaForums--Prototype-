@@ -97,9 +97,9 @@
 }
 
 .catBtnActive {
-  color: #fff;
-  background: linear-gradient(135deg, #d97706, #f59e0b);
-  box-shadow: 0 2px 8px rgba(217,119,6,0.35);
+  color: var(--text-on-brand);
+  background: linear-gradient(135deg, var(--amber), var(--amber-bright));
+  box-shadow: 0 2px 8px var(--amber-border);
 }
 
 .weekStrip {
@@ -113,9 +113,9 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #22c55e;
+  background: var(--live);
   flex-shrink: 0;
-  box-shadow: 0 0 0 2px rgba(34,197,94,0.25);
+  box-shadow: 0 0 0 2px var(--live-surface);
 }
 
 .weekText {
@@ -143,9 +143,9 @@
   display: inline-flex;
   align-items: center;
 }
-.diffEasy   { color: #16a34a; background: #dcfce7; }
-.diffMedium { color: #d97706; background: #fef3c7; }
-.diffHard   { color: #dc2626; background: #fee2e2; }
+.diffEasy   { color: var(--success); background: var(--success-surface); }
+.diffMedium { color: var(--warning); background: var(--warning-surface); }
+.diffHard   { color: var(--error);   background: var(--error-surface); }
 
 /* ── Podium section ──────────────────────────────────────────────────────────── */
 .podiumSection {
@@ -282,8 +282,8 @@
 }
 .podiumCard:active { transform: scale(0.97); }
 
-.podiumSilver { border-color: #CBD5E1; }
-.podiumBronze { border-color: rgba(217,119,6,0.4); }
+.podiumSilver { border-color: var(--silver-border); }
+.podiumBronze { border-color: var(--amber-border); }
 
 .podiumThumb {
   position: relative;
@@ -347,13 +347,13 @@
 }
 .podiumProgressFill {
   height: 100%;
-  background: linear-gradient(90deg, #d97706, #f59e0b);
+  background: linear-gradient(90deg, var(--amber), var(--amber-bright));
   border-radius: 3px;
 }
 .podiumPlaysNum {
   font-size: 10px;
   font-weight: 700;
-  color: #d97706;
+  color: var(--amber);
   width: 30px;
   text-align: right;
 }
@@ -383,7 +383,7 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   padding: 8px 0 6px;
-  border-bottom: 2px solid #d97706;
+  border-bottom: 2px solid var(--amber);
   display: inline-block;
 }
 
@@ -458,13 +458,13 @@
 }
 .rankBuzzFill {
   height: 100%;
-  background: linear-gradient(90deg, #d97706, #f59e0b);
+  background: linear-gradient(90deg, var(--amber), var(--amber-bright));
   border-radius: 3px;
 }
 .rankBuzzNum {
   font-size: 10px;
   font-weight: 700;
-  color: #d97706;
+  color: var(--amber);
   width: 30px;
   text-align: right;
 }
@@ -668,7 +668,7 @@
   transition: all 0.18s;
 }
 .tabActive {
-  color: #92400e;
+  color: var(--amber);
   background: var(--card);
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
@@ -692,7 +692,7 @@
 .sheetSeeAll {
   font-size: 12px;
   font-weight: 700;
-  color: #d97706;
+  color: var(--amber);
   cursor: pointer;
 }
 .bio {
@@ -726,8 +726,8 @@
 .tag {
   font-size: 11.5px;
   font-weight: 700;
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--amber);
+  background: var(--amber-surface);
   border-radius: 8px;
   padding: 4px 10px;
 }
@@ -845,7 +845,7 @@
 }
 .quizProgressFill {
   height: 100%;
-  background: linear-gradient(90deg, #d97706, #f59e0b);
+  background: linear-gradient(90deg, var(--amber), var(--amber-bright));
   transition: width 0.35s ease;
 }
 
@@ -921,12 +921,12 @@
 }
 .optionBtn:active { transform: scale(0.99); }
 .optionCorrect {
-  background: #f0fdf4 !important;
-  border-color: #16a34a !important;
+  background: var(--success-surface) !important;
+  border-color: var(--success) !important;
 }
 .optionWrong {
-  background: #fef2f2 !important;
-  border-color: #dc2626 !important;
+  background: var(--error-surface) !important;
+  border-color: var(--error) !important;
 }
 .optionLetter {
   width: 26px;
@@ -942,21 +942,21 @@
   flex-shrink: 0;
 }
 .optionText { font-size: 14px; font-weight: 600; color: var(--dark); flex: 1; }
-.optionTick { font-size: 16px; color: #16a34a; flex-shrink: 0; }
-.optionCross { font-size: 16px; color: #dc2626; flex-shrink: 0; }
+.optionTick  { font-size: 16px; color: var(--success); flex-shrink: 0; }
+.optionCross { font-size: 16px; color: var(--error);   flex-shrink: 0; }
 
 .nextBtn {
   width: 100%;
   height: 48px;
-  background: linear-gradient(135deg, #d97706, #f59e0b);
+  background: linear-gradient(135deg, var(--amber), var(--amber-bright));
   border: none;
   border-radius: 14px;
   font-size: 15px;
   font-weight: 800;
-  color: #fff;
+  color: var(--text-on-brand);
   cursor: pointer;
   font-family: var(--font-display);
-  box-shadow: 0 4px 16px rgba(217,119,6,0.3);
+  box-shadow: 0 4px 16px var(--amber-border);
   transition: transform 0.12s;
   margin-top: 4px;
 }

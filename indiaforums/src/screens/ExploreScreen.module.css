@@ -22,7 +22,7 @@
 
 .forumTabs {
   display: flex;
-  border-bottom: 2px solid #EEF1FA;
+  border-bottom: 2px solid var(--border);
   margin-bottom: 10px;
 }
 
