@@ -1,10 +1,12 @@
+// catId = categoryId param sent to /media-galleries/list API for server-side filtering
+// IDs provided by backend team: 1=TV, 2=Movies, 3=Digital, 4=Lifestyle, 14=Sports
 export const GALLERY_CATS = [
-  { id: 'all',        label: 'All' },
-  { id: 'tv-shows',   label: 'TV Shows' },
-  { id: 'movies',     label: 'Movies' },
-  { id: 'celebrities',label: 'Celebrities' },
-  { id: 'events',     label: 'Events' },
-  { id: 'web-series', label: 'Web Series' },
+  { id: 'all',       label: 'All',       catId: null },
+  { id: 'tv',        label: 'TV',        catId: 1    },
+  { id: 'movies',    label: 'Movies',    catId: 2    },
+  { id: 'digital',   label: 'Digital',   catId: 3    },
+  { id: 'lifestyle', label: 'Lifestyle', catId: 4    },
+  { id: 'sports',    label: 'Sports',    catId: 14   },
 ];
 
 const makePhotos = (emojis, bgs) =>
