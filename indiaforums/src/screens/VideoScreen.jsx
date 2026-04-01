@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import styles from './VideoScreen.module.css';
 import SectionHeader from '../components/ui/SectionHeader';
-import { VIDEO_CATS, CAT_ACCENT, TRENDING_VIDEOS, VIDEOS } from '../data/videoData';
+import { VIDEO_CATS, CAT_ACCENT } from '../data/videoData';
+import useVideos from '../hooks/useVideos';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const PlayFill = ({ size = 14 }) => (
@@ -22,20 +23,19 @@ function getCatAccent(cat) {
 }
 
 // ─── Trending card — Inshorts gradient-overlay style ─────────────────────────
-// Wide horizontal-scroll card inspired by NDTV/HT "Trending Now" strip
-function TrendingCard({ video }) {
+function TrendingCard({ video, onClick }) {
   const accent = getCatAccent(video.cat);
   return (
-    <div className={styles.trendCard}>
-      {/* Full bleed gradient thumbnail */}
+    <div className={styles.trendCard} onClick={onClick}>
       <div className={styles.trendThumb} style={{ background: video.bg }}>
-        {/* Decorative emoji — faded, large */}
-        <span className={styles.trendEmoji}>{video.emoji}</span>
+        {video.thumbnail ? (
+          <img src={video.thumbnail} alt="" className={styles.trendImg} loading="lazy" />
+        ) : (
+          <span className={styles.trendEmoji}>{video.emoji}</span>
+        )}
 
-        {/* Bottom gradient scrim (Inshorts pattern) */}
         <div className={styles.trendScrim} />
 
-        {/* Category chip — top-left (NDTV badge style) */}
         <div
           className={`${styles.trendCatChip} ${video.live ? styles.liveChip : ''}`}
           style={video.live ? {} : { background: accent.bar }}
@@ -44,12 +44,12 @@ function TrendingCard({ video }) {
           {video.catLabel}
         </div>
 
-        {/* Duration or LIVE — bottom-right */}
-        <div className={styles.trendDuration}>
-          {video.live ? '● LIVE' : video.duration}
-        </div>
+        {(video.duration || video.live) && (
+          <div className={styles.trendDuration}>
+            {video.live ? '● LIVE' : video.duration}
+          </div>
+        )}
 
-        {/* Play button — center (YouTube style) */}
         {!video.live && (
           <div className={styles.trendPlayWrap}>
             <div className={styles.trendPlayBtn}>
@@ -58,7 +58,6 @@ function TrendingCard({ video }) {
           </div>
         )}
 
-        {/* Title overlaid at bottom (Inshorts / Reels style) */}
         <div className={styles.trendContent}>
           <div className={styles.trendTitle}>{video.title}</div>
           <div className={styles.trendMeta}>
@@ -72,37 +71,34 @@ function TrendingCard({ video }) {
 }
 
 // ─── Grid card — IndiaForums / TOI / Google News 2-col card ──────────────────
-function GridCard({ video, delay }) {
+function GridCard({ video, delay, onClick }) {
   const accent = getCatAccent(video.cat);
   return (
-    <div className={styles.gridCard} style={{ animationDelay: `${delay}s` }}>
-      {/* 16:9 thumbnail */}
+    <div className={styles.gridCard} style={{ animationDelay: `${delay}s` }} onClick={onClick}>
       <div className={styles.gridThumb} style={{ background: video.bg }}>
-        <span className={styles.gridEmoji}>{video.emoji}</span>
+        {video.thumbnail ? (
+          <img src={video.thumbnail} alt="" className={styles.gridImg} loading="lazy" />
+        ) : (
+          <span className={styles.gridEmoji}>{video.emoji}</span>
+        )}
 
-        {/* Subtle play overlay (always visible) */}
         <div className={styles.gridPlayOverlay}>
           <div className={styles.gridPlayBtn}><PlayFill size={10} /></div>
         </div>
 
-        {/* Duration chip — YouTube convention */}
-        <div className={styles.gridDuration}>{video.duration}</div>
+        {video.duration && (
+          <div className={styles.gridDuration}>{video.duration}</div>
+        )}
       </div>
 
-      {/* Card body */}
       <div className={styles.gridBody}>
-        {/* Coloured category chip (HT / Indian Express pattern) */}
         <span
           className={styles.gridCatChip}
           style={{ background: accent.bg, color: accent.text }}
         >
           {video.catLabel}
         </span>
-
-        {/* Title — 2-line clamp */}
         <div className={styles.gridTitle}>{video.title}</div>
-
-        {/* Timestamp — Google News / Inshorts style */}
         <div className={styles.gridTime}>
           <ClockIcon />
           <span>{video.timeAgo}</span>
@@ -112,31 +108,58 @@ function GridCard({ video, delay }) {
   );
 }
 
+// ─── Skeleton cards ──────────────────────────────────────────────────────────
+function TrendingSkeleton() {
+  return (
+    <div className={styles.trendCard}>
+      <div className={`${styles.trendThumb} ${styles.skelPulse}`} />
+    </div>
+  );
+}
+
+function GridSkeleton({ delay }) {
+  return (
+    <div className={styles.gridCard} style={{ animationDelay: `${delay}s` }}>
+      <div className={`${styles.gridThumb} ${styles.skelPulse}`} />
+      <div className={styles.gridBody}>
+        <div className={`${styles.skelChip} ${styles.skelPulse}`} />
+        <div className={`${styles.skelLine} ${styles.skelPulse}`} />
+        <div className={`${styles.skelLineShort} ${styles.skelPulse}`} />
+      </div>
+    </div>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
-export default function VideoScreen() {
+export default function VideoScreen({ onVideoPress }) {
   const [activeCat, setActiveCat] = useState('all');
-  const [page, setPage] = useState(1);
-  const PER_PAGE = 8;
+  const { videos, loading, error, loadMore, pagination, refresh } = useVideos(20);
 
+  // Filter by category
   const filtered = useMemo(() => {
-    setPage(1);
-    if (activeCat === 'all') return VIDEOS;
-    return VIDEOS.filter(v => v.cat === activeCat);
-  }, [activeCat]);
+    if (activeCat === 'all') return videos;
+    return videos.filter(v => v.cat === activeCat);
+  }, [videos, activeCat]);
 
-  const trendingVisible = activeCat === 'all'
-    ? TRENDING_VIDEOS
-    : TRENDING_VIDEOS.filter(v => v.cat === activeCat);
+  // Split: featured/first 4 for trending, rest for grid
+  const trending = useMemo(() => {
+    const featured = filtered.filter(v => v.featured);
+    if (featured.length >= 2) return featured.slice(0, 4);
+    return filtered.slice(0, 4);
+  }, [filtered]);
 
-  const gridVisible = filtered.slice(0, page * PER_PAGE);
-  const hasMore     = gridVisible.length < filtered.length;
+  const gridVideos = useMemo(() => {
+    const trendIds = new Set(trending.map(v => v.id));
+    return filtered.filter(v => !trendIds.has(v.id));
+  }, [filtered, trending]);
 
+  const hasMore = pagination?.hasNextPage;
   const activeCatData = VIDEO_CATS.find(c => c.id === activeCat);
 
   return (
     <div className={styles.screen}>
 
-      {/* ── Category tabs — NDTV / Google News style ─────────────────────── */}
+      {/* ── Category tabs ─────────────────────────────────────────────── */}
       <div className={styles.catBar}>
         {VIDEO_CATS.map(c => (
           <button
@@ -150,35 +173,72 @@ export default function VideoScreen() {
         ))}
       </div>
 
-      {/* ── Trending strip — NDTV / HT "Top Stories" horizontal scroll ──── */}
-      {trendingVisible.length > 0 && (
-        <div className={styles.trendSection}>
-          <SectionHeader title="Trending Now" linkLabel={null} />
-          <div className={styles.trendStrip}>
-            {trendingVisible.map(v => (
-              <TrendingCard key={v.id} video={v} />
-            ))}
-          </div>
+      {/* ── Error state ───────────────────────────────────────────────── */}
+      {error && (
+        <div className={styles.errorWrap}>
+          <div className={styles.errorIcon}>!</div>
+          <div className={styles.errorText}>{error}</div>
+          <button className={styles.retryBtn} onClick={refresh}>Retry</button>
         </div>
       )}
 
-      {/* ── Latest videos grid ────────────────────────────────────────────── */}
-      <SectionHeader
-        title={activeCat === 'all' ? 'Latest Videos' : activeCatData?.label}
-        linkLabel={null}
-      />
+      {/* ── Loading skeleton ──────────────────────────────────────────── */}
+      {loading && videos.length === 0 && !error && (
+        <>
+          <div className={styles.trendSection}>
+            <SectionHeader title="Trending Now" linkLabel={null} />
+            <div className={styles.trendStrip}>
+              <TrendingSkeleton />
+              <TrendingSkeleton />
+            </div>
+          </div>
+          <SectionHeader title="Latest Videos" linkLabel={null} />
+          <div className={styles.grid}>
+            {[0, 1, 2, 3, 4, 5].map(i => (
+              <GridSkeleton key={i} delay={i * 0.05} />
+            ))}
+          </div>
+        </>
+      )}
 
-      <div className={styles.grid}>
-        {gridVisible.map((v, i) => (
-          <GridCard key={v.id} video={v} delay={i * 0.035} />
-        ))}
-      </div>
+      {/* ── Content ───────────────────────────────────────────────────── */}
+      {!loading && !error && (
+        <>
+          {/* Trending strip */}
+          {trending.length > 0 && (
+            <div className={styles.trendSection}>
+              <SectionHeader title="Trending Now" linkLabel={null} />
+              <div className={styles.trendStrip}>
+                {trending.map(v => (
+                  <TrendingCard key={v.id} video={v} onClick={() => onVideoPress && onVideoPress(v)} />
+                ))}
+              </div>
+            </div>
+          )}
 
-      {/* ── Load more — mirrors site pagination concept ───────────────────── */}
-      {hasMore && (
-        <button className={styles.loadMore} onClick={() => setPage(p => p + 1)}>
-          Load More Videos
-        </button>
+          {/* Latest videos grid */}
+          <SectionHeader
+            title={activeCat === 'all' ? 'Latest Videos' : activeCatData?.label}
+            linkLabel={null}
+          />
+
+          {gridVideos.length === 0 && (
+            <div className={styles.emptyText}>No videos found in this category.</div>
+          )}
+
+          <div className={styles.grid}>
+            {gridVideos.map((v, i) => (
+              <GridCard key={v.id} video={v} delay={i * 0.035} onClick={() => onVideoPress && onVideoPress(v)} />
+            ))}
+          </div>
+
+          {/* Load more */}
+          {hasMore && (
+            <button className={styles.loadMore} onClick={loadMore}>
+              Load More Videos
+            </button>
+          )}
+        </>
       )}
 
       <div className={styles.spacer} />

@@ -1,0 +1,557 @@
+/* ── Screen shell ──────────────────────────────────────────────────────────── */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* ── Top bar ───────────────────────────────────────────────────────────────── */
+.topBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.backBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.backBtn:active { transform: scale(0.92); }
+
+.topTitle {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--dark);
+  letter-spacing: -0.2px;
+}
+
+.topActions {
+  display: flex;
+  gap: 4px;
+}
+
+.iconBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.iconBtn:active { background: var(--border); }
+
+/* ── Scroll area ───────────────────────────────────────────────────────────── */
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.scroll::-webkit-scrollbar { display: none; }
+
+/* ── Video player ──────────────────────────────────────────────────────────── */
+.playerWrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.player {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.playerFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.playerImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+}
+
+.playerEmoji {
+  font-size: 56px;
+  opacity: 0.6;
+}
+
+.playBtnLarge {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2.5px solid rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+  padding-left: 3px;
+}
+
+/* ── Content ───────────────────────────────────────────────────────────────── */
+.content {
+  padding: 0 14px;
+}
+
+/* ── Breadcrumb ────────────────────────────────────────────────────────────── */
+.breadcrumb {
+  padding: 12px 0 8px;
+  font-size: 11px;
+  font-family: var(--font-body);
+}
+
+.bcLink {
+  color: var(--brand);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.bcSep {
+  color: var(--text3);
+  margin: 0 1px;
+}
+
+.bcActive {
+  color: var(--text3);
+  font-weight: 600;
+}
+
+/* ── Title ─────────────────────────────────────────────────────────────────── */
+.title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1.35;
+  letter-spacing: -0.3px;
+  margin: 0 0 10px;
+}
+
+/* ── Meta row ──────────────────────────────────────────────────────────────── */
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.metaChip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 500;
+  font-family: var(--font-body);
+}
+
+.metaDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text3);
+  opacity: 0.5;
+}
+
+/* ── Share row ─────────────────────────────────────────────────────────────── */
+.shareRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.shareLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shareCircle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.12s;
+  color: #fff;
+}
+.shareCircle:active { transform: scale(0.9); }
+
+.fbBtn  { background: #1877F2; }
+.xBtn   { background: #000; }
+.waBtn  { background: #25D366; }
+.copyBtn { background: var(--text3); color: #fff; }
+
+/* ── Divider ───────────────────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 14px 0;
+}
+
+/* ── Description ───────────────────────────────────────────────────────────── */
+.descSection { }
+
+.sectionLabel {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--dark);
+  margin-bottom: 8px;
+  letter-spacing: -0.1px;
+}
+
+.descText {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-line;
+  font-family: var(--font-body);
+}
+
+.showMoreBtn {
+  background: none;
+  border: none;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 0 0;
+  font-family: var(--font-body);
+}
+
+/* ── Reactions ─────────────────────────────────────────────────────────────── */
+.reactBox { }
+
+.reactLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.reactRow {
+  display: flex;
+  gap: 6px;
+}
+
+.reactBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.reactBtn:active { transform: scale(0.93); }
+
+.reactActive {
+  border-color: var(--brand);
+  background: rgba(53, 88, 240, 0.06);
+}
+
+.reactEmoji {
+  font-size: 18px;
+}
+
+.reactCount {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+}
+
+/* ── Tags ──────────────────────────────────────────────────────────────────── */
+.tagsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand);
+  background: rgba(53, 88, 240, 0.07);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-family: var(--font-body);
+}
+
+/* ── Comments ──────────────────────────────────────────────────────────────── */
+.commentsBox { }
+
+.commentsHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.commentsTitle {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--dark);
+}
+
+.commentsCount {
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 600;
+}
+
+.commentInput {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  margin-bottom: 14px;
+  background: var(--card);
+}
+
+.inputAv {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.inputPlaceholder {
+  font-size: 12.5px;
+  color: var(--text3);
+  font-family: var(--font-body);
+}
+
+.comment {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.commentAv {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.commentContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.commentTop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.commentUser {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.commentTime {
+  font-size: 10px;
+  color: var(--text3);
+}
+
+.commentText {
+  font-size: 12.5px;
+  color: var(--text2);
+  line-height: 1.5;
+  margin-bottom: 6px;
+  font-family: var(--font-body);
+}
+
+.commentActions {
+  display: flex;
+  gap: 12px;
+}
+
+.likeBtn,
+.replyBtn {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font-body);
+}
+.likeBtn:active,
+.replyBtn:active { color: var(--brand); }
+
+/* ── Related Videos ────────────────────────────────────────────────────────── */
+.relatedSection { }
+
+.relatedList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.relCard {
+  display: flex;
+  gap: 10px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 12px;
+  transition: background 0.12s;
+}
+.relCard:active { background: rgba(53, 88, 240, 0.04); }
+
+.relThumb {
+  width: 120px;
+  height: 68px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.relThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+}
+
+.relEmoji {
+  font-size: 22px;
+  opacity: 0.7;
+}
+
+.relPlayBtn {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 1px;
+}
+
+.relDuration {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.relBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.relCat {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--brand);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+}
+
+.relTitle {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.relTime {
+  font-size: 10.5px;
+  color: var(--text3);
+  font-weight: 500;
+}
+
+/* ── Bottom pad ────────────────────────────────────────────────────────────── */
+.endPad {
+  height: 24px;
+}

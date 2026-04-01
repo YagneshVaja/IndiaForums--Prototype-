@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import styles from './ArticleScreen.module.css';
 import { getRelatedArticles } from '../data/newsData';
+import useArticleDetails from '../hooks/useArticleDetails';
 
 // ── Reactions ─────────────────────────────────────────────────────────────────
 const REACTIONS = [
@@ -125,32 +126,48 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
   const [reaction, setReaction] = useState(null);
   const scrollRef = useRef(null);
 
+  // Fetch enriched details from API
+  const { details, loading: detailsLoading } = useArticleDetails(article.id);
+
+  // Merge list-level article with fetched details (details take precedence when available)
+  const enriched = useMemo(() => {
+    if (!details) return article;
+    return { ...article, ...details };
+  }, [article, details]);
+
   const seed = useMemo(() => {
-    const s = String(article.id);
+    const s = String(enriched.id);
     return s.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  }, [article.id]);
+  }, [enriched.id]);
 
   const counts = useMemo(() =>
     REACTIONS.reduce((acc, r, i) => ({ ...acc, [r.id]: seededN(seed + i * 17, 0, 120) }), {}),
     [seed]
   );
 
-  const viewCount    = useMemo(() => fmt(seededN(seed * 7,  4200, 98000)), [seed]);
-  const commentCount = useMemo(() => seededN(seed * 3, 14, 297), [seed]);
-  const body         = useMemo(() => buildBody(article), [article]);
-  const subtitle     = useMemo(() => getSubtitle(article), [article]);
-  const related      = useMemo(() => getRelatedArticles(article), [article]);
-  const topCat       = useMemo(() => getTopCat(article), [article]);
+  const viewCount    = useMemo(() => enriched.viewCount ? fmt(enriched.viewCount) : fmt(seededN(seed * 7, 4200, 98000)), [seed, enriched.viewCount]);
+  const commentCount = useMemo(() => enriched.commentCount || seededN(seed * 3, 14, 297), [seed, enriched.commentCount]);
+  const body         = useMemo(() => buildBody(enriched), [enriched]);
+  const subtitle     = useMemo(() => enriched.description || getSubtitle(enriched), [enriched]);
+  const related      = useMemo(() => {
+    if (enriched.relatedArticles?.length) return enriched.relatedArticles.slice(0, 3);
+    return getRelatedArticles(enriched);
+  }, [enriched]);
+  const topCat       = useMemo(() => getTopCat(enriched), [enriched]);
   const tags         = useMemo(() => {
+    if (enriched.keywords) {
+      const kwTags = enriched.keywords.split(',').map(k => k.trim()).filter(Boolean).slice(0, 6);
+      if (kwTags.length > 0) return kwTags;
+    }
     const base = CAT_TAGS[topCat] || CAT_TAGS.MOVIES;
-    const extra = article.tag ? [article.tag] : [];
+    const extra = enriched.tag ? [enriched.tag] : [];
     return [...new Set([...extra, ...base])].slice(0, 6);
-  }, [topCat, article.tag]);
+  }, [topCat, enriched.tag, enriched.keywords]);
   const entities     = useMemo(() => CATEGORY_ENTITIES[topCat] || CATEGORY_ENTITIES.MOVIES, [topCat]);
-  const crumbs       = ['Home', ...(article.cat || '').split('·').map(s => s.trim()).filter(Boolean)];
+  const crumbs       = ['Home', ...(enriched.cat || '').split('·').map(s => s.trim()).filter(Boolean)];
 
   // Scroll to top when article changes
-  useMemo(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [article.id]);
+  useMemo(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [enriched.id]);
 
   return (
     <div className={styles.screen}>
@@ -162,7 +179,7 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
             <path d="M12.5 5l-5 5 5 5" stroke="var(--dark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        <span className={styles.topTitle}>Article</span>
+        <span className={styles.topTitle}>Article{detailsLoading ? '...' : ''}</span>
         <div className={styles.topActions}>
           <button className={styles.iconBtn}>
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -184,16 +201,20 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
       <div className={styles.scroll} ref={scrollRef}>
 
         {/* Hero */}
-        <div className={styles.hero} style={{ background: article.bg }}>
-          <span className={styles.heroEmoji}>{article.emoji}</span>
+        <div className={styles.hero} style={{ background: enriched.bg }}>
+          {enriched.thumbnail ? (
+            <img src={enriched.thumbnail} alt="" className={styles.heroImg} />
+          ) : (
+            <span className={styles.heroEmoji}>{enriched.emoji}</span>
+          )}
           <div className={styles.heroOverlay} />
           <div className={styles.heroBadges}>
-            {article.breaking && <span className={styles.badgeBreaking}>BREAKING</span>}
-            {article.tag      && <span className={styles.badgeTag}>{article.tag}</span>}
+            {enriched.breaking && <span className={styles.badgeBreaking}>BREAKING</span>}
+            {enriched.tag      && <span className={styles.badgeTag}>{enriched.tag}</span>}
           </div>
         </div>
         <div className={styles.heroCaption}>
-          <span>{article.source || 'India Forums'}</span> · Photo for representation
+          <span>{enriched.source || 'India Forums'}</span> · Photo for representation
         </div>
 
         <div className={styles.content}>
@@ -209,7 +230,7 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
           </div>
 
           {/* Title */}
-          <h1 className={styles.title}>{article.title}</h1>
+          <h1 className={styles.title}>{enriched.title}</h1>
 
           {/* Subtitle */}
           <p className={styles.subtitle}>{subtitle}</p>
@@ -218,8 +239,8 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
           <div className={styles.metaRow}>
             <div className={styles.authorAv}>IF</div>
             <div className={styles.metaInfo}>
-              <div className={styles.authorName}>{article.source || 'IF News Desk'}</div>
-              <div className={styles.authorMeta}>{article.time} · {article.readTime || '4 min read'}</div>
+              <div className={styles.authorName}>{enriched.source || 'IF News Desk'}</div>
+              <div className={styles.authorMeta}>{enriched.time} · {enriched.readTime || '4 min read'}</div>
             </div>
             <div className={styles.statsRow}>
               <div className={styles.statChip}>
@@ -257,22 +278,29 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
 
           {/* Article body */}
           <div className={styles.body}>
-            {body.map((block, idx) => {
-              if (block.type === 'heading') return <h2 key={idx} className={styles.bHeading}>{block.text}</h2>;
-              if (block.type === 'quote')   return (
-                <blockquote key={idx} className={styles.bQuote}>
-                  <p>{block.text}</p>
-                  <cite>{block.author}</cite>
-                </blockquote>
-              );
-              if (block.type === 'tldr') return (
-                <div key={idx} className={styles.tldr}>
-                  <span className={styles.tldrBadge}>TL;DR</span>
-                  <span className={styles.tldrText}>{block.text}</span>
-                </div>
-              );
-              return <p key={idx} className={styles.bPara}>{block.text}</p>;
-            })}
+            {enriched.bodyContent ? (
+              <div
+                className={styles.apiBody}
+                dangerouslySetInnerHTML={{ __html: enriched.bodyContent }}
+              />
+            ) : (
+              body.map((block, idx) => {
+                if (block.type === 'heading') return <h2 key={idx} className={styles.bHeading}>{block.text}</h2>;
+                if (block.type === 'quote')   return (
+                  <blockquote key={idx} className={styles.bQuote}>
+                    <p>{block.text}</p>
+                    <cite>{block.author}</cite>
+                  </blockquote>
+                );
+                if (block.type === 'tldr') return (
+                  <div key={idx} className={styles.tldr}>
+                    <span className={styles.tldrBadge}>TL;DR</span>
+                    <span className={styles.tldrText}>{block.text}</span>
+                  </div>
+                );
+                return <p key={idx} className={styles.bPara}>{block.text}</p>;
+              })
+            )}
           </div>
 
           <div className={styles.divider} />
@@ -298,7 +326,7 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
           <div className={styles.reactBox}>
             <div className={styles.reactLabel}>Your reaction</div>
             <div className={styles.reactRow}>
-              {REACTIONS.map((r, i) => {
+              {REACTIONS.map((r) => {
                 const active = reaction === r.id;
                 const count  = counts[r.id] + (active ? 1 : 0);
                 return (

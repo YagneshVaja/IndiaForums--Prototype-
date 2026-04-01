@@ -9,9 +9,10 @@ import ArticleCard from '../components/cards/ArticleCard';
 import ThreadCard from '../components/cards/ThreadCard';
 import PhotoGallerySection from '../components/sections/PhotoGallerySection';
 
-import { ARTICLES, EXPLORE_CHIPS } from '../data/articles';
+import { EXPLORE_CHIPS } from '../data/articles';
 import { FORUMS, FORUM_TABS } from '../data/forums';
 import { GALLERIES } from '../data/galleryData';
+import useArticles from '../hooks/useArticles';
 
 const PREVIEW_GALLERIES = GALLERIES.slice(0, 4);
 
@@ -19,10 +20,15 @@ export default function ExploreScreen({ onArticlePress, onGalleryPress, onGaller
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeForumTab, setActiveForumTab] = useState('announcements');
 
-  const articles = useMemo(
-    () => ARTICLES[activeCategory] || ARTICLES.all,
-    [activeCategory]
-  );
+  const { articles, loading, error, refresh } = useArticles();
+
+  // Filter articles by category chip
+  const filteredArticles = useMemo(() => {
+    if (activeCategory === 'all') return articles;
+    return articles.filter(
+      a => a.cat.toLowerCase() === activeCategory.toLowerCase()
+    );
+  }, [articles, activeCategory]);
 
   const threads = useMemo(
     () => FORUMS[activeForumTab] || FORUMS.announcements,
@@ -39,7 +45,38 @@ export default function ExploreScreen({ onArticlePress, onGalleryPress, onGaller
       <ChipsRow chips={EXPLORE_CHIPS} activeId={activeCategory} onSelect={setActiveCategory} />
 
       <div className={styles.articles}>
-        {articles.map((a, i) => (
+        {/* Loading skeleton */}
+        {loading && articles.length === 0 && (
+          <div className={styles.loadingWrap}>
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className={styles.skeleton}>
+                <div className={styles.skelThumb} />
+                <div className={styles.skelBody}>
+                  <div className={styles.skelCat} />
+                  <div className={styles.skelTitle} />
+                  <div className={styles.skelTitle2} />
+                  <div className={styles.skelTime} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Error state */}
+        {error && (
+          <div className={styles.errorWrap}>
+            <div className={styles.errorIcon}>!</div>
+            <div className={styles.errorText}>{error}</div>
+            <button className={styles.retryBtn} onClick={refresh}>Retry</button>
+          </div>
+        )}
+
+        {/* Articles list */}
+        {!loading && !error && filteredArticles.length === 0 && (
+          <div className={styles.emptyText}>No articles found in this category</div>
+        )}
+
+        {filteredArticles.map((a, i) => (
           <ArticleCard key={a.id} {...a} delay={i * 0.06} onClick={() => onArticlePress && onArticlePress(a)} />
         ))}
       </div>

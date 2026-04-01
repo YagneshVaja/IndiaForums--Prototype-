@@ -194,6 +194,15 @@
   overflow: hidden;
 }
 
+/* Thumbnail image — covers full card */
+.trendImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* Decorative background emoji — faded, large (TOI / Inshorts feeling) */
 .trendEmoji {
   font-size: 56px;
@@ -357,6 +366,14 @@
   overflow: hidden;
 }
 
+.gridImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .gridEmoji {
   font-size: 28px;
   opacity: 0.72;
@@ -464,6 +481,86 @@
 }
 .loadMore:hover  { background: var(--brand-light); border-color: var(--brand); }
 .loadMore:active { background: #dde5ff; }
+
+/* ── Skeleton loading ────────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.8; }
+}
+
+.skelPulse {
+  background: var(--border) !important;
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+.skelChip {
+  width: 56px;
+  height: 14px;
+  border-radius: 3px;
+  margin-bottom: 6px;
+}
+
+.skelLine {
+  width: 100%;
+  height: 12px;
+  border-radius: 4px;
+  margin-bottom: 5px;
+}
+
+.skelLineShort {
+  width: 60%;
+  height: 10px;
+  border-radius: 4px;
+}
+
+/* ── Error state ─────────────────────────────────────────────────────────────── */
+.errorWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 16px;
+}
+
+.errorIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--red, #ef4444);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.errorText {
+  font-size: 13px;
+  color: var(--text3);
+  text-align: center;
+}
+
+.retryBtn {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--brand);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 24px;
+  cursor: pointer;
+}
+
+.retryBtn:active { opacity: 0.85; }
+
+/* ── Empty state ─────────────────────────────────────────────────────────────── */
+.emptyText {
+  text-align: center;
+  padding: 24px 16px;
+  font-size: 13px;
+  color: var(--text3);
+}
 
 /* ── Bottom spacer ───────────────────────────────────────────────────────────── */
 .spacer { height: 28px; }
