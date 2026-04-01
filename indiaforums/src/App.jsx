@@ -17,6 +17,7 @@ import GalleryScreen       from './screens/GalleryScreen';
 import GalleryDetailScreen from './screens/GalleryDetailScreen';
 import CelebritiesScreen   from './screens/CelebritiesScreen';
 import VideoScreen         from './screens/VideoScreen';
+import VideoDetailScreen   from './screens/VideoDetailScreen';
 import FanFictionScreen    from './screens/FanFictionScreen';
 import QuizzesScreen       from './screens/QuizzesScreen';
 import ShortsScreen        from './screens/ShortsScreen';
@@ -34,6 +35,7 @@ export default function App() {
   /* ── Navigation state ─────────────────────────────────────────────────────── */
   const [activeTab,       setActiveTab]       = useState('explore');
   const [selectedArticle, setSelectedArticle] = useState(null);
+  const [selectedVideo,   setSelectedVideo]   = useState(null);
   const [showGalleries,   setShowGalleries]   = useState(false);
   const [selectedGallery, setSelectedGallery] = useState(null);
   const [activeStory,     setActiveStory]     = useState(null);
@@ -55,6 +57,7 @@ export default function App() {
     setShowGalleries(false);
     setSelectedGallery(null);
     setSelectedArticle(null);
+    setSelectedVideo(null);
     setActiveTab(tab);
   }
 
@@ -88,7 +91,7 @@ export default function App() {
   if (selectedGallery) {
     topNavTitle = selectedGallery.title;
     topNavBack  = handleGalleryBack;
-    content     = <GalleryDetailScreen gallery={selectedGallery} onBack={handleGalleryBack} />;
+    content     = <GalleryDetailScreen gallery={selectedGallery} onBack={handleGalleryBack} onGalleryPress={handleGalleryPress} />;
 
   } else if (activeStory === 'galleries' || showGalleries) {
     topNavTitle = 'Photo Gallery';
@@ -100,10 +103,21 @@ export default function App() {
     topNavBack  = handleStoryBack;
     content     = <CelebritiesScreen onBack={handleStoryBack} />;
 
+  } else if (selectedVideo) {
+    topNavTitle = 'Video';
+    topNavBack  = () => setSelectedVideo(null);
+    content     = (
+      <VideoDetailScreen
+        video={selectedVideo}
+        onBack={() => setSelectedVideo(null)}
+        onVideoPress={setSelectedVideo}
+      />
+    );
+
   } else if (activeStory === 'videos') {
     topNavTitle = 'Videos';
     topNavBack  = handleStoryBack;
-    content     = <VideoScreen onBack={handleStoryBack} />;
+    content     = <VideoScreen onBack={handleStoryBack} onVideoPress={setSelectedVideo} />;
 
   } else if (activeStory === 'fan fictions') {
     topNavTitle = 'Fan Fictions';
@@ -141,6 +155,7 @@ export default function App() {
     content = (
       <ActiveScreen
         onArticlePress={setSelectedArticle}
+        onVideoPress={setSelectedVideo}
         onGalleryPress={handleGalleryPress}
         onGalleriesOpen={handleGalleriesOpen}
         onStoryPress={handleStoryPress}
