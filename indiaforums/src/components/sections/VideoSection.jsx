@@ -1,6 +1,6 @@
 import styles from './VideoSection.module.css';
 
-export default function VideoSection({ videos }) {
+export default function VideoSection({ videos, onVideoPress }) {
   return (
     <div className={styles.section}>
       <div className={styles.header}>
@@ -16,9 +16,13 @@ export default function VideoSection({ videos }) {
 
       <div className={styles.scroll}>
         {videos.map(v => (
-          <div key={v.id} className={styles.card}>
+          <div key={v.id} className={styles.card} onClick={() => onVideoPress && onVideoPress(v)}>
             <div className={styles.thumb} style={{ background: v.bg }}>
-              <span className={styles.emoji}>{v.emoji}</span>
+              {v.thumbnail ? (
+                <img src={v.thumbnail} alt="" className={styles.thumbImg} loading="lazy" />
+              ) : (
+                <span className={styles.emoji}>{v.emoji}</span>
+              )}
               <div className={styles.playOverlay}>
                 <div className={styles.playBtn}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -26,10 +30,10 @@ export default function VideoSection({ videos }) {
                   </svg>
                 </div>
               </div>
-              <div className={styles.duration}>{v.duration}</div>
+              {v.duration && <div className={styles.duration}>{v.duration}</div>}
             </div>
             <div className={styles.cardTitle}>{v.title}</div>
-            <div className={styles.views}>{v.views} views</div>
+            <div className={styles.views}>{v.views ? `${v.views} views` : v.timeAgo || ''}</div>
           </div>
         ))}
       </div>

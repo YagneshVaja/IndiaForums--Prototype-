@@ -1,10 +1,14 @@
 import styles from './NewsVerticalCard.module.css';
 
-export default function NewsVerticalCard({ cat, tag, breaking, title, time, bg, emoji, source, readTime, onClick }) {
+export default function NewsVerticalCard({ cat, tag, breaking, title, time, bg, emoji, thumbnail, source, readTime, onClick }) {
   return (
     <div className={styles.card} onClick={onClick}>
       <div className={styles.img} style={{ background: bg }}>
-        {emoji}
+        {thumbnail ? (
+          <img src={thumbnail} alt="" className={styles.thumbImg} loading="lazy" />
+        ) : (
+          emoji
+        )}
         {breaking && <div className={styles.breaking}>Breaking</div>}
         {tag && <div className={styles.tag}>{tag}</div>}
       </div>

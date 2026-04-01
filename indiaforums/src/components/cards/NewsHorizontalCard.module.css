@@ -31,6 +31,12 @@
   font-size: 26px;
 }
 
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .tag {
   position: absolute;
   top: 5px;
