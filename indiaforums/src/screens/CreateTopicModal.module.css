@@ -1,0 +1,129 @@
+/* ── Create Topic Modal ────────────────────────────────────────────────────── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+}
+
+.modal {
+  width: 100%;
+  background: var(--card);
+  border-radius: 16px 16px 0 0;
+  padding-bottom: 20px;
+  max-height: 80%;
+  overflow-y: auto;
+  animation: slideUp 0.25s ease both;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cancelBtn {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.headerTitle {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--dark);
+}
+
+.postBtn {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text3);
+  background: var(--surface);
+  border: none;
+  padding: 6px 16px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.postBtnActive {
+  background: var(--brand);
+  color: #fff;
+}
+
+/* Forum badge */
+.forumBadge {
+  padding: 8px 14px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  background: var(--surface);
+}
+
+/* Form inputs */
+.subjectInput {
+  display: block;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 14px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--dark);
+  background: transparent;
+  outline: none;
+}
+.subjectInput::placeholder { color: var(--text3); font-weight: 400; }
+
+.messageInput {
+  display: block;
+  width: 100%;
+  border: none;
+  padding: 12px 14px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  outline: none;
+  resize: none;
+  min-height: 100px;
+  line-height: 1.55;
+}
+.messageInput::placeholder { color: var(--text3); }
+
+/* Error */
+.errorMsg {
+  margin: 0 14px;
+  padding: 8px 12px;
+  background: var(--red-surface, #FFF0F1);
+  color: var(--red, #C8001E);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+/* Character count */
+.charCount {
+  text-align: right;
+  padding: 4px 14px 0;
+  font-size: 10px;
+  color: var(--text3);
+}
