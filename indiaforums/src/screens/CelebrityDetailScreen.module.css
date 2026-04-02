@@ -1,0 +1,679 @@
+/* ────────────────────────────────────────────────────────────────────────────
+   CELEBRITY DETAIL SCREEN  ·  Magazine-style profile  ·  8pt grid
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* ── Screen ─────────────────────────────────────────────────────────────────── */
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.screen::-webkit-scrollbar { display: none; }
+
+/* ── Hero ────────────────────────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px 20px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+}
+
+.heroImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(0deg,
+      rgba(0,0,0,0.85) 0%,
+      rgba(0,0,0,0.4) 35%,
+      rgba(0,0,0,0.05) 65%,
+      rgba(0,0,0,0.2) 100%);
+  pointer-events: none;
+}
+
+.heroTop {
+  display: flex;
+  justify-content: flex-end;
+  position: relative;
+  z-index: 2;
+}
+
+.heroRankPill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+
+.heroRankNum {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.heroTrendBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.heroTrendUp      { color: #4ade80; background: rgba(74,222,128,0.2); }
+.heroTrendDown    { color: #f87171; background: rgba(248,113,113,0.2); }
+.heroTrendNeutral { color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.1); }
+
+.heroFlex { flex: 1; }
+
+.heroBottom {
+  position: relative;
+  z-index: 2;
+}
+
+.heroName {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.heroDesc {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.65);
+  margin: 5px 0 0;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.heroPrevRank {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  margin-top: 4px;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────────── */
+.tabBar {
+  display: flex;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tabBtn {
+  flex: 1;
+  padding: 12px 0;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text3);
+  text-align: center;
+  background: none;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tabBtnActive {
+  color: var(--brand);
+  border-bottom-color: var(--brand);
+}
+
+/* ── Tab body ───────────────────────────────────────────────────────────────── */
+.tabBody {
+  padding: 0 14px;
+}
+
+/* ── Stats row ──────────────────────────────────────────────────────────────── */
+.statsRow {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 14px 0;
+  -webkit-overflow-scrolling: touch;
+}
+.statsRow::-webkit-scrollbar { display: none; }
+
+.statChip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 10px 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  flex-shrink: 0;
+  gap: 1px;
+}
+
+.statIcon  { font-size: 14px; line-height: 1; }
+.statVal {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1.2;
+}
+.statLabel {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* ── About card ─────────────────────────────────────────────────────────────── */
+.aboutCard {
+  background: var(--card);
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+
+.aboutText {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text2);
+  margin: 0;
+}
+
+/* ── Bio sections container ─────────────────────────────────────────────────── */
+.bioSections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Individual bio section card ────────────────────────────────────────────── */
+.bioSection {
+  background: var(--card);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.bioSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border);
+}
+
+.bioSectionIcon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.bioSectionTitle {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--dark);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.bioSectionBody {}
+
+.bioRow {
+  display: flex;
+  padding: 9px 14px;
+  gap: 10px;
+  align-items: baseline;
+  border-bottom: 1px solid var(--border);
+}
+.bioRow:last-child {
+  border-bottom: none;
+}
+
+.bioLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  min-width: 78px;
+  max-width: 90px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  line-height: 1.5;
+}
+
+.bioValue {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dark);
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+/* ── Bio images (in-section photos) ─────────────────────────────────────────── */
+.bioImages {
+  padding: 8px 14px 12px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.bioImages::-webkit-scrollbar { display: none; }
+
+.bioImageWrap {
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+.bioImageWrap:active { opacity: 0.85; }
+
+.bioImage {
+  height: 120px;
+  width: auto;
+  display: block;
+  object-fit: cover;
+  background: var(--surface);
+}
+
+.bioImageZoom {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Image lightbox ─────────────────────────────────────────────────────────── */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: lbFadeIn 0.2s ease;
+}
+
+@keyframes lbFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.lightboxContent {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+}
+
+.lightboxClose {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  -webkit-tap-highlight-color: transparent;
+}
+.lightboxClose:active { background: rgba(255,255,255,0.25); }
+
+.lightboxCounter {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.12);
+  padding: 4px 12px;
+  border-radius: 12px;
+  z-index: 3;
+}
+
+.lightboxImg {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+  animation: lbZoomIn 0.2s ease;
+}
+
+@keyframes lbZoomIn {
+  from { transform: scale(0.92); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.lightboxCaption {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.7);
+  padding: 6px 12px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.lightboxNav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  -webkit-tap-highlight-color: transparent;
+}
+.lightboxNav:active { background: rgba(255,255,255,0.25); }
+
+.lightboxPrev { left: 8px; }
+.lightboxNext { right: 8px; }
+
+/* ── Social media ───────────────────────────────────────────────────────────── */
+.socialList {
+  display: flex;
+  flex-direction: column;
+}
+
+.socialItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.socialItem:last-child { border-bottom: none; }
+
+.socialBadge {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.socialBadgeIcon {
+  font-size: 15px;
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.socialInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.socialPlatform {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.socialHandle {
+  font-size: 12px;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Fans ────────────────────────────────────────────────────────────────────── */
+.fansHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 14px 0 10px;
+}
+
+.fansTotal {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--dark);
+}
+
+.fansLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text3);
+}
+
+.fansGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.fanCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 6px 10px;
+  background: var(--card);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  gap: 4px;
+}
+
+.fanAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.fanInitial {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.fanName {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dark);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.fanLevel {
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.loadMoreBtn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand);
+  background: var(--brand-light);
+  border: 1px solid var(--brand-border);
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.loadMoreBtn:active { background: var(--brand-lighter); }
+.loadMoreBtn:disabled { opacity: 0.6; cursor: default; }
+
+/* ── Loading / Error / Empty ────────────────────────────────────────────────── */
+.stateWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  gap: 10px;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--border);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.stateIcon { font-size: 28px; opacity: 0.6; }
+.stateText { font-size: 13px; color: var(--text3); text-align: center; }
+
+.retryBtn {
+  margin-top: 4px;
+  padding: 8px 20px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--brand);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.retryBtn:active { opacity: 0.8; }
+
+/* ── Skeletons ──────────────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skStat {
+  min-width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, var(--border) 25%, var(--surface) 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skCard {
+  background: var(--card);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.skCardHead {
+  height: 14px;
+  width: 40%;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  background: linear-gradient(90deg, var(--border) 25%, var(--surface) 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skLine {
+  height: 12px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, var(--border) 25%, var(--surface) 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skLineShort {
+  composes: skLine;
+  width: 55%;
+}
+
+/* ── Misc ───────────────────────────────────────────────────────────────────── */
+.spacer { height: 24px; }

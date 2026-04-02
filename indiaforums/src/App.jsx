@@ -16,7 +16,8 @@ import ArticleScreen       from './screens/ArticleScreen';
 import GalleryScreen       from './screens/GalleryScreen';
 import GalleryDetailScreen from './screens/GalleryDetailScreen';
 import TopicDetailScreen   from './screens/TopicDetailScreen';
-import CelebritiesScreen   from './screens/CelebritiesScreen';
+import CelebritiesScreen      from './screens/CelebritiesScreen';
+import CelebrityDetailScreen from './screens/CelebrityDetailScreen';
 import VideoScreen         from './screens/VideoScreen';
 import VideoDetailScreen   from './screens/VideoDetailScreen';
 import FanFictionScreen    from './screens/FanFictionScreen';
@@ -41,6 +42,7 @@ export default function App() {
   const [selectedGallery, setSelectedGallery] = useState(null);
   const [activeStory,     setActiveStory]     = useState(null);
   const [selectedTopic,   setSelectedTopic]   = useState(null);
+  const [selectedCeleb,   setSelectedCeleb]   = useState(null);
   const [drilledForum,    setDrilledForum]    = useState(null);
 
   /* ── UI state ─────────────────────────────────────────────────────────────── */
@@ -62,6 +64,7 @@ export default function App() {
     setSelectedArticle(null);
     setSelectedVideo(null);
     setSelectedTopic(null);
+    setSelectedCeleb(null);
     setDrilledForum(null);
     setActiveTab(tab);
   }
@@ -102,10 +105,15 @@ export default function App() {
     topNavBack  = showGalleries ? handleGalleriesBack : handleStoryBack;
     content     = <GalleryScreen onBack={topNavBack} onGalleryPress={handleGalleryPress} />;
 
+  } else if (selectedCeleb) {
+    topNavTitle = selectedCeleb.name;
+    topNavBack  = () => setSelectedCeleb(null);
+    content     = <CelebrityDetailScreen celebrity={selectedCeleb} />;
+
   } else if (activeStory === 'celebrities') {
-    topNavTitle = 'Celebrity Rankings';
+    topNavTitle = 'Celebrities';
     topNavBack  = handleStoryBack;
-    content     = <CelebritiesScreen onBack={handleStoryBack} />;
+    content     = <CelebritiesScreen onBack={handleStoryBack} onCelebPress={setSelectedCeleb} />;
 
   } else if (selectedVideo) {
     topNavTitle = 'Video';

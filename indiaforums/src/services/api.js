@@ -178,6 +178,20 @@ export async function fetchArticleBasic(articleId) {
   return transformArticleDetail(data);
 }
 
+// ── Home banners (Trending Now carousel) ────────────────────────────────────
+export async function fetchBanners() {
+  const { data } = await api.get('/home/banners');
+  const banners = data?.banners || [];
+  return banners.map(b => ({
+    id:        b.id,
+    title:     b.headline,
+    thumbnail: b.thumbnailUrl || null,
+    pageUrl:   b.pageUrl || '',
+    time:      timeAgo(b.publishDate),
+    contentType: b.contentType,  // 1=article, 4=video
+  }));
+}
+
 // ── Video category mapping  (uses same hierarchy as articles) ─────────────────
 const VIDEO_CAT_MAP = {
   5:  'tv',       6:  'tv',
@@ -443,28 +457,23 @@ export async function fetchMediaGalleryBasic(id) {
 
 // ── Video API methods ────────────────────────────────────────────────────────
 export async function fetchVideos(page = 1, pageSize = 20, contentId = null) {
-  const params = { pageNumber: page, pageSize, contentType: 1000 };
-  if (contentId) params.contentId = contentId;
+  const params = { pageNumber: page, pageSize };
+  if (contentId) {
+    params.contentType = 1000;
+    params.contentId = contentId;
+  }
   const { data } = await api.get('/videos/list', { params });
 
   const payload = data?.data || data;
-  const rawVideos = payload?.medias || payload?.videos || [];
-  const rawPagination = payload?.pagination;
-
-  console.log('[API] fetchVideos response:', { videosCount: rawVideos.length, pagination: rawPagination });
-
-  const pagination = rawPagination || {
-    currentPage: page,
-    pageSize,
-    totalPages: 1,
-    totalItems: 0,
-    hasNextPage: false,
-    hasPreviousPage: false,
-  };
+  const rawVideos = payload?.medias || [];
 
   return {
     videos: rawVideos.map(transformVideo),
-    pagination,
+    pagination: {
+      currentPage: page,
+      pageSize,
+      hasNextPage: rawVideos.length >= pageSize,
+    },
   };
 }
 
@@ -732,6 +741,199 @@ export async function replyToTopic(topicId, message) {
 
   console.log('[API] replyToTopic:', { topicId });
   return data;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CELEBRITIES API
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Celebrity category tabs
+export const CELEB_CATEGORIES = [
+  { id: 'bollywood',  label: 'Bollywood',  key: 'bollywoodCelebrities' },
+  { id: 'television', label: 'Television', key: 'televisionCelebrities' },
+  { id: 'creators',   label: 'Creators',   key: 'creators' },
+];
+
+// ── Transform API celebrity → UI celebrity ───────────────────────────────────
+// Real API fields: personId, displayName, genderId, pageUrl, updateChecksum,
+//   defaultCategoryId, rankCurrentWeek, rankLastWeek, imageUrl, shareUrl, shortDesc
+function transformCelebrity(raw, category) {
+  const rankDiff = (raw.rankLastWeek || 0) - (raw.rankCurrentWeek || 0);
+  let trend = 'stable';
+  if (rankDiff > 0) trend = 'up';
+  else if (rankDiff < 0) trend = 'down';
+
+  return {
+    id:            raw.personId,
+    name:          raw.displayName || '',
+    shortDesc:     raw.shortDesc || '',
+    thumbnail:     raw.imageUrl || null,
+    pageUrl:       raw.pageUrl || '',
+    shareUrl:      raw.shareUrl || '',
+    category,
+    rank:          raw.rankCurrentWeek || 0,
+    prevRank:      raw.rankLastWeek || 0,
+    trend,
+    rankDiff:      Math.abs(rankDiff),
+  };
+}
+
+// ── Transform biography response ────────────────────────────────────────────
+// Real API: { person: {...}, isFan, rankStartDate, rankEndDate, personInfos: [...], socialMediaDetails: [...] }
+function transformBiography(data) {
+  const person = data?.person;
+  if (!person) return null;
+
+  // Extract structured info from personInfos array
+  const infos = data?.personInfos || [];
+  const infoMap = {};
+  for (const info of infos) {
+    const key = info.personInfoTypeName;
+    if (!infoMap[key]) infoMap[key] = [];
+    infoMap[key].push(info.contents);
+  }
+
+  // Build image URL from personId + updateChecksum
+  const imageUrl = person.imageUrl
+    || (person.hasThumbnail ? `https://img.indiaforums.com/person/320x240/${Math.floor(person.personId / 10000)}/${String(person.personId).padStart(4, '0')}-${person.pageUrl}.webp?c=${person.updateChecksum}` : null);
+
+  return {
+    id:             person.personId,
+    name:           person.displayName || person.fullName || '',
+    fullName:       person.fullName || '',
+    shortDesc:      person.shortDesc || '',
+    thumbnail:      imageUrl,
+    pageUrl:        person.pageUrl || '',
+    bioHtml:        person.biographyCachedContent || '',
+    rank:           person.rankCurrentWeek,
+    prevRank:       person.rankLastWeek,
+    isFan:          data?.isFan ?? false,
+    rankStartDate:  data?.rankStartDate || '',
+    rankEndDate:    data?.rankEndDate || '',
+    // Stats
+    articleCount:   person.articleCount || 0,
+    fanCount:       person.fanCount || 0,
+    videoCount:     person.videoCount || 0,
+    viewCount:      person.viewCount || 0,
+    photoCount:     person.photoCount || 0,
+    topicsCount:    person.topicsCount || 0,
+    // Structured info from personInfos (keys match exact API personInfoTypeName)
+    nicknames:      infoMap['NickName(s)'] || [],
+    profession:     infoMap['Profession(s)'] || [],
+    birthDate:      (infoMap['Date Of Birth'] || [])[0] || '',
+    birthPlace:     (infoMap['Birthplace'] || [])[0] || '',
+    zodiacSign:     (infoMap['Zodiac Sign'] || [])[0] || '',
+    nationality:    (infoMap['Nationality'] || [])[0] || '',
+    height:         (infoMap['Height (approx.)'] || [])[0] || '',
+    weight:         (infoMap['Weight (approx.)'] || [])[0] || '',
+    debut:          infoMap['Debut'] || [],
+    hometown:       (infoMap['Hometown'] || [])[0] || '',
+    education:      (infoMap['Educational Qualification'] || [])[0] || '',
+    schools:        (infoMap['Schools'] || [])[0] || '',
+    colleges:       infoMap['College(s)'] || [],
+    maritalStatus:  (infoMap['Marital Status'] || [])[0] || '',
+    spouse:         infoMap['Spouse(s)'] || [],
+    children:       infoMap['Children'] || [],
+    parents:        infoMap['Parents'] || [],
+    siblings:       infoMap['Siblings'] || [],
+    religion:       (infoMap['Religion'] || [])[0] || '',
+    ethnicity:      (infoMap['Ethnicity'] || [])[0] || '',
+    hobbies:        infoMap['Hobbies'] || [],
+    awards:         infoMap['Awards/Honours'] || [],
+    netWorth:       (infoMap['Net Worth'] || [])[0] || '',
+    // Favorites
+    favFilms:       infoMap['Film(s)'] || [],
+    favActors:      infoMap['Actor(s)'] || [],
+    favFood:        infoMap['Food'] || [],
+    favSports:      infoMap['Sport(s)'] || [],
+    favColors:      infoMap['Colour(s)'] || [],
+    favDestination: infoMap['Destination'] || [],
+    // All personInfos for additional data
+    allInfos:       infoMap,
+    // Social media
+    facebook:       person.facebook || '',
+    twitter:        person.twitter || '',
+    instagram:      person.instagram || '',
+    socialMedia:    data?.socialMediaDetails || [],
+  };
+}
+
+// ── Transform fan item ──────────────────────────────────────────────────────
+// Real API: { userId, userName, avatarType, avatarAccent, lastVisitedDate, privacy, updateChecksum, groupId, groupName }
+function transformFan(raw) {
+  return {
+    id:           raw.userId,
+    name:         raw.userName || 'Fan',
+    avatarType:   raw.avatarType || 0,
+    avatarAccent: raw.avatarAccent || '#3558F0',
+    avatarUrl:    null,  // API doesn't provide avatar URL directly
+    level:        raw.groupName || '',
+    groupId:      raw.groupId || 0,
+  };
+}
+
+// ── Celebrities list ────────────────────────────────────────────────────────
+// Real API returns: { bollywoodCelebrities: [...], televisionCelebrities: [...], creators: [...],
+//   celebrities: [...], rankStartDate, rankEndDate, totalCount, pageNumber, pageSize, totalPages, hasPreviousPage, hasNextPage }
+export async function fetchCelebrities(page = 1, pageSize = 20) {
+  const params = { pageNumber: page, pageSize };
+  const { data } = await api.get('/celebrities', { params });
+
+  // Build categorized result
+  const categories = {};
+  for (const cat of CELEB_CATEGORIES) {
+    categories[cat.id] = (data?.[cat.key] || []).map(c => transformCelebrity(c, cat.id));
+  }
+
+  // Also include the flat "celebrities" list (all combined)
+  const allCelebrities = data?.celebrities
+    ? data.celebrities.map(c => transformCelebrity(c, 'all'))
+    : [];
+
+  const pagination = {
+    currentPage:     data?.pageNumber ?? page,
+    pageSize:        data?.pageSize ?? pageSize,
+    totalPages:      data?.totalPages ?? 1,
+    totalCount:      data?.totalCount ?? 0,
+    hasNextPage:     data?.hasNextPage ?? false,
+    hasPreviousPage: data?.hasPreviousPage ?? false,
+  };
+
+  return {
+    categories,
+    celebrities: allCelebrities,
+    rankStartDate: data?.rankStartDate || '',
+    rankEndDate:   data?.rankEndDate || '',
+    pagination,
+  };
+}
+
+// ── Celebrity biography ─────────────────────────────────────────────────────
+export async function fetchCelebrityBiography(personId) {
+  const { data } = await api.get(`/celebrities/${personId}/biography`);
+  return transformBiography(data);
+}
+
+// ── Celebrity fans ──────────────────────────────────────────────────────────
+export async function fetchCelebrityFans(personId, page = 1, pageSize = 20) {
+  const params = { pageNumber: page, pageSize };
+  const { data } = await api.get(`/celebrities/${personId}/fans`, { params });
+
+  const rawFans = data?.fans || [];
+
+  const pagination = {
+    currentPage:     data?.pageNumber ?? page,
+    pageSize:        data?.pageSize ?? pageSize,
+    totalPages:      data?.totalPages ?? 1,
+    totalCount:      data?.totalCount ?? 0,
+    hasNextPage:     data?.hasNextPage ?? false,
+    hasPreviousPage: data?.hasPreviousPage ?? false,
+  };
+
+  return {
+    fans: rawFans.map(transformFan),
+    pagination,
+  };
 }
 
 export default api;

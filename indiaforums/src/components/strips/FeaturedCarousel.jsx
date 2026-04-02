@@ -6,7 +6,9 @@ import { FEATURED } from '../../data/featured';
 
 const CARD_WIDTH = 292; // 280px card + 12px gap
 
-export default function FeaturedCarousel({ onArticlePress }) {
+export default function FeaturedCarousel({ banners, onArticlePress }) {
+  const items = banners && banners.length > 0 ? banners : FEATURED;
+
   const scrollRef = useRef(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const rafRef = useRef(false);
@@ -17,12 +19,12 @@ export default function FeaturedCarousel({ onArticlePress }) {
     requestAnimationFrame(() => {
       const el = scrollRef.current;
       if (el) {
-        const i = Math.max(0, Math.min(FEATURED.length - 1, Math.round(el.scrollLeft / CARD_WIDTH)));
+        const i = Math.max(0, Math.min(items.length - 1, Math.round(el.scrollLeft / CARD_WIDTH)));
         setActiveIndex(i);
       }
       rafRef.current = false;
     });
-  }, []);
+  }, [items.length]);
 
   const handleDotClick = useCallback((i) => {
     scrollRef.current?.scrollTo({ left: i * CARD_WIDTH, behavior: 'smooth' });
@@ -33,12 +35,12 @@ export default function FeaturedCarousel({ onArticlePress }) {
     <div className={styles.section}>
       <div className={styles.scroll} ref={scrollRef} onScroll={handleScroll}>
         <div className={styles.track}>
-          {FEATURED.map((item) => (
+          {items.map((item) => (
             <FeaturedCard key={item.id} {...item} onClick={() => onArticlePress && onArticlePress(item)} />
           ))}
         </div>
       </div>
-      <CarouselDots count={FEATURED.length} activeIndex={activeIndex} onDotClick={handleDotClick} />
+      <CarouselDots count={items.length} activeIndex={activeIndex} onDotClick={handleDotClick} />
     </div>
   );
 }

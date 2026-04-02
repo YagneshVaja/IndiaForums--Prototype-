@@ -1,37 +1,39 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchVideos } from '../services/api';
+import { fetchCelebrityFans } from '../services/api';
 
-export default function useVideos(pageSize = 20, contentId = null) {
-  const [videos, setVideos]       = useState([]);
+export default function useCelebrityFans(personId, pageSize = 20) {
+  const [fans, setFans]             = useState([]);
   const [pagination, setPagination] = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(null);
-  const [page, setPage]           = useState(1);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState(null);
+  const [page, setPage]             = useState(1);
   const loadingRef = useRef(false);
 
   const load = useCallback(async (pageNum, replace = false) => {
-    if (loadingRef.current) return;
+    if (!personId) return;
+    if (!replace && loadingRef.current) return;
     loadingRef.current = true;
     if (replace) {
       setLoading(true);
       setError(null);
     }
     try {
-      const result = await fetchVideos(pageNum, pageSize, contentId);
-      setVideos(prev => replace ? result.videos : [...prev, ...result.videos]);
+      const result = await fetchCelebrityFans(personId, pageNum, pageSize);
+      setFans(prev => replace ? result.fans : [...prev, ...result.fans]);
       setPagination(result.pagination);
     } catch (err) {
-      setError(err.message || 'Failed to load videos');
+      setError(err.message || 'Failed to load fans');
     } finally {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [pageSize, contentId]);
+  }, [personId, pageSize]);
 
   useEffect(() => {
+    if (!personId) return;
     setPage(1);
     load(1, true);
-  }, [load]);
+  }, [load, personId]);
 
   const loadMore = useCallback(() => {
     if (pagination?.hasNextPage && !loadingRef.current) {
@@ -46,5 +48,5 @@ export default function useVideos(pageSize = 20, contentId = null) {
     load(1, true);
   }, [load]);
 
-  return { videos, pagination, loading, error, loadMore, refresh };
+  return { fans, pagination, loading, error, loadMore, refresh };
 }
