@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchVideos } from '../services/api';
 
-export default function useVideos(pageSize = 20) {
+export default function useVideos(pageSize = 20, contentId = null) {
   const [videos, setVideos]       = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading]     = useState(true);
@@ -14,7 +14,7 @@ export default function useVideos(pageSize = 20) {
       setError(null);
     }
     try {
-      const result = await fetchVideos(pageNum, pageSize);
+      const result = await fetchVideos(pageNum, pageSize, contentId);
       setVideos(prev => replace ? result.videos : [...prev, ...result.videos]);
       setPagination(result.pagination);
     } catch (err) {
@@ -22,9 +22,13 @@ export default function useVideos(pageSize = 20) {
     } finally {
       setLoading(false);
     }
-  }, [pageSize]);
+  }, [pageSize, contentId]);
 
-  useEffect(() => { load(1, true); }, [load]);
+  // Refetch from page 1 when contentId changes
+  useEffect(() => {
+    setPage(1);
+    load(1, true);
+  }, [load]);
 
   const loadMore = useCallback(() => {
     if (pagination?.hasNextPage && !loading) {

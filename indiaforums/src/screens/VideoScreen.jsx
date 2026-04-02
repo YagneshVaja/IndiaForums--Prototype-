@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import styles from './VideoScreen.module.css';
 import SectionHeader from '../components/ui/SectionHeader';
-import { VIDEO_CATS, CAT_ACCENT } from '../data/videoData';
+import { CAT_ACCENT } from '../data/videoData';
+import { VIDEO_CAT_TABS } from '../services/api';
 import useVideos from '../hooks/useVideos';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -133,13 +134,16 @@ function GridSkeleton({ delay }) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function VideoScreen({ onVideoPress }) {
   const [activeCat, setActiveCat] = useState('all');
-  const { videos, loading, error, loadMore, pagination, refresh } = useVideos(20);
+  const activeCatObj = VIDEO_CAT_TABS.find(c => c.id === activeCat);
+  const contentId = activeCatObj?.contentId || null;
 
-  // Filter by category
+  const { videos, loading, error, loadMore, pagination, refresh } = useVideos(20, contentId);
+
+  // Client-side fallback for categories without a server contentId
   const filtered = useMemo(() => {
-    if (activeCat === 'all') return videos;
+    if (activeCat === 'all' || contentId) return videos;
     return videos.filter(v => v.cat === activeCat);
-  }, [videos, activeCat]);
+  }, [videos, activeCat, contentId]);
 
   // Split: featured/first 4 for trending, rest for grid
   const trending = useMemo(() => {
@@ -154,14 +158,13 @@ export default function VideoScreen({ onVideoPress }) {
   }, [filtered, trending]);
 
   const hasMore = pagination?.hasNextPage;
-  const activeCatData = VIDEO_CATS.find(c => c.id === activeCat);
 
   return (
     <div className={styles.screen}>
 
       {/* ── Category tabs ─────────────────────────────────────────────── */}
       <div className={styles.catBar}>
-        {VIDEO_CATS.map(c => (
+        {VIDEO_CAT_TABS.map(c => (
           <button
             key={c.id}
             className={`${styles.catTab} ${activeCat === c.id ? styles.catActive : ''}`}
@@ -218,7 +221,7 @@ export default function VideoScreen({ onVideoPress }) {
 
           {/* Latest videos grid */}
           <SectionHeader
-            title={activeCat === 'all' ? 'Latest Videos' : activeCatData?.label}
+            title={activeCat === 'all' ? 'Latest Videos' : activeCatObj?.label}
             linkLabel={null}
           />
 
