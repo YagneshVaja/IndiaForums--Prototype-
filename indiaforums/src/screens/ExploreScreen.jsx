@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import styles from './ExploreScreen.module.css';
 
 import StoriesStrip from '../components/strips/StoriesStrip';
@@ -12,6 +12,7 @@ import PhotoGallerySection from '../components/sections/PhotoGallerySection';
 import { EXPLORE_CHIPS } from '../data/articles';
 import { FORUMS, FORUM_TABS } from '../data/forums';
 import { GALLERIES } from '../data/galleryData';
+import { fetchBanners } from '../services/api';
 import useArticles from '../hooks/useArticles';
 
 const PREVIEW_GALLERIES = GALLERIES.slice(0, 4);
@@ -19,6 +20,12 @@ const PREVIEW_GALLERIES = GALLERIES.slice(0, 4);
 export default function ExploreScreen({ onArticlePress, onGalleryPress, onGalleriesOpen, onStoryPress }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeForumTab, setActiveForumTab] = useState('announcements');
+
+  const [banners, setBanners] = useState([]);
+
+  useEffect(() => {
+    fetchBanners().then(setBanners).catch(() => {});
+  }, []);
 
   const { articles, loading, error, refresh } = useArticles();
 
@@ -39,8 +46,8 @@ export default function ExploreScreen({ onArticlePress, onGalleryPress, onGaller
     <div className={styles.screen}>
       <StoriesStrip onItemPress={onStoryPress} />
 
-      <SectionHeader title="Trending Now" />
-      <FeaturedCarousel onArticlePress={onArticlePress} />
+      <SectionHeader title="Trending Now" linkLabel={null} />
+      <FeaturedCarousel banners={banners} onArticlePress={onArticlePress} />
 
       <ChipsRow chips={EXPLORE_CHIPS} activeId={activeCategory} onSelect={setActiveCategory} />
 

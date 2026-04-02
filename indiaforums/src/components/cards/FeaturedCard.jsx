@@ -1,16 +1,20 @@
 import styles from './FeaturedCard.module.css';
 
-export default function FeaturedCard({ tag, tagColor, title, source, time, emoji, bg, onClick }) {
+export default function FeaturedCard({ tag, tagColor, title, source, time, emoji, bg, thumbnail, onClick }) {
   return (
     <div className={styles.card} onClick={onClick}>
-      <div className={styles.bg} style={{ background: bg }}>{emoji}</div>
+      {thumbnail ? (
+        <img src={thumbnail} alt="" className={styles.thumb} loading="lazy" />
+      ) : (
+        <div className={styles.bg} style={{ background: bg }}>{emoji}</div>
+      )}
       <div className={styles.overlay}/>
       <div className={styles.content}>
-        <div className={styles.tag} style={{ background: tagColor }}>{tag}</div>
+        {tag && <div className={styles.tag} style={{ background: tagColor }}>{tag}</div>}
         <div className={styles.title}>{title}</div>
         <div className={styles.meta}>
-          <span className={styles.source}>{source}</span>
-          <div className={styles.dot}/>
+          {source && <span className={styles.source}>{source}</span>}
+          {source && <div className={styles.dot}/>}
           <span className={styles.time}>{time}</span>
         </div>
       </div>
