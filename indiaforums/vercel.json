@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://api2.indiaforums.com/api/:path*"
+    }
+  ]
+}
