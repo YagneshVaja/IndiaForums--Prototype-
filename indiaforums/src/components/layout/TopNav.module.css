@@ -1,105 +1,108 @@
+/* ── Shell ──────────────────────────────────────────────────────────────────── */
 .topnav {
   display: flex;
   align-items: center;
-  padding: 6px 16px 10px;
-  gap: 10px;
+  height: 52px;
+  padding: 0 12px;
+  gap: 8px;
   flex-shrink: 0;
-  background: var(--bg);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 20;
 }
 
-.btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  background: var(--card);
-  border: 1px solid var(--border);
+/* ── Brand nav ──────────────────────────────────────────────────────────────── */
+.iconBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   cursor: pointer;
-  transition: all 0.15s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  color: var(--text);
+  transition: background 0.15s;
   position: relative;
 }
-
-.btn:active {
-  transform: scale(0.92);
-  background: var(--surface);
-}
+.iconBtn:active { background: var(--surface); }
 
 .logo {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-}
-
-.logomark {
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  gap: 7px;
 }
 
 .wordmark {
   font-family: var(--font-body);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 800;
   color: var(--dark);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.4px;
 }
 
 .right {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 2px;
 }
 
 .notifDot {
   position: absolute;
-  top: 7px;
-  right: 7px;
-  width: 8px;
-  height: 8px;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--red);
-  border: 2px solid var(--bg);
+  border: 1.5px solid var(--card);
 }
 
 /* ── Back-navigation mode ───────────────────────────────────────────────────── */
 .backBtn {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  background: var(--card);
-  border: 1px solid var(--border);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   cursor: pointer;
-  transition: all 0.15s;
-  box-shadow: var(--shadow-xs);
+  color: var(--dark);
+  transition: background 0.15s, transform 0.15s;
 }
 .backBtn:active {
+  background: var(--border);
   transform: scale(0.92);
-  background: var(--surface);
 }
 
 .screenTitle {
   flex: 1;
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--dark);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.spacer {
-  width: 40px;
+/* Used when back mode has no title — keeps back button left-aligned */
+.flex1 {
+  flex: 1;
+}
+
+/* Balances the back button so title stays centered */
+.backSpacer {
+  width: 36px;
   flex-shrink: 0;
 }

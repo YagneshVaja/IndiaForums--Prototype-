@@ -1,75 +1,86 @@
+/* ── Shell ──────────────────────────────────────────────────────────────────── */
 .bottomnav {
   flex-shrink: 0;
   background: var(--nav-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--border);
-  padding: 8px 6px 28px;
+  padding: 8px 4px 28px;
   display: flex;
   justify-content: space-around;
-  align-items: center;
-  box-shadow: 0 -2px 16px rgba(0,0,0,0.04);
+  align-items: flex-start;
+  position: relative;
+  z-index: 20;
 }
 
+/* ── Tab item ───────────────────────────────────────────────────────────────── */
 .item {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
   cursor: pointer;
-  min-width: 52px;
+  background: none;
+  border: none;
+  padding: 4px 0 0;
   position: relative;
-  transition: transform 0.15s;
+  transition: transform 0.12s;
+  -webkit-tap-highlight-color: transparent;
 }
+.item:active { transform: scale(0.88); }
+.itemActive  { cursor: default; }
 
-.item:active {
-  transform: scale(0.92);
-}
-
-.pill {
-  padding: 7px 16px;
-  border-radius: 14px;
+/* ── Icon wrapper ───────────────────────────────────────────────────────────── */
+.iconWrap {
+  width: 44px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--brand);
-  box-shadow: 0 3px 12px rgba(53,88,240,0.3);
+  position: relative;
+  border-radius: 16px;
+  transition: background 0.15s;
 }
-
-.pillLight {
-  padding: 7px 16px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.itemActive .iconWrap {
   background: var(--brand-light);
 }
 
-.wrap {
-  padding: 7px 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+/* ── Labels ─────────────────────────────────────────────────────────────────── */
 .lbl {
+  font-family: var(--font-body);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text3);
+  white-space: nowrap;
 }
-
 .activeLbl {
+  font-family: var(--font-body);
   font-size: 10px;
   font-weight: 800;
   color: var(--brand);
+  white-space: nowrap;
 }
 
-.notif {
+/* ── Active top-edge indicator ──────────────────────────────────────────────── */
+.indicator {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2.5px;
+  border-radius: 0 0 3px 3px;
+  background: var(--brand);
+}
+
+/* ── Notification dot ───────────────────────────────────────────────────────── */
+.notifDot {
   position: absolute;
   top: 2px;
-  right: 4px;
-  width: 6px;
-  height: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--red);
   border: 1.5px solid var(--card);

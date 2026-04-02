@@ -15,6 +15,7 @@ import MySpaceScreen       from './screens/MySpaceScreen';
 import ArticleScreen       from './screens/ArticleScreen';
 import GalleryScreen       from './screens/GalleryScreen';
 import GalleryDetailScreen from './screens/GalleryDetailScreen';
+import TopicDetailScreen   from './screens/TopicDetailScreen';
 import CelebritiesScreen   from './screens/CelebritiesScreen';
 import VideoScreen         from './screens/VideoScreen';
 import VideoDetailScreen   from './screens/VideoDetailScreen';
@@ -39,6 +40,8 @@ export default function App() {
   const [showGalleries,   setShowGalleries]   = useState(false);
   const [selectedGallery, setSelectedGallery] = useState(null);
   const [activeStory,     setActiveStory]     = useState(null);
+  const [selectedTopic,   setSelectedTopic]   = useState(null);
+  const [drilledForum,    setDrilledForum]    = useState(null);
 
   /* ── UI state ─────────────────────────────────────────────────────────────── */
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -58,6 +61,8 @@ export default function App() {
     setSelectedGallery(null);
     setSelectedArticle(null);
     setSelectedVideo(null);
+    setSelectedTopic(null);
+    setDrilledForum(null);
     setActiveTab(tab);
   }
 
@@ -86,7 +91,6 @@ export default function App() {
   let topNavTitle = null;
   let topNavBack  = null;
   let content     = null;
-  let showBottomNav = true;
 
   if (selectedGallery) {
     topNavTitle = selectedGallery.title;
@@ -139,6 +143,10 @@ export default function App() {
     topNavBack  = handleStoryBack;
     content     = <WebStoriesScreen onBack={handleStoryBack} />;
 
+  } else if (selectedTopic) {
+    topNavBack  = () => setSelectedTopic(null);
+    content     = <TopicDetailScreen topic={selectedTopic} />;
+
   } else if (selectedArticle) {
     topNavTitle = 'Article';
     topNavBack  = () => setSelectedArticle(null);
@@ -147,6 +155,18 @@ export default function App() {
         article={selectedArticle}
         onBack={() => setSelectedArticle(null)}
         onArticlePress={setSelectedArticle}
+      />
+    );
+
+  } else if (activeTab === 'forums') {
+    if (drilledForum) {
+      topNavBack = () => setDrilledForum(null);
+    }
+    content = (
+      <ForumScreen
+        onTopicPress={setSelectedTopic}
+        onForumDrill={setDrilledForum}
+        drilledForum={drilledForum}
       />
     );
 
