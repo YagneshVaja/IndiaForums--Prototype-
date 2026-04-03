@@ -171,6 +171,32 @@ function TikTokEmbed({ url }) {
   );
 }
 
+// ── YouTube Embed (iframe) ───────────────────────────────────────────────────
+function YouTubeEmbed({ url }) {
+  const videoId = extractYouTubeId(url);
+  if (!videoId) return <FallbackLink url={url} platform="YouTube" icon="▶" bg="#FF0000" />;
+
+  return (
+    <div className={styles.embedWrap}>
+      <div className={styles.youtubeWrap}>
+        <iframe
+          src={`https://www.youtube.com/embed/${videoId}`}
+          title="YouTube video"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className={styles.youtubeFrame}
+          loading="lazy"
+        />
+      </div>
+    </div>
+  );
+}
+
+function extractYouTubeId(url) {
+  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+  return match ? match[1] : '';
+}
+
 // ── Reddit Embed (iframe) ────────────────────────────────────────────────────
 function RedditEmbed({ url }) {
   // Reddit provides an embed URL pattern
@@ -232,6 +258,7 @@ export default function SocialEmbed({ url, type }) {
     case 'facebook':  return <FacebookEmbed url={url} />;
     case 'tiktok':    return <TikTokEmbed url={url} />;
     case 'reddit':    return <RedditEmbed url={url} />;
+    case 'youtube':   return <YouTubeEmbed url={url} />;
     default:          return <FallbackLink url={url} platform="Link" icon="🔗" bg="var(--text3)" />;
   }
 }
