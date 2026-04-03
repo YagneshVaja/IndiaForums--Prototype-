@@ -1,11 +1,11 @@
 .strip {
-  padding: 14px 0 6px;
+  padding: var(--sp-3) 0 var(--sp-2);
 }
 
 .row {
   display: flex;
-  gap: 8px;
-  padding: 0 16px;
+  gap: var(--sp-2);
+  padding: 0 var(--content-px);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -16,25 +16,32 @@
 
 .chip {
   flex-shrink: 0;
-  padding: 8px 18px;
-  border-radius: 100px;
+  padding: var(--sp-2) 18px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
   font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s;
+  border: none;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .chipActive {
   background: var(--dark);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(12,16,36,0.2);
+  color: var(--text-on-brand);
+  box-shadow: var(--shadow-sm);
 }
 
 .chipInactive {
   background: var(--card);
   color: var(--text2);
   border: 1.5px solid var(--border);
+}
+
+.chipInactive:hover {
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
 }
 
 .chipInactive:active {

@@ -2,7 +2,7 @@
 .overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: var(--overlay-light);
   z-index: 100;
   display: flex;
   align-items: flex-end;
@@ -60,12 +60,12 @@
   padding: 6px 16px;
   border-radius: 16px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .postBtnActive {
   background: var(--brand);
-  color: #fff;
+  color: var(--text-on-brand);
 }
 
 /* Forum badge */
@@ -117,7 +117,7 @@
   color: var(--red, #C8001E);
   font-size: 11px;
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 /* Character count */

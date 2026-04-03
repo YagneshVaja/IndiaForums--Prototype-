@@ -20,7 +20,7 @@
 
 /* Horizontal padding here; sections use negative margin -14px to break out */
 .articles {
-  padding: 10px 14px 0;
+  padding: var(--sp-3) var(--content-px) 0;
 }
 
 .empty {
@@ -154,8 +154,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--red, #ef4444);
+  background: var(--error-surface);
+  color: var(--error);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -172,12 +172,16 @@
 .retryBtn {
   font-size: 13px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-on-brand);
   background: var(--brand);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 8px 24px;
   cursor: pointer;
+}
+
+.retryBtn:hover {
+  background: var(--brand-hover);
 }
 
 .retryBtn:active {

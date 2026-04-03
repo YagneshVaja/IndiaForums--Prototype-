@@ -79,7 +79,8 @@
   -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s;
 }
-.closeBtn:active { opacity: 0.7; }
+.closeBtn:hover { background: var(--border); }
+.closeBtn:active { opacity: 0.7; transform: scale(0.92); }
 
 /* ── Scrollable body ─────────────────────────────────────────────────────────── */
 .drawerBody {
@@ -195,7 +196,8 @@
   -webkit-tap-highlight-color: transparent;
   transition: background 0.1s;
 }
-.sectionGroupHeader:active { background: var(--surface); }
+.sectionGroupHeader:hover { background: var(--surface); }
+.sectionGroupHeader:active { background: var(--border); }
 
 .sectionGroupIcon {
   font-size: 14px;
@@ -224,16 +226,17 @@
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 9px 14px;
+  padding: 9px var(--content-px);
   border: none;
   background: transparent;
   cursor: pointer;
   gap: 10px;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.1s;
+  transition: background var(--duration-fast) var(--ease-out);
   text-align: left;
 }
-.navRow:active { background: var(--surface); }
+.navRow:hover { background: var(--surface); }
+.navRow:active { background: var(--border); }
 
 .navRowIndent {
   padding-left: 24px;
@@ -289,6 +292,7 @@
   -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s;
 }
+.seeMoreBtn:hover { background: var(--brand-light); border-radius: var(--radius-sm); }
 .seeMoreBtn:active { opacity: 0.7; }
 
 /* ── Social section ──────────────────────────────────────────────────────────── */
@@ -324,6 +328,9 @@
   flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s, transform 0.15s;
+}
+.socialBtn:hover {
+  transform: scale(1.08);
 }
 .socialBtn:active {
   opacity: 0.8;

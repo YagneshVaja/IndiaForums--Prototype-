@@ -21,7 +21,7 @@
 .backBtn {
   width: 32px;
   height: 32px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
   border: 1.5px solid var(--border);
   display: flex;
@@ -29,8 +29,9 @@
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform 0.15s;
+  transition: transform var(--duration-fast) var(--ease-out);
 }
+.backBtn:hover { border-color: var(--brand-border); }
 .backBtn:active { transform: scale(0.92); }
 
 .topTitle {
@@ -50,15 +51,16 @@
 .iconBtn {
   width: 32px;
   height: 32px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: transparent;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--duration-fast) var(--ease-out);
 }
+.iconBtn:hover { background: var(--bg); }
 .iconBtn:active { background: var(--border); }
 
 /* ── Scroll area ───────────────────────────────────────────────────────────── */
@@ -125,7 +127,7 @@
 
 .badgeBreaking {
   background: var(--red);
-  color: #fff;
+  color: var(--text-on-brand);
   font-size: 9.5px;
   font-weight: 800;
   padding: 3px 8px;
@@ -137,7 +139,7 @@
 
 .badgeTag {
   background: rgba(0,0,0,0.55);
-  color: #fff;
+  color: var(--text-on-brand);
   font-size: 9.5px;
   font-weight: 800;
   padding: 3px 8px;
@@ -149,7 +151,7 @@
 
 /* ── Content padding ───────────────────────────────────────────────────────── */
 .content {
-  padding: 14px 14px 0;
+  padding: var(--content-px) var(--content-px) 0;
 }
 
 /* ── Breadcrumb ────────────────────────────────────────────────────────────── */
@@ -206,7 +208,7 @@
   gap: 10px;
   padding: 11px 12px;
   background: var(--card);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   margin-bottom: 12px;
 }
@@ -216,7 +218,7 @@
   height: 34px;
   border-radius: 50%;
   background: var(--brand);
-  color: #fff;
+  color: var(--text-on-brand);
   font-size: 13px;
   font-weight: 800;
   display: flex;
@@ -290,8 +292,9 @@
   border: none;
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform 0.15s, opacity 0.15s;
+  transition: transform var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
 }
+.shareCircle:hover { opacity: 0.85; }
 .shareCircle:active { transform: scale(0.9); opacity: 0.8; }
 
 .fbBtn   { background: #1877F2; }
@@ -302,7 +305,7 @@
 /* ── Reactions ─────────────────────────────────────────────────────────────── */
 .reactBox {
   background: var(--card);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   padding: 14px 12px;
   margin-bottom: 0;
@@ -333,13 +336,14 @@
   align-items: center;
   gap: 3px;
   padding: 8px 10px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--bg);
   border: 1.5px solid var(--border);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--duration-fast) var(--ease-out);
   min-width: 50px;
 }
+.reactBtn:hover { border-color: var(--brand-border); }
 .reactBtn:active { transform: scale(0.92); }
 
 .reactActive {
@@ -397,10 +401,116 @@
 .apiBody h2,
 .apiBody h3 { font-family: var(--font-display); font-size: 16px; font-weight: 800; color: var(--dark); margin: 20px 0 8px; }
 .apiBody a  { color: var(--brand); text-decoration: none; }
-.apiBody img { max-width: 100%; border-radius: 10px; margin: 10px 0; }
+.apiBody img { max-width: 100%; border-radius: var(--radius-sm); margin: 10px 0; }
 .apiBody ul,
 .apiBody ol  { padding-left: 20px; margin: 0 0 14px; }
 .apiBody li  { margin-bottom: 6px; }
+
+/* ── Article item blocks (API articleItems) ───────────────────────────────── */
+.itemBlock {
+  margin-bottom: 20px;
+}
+.itemBlock:last-child { margin-bottom: 0; }
+
+.itemImageWrap {
+  margin: 0 -14px 14px;
+}
+
+.itemImage {
+  width: 100%;
+  display: block;
+}
+
+.itemCaption {
+  padding: 6px 14px 0;
+  font-size: 10.5px;
+  color: var(--text3);
+  font-family: var(--font-body);
+  font-style: italic;
+}
+
+.itemTitle {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--dark);
+  margin: 0 0 10px;
+  padding-left: 12px;
+  border-left: 3px solid var(--brand);
+  letter-spacing: -0.3px;
+  line-height: 1.3;
+}
+
+/* YouTube embed */
+.ytWrap {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;
+  margin-bottom: 12px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #000;
+}
+
+.ytFrame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Social embed links (Instagram, Twitter/X) */
+.socialEmbed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border);
+  text-decoration: none;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.socialEmbed:hover { border-color: var(--brand-border); }
+.socialEmbed:active { border-color: var(--brand); }
+
+.socialEmbedIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text-on-brand);
+  font-family: var(--font-body);
+}
+
+.socialEmbedText {
+  flex: 1;
+  min-width: 0;
+}
+
+.socialEmbedLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
+  font-family: var(--font-body);
+}
+
+.socialEmbedUrl {
+  font-size: 10.5px;
+  color: var(--text3);
+  font-family: var(--font-body);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .bHeading {
   font-family: var(--font-display);
@@ -419,7 +529,7 @@
   margin: 14px 0;
   padding: 10px 14px;
   background: var(--brand-light);
-  border-radius: 0 12px 12px 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
 .bQuote p {
   font-size: 13px;
@@ -442,7 +552,7 @@
   gap: 10px;
   align-items: flex-start;
   background: linear-gradient(135deg,#f0f4ff,#e8ecff);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 12px;
   margin-top: 14px;
   border: 1px solid #c7d2fe;
@@ -451,7 +561,7 @@
 .tldrBadge {
   flex-shrink: 0;
   background: var(--brand);
-  color: #fff;
+  color: var(--text-on-brand);
   font-size: 9.5px;
   font-weight: 800;
   padding: 3px 7px;
@@ -487,8 +597,9 @@
   color: var(--text2);
   font-family: var(--font-body);
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
 }
+.tag:hover { border-color: var(--brand-border); }
 .tag:active { border-color: var(--brand); color: var(--brand); }
 
 /* ── WhatsApp widget ───────────────────────────────────────────────────────── */
@@ -498,7 +609,7 @@
   gap: 12px;
   padding: 14px;
   background: linear-gradient(135deg, #e8f8ef, #d0f2e0);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 1.5px solid #a7e9c1;
 }
 
@@ -533,15 +644,16 @@
   flex-shrink: 0;
   padding: 8px 14px;
   background: #25D366;
-  color: #fff;
+  color: var(--text-on-brand);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 800;
   font-family: var(--font-body);
   cursor: pointer;
-  transition: transform 0.15s, opacity 0.15s;
+  transition: transform var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
 }
+.waWidgetBtn:hover { opacity: 0.9; }
 .waWidgetBtn:active { transform: scale(0.95); opacity: 0.85; }
 
 /* ── Shared section label ──────────────────────────────────────────────────── */
@@ -555,6 +667,40 @@
   padding-left: 11px;
   border-left: 3px solid var(--brand);
   line-height: 1.2;
+}
+
+/* ── JSON entity chips ─────────────────────────────────────────────────────── */
+.chipGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+
+.entityChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
+}
+.entityChip:hover { border-color: var(--brand-border); }
+.entityChip:active {
+  border-color: var(--brand);
+  background: var(--brand-light);
+}
+
+.entityChipName {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text2);
+  font-family: var(--font-body);
+  white-space: nowrap;
 }
 
 /* ── Entities section ──────────────────────────────────────────────────────── */
@@ -582,7 +728,7 @@
 .entityAvatar {
   width: 64px;
   height: 64px;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -624,17 +770,18 @@
   align-items: flex-start;
   padding: 12px;
   background: var(--card);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: transform 0.15s;
+  transition: transform var(--duration-fast) var(--ease-out);
 }
-.relCard:active { transform: scale(0.98); border-color: rgba(53,88,240,0.2); }
+.relCard:hover { border-color: var(--brand-border); }
+.relCard:active { transform: scale(0.98); border-color: var(--brand-border); }
 
 .relThumb {
   width: 80px;
   height: 80px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -650,7 +797,7 @@
   top: 4px;
   left: 4px;
   background: var(--red);
-  color: #fff;
+  color: var(--text-on-brand);
   font-size: 7px;
   font-weight: 800;
   padding: 1px 4px;
@@ -698,7 +845,7 @@
   flex-direction: column;
   gap: 0;
   background: var(--card);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   overflow: hidden;
 }
@@ -710,7 +857,7 @@
   padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background var(--duration-fast) var(--ease-out);
 }
 .socialCard:last-child { border-bottom: none; }
 .socialCard:active { background: var(--bg); }
@@ -718,14 +865,14 @@
 .socialIcon {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
   font-weight: 900;
-  color: #fff;
+  color: var(--text-on-brand);
   font-family: var(--font-body);
 }
 
@@ -774,15 +921,16 @@
   color: var(--brand);
   font-family: var(--font-body);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
   white-space: nowrap;
 }
-.socialFollowBtn:active { background: var(--brand); color: #fff; }
+.socialFollowBtn:hover { background: var(--brand); color: var(--text-on-brand); }
+.socialFollowBtn:active { background: var(--brand); color: var(--text-on-brand); }
 
 /* ── Comments ──────────────────────────────────────────────────────────────── */
 .commentsBox {
   background: var(--card);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   padding: 16px;
 }
@@ -818,7 +966,7 @@
   gap: 10px;
   padding: 10px 12px;
   background: var(--bg);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 1.5px solid var(--border);
   margin-bottom: 14px;
   cursor: text;
@@ -828,7 +976,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  color: #fff;
+  color: var(--text-on-brand);
   font-size: 11px;
   font-weight: 800;
   display: flex;
@@ -854,7 +1002,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  color: #fff;
+  color: var(--text-on-brand);
   font-size: 13px;
   font-weight: 800;
   display: flex;
@@ -907,8 +1055,9 @@
   color: var(--text3);
   cursor: pointer;
   font-family: var(--font-body);
-  transition: color 0.15s;
+  transition: color var(--duration-fast) var(--ease-out);
 }
+.likeBtn:hover, .replyBtn:hover { color: var(--brand); }
 .likeBtn:active, .replyBtn:active { color: var(--brand); }
 
 /* ── End padding ───────────────────────────────────────────────────────────── */

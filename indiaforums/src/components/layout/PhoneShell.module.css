@@ -3,7 +3,7 @@
   height: 852px;
   background: var(--bg);
   border-radius: 48px;
-  border: 2px solid #D1D8EA;
+  border: 2px solid var(--border);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -13,4 +13,5 @@
     0 20px 60px rgba(12,16,36,0.18),
     0 8px 20px rgba(12,16,36,0.08),
     inset 0 1px 0 rgba(255,255,255,0.6);
+  transition: background var(--duration-med) var(--ease-out);
 }

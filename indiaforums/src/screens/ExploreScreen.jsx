@@ -99,13 +99,13 @@ export default function ExploreScreen({ onArticlePress, onGalleryPress, onGaller
       <div className={styles.forumWrap}>
         <div className={styles.forumTabs}>
           {FORUM_TABS.map(({ id, label }) => (
-            <div
+            <button
               key={id}
               className={`${styles.tab} ${activeForumTab === id ? styles.tabActive : ''}`}
               onClick={() => setActiveForumTab(id)}
             >
               {label}
-            </div>
+            </button>
           ))}
         </div>
         {threads.map((t, i) => (

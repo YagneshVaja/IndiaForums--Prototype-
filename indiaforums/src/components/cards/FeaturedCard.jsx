@@ -2,7 +2,7 @@ import styles from './FeaturedCard.module.css';
 
 export default function FeaturedCard({ tag, tagColor, title, source, time, emoji, bg, thumbnail, onClick }) {
   return (
-    <div className={styles.card} onClick={onClick}>
+    <div className={styles.card} onClick={onClick} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && onClick?.()}>
       {thumbnail ? (
         <img src={thumbnail} alt="" className={styles.thumb} loading="lazy" />
       ) : (

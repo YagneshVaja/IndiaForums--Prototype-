@@ -60,12 +60,16 @@
   position: relative;
   width: 100px;
   height: 152px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.card:hover .thumb {
+  transform: scale(1.03);
 }
 
 .progressBar {

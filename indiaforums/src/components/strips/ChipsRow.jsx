@@ -5,13 +5,13 @@ export default function ChipsRow({ chips, activeId, onSelect }) {
     <div className={styles.strip}>
       <div className={styles.row}>
         {chips.map(({ id, label }) => (
-          <div
+          <button
             key={id}
             className={`${styles.chip} ${id === activeId ? styles.chipActive : styles.chipInactive}`}
             onClick={() => onSelect(id)}
           >
             {label}
-          </div>
+          </button>
         ))}
       </div>
     </div>

@@ -13,11 +13,11 @@
 }
 
 .articles {
-  padding: 4px 12px 0;
+  padding: var(--sp-1) var(--content-px) 0;
 }
 
 .forumWrap {
-  padding: 0 16px;
+  padding: 0 var(--content-px);
 }
 
 .forumTabs {
@@ -30,12 +30,19 @@
   flex: 1;
   text-align: center;
   padding: 11px 4px;
+  font-family: var(--font-body);
   font-size: 13px;
   font-weight: 700;
   color: var(--text3);
   cursor: pointer;
   position: relative;
-  transition: color 0.15s;
+  border: none;
+  background: transparent;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.tab:hover {
+  color: var(--text2);
 }
 
 .tabActive {
@@ -142,8 +149,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--red, #ef4444);
+  background: var(--error-surface);
+  color: var(--error);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -160,12 +167,16 @@
 .retryBtn {
   font-size: 13px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-on-brand);
   background: var(--brand);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 8px 24px;
   cursor: pointer;
+}
+
+.retryBtn:hover {
+  background: var(--brand-hover);
 }
 
 .retryBtn:active {

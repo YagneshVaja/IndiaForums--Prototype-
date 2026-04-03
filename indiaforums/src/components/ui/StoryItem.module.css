@@ -6,7 +6,11 @@
   flex-shrink: 0;
   cursor: pointer;
   width: 68px;
-  transition: transform 0.2s;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.item:hover {
+  transform: scale(1.05);
 }
 
 .item:active {

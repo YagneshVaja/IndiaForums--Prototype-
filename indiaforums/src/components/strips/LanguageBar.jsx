@@ -9,13 +9,13 @@ export default function LanguageBar({ langs, activeId, onSelect }) {
         const label = isObj ? item.label : item;
         const active = key === activeId;
         return (
-          <div
+          <button
             key={key}
             className={`${styles.tab} ${active ? styles.tabActive : ''}`}
             onClick={() => onSelect(key)}
           >
             {label}
-          </div>
+          </button>
         );
       })}
     </div>

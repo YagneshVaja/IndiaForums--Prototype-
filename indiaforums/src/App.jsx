@@ -24,6 +24,7 @@ import FanFictionScreen    from './screens/FanFictionScreen';
 import QuizzesScreen       from './screens/QuizzesScreen';
 import ShortsScreen        from './screens/ShortsScreen';
 import WebStoriesScreen    from './screens/WebStoriesScreen';
+import TagDetailScreen     from './screens/TagDetailScreen';
 
 const TAB_SCREENS = {
   explore: ExploreScreen,
@@ -44,6 +45,7 @@ export default function App() {
   const [selectedTopic,   setSelectedTopic]   = useState(null);
   const [selectedCeleb,   setSelectedCeleb]   = useState(null);
   const [drilledForum,    setDrilledForum]    = useState(null);
+  const [selectedTag,     setSelectedTag]     = useState(null);
 
   /* ── UI state ─────────────────────────────────────────────────────────────── */
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -66,6 +68,7 @@ export default function App() {
     setSelectedTopic(null);
     setSelectedCeleb(null);
     setDrilledForum(null);
+    setSelectedTag(null);
     setActiveTab(tab);
   }
 
@@ -155,6 +158,19 @@ export default function App() {
     topNavBack  = () => setSelectedTopic(null);
     content     = <TopicDetailScreen topic={selectedTopic} />;
 
+  } else if (selectedTag) {
+    topNavTitle = selectedTag.name;
+    topNavBack  = () => setSelectedTag(null);
+    content     = (
+      <TagDetailScreen
+        tag={selectedTag}
+        onBack={() => setSelectedTag(null)}
+        onArticlePress={setSelectedArticle}
+        onVideoPress={setSelectedVideo}
+        onGalleryPress={handleGalleryPress}
+      />
+    );
+
   } else if (selectedArticle) {
     topNavTitle = 'Article';
     topNavBack  = () => setSelectedArticle(null);
@@ -163,6 +179,7 @@ export default function App() {
         article={selectedArticle}
         onBack={() => setSelectedArticle(null)}
         onArticlePress={setSelectedArticle}
+        onTagPress={setSelectedTag}
       />
     );
 
