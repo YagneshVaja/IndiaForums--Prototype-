@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import styles from './ArticleScreen.module.css';
 import { getRelatedArticles } from '../data/newsData';
 import useArticleDetails from '../hooks/useArticleDetails';
+import SocialEmbed from '../components/ui/SocialEmbed';
 
 // ── Reactions ─────────────────────────────────────────────────────────────────
 const REACTIONS = [
@@ -307,28 +308,14 @@ export default function ArticleScreen({ article, onBack, onArticlePress, onTagPr
                   // Type 6: Instagram embed
                   if (item.type === 6 && item.mediaUrl) return (
                     <div key={item.id} className={styles.itemBlock}>
-                      <a href={item.mediaUrl} target="_blank" rel="noopener noreferrer" className={styles.socialEmbed}>
-                        <div className={styles.socialEmbedIcon} style={{ background: 'linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)' }}>IG</div>
-                        <div className={styles.socialEmbedText}>
-                          <div className={styles.socialEmbedLabel}>View on Instagram</div>
-                          <div className={styles.socialEmbedUrl}>{item.mediaUrl.replace(/https?:\/\/(www\.)?/, '').substring(0, 45)}...</div>
-                        </div>
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="var(--text3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </a>
+                      <SocialEmbed url={item.mediaUrl} type={item.type} />
                     </div>
                   );
 
                   // Type 7: Twitter/X embed
                   if (item.type === 7 && item.mediaUrl) return (
                     <div key={item.id} className={styles.itemBlock}>
-                      <a href={item.mediaUrl} target="_blank" rel="noopener noreferrer" className={styles.socialEmbed}>
-                        <div className={styles.socialEmbedIcon} style={{ background: '#000' }}>𝕏</div>
-                        <div className={styles.socialEmbedText}>
-                          <div className={styles.socialEmbedLabel}>View on X</div>
-                          <div className={styles.socialEmbedUrl}>{item.mediaUrl.replace(/https?:\/\/(www\.)?/, '').substring(0, 45)}...</div>
-                        </div>
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="var(--text3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </a>
+                      <SocialEmbed url={item.mediaUrl} type={item.type} />
                     </div>
                   );
 
@@ -337,6 +324,13 @@ export default function ArticleScreen({ article, onBack, onArticlePress, onTagPr
                     <div key={item.id} className={styles.itemBlock}>
                       {item.title && <h3 className={styles.itemTitle}>{item.title}</h3>}
                       <div className={styles.apiBody} dangerouslySetInnerHTML={{ __html: item.contents }} />
+                    </div>
+                  );
+
+                  // Catch-all: any other type with a social media URL
+                  if (item.mediaUrl && /twitter\.com|x\.com|instagram\.com|facebook\.com|fb\.watch|tiktok\.com|reddit\.com/i.test(item.mediaUrl)) return (
+                    <div key={item.id} className={styles.itemBlock}>
+                      <SocialEmbed url={item.mediaUrl} type={item.type} />
                     </div>
                   );
 
