@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import styles from './ArticleScreen.module.css';
 import { getRelatedArticles } from '../data/newsData';
 import useArticleDetails from '../hooks/useArticleDetails';
+import useComments from '../hooks/useComments';
 import SocialEmbed from '../components/ui/SocialEmbed';
 
 // ── Reactions ─────────────────────────────────────────────────────────────────
@@ -45,11 +46,8 @@ const CATEGORY_ENTITIES = {
   ],
 };
 
-const COMMENTS = [
-  { id: 1, user: 'FilmLover99',   av: 'F', color: '#3558F0', time: '2 hr ago', text: 'Absolutely love this! Cannot wait for more updates. This is exactly what fans have been wanting! Great reporting 🙌', likes: 24 },
-  { id: 2, user: 'TVAddict_2026', av: 'T', color: '#7c3aed', time: '3 hr ago', text: 'Saw this coming honestly — the hints were all there last week. Brilliant work by the IF team as always!', likes: 18 },
-  { id: 3, user: 'Bollywood_Fan', av: 'B', color: '#db2777', time: '5 hr ago', text: 'OMG!! Cannot believe this is happening! Already sharing with all my friends right now 😍🔥', likes: 31 },
-];
+// contentTypeId 7 = articles
+const COMMENT_CONTENT_TYPE = 7;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function seededN(seed, min, max) {
@@ -107,12 +105,15 @@ function buildBody(article) {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function ArticleScreen({ article, onBack, onArticlePress, onTagPress }) {
+export default function ArticleScreen({ article, onArticlePress, onTagPress }) {
   const [reaction, setReaction] = useState(null);
   const scrollRef = useRef(null);
 
   // Fetch enriched details from API
-  const { details, loading: detailsLoading } = useArticleDetails(article.id);
+  const { details } = useArticleDetails(article.id);
+
+  // Fetch live comments
+  const { comments: liveComments, loading: commentsLoading, hasMore, loadMore, totalItems: liveCommentTotal } = useComments(COMMENT_CONTENT_TYPE, article.id);
 
   // Merge list-level article with fetched details
   // Skip null/undefined detail values so list-level data is preserved
@@ -155,31 +156,6 @@ export default function ArticleScreen({ article, onBack, onArticlePress, onTagPr
 
   return (
     <div className={styles.screen}>
-
-      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
-      <div className={styles.topBar}>
-        <button className={styles.backBtn} onClick={onBack}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M12.5 5l-5 5 5 5" stroke="var(--dark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        <span className={styles.topTitle}>Article{detailsLoading ? '...' : ''}</span>
-        <div className={styles.topActions}>
-          <button className={styles.iconBtn}>
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <circle cx="14" cy="4"  r="1.8" stroke="var(--text2)" strokeWidth="1.4"/>
-              <circle cx="4"  cy="9"  r="1.8" stroke="var(--text2)" strokeWidth="1.4"/>
-              <circle cx="14" cy="14" r="1.8" stroke="var(--text2)" strokeWidth="1.4"/>
-              <path d="M5.8 8l6.4-3.2M5.8 10.2l6.4 3" stroke="var(--text2)" strokeWidth="1.3"/>
-            </svg>
-          </button>
-          <button className={styles.iconBtn}>
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M4 2h10a1 1 0 011 1v13l-6-3.5L3 16V3a1 1 0 011-1z" stroke="var(--text2)" strokeWidth="1.4" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        </div>
-      </div>
 
       {/* ── Scroll ──────────────────────────────────────────────────────────── */}
       <div className={styles.scroll} ref={scrollRef}>
@@ -452,7 +428,9 @@ export default function ArticleScreen({ article, onBack, onArticlePress, onTagPr
           <div className={styles.commentsBox}>
             <div className={styles.commentsHeader}>
               <span className={styles.commentsTitle}>Comments</span>
-              <span className={styles.commentsCount}>{commentCount} comments</span>
+              <span className={styles.commentsCount}>
+                {liveCommentTotal > 0 ? liveCommentTotal : commentCount} comments
+              </span>
             </div>
 
             <div className={styles.commentInput}>
@@ -460,9 +438,19 @@ export default function ArticleScreen({ article, onBack, onArticlePress, onTagPr
               <div className={styles.inputPlaceholder}>Add a comment...</div>
             </div>
 
-            {COMMENTS.map(c => (
+            {commentsLoading && liveComments.length === 0 && (
+              <div className={styles.commentsLoading}>Loading comments...</div>
+            )}
+
+            {!commentsLoading && liveComments.length === 0 && (
+              <div className={styles.commentsEmpty}>No comments yet. Be the first to comment!</div>
+            )}
+
+            {liveComments.map(c => (
               <div key={c.id} className={styles.comment}>
-                <div className={styles.commentAv} style={{ background: c.color }}>{c.av}</div>
+                <div className={styles.commentAv} style={{ background: c.accentColor }}>
+                  {c.initial}
+                </div>
                 <div className={styles.commentContent}>
                   <div className={styles.commentTop}>
                     <span className={styles.commentUser}>{c.user}</span>
@@ -471,11 +459,21 @@ export default function ArticleScreen({ article, onBack, onArticlePress, onTagPr
                   <div className={styles.commentText}>{c.text}</div>
                   <div className={styles.commentActions}>
                     <button className={styles.likeBtn}>👍 {c.likes}</button>
+                    <button className={styles.likeBtn}>👎 {c.dislikes}</button>
                     <button className={styles.replyBtn}>Reply</button>
+                    {c.replyCount > 0 && (
+                      <span className={styles.replyCount}>{c.replyCount} {c.replyCount === 1 ? 'reply' : 'replies'}</span>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
+
+            {hasMore && (
+              <button className={styles.loadMoreBtn} onClick={loadMore}>
+                Load more comments
+              </button>
+            )}
           </div>
 
           <div className={styles.divider} />

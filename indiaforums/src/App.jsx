@@ -177,7 +177,6 @@ export default function App() {
     content     = (
       <ArticleScreen
         article={selectedArticle}
-        onBack={() => setSelectedArticle(null)}
         onArticlePress={setSelectedArticle}
         onTagPress={setSelectedTag}
       />
