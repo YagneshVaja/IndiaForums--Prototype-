@@ -1,0 +1,140 @@
+/* ── Embed wrapper ─────────────────────────────────────────────────────────── */
+.embedWrap {
+  width: 100%;
+  min-height: 120px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* Force third-party embeds to fit container */
+.embedWrap iframe {
+  max-width: 100% !important;
+  border-radius: var(--radius-md);
+}
+
+.embedWrap blockquote {
+  max-width: 100% !important;
+  margin: 0 !important;
+}
+
+/* Instagram overrides */
+.embedWrap .instagram-media {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+/* Twitter overrides */
+.embedWrap .twitter-tweet {
+  margin: 0 auto !important;
+}
+
+/* ── Reddit embed ─────────────────────────────────────────────────────────── */
+.redditWrap {
+  position: relative;
+  width: 100%;
+  min-height: 320px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.redditFrame {
+  width: 100%;
+  min-height: 320px;
+  height: 480px;
+  border: 0;
+}
+
+/* ── Fallback link card ───────────────────────────────────────────────────── */
+.fallback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border);
+  text-decoration: none;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.fallback:hover { border-color: var(--brand-border); }
+.fallback:active { border-color: var(--brand); }
+
+.fallbackIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text-on-brand);
+  font-family: var(--font-body);
+}
+
+.fallbackText {
+  flex: 1;
+  min-width: 0;
+}
+
+.fallbackLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
+  font-family: var(--font-body);
+}
+
+.fallbackUrl {
+  font-size: 10.5px;
+  color: var(--text3);
+  font-family: var(--font-body);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Loading skeleton ─────────────────────────────────────────────────────── */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonShimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0,0,0,0.04) 40%,
+    rgba(0,0,0,0.04) 60%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.skeletonText {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text3);
+  font-family: var(--font-body);
+  z-index: 1;
+}
