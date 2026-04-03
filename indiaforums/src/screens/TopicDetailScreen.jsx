@@ -1,12 +1,64 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import styles from './TopicDetailScreen.module.css';
 import useTopicPosts from '../hooks/useTopicPosts';
 import { replyToTopic } from '../services/api';
+import SocialEmbed, { detectPlatform } from '../components/ui/SocialEmbed';
 
 function formatNum(n) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
   if (n >= 1000)    return (n / 1000).toFixed(1) + 'k';
   return String(n);
+}
+
+// ── Extract social-media URLs from HTML message ─────────────────────────────
+const SOCIAL_URL_RE = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com|instagram\.com|facebook\.com|fb\.watch|tiktok\.com|reddit\.com|youtube\.com|youtu\.be)[^\s"'<)]+/gi;
+
+function extractSocialUrls(html) {
+  if (!html) return [];
+  const matches = html.match(SOCIAL_URL_RE);
+  if (!matches) return [];
+  // dedupe
+  return [...new Set(matches)];
+}
+
+// ── Topic description with embedded social content ──────────────────────────
+function TopicBodyWithEmbeds({ text }) {
+  const socialUrls = useMemo(() => {
+    if (!text) return [];
+    const matches = text.match(SOCIAL_URL_RE);
+    return matches ? [...new Set(matches)] : [];
+  }, [text]);
+
+  return (
+    <>
+      <p className={styles.topicBody}>{text}</p>
+      {socialUrls.length > 0 && (
+        <div className={styles.embedsRow}>
+          {socialUrls.map(url => (
+            <SocialEmbed key={url} url={url} />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── Post body with embedded social content ──────────────────────────────────
+function PostBodyWithEmbeds({ html }) {
+  const socialUrls = useMemo(() => extractSocialUrls(html), [html]);
+
+  return (
+    <>
+      <div className={styles.postBody} dangerouslySetInnerHTML={{ __html: html }} />
+      {socialUrls.length > 0 && (
+        <div className={styles.embedsRow}>
+          {socialUrls.map(url => (
+            <SocialEmbed key={url} url={url} />
+          ))}
+        </div>
+      )}
+    </>
+  );
 }
 
 export default function TopicDetailScreen({ topic }) {
@@ -52,9 +104,9 @@ export default function TopicDetailScreen({ topic }) {
           {/* Title */}
           <h2 className={styles.topicTitle}>{topic.title}</h2>
 
-          {/* Description */}
+          {/* Description + embeds */}
           {topic.description && (
-            <p className={styles.topicBody}>{topic.description}</p>
+            <TopicBodyWithEmbeds text={topic.description} />
           )}
 
           {/* Tags */}
@@ -157,7 +209,7 @@ export default function TopicDetailScreen({ topic }) {
                   </div>
                   {post.isOp && <span className={styles.opBadge}>OP</span>}
                 </div>
-                <div className={styles.postBody} dangerouslySetInnerHTML={{ __html: post.message }} />
+                <PostBodyWithEmbeds html={post.message} />
                 <div className={styles.postFooter}>
                   <button className={styles.postAction}>
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
