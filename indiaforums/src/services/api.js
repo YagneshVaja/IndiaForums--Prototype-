@@ -60,7 +60,7 @@ const CATEGORY_EMOJIS = {
 };
 
 // ── Time formatting ──────────────────────────────────────────────────────────
-function timeAgo(dateStr) {
+export function timeAgo(dateStr) {
   const now  = Date.now();
   const past = new Date(dateStr).getTime();
   const diff = now - past;
@@ -1023,6 +1023,44 @@ export async function fetchTagGalleries(contentType, contentId, page = 1, pageSi
     pagination: data?.pagination || payload?.pagination || {
       currentPage: page, pageSize, totalPages: 1, totalItems: 0,
       hasNextPage: false, hasPreviousPage: false,
+    },
+  };
+}
+
+// ── Comments ────────────────────────────────────────────────────────────────
+function transformComment(raw) {
+  return {
+    id:          raw.commentId,
+    user:        raw.userName || 'Anonymous',
+    initial:     (raw.userName || 'A').charAt(0).toUpperCase(),
+    accentColor: raw.avatarAccent || '#3558F0',
+    time:        timeAgo(raw.createdWhen),
+    text:        raw.contents || '',
+    likes:       raw.likeCount || 0,
+    dislikes:    raw.disLikeCount || 0,
+    replyCount:  raw.replyCount || 0,
+    groupId:     raw.groupId || 0,
+  };
+}
+
+export async function fetchComments(contentTypeId, contentTypeValue, { cursor, pageSize = 25, parentCommentId = 0 } = {}) {
+  const params = { contentTypeId, contentTypeValue, parentCommentId, pageSize };
+  if (cursor) params.cursor = cursor;
+
+  const { data } = await api.get('/comments', { params });
+  const payload = data?.data || data;
+  const rawComments = payload?.comments || [];
+
+  return {
+    comments: rawComments.map(transformComment),
+    pagination: payload?.pagination || {
+      currentPage: 1,
+      pageSize,
+      totalItems: 0,
+      totalPages: 0,
+      hasNextPage: false,
+      hasPreviousPage: false,
+      nextCursor: null,
     },
   };
 }
