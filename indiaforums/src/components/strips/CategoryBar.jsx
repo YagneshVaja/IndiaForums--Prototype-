@@ -53,14 +53,14 @@ export default function CategoryBar({ cats, activeId, onSelect }) {
         {cats.map(({ id, label, icon }) => {
           const active = id === activeId;
           return (
-            <div
+            <button
               key={id}
               className={`${styles.tab} ${active ? styles.tabActive : ''}`}
               onClick={() => onSelect(id)}
             >
               <span className={styles.icon}>{ICONS[icon]}</span>
               {label}
-            </div>
+            </button>
           );
         })}
       </div>

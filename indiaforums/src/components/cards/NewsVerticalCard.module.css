@@ -1,18 +1,25 @@
 .card {
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: var(--card);
   overflow: hidden;
-  margin-bottom: 12px;
+  margin-bottom: var(--sp-3);
   cursor: pointer;
-  box-shadow: 0 2px 14px rgba(0,0,0,0.07);
+  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
-  transition: transform 0.15s, box-shadow 0.15s;
-  animation: fadeInUp 0.35s ease both;
+  transition: transform var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+  animation: fadeInUp var(--duration-slow) ease both;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
 }
 
 .card:active {
   transform: scale(0.98);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-xs);
 }
 
 .img {
@@ -52,12 +59,13 @@
   position: absolute;
   bottom: 10px;
   left: 10px;
-  background: rgba(0,0,0,0.55);
-  color: #fff;
+  background: var(--overlay-light);
+  backdrop-filter: blur(4px);
+  color: var(--text-on-brand);
   font-size: 8px;
   font-weight: 800;
   padding: 3px 8px;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }

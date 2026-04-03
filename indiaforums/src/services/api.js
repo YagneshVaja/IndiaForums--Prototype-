@@ -116,25 +116,68 @@ function transformArticleDetail(data) {
   // Description / subtitle — from metadata
   const description = metadata?.description || '';
 
-  return {
+  // Transform articleItems for structured body rendering
+  const articleItems = (data?.articleItems || [])
+    .sort((a, b) => a.orderNum - b.orderNum)
+    .map(item => ({
+      id:       item.articleItemId,
+      type:     item.articleItemTypeId,
+      order:    item.orderNum,
+      title:    item.title || '',
+      contents: item.contents || '',
+      source:   item.source || '',
+      mediaUrl: item.contentCodes || '',
+      mediaTitle: item.mediaTitle || '',
+    }));
+
+  // Parse jsonData for related entities (shows, celebrities, platforms)
+  let jsonEntities = [];
+  try {
+    const raw = article.jsonData || metadata?.jsonData || '';
+    if (raw) {
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      jsonEntities = (parsed?.json || []).map(item => ({
+        id:   item.id,
+        name: item.name || '',
+        slug: item.pu || '',
+        code: item.uc || '',
+        ct:   item.ct,
+        tt:   item.tt,
+      })).filter(item => item.name);
+    }
+  } catch (e) {
+    console.warn('[API] Failed to parse jsonData:', e);
+  }
+
+  const result = {
     id:           article.articleId,
     cat,
-    tag:          article.articleAttribute || '',
-    breaking:     false,
     title:        article.headline || '',
     time:         timeAgo(article.publishDate),
     bg:           CATEGORY_GRADIENTS[cat] || CATEGORY_GRADIENTS.MOVIES,
     emoji:        CATEGORY_EMOJIS[cat] || '📰',
-    thumbnail:    null,  // Detail endpoint doesn't include thumbnail; use from list card
     source:       metadata?.author || 'IF News Desk',
     description,
     bodyContent,
+    articleItems,
+    jsonEntities,
+    tldr:         data?.tlDrDescription || '',
     keywords:     article.keywords || '',
     viewCount:    article.viewCount || 0,
     commentCount: article.commentCount || 0,
     authorId:     article.authorId,
+    publishDate:  article.publishDate || metadata?.publishDate || '',
+    modifiedDate: metadata?.modifiedDate || '',
     relatedArticles: relatedArticles.map(a => transformArticle(a)),
   };
+
+  // Only include these if the detail endpoint actually provides them,
+  // so list-level data is preserved through merge
+  if (article.articleAttribute) result.tag = article.articleAttribute;
+  if (article.priority > 0) result.breaking = true;
+  if (metadata?.imageUrl) result.thumbnail = metadata.imageUrl;
+
+  return result;
 }
 
 // ── API methods ──────────────────────────────────────────────────────────────
@@ -933,6 +976,54 @@ export async function fetchCelebrityFans(personId, page = 1, pageSize = 20) {
   return {
     fans: rawFans.map(transformFan),
     pagination,
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TAG / ENTITY CONTENT API
+// ══════════════════════════════════════════════════════════════════════════════
+
+export async function fetchTagArticles(contentType, contentId, page = 1, pageSize = 20) {
+  const { data } = await api.get('/articles/list', {
+    params: { pageNumber: page, pageSize, contentType, contentId },
+  });
+  const payload = data?.data || data;
+  const rawArticles = payload?.articles || [];
+  return {
+    articles: rawArticles.map(transformArticle),
+    pagination: payload?.pagination || data?.pagination || {
+      currentPage: page, pageSize, totalPages: 1, totalItems: 0,
+      hasNextPage: false, hasPreviousPage: false,
+    },
+  };
+}
+
+export async function fetchTagVideos(contentType, contentId, page = 1, pageSize = 10) {
+  const { data } = await api.get('/videos/list', {
+    params: { pageNumber: page, pageSize, contentType, contentId },
+  });
+  const payload = data?.data || data;
+  const rawVideos = payload?.medias || [];
+  return {
+    videos: rawVideos.map(transformVideo),
+    pagination: {
+      currentPage: page, pageSize,
+      hasNextPage: rawVideos.length >= pageSize,
+    },
+  };
+}
+
+export async function fetchTagGalleries(contentType, contentId, page = 1, pageSize = 10) {
+  const params = { pageNumber: page, pageSize, publishedOnly: false, contentType, contentId };
+  const { data } = await api.get('/media-galleries/list', { params });
+  const payload = data?.data || data;
+  const rawGalleries = payload?.galleries || payload?.mediaGalleries || [];
+  return {
+    galleries: rawGalleries.map(transformGallery),
+    pagination: data?.pagination || payload?.pagination || {
+      currentPage: page, pageSize, totalPages: 1, totalItems: 0,
+      hasNextPage: false, hasPreviousPage: false,
+    },
   };
 }
 

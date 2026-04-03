@@ -5,7 +5,7 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--border);
-  padding: 8px 4px 28px;
+  padding: var(--sp-2) var(--sp-1) 28px;
   display: flex;
   justify-content: space-around;
   align-items: flex-start;
@@ -23,13 +23,15 @@
   cursor: pointer;
   background: none;
   border: none;
-  padding: 4px 0 0;
+  padding: var(--sp-1) 0 0;
   position: relative;
-  transition: transform 0.12s;
+  transition: transform var(--duration-fast) var(--ease-out);
   -webkit-tap-highlight-color: transparent;
 }
+.item:hover .iconWrap { background: var(--surface); }
 .item:active { transform: scale(0.88); }
 .itemActive  { cursor: default; }
+.itemActive:hover .iconWrap { background: var(--brand-light); }
 
 /* ── Icon wrapper ───────────────────────────────────────────────────────────── */
 .iconWrap {
@@ -39,8 +41,8 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  border-radius: 16px;
-  transition: background 0.15s;
+  border-radius: var(--radius-lg);
+  transition: background var(--duration-fast) var(--ease-out);
 }
 .itemActive .iconWrap {
   background: var(--brand-light);

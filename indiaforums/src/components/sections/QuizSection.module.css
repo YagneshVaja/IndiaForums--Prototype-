@@ -41,10 +41,10 @@
 .badge {
   font-size: 9.5px;
   font-weight: 800;
-  color: #f59e0b;
-  background: #fef3c7;
+  color: var(--amber);
+  background: var(--amber-surface);
   padding: 2px 7px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   letter-spacing: 0.4px;
   text-transform: uppercase;
 }
@@ -57,8 +57,8 @@
 
 .card {
   background: var(--bg);
-  border-radius: 14px;
-  padding: 14px;
+  border-radius: var(--radius-lg);
+  padding: var(--content-px);
   border: 1px solid var(--border);
 }
 
@@ -83,14 +83,16 @@
   align-items: center;
   gap: 7px;
   padding: 9px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--card);
   border: 1.5px solid var(--border);
   cursor: pointer;
   text-align: left;
-  transition: all 0.15s;
+  transition: all var(--duration-fast) var(--ease-out);
   position: relative;
+  font-family: var(--font-body);
 }
+.opt:hover { background: var(--surface-raised); border-color: var(--border-strong); }
 .opt:active { transform: scale(0.96); }
 
 .optLabel {
@@ -125,26 +127,26 @@
 
 /* States after answering */
 .correct {
-  background: #f0fdf4;
-  border-color: #86efac;
+  background: var(--success-surface);
+  border-color: var(--success);
 }
 .correct .optLabel {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--success-surface);
+  color: var(--success);
 }
-.correct .optText { color: #15803d; }
-.tick { color: #16a34a; }
+.correct .optText { color: var(--success); }
+.tick { color: var(--success); }
 
 .wrong {
-  background: #fef2f2;
-  border-color: #fca5a5;
+  background: var(--error-surface);
+  border-color: var(--error);
 }
 .wrong .optLabel {
-  background: #fee2e2;
-  color: #dc2626;
+  background: var(--error-surface);
+  color: var(--error);
 }
-.wrong .optText { color: #dc2626; }
-.cross { color: #dc2626; }
+.wrong .optText { color: var(--error); }
+.cross { color: var(--error); }
 
 .dim {
   opacity: 0.45;
@@ -162,13 +164,13 @@
 }
 
 .resultCorrect {
-  background: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+  background: var(--success-surface);
+  color: var(--success);
+  border: 1px solid var(--success);
 }
 
 .resultWrong {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  background: var(--error-surface);
+  color: var(--error);
+  border: 1px solid var(--error);
 }

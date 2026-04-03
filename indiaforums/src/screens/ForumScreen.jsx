@@ -362,6 +362,7 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
                 <div key={forum.id} className={styles.forumCard}
                   style={{ animationDelay: `${i * 0.04}s` }}
                   onClick={() => openForum(forum)}
+                  role="button" tabIndex={0}
                 >
                   <div className={styles.forumAvatar} style={{ background: forum.bg }}>
                     {forum.thumbnailUrl
@@ -451,6 +452,7 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
                 <div key={forum.id} className={styles.forumCard}
                   style={{ animationDelay: `${i * 0.03}s` }}
                   onClick={() => openForum(forum)}
+                  role="button" tabIndex={0}
                 >
                   <div className={styles.forumAvatar} style={{ background: forum.bg }}>
                     {forum.emoji}

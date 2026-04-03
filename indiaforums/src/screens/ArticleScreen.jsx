@@ -15,14 +15,6 @@ const REACTIONS = [
 ];
 
 // ── Static data ───────────────────────────────────────────────────────────────
-const SOCIAL_CHANNELS = [
-  { id: 'yt1', platform: 'YouTube',   handle: '@indiaforums',      count: '3.6M', bg: '#FF0000', abbr: 'YT' },
-  { id: 'yt2', platform: 'YouTube',   handle: '@indiaforumshindi', count: '1.2M', bg: '#FF0000', abbr: 'YT' },
-  { id: 'ig1', platform: 'Instagram', handle: '@indiaforums',      count: '1.1M', bg: 'linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)', abbr: 'IG' },
-  { id: 'ig2', platform: 'Instagram', handle: '@indiaforumsglitz', count: '58.8K',bg: 'linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)', abbr: 'IG' },
-  { id: 'fb1', platform: 'Facebook',  handle: '@indiaforums',      count: '2.5M', bg: '#1877F2', abbr: 'FB' },
-  { id: 'x1',  platform: 'X',         handle: '@indiaforums',      count: '280K', bg: '#000',    abbr: 'X'  },
-];
 
 const CATEGORY_ENTITIES = {
   MOVIES: [
@@ -50,14 +42,6 @@ const CATEGORY_ENTITIES = {
     { id: 'ranveer', name: 'Ranveer Singh',  role: 'Actor · Style Icon',emoji: '👗', bg: 'linear-gradient(135deg,#431407,#ea580c)' },
     { id: 'deepika', name: 'Deepika Padukone',role:'Actress · Fashion', emoji: '✨', bg: 'linear-gradient(135deg,#831843,#db2777)' },
   ],
-};
-
-const CAT_TAGS = {
-  TV:        ['Television', 'Hindi TV', 'Drama', 'TRP Watch', 'Star Plus', 'Colors TV'],
-  MOVIES:    ['Bollywood', 'Box Office', 'Hindi Cinema', 'Film Review', 'Celeb News'],
-  SPORTS:    ['Cricket', 'IPL 2026', 'Sports News', 'India Cricket', 'BCCI'],
-  DIGITAL:   ['OTT', 'Web Series', 'Streaming', 'Netflix', 'Prime Video', 'Hotstar'],
-  LIFESTYLE: ['Fashion', 'Bollywood Style', 'Celebrity', 'Trending', 'Wellness'],
 };
 
 const COMMENTS = [
@@ -122,17 +106,22 @@ function buildBody(article) {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function ArticleScreen({ article, onBack, onArticlePress }) {
+export default function ArticleScreen({ article, onBack, onArticlePress, onTagPress }) {
   const [reaction, setReaction] = useState(null);
   const scrollRef = useRef(null);
 
   // Fetch enriched details from API
   const { details, loading: detailsLoading } = useArticleDetails(article.id);
 
-  // Merge list-level article with fetched details (details take precedence when available)
+  // Merge list-level article with fetched details
+  // Skip null/undefined detail values so list-level data is preserved
   const enriched = useMemo(() => {
     if (!details) return article;
-    return { ...article, ...details };
+    const merged = { ...article };
+    for (const [key, value] of Object.entries(details)) {
+      if (value != null) merged[key] = value;
+    }
+    return merged;
   }, [article, details]);
 
   const seed = useMemo(() => {
@@ -149,20 +138,14 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
   const commentCount = useMemo(() => enriched.commentCount || seededN(seed * 3, 14, 297), [seed, enriched.commentCount]);
   const body         = useMemo(() => buildBody(enriched), [enriched]);
   const subtitle     = useMemo(() => enriched.description || getSubtitle(enriched), [enriched]);
+  const hasArticleItems = enriched.articleItems?.length > 0;
+  const apiTldr      = enriched.tldr || '';
   const related      = useMemo(() => {
     if (enriched.relatedArticles?.length) return enriched.relatedArticles.slice(0, 3);
     return getRelatedArticles(enriched);
   }, [enriched]);
   const topCat       = useMemo(() => getTopCat(enriched), [enriched]);
-  const tags         = useMemo(() => {
-    if (enriched.keywords) {
-      const kwTags = enriched.keywords.split(',').map(k => k.trim()).filter(Boolean).slice(0, 6);
-      if (kwTags.length > 0) return kwTags;
-    }
-    const base = CAT_TAGS[topCat] || CAT_TAGS.MOVIES;
-    const extra = enriched.tag ? [enriched.tag] : [];
-    return [...new Set([...extra, ...base])].slice(0, 6);
-  }, [topCat, enriched.tag, enriched.keywords]);
+  const jsonEntities = enriched.jsonEntities || [];
   const entities     = useMemo(() => CATEGORY_ENTITIES[topCat] || CATEGORY_ENTITIES.MOVIES, [topCat]);
   const crumbs       = ['Home', ...(enriched.cat || '').split('·').map(s => s.trim()).filter(Boolean)];
 
@@ -278,7 +261,96 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
 
           {/* Article body */}
           <div className={styles.body}>
-            {enriched.bodyContent ? (
+            {hasArticleItems ? (
+              <>
+                {enriched.articleItems.map((item) => {
+                  // Type 2: Image + text
+                  if (item.type === 2) return (
+                    <div key={item.id} className={styles.itemBlock}>
+                      {item.mediaUrl && (
+                        <div className={styles.itemImageWrap}>
+                          <img src={item.mediaUrl} alt={item.mediaTitle || ''} className={styles.itemImage} loading="lazy" />
+                          {item.source && <div className={styles.itemCaption}>{item.source}</div>}
+                        </div>
+                      )}
+                      {item.contents && (
+                        <div className={styles.apiBody} dangerouslySetInnerHTML={{ __html: item.contents }} />
+                      )}
+                    </div>
+                  );
+
+                  // Type 4: YouTube video + text
+                  if (item.type === 4) {
+                    const ytMatch = item.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+                    return (
+                      <div key={item.id} className={styles.itemBlock}>
+                        {item.title && <h3 className={styles.itemTitle}>{item.title}</h3>}
+                        {ytMatch && (
+                          <div className={styles.ytWrap}>
+                            <iframe
+                              src={`https://www.youtube.com/embed/${ytMatch[1]}`}
+                              title={item.title || 'Video'}
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              className={styles.ytFrame}
+                              loading="lazy"
+                            />
+                          </div>
+                        )}
+                        {item.contents && (
+                          <div className={styles.apiBody} dangerouslySetInnerHTML={{ __html: item.contents }} />
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // Type 6: Instagram embed
+                  if (item.type === 6 && item.mediaUrl) return (
+                    <div key={item.id} className={styles.itemBlock}>
+                      <a href={item.mediaUrl} target="_blank" rel="noopener noreferrer" className={styles.socialEmbed}>
+                        <div className={styles.socialEmbedIcon} style={{ background: 'linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)' }}>IG</div>
+                        <div className={styles.socialEmbedText}>
+                          <div className={styles.socialEmbedLabel}>View on Instagram</div>
+                          <div className={styles.socialEmbedUrl}>{item.mediaUrl.replace(/https?:\/\/(www\.)?/, '').substring(0, 45)}...</div>
+                        </div>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="var(--text3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </a>
+                    </div>
+                  );
+
+                  // Type 7: Twitter/X embed
+                  if (item.type === 7 && item.mediaUrl) return (
+                    <div key={item.id} className={styles.itemBlock}>
+                      <a href={item.mediaUrl} target="_blank" rel="noopener noreferrer" className={styles.socialEmbed}>
+                        <div className={styles.socialEmbedIcon} style={{ background: '#000' }}>𝕏</div>
+                        <div className={styles.socialEmbedText}>
+                          <div className={styles.socialEmbedLabel}>View on X</div>
+                          <div className={styles.socialEmbedUrl}>{item.mediaUrl.replace(/https?:\/\/(www\.)?/, '').substring(0, 45)}...</div>
+                        </div>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="var(--text3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </a>
+                    </div>
+                  );
+
+                  // Type 9: Text-only paragraph
+                  if (item.type === 9 && item.contents) return (
+                    <div key={item.id} className={styles.itemBlock}>
+                      {item.title && <h3 className={styles.itemTitle}>{item.title}</h3>}
+                      <div className={styles.apiBody} dangerouslySetInnerHTML={{ __html: item.contents }} />
+                    </div>
+                  );
+
+                  return null;
+                })}
+
+                {apiTldr && (
+                  <div className={styles.tldr}>
+                    <span className={styles.tldrBadge}>TL;DR</span>
+                    <span className={styles.tldrText}>{apiTldr}</span>
+                  </div>
+                )}
+              </>
+            ) : enriched.bodyContent ? (
               <div
                 className={styles.apiBody}
                 dangerouslySetInnerHTML={{ __html: enriched.bodyContent }}
@@ -346,52 +418,39 @@ export default function ArticleScreen({ article, onBack, onArticlePress }) {
 
           <div className={styles.divider} />
 
-          {/* We're Everywhere */}
-          <div className={styles.socialSection}>
-            <div className={styles.sectionLabel}>We're Everywhere!</div>
-            <div className={styles.socialGrid}>
-              {SOCIAL_CHANNELS.map(ch => (
-                <div key={ch.id} className={styles.socialCard}>
-                  <div className={styles.socialIcon} style={{ background: ch.bg }}>{ch.abbr}</div>
-                  <div className={styles.socialInfo}>
-                    <div className={styles.socialPlatform}>{ch.platform}</div>
-                    <div className={styles.socialHandle}>{ch.handle}</div>
+          {/* Related entities from API jsonData */}
+          {jsonEntities.length > 0 && (
+            <>
+              <div className={styles.sectionLabel}>Related Topics</div>
+              <div className={styles.chipGrid}>
+                {jsonEntities.map(e => (
+                  <button key={e.id} className={styles.entityChip} onClick={() => onTagPress?.(e)}>
+                    <span className={styles.entityChipName}>{e.name}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Fallback static entities when no API data */}
+          {jsonEntities.length === 0 && (
+            <div className={styles.entitiesSection}>
+              <div className={styles.sectionLabel}>People & Topics</div>
+              <div className={styles.entitiesRow}>
+                {entities.map(e => (
+                  <div key={e.id} className={styles.entityCard}>
+                    <div className={styles.entityAvatar} style={{ background: e.bg }}>
+                      <span className={styles.entityEmoji}>{e.emoji}</span>
+                    </div>
+                    <div className={styles.entityName}>{e.name}</div>
+                    <div className={styles.entityRole}>{e.role}</div>
                   </div>
-                  <div className={styles.socialRight}>
-                    <div className={styles.socialCount}>{ch.count}</div>
-                    <button className={styles.socialFollowBtn}>+ Follow</button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className={styles.divider} />
-
-          {/* Related entities (people / movies / shows) */}
-          <div className={styles.entitiesSection}>
-            <div className={styles.sectionLabel}>People & Topics</div>
-            <div className={styles.entitiesRow}>
-              {entities.map(e => (
-                <div key={e.id} className={styles.entityCard}>
-                  <div className={styles.entityAvatar} style={{ background: e.bg }}>
-                    <span className={styles.entityEmoji}>{e.emoji}</span>
-                  </div>
-                  <div className={styles.entityName}>{e.name}</div>
-                  <div className={styles.entityRole}>{e.role}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.divider} />
-
-          {/* Tags */}
-          <div className={styles.tagsRow}>
-            {tags.map(tag => (
-              <span key={tag} className={styles.tag}>{tag}</span>
-            ))}
-          </div>
 
           <div className={styles.divider} />
 

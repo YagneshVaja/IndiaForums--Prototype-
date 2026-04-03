@@ -2,13 +2,19 @@
   flex-shrink: 0;
   width: 280px;
   height: 180px;
-  border-radius: 22px;
+  border-radius: var(--radius-xl);
   overflow: hidden;
   position: relative;
   cursor: pointer;
   scroll-snap-align: start;
-  transition: transform 0.2s;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  transition: transform var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+  box-shadow: var(--shadow-lg);
+}
+
+.card:hover {
+  transform: scale(1.02);
+  box-shadow: var(--shadow-lg);
 }
 
 .card:active {

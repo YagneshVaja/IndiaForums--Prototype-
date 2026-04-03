@@ -147,7 +147,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--text-on-brand);
   font-weight: 800;
   font-size: 10px;
   flex-shrink: 0;
@@ -225,7 +225,7 @@
 
 .postCard {
   background: var(--card);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   padding: 12px;
   animation: fadeInUp 0.3s ease both;
@@ -243,7 +243,7 @@
   height: 28px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--brand), #6B7FFF);
-  color: #fff;
+  color: var(--text-on-brand);
   font-weight: 800;
   font-size: 12px;
   display: flex;
@@ -289,7 +289,7 @@
   line-height: 1.55;
   word-break: break-word;
 }
-.postBody img { max-width: 100%; border-radius: 8px; margin: 6px 0; }
+.postBody img { max-width: 100%; border-radius: var(--radius-sm); margin: 6px 0; }
 .postBody a { color: var(--brand); text-decoration: underline; }
 
 .postFooter {
@@ -313,8 +313,8 @@
   border: none;
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 8px;
-  transition: background 0.15s;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast) var(--ease-out);
 }
 .postAction:active { background: var(--surface); }
 
@@ -335,7 +335,7 @@
   height: 30px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--brand), #6B7FFF);
-  color: #fff;
+  color: var(--text-on-brand);
   font-weight: 800;
   font-size: 13px;
   display: flex;
@@ -354,7 +354,7 @@
   color: var(--text);
   background: var(--bg);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color var(--duration-fast) var(--ease-out);
 }
 .replyInput:focus {
   border-color: var(--brand);
@@ -378,7 +378,7 @@
 }
 .sendActive {
   background: var(--brand);
-  color: #fff;
+  color: var(--text-on-brand);
 }
 .sendBtn:active { transform: scale(0.9); }
 
@@ -402,7 +402,7 @@
   font-size: 11px;
   font-weight: 600;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   margin-bottom: 4px;
 }
 

@@ -49,7 +49,7 @@
   justify-content: center;
   flex-shrink: 0;
   border-radius: 50%;
-  transition: background 0.15s;
+  transition: background var(--duration-fast) var(--ease-out);
   margin-left: -10px;
 }
 .backBtn:active { background: var(--surface); }
@@ -102,7 +102,7 @@
   padding: 5px 13px;
   border-radius: 20px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
   white-space: nowrap;
 }
 .catTab:active { transform: scale(0.95); }
@@ -111,7 +111,7 @@
 .catActive {
   background: var(--red);
   border-color: var(--red);
-  color: #fff;
+  color: var(--text-on-brand);
 }
 
 /* ── Scroll area — the ONLY thing that scrolls ──────────────────────────────── */
@@ -120,7 +120,7 @@
   overflow-y: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  padding: 14px 14px 0;
+  padding: 14px var(--content-px) 0;
   min-height: 0;
 }
 .scrollArea::-webkit-scrollbar { display: none; }
@@ -129,7 +129,7 @@
 .hero {
   position: relative;
   height: 200px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -172,7 +172,7 @@
   font-family: var(--font-display);
   font-size: 15px;
   font-weight: 800;
-  color: #fff;
+  color: var(--text-on-brand);
   margin: 0 0 6px;
   line-height: 1.3;
   display: -webkit-box;
@@ -212,7 +212,7 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255,255,255,0.28);
-  color: #fff;
+  color: var(--text-on-brand);
   font-size: 11px;
   font-weight: 700;
   padding: 5px 12px;
@@ -227,7 +227,7 @@
   align-items: center;
   justify-content: space-around;
   background: var(--card);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 12px 0;
   margin-bottom: 16px;
   border: 1px solid var(--border);
@@ -288,13 +288,13 @@
 /* ── Gallery card — Google News: white, thin border, xs shadow, 12px radius ─── */
 .card {
   background: var(--card);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   cursor: pointer;
   animation: fadeInUp 0.3s ease both;
   border: 1px solid var(--border);
   box-shadow: var(--shadow-xs);
-  transition: box-shadow 0.15s, transform 0.15s;
+  transition: box-shadow var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
 }
 .card:active {
   transform: scale(0.97);
@@ -331,8 +331,8 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  background: rgba(0,0,0,0.65);
-  color: #fff;
+  background: var(--overlay-medium);
+  color: var(--text-on-brand);
   font-size: 9px;
   font-weight: 700;
   padding: 2px 6px;
@@ -421,7 +421,7 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
 }
 .loadMoreBtn:active {
   background: var(--surface);
@@ -455,7 +455,7 @@
   gap: 10px;
   padding: 24px 16px;
   background: var(--card);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   margin-bottom: 16px;
   animation: fadeInUp 0.3s ease both;
@@ -491,7 +491,7 @@
   align-items: center;
   justify-content: space-around;
   background: var(--card);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 12px 0;
   margin-bottom: 16px;
   border: 1px solid var(--border);
@@ -508,7 +508,7 @@
 
 .skeletonCard {
   background: var(--card);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--border);
 }

@@ -2,7 +2,7 @@ import styles from './NewsVerticalCard.module.css';
 
 export default function NewsVerticalCard({ cat, tag, breaking, title, time, bg, emoji, thumbnail, source, readTime, onClick }) {
   return (
-    <div className={styles.card} onClick={onClick}>
+    <div className={styles.card} onClick={onClick} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && onClick?.()}>
       <div className={styles.img} style={{ background: bg }}>
         {thumbnail ? (
           <img src={thumbnail} alt="" className={styles.thumbImg} loading="lazy" />

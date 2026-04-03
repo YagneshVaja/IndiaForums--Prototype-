@@ -21,7 +21,28 @@ body {
   padding: 20px;
 }
 
-/* Shared entrance animation — subtle, Inshorts / Google News speed */
+/* ── Accessibility: Focus-visible ring ──────────────────────────────────── */
+:focus { outline: none; }
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ── Global interactive hover uplift (inside PhoneShell only) ───────────── */
+[data-theme] button:hover,
+[data-theme] [role="button"]:hover {
+  filter: brightness(1.02);
+}
+
+/* ── Shared entrance animations ─────────────────────────────────────────── */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -30,4 +51,19 @@ body {
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Reduced motion preference ──────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

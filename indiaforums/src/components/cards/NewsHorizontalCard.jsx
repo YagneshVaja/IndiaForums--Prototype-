@@ -2,7 +2,7 @@ import styles from './NewsHorizontalCard.module.css';
 
 export default function NewsHorizontalCard({ cat, tag, breaking, title, time, bg, emoji, thumbnail, source, delay = 0, onClick }) {
   return (
-    <div className={styles.card} style={{ animationDelay: `${delay}s` }} onClick={onClick}>
+    <div className={styles.card} style={{ animationDelay: `${delay}s` }} onClick={onClick} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && onClick?.()}>
       <div className={styles.thumb} style={{ background: bg }}>
         {thumbnail ? (
           <img src={thumbnail} alt="" className={styles.thumbImg} loading="lazy" />

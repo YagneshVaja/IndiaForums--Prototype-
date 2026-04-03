@@ -7,9 +7,9 @@
 
 .dot {
   height: 5px;
-  border-radius: 100px;
+  border-radius: var(--radius-full);
   cursor: pointer;
-  transition: all 0.25s;
+  transition: all var(--duration-med) var(--ease-out);
 }
 
 .active {
@@ -20,4 +20,9 @@
 .inactive {
   width: 5px;
   background: var(--silver);
+}
+
+.inactive:hover {
+  background: var(--text3);
+  transform: scale(1.3);
 }

@@ -1,13 +1,13 @@
 .strip {
-  padding: 12px 0 4px;
+  padding: var(--sp-3) 0 var(--sp-1);
 }
 
 .row {
   display: flex;
-  gap: 4px;
+  gap: var(--sp-1);
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 0 14px;
+  padding: 0 var(--content-px);
 }
 
 .row::-webkit-scrollbar {

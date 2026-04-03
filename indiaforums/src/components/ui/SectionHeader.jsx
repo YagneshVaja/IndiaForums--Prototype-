@@ -5,7 +5,7 @@ export default function SectionHeader({ title, linkLabel = 'See all', onLinkPres
     <div className={styles.header}>
       <div className={styles.title}>{title}</div>
       {linkLabel && (
-        <div className={styles.link} onClick={onLinkPress}>{linkLabel}</div>
+        <button className={styles.link} onClick={onLinkPress}>{linkLabel}</button>
       )}
     </div>
   );
