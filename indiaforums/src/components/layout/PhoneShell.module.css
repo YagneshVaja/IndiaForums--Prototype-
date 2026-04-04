@@ -1,6 +1,12 @@
+/* ── Zoom wrapper — scales the phone without affecting toolbar ──────────── */
+.zoomWrap {
+  transform-origin: top center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .phone {
-  width: 393px;
-  height: 852px;
+  width: var(--phone-w, 393px);
+  height: var(--phone-h, 852px);
   background: var(--bg);
   border-radius: 48px;
   border: 2px solid var(--border);
@@ -13,5 +19,29 @@
     0 20px 60px rgba(12,16,36,0.18),
     0 8px 20px rgba(12,16,36,0.08),
     inset 0 1px 0 rgba(255,255,255,0.6);
-  transition: background var(--duration-med) var(--ease-out);
+  transition:
+    background var(--duration-med) var(--ease-out),
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Slow animations — multiply all transition durations ───────────────── */
+.phone[data-slow-anim] *,
+.phone[data-slow-anim] *::before,
+.phone[data-slow-anim] *::after {
+  transition-duration: calc(var(--anim-mult, 1) * 0.25s) !important;
+  animation-duration: calc(var(--anim-mult, 1) * 0.25s) !important;
+}
+
+/* ── Grid overlay ──────────────────────────────────────────────────────── */
+.gridOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(53, 88, 240, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(53, 88, 240, 0.08) 1px, transparent 1px);
+  background-size: 8px 8px;
+  border-radius: 48px;
 }

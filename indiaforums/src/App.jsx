@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useDevToolbar } from './contexts/DevToolbarContext';
 
 import PhoneShell    from './components/layout/PhoneShell';
 import DynamicIsland from './components/layout/DynamicIsland';
@@ -49,7 +50,23 @@ export default function App() {
 
   /* ── UI state ─────────────────────────────────────────────────────────────── */
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [darkMode,   setDarkMode]   = useState(false);
+  const { darkMode, toggleDarkMode, navResetTrigger } = useDevToolbar();
+
+  /* ── Reset all navigation when toolbar reset button is pressed ────────── */
+  useEffect(() => {
+    if (navResetTrigger === 0) return;
+    setActiveTab('explore');
+    setSelectedArticle(null);
+    setSelectedVideo(null);
+    setShowGalleries(false);
+    setSelectedGallery(null);
+    setActiveStory(null);
+    setSelectedTopic(null);
+    setSelectedCeleb(null);
+    setDrilledForum(null);
+    setSelectedTag(null);
+    setDrawerOpen(false);
+  }, [navResetTrigger]);
 
   /* ── Handlers ─────────────────────────────────────────────────────────────── */
   function handleGalleryPress(gallery) { setSelectedGallery(gallery); }
@@ -231,7 +248,7 @@ export default function App() {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         darkMode={darkMode}
-        onDarkModeToggle={() => setDarkMode((d) => !d)}
+        onDarkModeToggle={toggleDarkMode}
         onNavigate={handleDrawerNavigate}
       />
     </PhoneShell>
