@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import styles from './TopicDetailScreen.module.css';
 import useTopicPosts from '../hooks/useTopicPosts';
 import { replyToTopic } from '../services/api';
-import SocialEmbed, { detectPlatform } from '../components/ui/SocialEmbed';
+import SocialEmbed from '../components/ui/SocialEmbed';
 
 function formatNum(n) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
@@ -17,7 +17,6 @@ function extractSocialUrls(html) {
   if (!html) return [];
   const matches = html.match(SOCIAL_URL_RE);
   if (!matches) return [];
-  // dedupe
   return [...new Set(matches)];
 }
 
@@ -66,8 +65,13 @@ export default function TopicDetailScreen({ topic }) {
   const [replyText, setReplyText] = useState('');
   const [sending, setSending]     = useState(false);
   const [replyError, setReplyError] = useState(null);
+  const [sortBy, setSortBy] = useState('date');
 
   if (!topic) return null;
+
+  const sortedPosts = sortBy === 'likes'
+    ? [...posts].sort((a, b) => (b.likes || 0) - (a.likes || 0))
+    : posts;
 
   async function handleReply() {
     if (!replyText.trim() || sending) return;
@@ -97,9 +101,15 @@ export default function TopicDetailScreen({ topic }) {
               {topic.forumEmoji || '💬'}
             </div>
             <span className={styles.forumName}>{topic.forumName || 'Forum'}</span>
-            {topic.locked && <span className={styles.lockedBadge}>Locked</span>}
-            {topic.pinned && <span className={styles.pinnedBadge}>Pinned</span>}
           </div>
+
+          {/* Badges */}
+          {(topic.locked || topic.pinned) && (
+            <div className={styles.badgeRow}>
+              {topic.locked && <span className={styles.lockedBadge}>Locked</span>}
+              {topic.pinned && <span className={styles.pinnedBadge}>Pinned</span>}
+            </div>
+          )}
 
           {/* Title */}
           <h2 className={styles.topicTitle}>{topic.title}</h2>
@@ -118,40 +128,48 @@ export default function TopicDetailScreen({ topic }) {
             </div>
           )}
 
-          {/* Author + stats bar */}
-          <div className={styles.metaBar}>
-            <div className={styles.authorChip}>
-              <div className={styles.authorAvatar} style={{ background: topic.forumBg || 'var(--brand)' }}>
-                {(topic.poster || 'A').charAt(0).toUpperCase()}
-              </div>
-              <span className={styles.authorName}>{topic.poster || 'Anonymous'}</span>
-              <span className={styles.dot}>·</span>
-              <span className={styles.authorTime}>{topic.time || ''}</span>
+          {/* Stats bar */}
+          <div className={styles.topicStatsBar}>
+            <div className={styles.topicStatItem}>
+              <span className={styles.topicStatVal}>{formatNum(topic.replies ?? 0)}</span>
+              <span className={styles.topicStatLbl}>Replies</span>
             </div>
+            <div className={styles.topicStatItem}>
+              <span className={styles.topicStatVal}>{formatNum(topic.views ?? 0)}</span>
+              <span className={styles.topicStatLbl}>Views</span>
+            </div>
+            <div className={styles.topicStatItem}>
+              <span className={styles.topicStatVal}>{formatNum(topic.likes ?? 0)}</span>
+              <span className={styles.topicStatLbl}>Likes</span>
+            </div>
+          </div>
 
-            <div className={styles.statsRow}>
-              <span className={styles.stat}>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M1 6s2-4 5-4 5 4 5 4-2 4-5 4-5-4-5-4z" stroke="currentColor" strokeWidth="1.2"/>
-                  <circle cx="6" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.2"/>
-                </svg>
-                {formatNum(topic.views ?? 0)}
-              </span>
-              <span className={styles.stat}>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M6 10s-4.5-3-4.5-6a4.5 4.5 0 019 0c0 3-4.5 6-4.5 6z" stroke="currentColor" strokeWidth="1.2"/>
-                </svg>
-                {formatNum(topic.likes ?? 0)}
-              </span>
-              <span className={styles.stat}>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M1 1.5h10a.5.5 0 01.5.5v6a.5.5 0 01-.5.5H3l-2.5 2V2a.5.5 0 01.5-.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-                </svg>
-                {formatNum(topic.replies ?? 0)}
-              </span>
+          {/* Author */}
+          <div className={styles.authorChip}>
+            <div className={styles.authorAvatar} style={{ background: topic.forumBg || 'var(--brand)' }}>
+              {(topic.poster || 'A').charAt(0).toUpperCase()}
+            </div>
+            <div className={styles.authorInfo}>
+              <span className={styles.authorName}>{topic.poster || 'Anonymous'}</span>
+              <span className={styles.authorTime}>Created {topic.time || ''}</span>
             </div>
           </div>
         </div>
+
+        {/* ── Sort controls ── */}
+        {!loading && posts.length > 0 && (
+          <div className={styles.sortRow}>
+            <span className={styles.sortLabel}>Sort:</span>
+            <button
+              className={`${styles.sortBtn} ${sortBy === 'date' ? styles.sortBtnActive : ''}`}
+              onClick={() => setSortBy('date')}
+            >By Date</button>
+            <button
+              className={`${styles.sortBtn} ${sortBy === 'likes' ? styles.sortBtnActive : ''}`}
+              onClick={() => setSortBy('likes')}
+            >By Likes</button>
+          </div>
+        )}
 
         {/* ── Posts section label ── */}
         {!loading && posts.length > 0 && (
@@ -197,31 +215,56 @@ export default function TopicDetailScreen({ topic }) {
               </div>
             )}
 
-            {posts.map((post, i) => (
+            {sortedPosts.map((post, i) => (
               <div key={post.id} className={styles.postCard} style={{ animationDelay: `${i * 0.04}s` }}>
+                {/* Post header */}
                 <div className={styles.postHeader}>
                   <div className={styles.postAvatar}>
-                    {(post.author || 'A').charAt(0).toUpperCase()}
+                    {post.avatarUrl
+                      ? <img src={post.avatarUrl} alt="" className={styles.postAvatarImg} />
+                      : <span className={styles.postAvatarLetter}>{(post.author || 'A').charAt(0).toUpperCase()}</span>
+                    }
                   </div>
                   <div className={styles.postAuthorInfo}>
-                    <span className={styles.postAuthor}>{post.author}</span>
+                    <div className={styles.postAuthorRow}>
+                      <span className={styles.postAuthor}>{post.author}</span>
+                      {post.isOp && <span className={styles.opBadge}>OP</span>}
+                    </div>
                     <span className={styles.postTime}>{post.time}</span>
                   </div>
-                  {post.isOp && <span className={styles.opBadge}>OP</span>}
+                  <span className={styles.postNumber}>#{i + 1}</span>
                 </div>
+
+                {/* Post content */}
                 <PostBodyWithEmbeds html={post.message} />
+
+                {/* Post footer with actions */}
                 <div className={styles.postFooter}>
                   <button className={styles.postAction}>
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M6 10s-4.5-3-4.5-6a4.5 4.5 0 019 0c0 3-4.5 6-4.5 6z" stroke="currentColor" strokeWidth="1.2"/>
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                      <path d="M6.5 11s-5-3.5-5-7a5 5 0 0110 0c0 3.5-5 7-5 7z" stroke="currentColor" strokeWidth="1.1"/>
                     </svg>
                     {post.likes > 0 ? formatNum(post.likes) : 'Like'}
                   </button>
                   <button className={styles.postAction}>
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M1 1.5h10a.5.5 0 01.5.5v6a.5.5 0 01-.5.5H3l-2.5 2V2a.5.5 0 01.5-.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                      <path d="M2 2h9a1 1 0 011 1v5a1 1 0 01-1 1H4l-3 2.5V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
                     </svg>
                     Reply
+                  </button>
+                  <button className={styles.postAction}>
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                      <path d="M2 3h6v7H2z" stroke="currentColor" strokeWidth="1.1"/>
+                      <path d="M5 1h6v7" stroke="currentColor" strokeWidth="1.1"/>
+                    </svg>
+                    Quote
+                  </button>
+                  <button className={`${styles.postAction} ${styles.postActionRight}`}>
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                      <path d="M8 1l4 4-4 4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M12 5H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                    </svg>
+                    Share
                   </button>
                 </div>
               </div>

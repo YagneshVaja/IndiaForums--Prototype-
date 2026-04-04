@@ -4,6 +4,7 @@ import { fetchForumTopics } from '../services/api';
 export default function useForumTopics(forumId) {
   const [topics, setTopics]           = useState([]);
   const [forumDetail, setForumDetail] = useState(null);
+  const [flairs, setFlairs]           = useState([]);
   const [loading, setLoading]         = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError]             = useState(null);
@@ -22,6 +23,7 @@ export default function useForumTopics(forumId) {
       setCursor(result.nextCursor);
       setHasMore(result.hasMore);
       if (result.forumDetail) setForumDetail(result.forumDetail);
+      if (result.flairs?.length) setFlairs(result.flairs);
     } catch (err) {
       setError(err.message || 'Failed to load topics');
     } finally {
@@ -38,6 +40,7 @@ export default function useForumTopics(forumId) {
     setCursor(null);
     setHasMore(false);
     setForumDetail(null);
+    setFlairs([]);
     load(1, true);
   }, [forumId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -56,5 +59,5 @@ export default function useForumTopics(forumId) {
     load(1, true);
   }, [load]);
 
-  return { topics, forumDetail, loading, loadingMore, error, hasMore, loadMore, refresh };
+  return { topics, forumDetail, flairs, loading, loadingMore, error, hasMore, loadMore, refresh };
 }
