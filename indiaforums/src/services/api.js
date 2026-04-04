@@ -718,6 +718,28 @@ export async function fetchForumHome() {
   return { ...cats, forums: list.forums };
 }
 
+// ── All Forum Topics (cross-forum feed) ─────────────────────────────────────
+export async function fetchAllForumTopics(pageNumber = 1, pageSize = 20) {
+  const { data } = await api.get('/forums/topics', {
+    params: { pageNumber, pageSize },
+  });
+
+  const rawTopics = data?.topics || [];
+  const totalCount = data?.totalCount ?? 0;
+
+  console.log('[API] fetchAllForumTopics:', {
+    count: rawTopics.length,
+    totalCount,
+    pageNumber,
+  });
+
+  return {
+    topics:     rawTopics.map(transformTopic),
+    totalCount,
+    hasMore:    totalCount > pageNumber * pageSize,
+  };
+}
+
 // ── Forum Topics ─────────────────────────────────────────────────────────────
 export async function fetchForumTopics(forumId, pageNumber = 1, pageSize = 20, cursor = null) {
   const params = { pageNumber, pageSize };

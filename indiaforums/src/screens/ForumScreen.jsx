@@ -3,6 +3,7 @@ import styles from './ForumScreen.module.css';
 import ThreadCard from '../components/cards/ThreadCard';
 import useForumHome from '../hooks/useForumHome';
 import useForumTopics from '../hooks/useForumTopics';
+import useAllForumTopics from '../hooks/useAllForumTopics';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TOP_TABS = [
@@ -64,6 +65,14 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
     error: topicsError, hasMore: topicsHasMore,
     loadMore: loadMoreTopics, refresh: refreshTopics,
   } = useForumTopics(selectedForum?.id || null);
+
+  // All Topics feed — cross-forum topic listing
+  const {
+    topics: allTopics, totalCount: allTopicsTotal,
+    loading: allTopicsLoading, loadingMore: allTopicsLoadingMore,
+    error: allTopicsError, hasMore: allTopicsHasMore,
+    loadMore: loadMoreAllTopics, refresh: refreshAllTopics,
+  } = useAllForumTopics();
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   function scrollTop() {
@@ -192,49 +201,79 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
           </div>
         </div>
 
-        {/* Flair filter dropdown */}
-        {flairs.length > 0 && (
-          <div className={styles.flairFilterWrap}>
-            <button
-              className={styles.flairTrigger}
-              onClick={() => setFlairDropdownOpen(o => !o)}
-            >
-              {activeFlairId != null && (
-                <span
-                  className={styles.flairDot}
-                  style={{ background: flairs.find(f => f.id === activeFlairId)?.bgColor }}
-                />
-              )}
-              <span className={styles.flairTriggerLabel}>{activeFlairLabel}</span>
-              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={flairDropdownOpen ? styles.chevronUp : ''}>
-                <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-            {flairDropdownOpen && (
-              <>
-                <div className={styles.flairBackdrop} onClick={() => setFlairDropdownOpen(false)} />
-                <div className={styles.flairDropdown}>
-                  <div
-                    className={`${styles.flairOption} ${activeFlairId == null ? styles.flairOptionActive : ''}`}
-                    onClick={() => { setActiveFlairId(null); setFlairDropdownOpen(false); }}
-                  >
-                    <span className={styles.flairOptionName}>All</span>
-                  </div>
-                  {flairs.map(f => (
+        {/* Flair filter bar */}
+        <div className={styles.flairBar}>
+          {/* Left: flair dropdown (only if flairs exist) */}
+          {flairs.length > 0 && (
+            <div className={styles.flairFilterWrap}>
+              <button
+                className={`${styles.flairTrigger} ${flairDropdownOpen ? styles.flairTriggerOpen : ''}`}
+                onClick={() => setFlairDropdownOpen(o => !o)}
+              >
+                {activeFlairId != null ? (
+                  <span
+                    className={styles.flairDot}
+                    style={{ background: flairs.find(f => f.id === activeFlairId)?.bgColor }}
+                  />
+                ) : (
+                  <span className={styles.flairAllDot} />
+                )}
+                <span className={styles.flairTriggerLabel}>{activeFlairLabel}</span>
+                <svg width="10" height="6" viewBox="0 0 10 6" fill="none"
+                  className={`${styles.flairChevron} ${flairDropdownOpen ? styles.flairChevronOpen : ''}`}
+                >
+                  <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              {flairDropdownOpen && (
+                <>
+                  <div className={styles.flairBackdrop} onClick={() => setFlairDropdownOpen(false)} />
+                  <div className={styles.flairDropdown}>
                     <div
-                      key={f.id}
-                      className={`${styles.flairOption} ${activeFlairId === f.id ? styles.flairOptionActive : ''}`}
-                      onClick={() => { setActiveFlairId(f.id); setFlairDropdownOpen(false); }}
+                      className={`${styles.flairOption} ${activeFlairId == null ? styles.flairOptionActive : ''}`}
+                      onClick={() => { setActiveFlairId(null); setFlairDropdownOpen(false); }}
                     >
-                      <span className={styles.flairDot} style={{ background: f.bgColor }} />
-                      <span className={styles.flairOptionName}>{f.name}</span>
+                      <span className={styles.flairAllDot} />
+                      <span className={styles.flairOptionName}>All</span>
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={styles.flairCheck}>
+                        <path d="M2.5 7.5l3 3 6-6.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
                     </div>
-                  ))}
-                </div>
-              </>
+                    <div className={styles.flairSeparator} />
+                    {flairs.map(f => (
+                      <div
+                        key={f.id}
+                        className={`${styles.flairOption} ${activeFlairId === f.id ? styles.flairOptionActive : ''}`}
+                        onClick={() => { setActiveFlairId(f.id); setFlairDropdownOpen(false); }}
+                      >
+                        <span className={styles.flairDot} style={{ background: f.bgColor }} />
+                        <span className={styles.flairOptionName}>{f.name}</span>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={styles.flairCheck}>
+                          <path d="M2.5 7.5l3 3 6-6.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Right: topic count + new topic */}
+          <div className={styles.flairBarRight}>
+            {!topicsLoading && (
+              <span className={styles.flairTopicCount}>
+                {topicCards.length} topic{topicCards.length !== 1 ? 's' : ''}
+              </span>
             )}
+            <button className={styles.newTopicBtn}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+              New
+            </button>
           </div>
-        )}
+        </div>
 
         {/* Loading skeleton */}
         {topicsLoading && (
@@ -482,19 +521,80 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
       )}
 
       {/* ════════════════════════════════════════════
-          TAB: ALL TOPICS (Browse all forums, pick one)
+          TAB: ALL TOPICS — live cross-forum topic feed
       ════════════════════════════════════════════ */}
       {topTab === 'all-topics' && (
         <>
+          {/* Header with count */}
           <div className={styles.allTopicsIntro}>
-            <div className={styles.allTopicsLabel}>Browse Forums</div>
-            <div className={styles.allTopicsSub}>Tap a forum to view its topics</div>
+            <div className={styles.allTopicsLabel}>All Topics</div>
+            <div className={styles.allTopicsSub}>
+              {allTopicsLoading ? 'Loading...' : `${formatCount(allTopicsTotal)} topics across all forums`}
+            </div>
           </div>
 
-          {homeLoading && (
-            <div className={styles.forumList}>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className={styles.skeletonForum}>
+          {/* Loading skeleton */}
+          {allTopicsLoading && (
+            <div className={styles.threadList}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className={styles.skeletonThread}>
+                  <div className={styles.skeletonAvatar} />
+                  <div className={styles.skeletonBody}>
+                    <div className={styles.skeletonLine} />
+                    <div className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+                    <div className={`${styles.skeletonLine} ${styles.skeletonLineTiny}`} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Error */}
+          {allTopicsError && !allTopicsLoading && (
+            <div className={styles.errorBox}>
+              <span className={styles.errorText}>{allTopicsError}</span>
+              <button className={styles.retryBtn} onClick={refreshAllTopics}>Retry</button>
+            </div>
+          )}
+
+          {/* Topic feed */}
+          {!allTopicsLoading && !allTopicsError && (
+            <div className={styles.threadList}>
+              {allTopics.length === 0 ? (
+                <div className={styles.empty}>
+                  <div className={styles.emptyIcon}>📭</div>
+                  <div className={styles.emptyText}>No topics yet</div>
+                </div>
+              ) : allTopics.map((t, i) => (
+                <div key={t.id} onClick={() => onTopicPress?.({
+                  ...t,
+                  forumBg: 'linear-gradient(135deg,#1e3a5e,#2563eb)',
+                  forumEmoji: '💬',
+                })}>
+                  <ThreadCard
+                    forumName={t.forumName}
+                    bg="linear-gradient(135deg,#1e3a5e,#2563eb)"
+                    title={t.title}
+                    description={t.description}
+                    poster={t.poster}
+                    ago={t.time}
+                    likes={formatCount(t.likes)}
+                    comments={formatCount(t.replies)}
+                    views={formatCount(t.views)}
+                    lastBy={t.lastBy}
+                    lastTime={t.lastTime}
+                    locked={t.locked}
+                    pinned={t.pinned}
+                    tags={t.tags}
+                    topicImage={t.topicImage}
+                    delay={i * 0.03}
+                  />
+                </div>
+              ))}
+
+              {/* Load more skeleton */}
+              {allTopicsLoadingMore && Array.from({ length: 3 }).map((_, i) => (
+                <div key={`atlm-${i}`} className={styles.skeletonThread}>
                   <div className={styles.skeletonAvatar} />
                   <div className={styles.skeletonBody}>
                     <div className={styles.skeletonLine} />
@@ -505,38 +605,11 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
             </div>
           )}
 
-          {!homeLoading && (
-            <div className={styles.forumList}>
-              {forums
-                .filter(f => f.topicCount > 0)
-                .sort((a, b) => b.topicCount - a.topicCount)
-                .slice(0, 30)
-                .map((forum, i) => (
-                <div key={forum.id} className={styles.forumCard}
-                  style={{ animationDelay: `${i * 0.03}s` }}
-                  onClick={() => openForum(forum)}
-                  role="button" tabIndex={0}
-                >
-                  <div className={styles.forumAvatar} style={{ background: forum.bg }}>
-                    {forum.emoji}
-                  </div>
-                  <div className={styles.forumBody}>
-                    <div className={styles.forumNameRow}>
-                      <span className={styles.forumName}>{forum.name}</span>
-                    </div>
-                    <div className={styles.forumDesc}>
-                      {formatCount(forum.topicCount)} topics · {formatCount(forum.postCount)} posts
-                    </div>
-                  </div>
-                  <div className={styles.forumStats}>
-                    <div className={styles.statCol}>
-                      <span className={styles.statNum}>{formatCount(forum.topicCount)}</span>
-                      <span className={styles.statLabel}>Topics</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* Load More */}
+          {allTopicsHasMore && !allTopicsLoadingMore && !allTopicsLoading && (
+            <button className={styles.loadMore} onClick={loadMoreAllTopics}>
+              Load More Topics
+            </button>
           )}
         </>
       )}

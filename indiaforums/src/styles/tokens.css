@@ -224,3 +224,68 @@
   /* Focus ring — brighter on dark */
   --focus-ring: 0 0 0 2px var(--card), 0 0 0 4px var(--brand);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   COLOR THEMES — Applied via data-color-theme on PhoneShell
+   Each theme overrides brand-related tokens only.
+──────────────────────────────────────────────────────────────────────────── */
+
+/* Warm — amber/orange accent */
+[data-color-theme="warm"] {
+  --brand:         #D97706;
+  --brand-hover:   #B45309;
+  --brand-light:   #FEF3C7;
+  --brand-lighter: #FFFBEB;
+  --brand-border:  rgba(217,119,6,0.35);
+  --brand-glow:    rgba(217,119,6,0.10);
+  --shadow-brand:  0 3px 12px rgba(217,119,6,0.25);
+}
+[data-color-theme="warm"][data-theme="dark"] {
+  --brand:         #F59E0B;
+  --brand-hover:   #FBBF24;
+  --brand-light:   rgba(245,158,11,0.16);
+  --brand-lighter: rgba(245,158,11,0.10);
+  --brand-border:  rgba(245,158,11,0.35);
+  --brand-glow:    rgba(245,158,11,0.22);
+  --shadow-brand:  0 3px 12px rgba(245,158,11,0.35);
+}
+
+/* Midnight — deep purple accent */
+[data-color-theme="midnight"] {
+  --brand:         #7C3AED;
+  --brand-hover:   #6D28D9;
+  --brand-light:   #EDE9FE;
+  --brand-lighter: #F5F3FF;
+  --brand-border:  rgba(124,58,237,0.35);
+  --brand-glow:    rgba(124,58,237,0.10);
+  --shadow-brand:  0 3px 12px rgba(124,58,237,0.25);
+}
+[data-color-theme="midnight"][data-theme="dark"] {
+  --brand:         #A78BFA;
+  --brand-hover:   #C4B5FD;
+  --brand-light:   rgba(167,139,250,0.16);
+  --brand-lighter: rgba(167,139,250,0.10);
+  --brand-border:  rgba(167,139,250,0.35);
+  --brand-glow:    rgba(167,139,250,0.22);
+  --shadow-brand:  0 3px 12px rgba(167,139,250,0.35);
+}
+
+/* Rose — pink accent */
+[data-color-theme="rose"] {
+  --brand:         #E03A5C;
+  --brand-hover:   #C42B4A;
+  --brand-light:   #FFF1F3;
+  --brand-lighter: #FFF5F7;
+  --brand-border:  rgba(224,58,92,0.35);
+  --brand-glow:    rgba(224,58,92,0.10);
+  --shadow-brand:  0 3px 12px rgba(224,58,92,0.25);
+}
+[data-color-theme="rose"][data-theme="dark"] {
+  --brand:         #FB7185;
+  --brand-hover:   #FDA4AF;
+  --brand-light:   rgba(251,113,133,0.16);
+  --brand-lighter: rgba(251,113,133,0.10);
+  --brand-border:  rgba(251,113,133,0.35);
+  --brand-glow:    rgba(251,113,133,0.22);
+  --shadow-brand:  0 3px 12px rgba(251,113,133,0.35);
+}
