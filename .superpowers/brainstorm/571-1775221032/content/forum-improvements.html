@@ -1,0 +1,198 @@
+<h2>Forum Views — Proposed Improvements</h2>
+<p class="subtitle">Comparing current state vs proposed changes for all 3 forum views, adapted from the live IndiaForums website for mobile</p>
+
+<h3>View 1: Forums List</h3>
+<p class="subtitle">Current: Shows forum name, description, rank/topics/followers. Proposed: Add post count, last activity time, and visual "hot" indicator</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Current</div>
+    <div class="mockup-body" style="background:#f5f6f7;padding:12px;font-family:system-ui">
+      <!-- Current forum card -->
+      <div style="background:white;border-radius:12px;padding:12px;display:flex;gap:10px;align-items:center;margin-bottom:8px">
+        <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#4a1942,#7e22ce);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🌟</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px;color:#1a1a1a">Kundali Bhagya</div>
+          <div style="font-size:11px;color:#888;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Kundali Bhagya is the spin-off of Kumkum Bhagya...</div>
+        </div>
+        <div style="display:flex;gap:12px;flex-shrink:0;text-align:center">
+          <div><div style="font-size:12px;font-weight:600;color:#3558F0">#31</div><div style="font-size:9px;color:#aaa">Rank</div></div>
+          <div style="width:1px;background:#eee"></div>
+          <div><div style="font-size:12px;font-weight:600">2.5k</div><div style="font-size:9px;color:#aaa">Topics</div></div>
+          <div style="width:1px;background:#eee"></div>
+          <div><div style="font-size:12px;font-weight:600">0</div><div style="font-size:9px;color:#aaa">Flwrs</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Proposed</div>
+    <div class="mockup-body" style="background:#f5f6f7;padding:12px;font-family:system-ui">
+      <!-- Proposed forum card -->
+      <div style="background:white;border-radius:12px;padding:12px;display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">
+        <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#4a1942,#7e22ce);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🌟</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-weight:600;font-size:14px;color:#1a1a1a">Kundali Bhagya</span>
+            <span style="font-size:12px">🔥</span>
+          </div>
+          <div style="font-size:11px;color:#888;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Kundali Bhagya is the spin-off of Kumkum Bhagya...</div>
+          <div style="display:flex;gap:10px;margin-top:6px;font-size:10px;color:#999">
+            <span style="display:flex;align-items:center;gap:3px">
+              <span style="color:#3558F0;font-weight:600">#31</span> rank
+            </span>
+            <span>2.5k topics</span>
+            <span>66.6k posts</span>
+            <span>153 followers</span>
+          </div>
+          <div style="font-size:10px;color:#aaa;margin-top:4px">Last post 2 months ago · by SilverBell</div>
+        </div>
+        <svg width="8" height="12" viewBox="0 0 8 12" fill="none" style="flex-shrink:0;margin-top:16px">
+          <path d="M1.5 1.5l5 5-5 5" stroke="#ccc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:32px">View 2: Forum Detail (Topic Listing)</h3>
+<p class="subtitle">Current: Shows forum name/emoji, title, author, likes/comments/views, last reply. Proposed: Add description preview, pinned/locked badges, category flair tag, and richer metadata</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Current ThreadCard</div>
+    <div class="mockup-body" style="background:#f5f6f7;padding:12px;font-family:system-ui">
+      <div style="background:white;border-radius:12px;padding:12px;display:flex;gap:10px;margin-bottom:8px">
+        <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#4a1942,#7e22ce);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🌟</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;color:#3558F0;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Kundali Bhagya</div>
+          <div style="font-weight:600;font-size:13px;color:#1a1a1a;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">||Kundali Bhagya Picture Gallery 1 :No Comments||</div>
+          <div style="font-size:11px;color:#888;margin-top:3px">By <b>jyoti06</b> · 10 Jul 2017</div>
+          <div style="display:flex;gap:12px;margin-top:5px;font-size:10px;color:#aaa;align-items:center">
+            <span>♡ 171</span>
+            <span>💬 711</span>
+            <span>👁 91.6k</span>
+            <span style="margin-left:auto">4 Feb 2025 · SilverBell</span>
+          </div>
+        </div>
+        <svg width="8" height="12" viewBox="0 0 8 12" fill="none" style="flex-shrink:0;margin-top:12px">
+          <path d="M1.5 1.5l5 5-5 5" stroke="#ccc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Proposed ThreadCard</div>
+    <div class="mockup-body" style="background:#f5f6f7;padding:12px;font-family:system-ui">
+      <div style="background:white;border-radius:12px;padding:12px;margin-bottom:8px">
+        <!-- Top row: badges -->
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <span style="font-size:10px;color:#3558F0;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Kundali Bhagya</span>
+          <span style="font-size:9px;padding:1px 6px;border-radius:4px;background:#fee2e2;color:#dc2626;font-weight:500">Locked</span>
+          <span style="font-size:9px;padding:1px 6px;border-radius:4px;background:#dbeafe;color:#2563eb;font-weight:500">Pinned</span>
+        </div>
+        <!-- Title -->
+        <div style="font-weight:600;font-size:14px;color:#1a1a1a;line-height:1.3">||Kundali Bhagya Picture Gallery 1 :No Comments||</div>
+        <!-- Description preview -->
+        <div style="font-size:11.5px;color:#666;margin-top:4px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">Picture Gallery 1 Post only Pictures related to the show .. No comments are allowed here NOTE: Check this link before posting as new rules are...</div>
+        <!-- Author row -->
+        <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+          <div style="width:20px;height:20px;border-radius:50%;background:#3558F0;color:white;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:600">J</div>
+          <span style="font-size:11px;color:#555;font-weight:500">jyoti06</span>
+          <span style="font-size:11px;color:#bbb">·</span>
+          <span style="font-size:11px;color:#999">10 Jul 2017</span>
+        </div>
+        <!-- Stats row -->
+        <div style="display:flex;gap:14px;margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;font-size:11px;color:#888;align-items:center">
+          <span style="display:flex;align-items:center;gap:3px">❤️ 171</span>
+          <span style="display:flex;align-items:center;gap:3px">💬 711</span>
+          <span style="display:flex;align-items:center;gap:3px">👁 91.6k</span>
+          <span style="margin-left:auto;font-size:10px;color:#aaa">4 Feb 2025 · SilverBell</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:32px">View 3: Topic Detail (Post/Reply View)</h3>
+<p class="subtitle">Current: Basic post cards with avatar initial, author, time, message, like/reply buttons. Proposed: Add post numbering (#1, #2...), user reputation badge, quote button, richer author info, and share action</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Current Post Card</div>
+    <div class="mockup-body" style="background:#f5f6f7;padding:12px;font-family:system-ui">
+      <div style="background:white;border-radius:12px;padding:12px;margin-bottom:8px">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <div style="width:32px;height:32px;border-radius:50%;background:#3558F0;color:white;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:600">J</div>
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#1a1a1a">jyoti06</div>
+            <div style="font-size:10px;color:#999">Just now</div>
+          </div>
+          <span style="margin-left:auto;font-size:9px;padding:2px 6px;border-radius:4px;background:#e8edff;color:#3558F0;font-weight:600">OP</span>
+        </div>
+        <div style="font-size:12px;color:#333;line-height:1.5">Post content goes here with the message body...</div>
+        <div style="display:flex;gap:16px;margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0">
+          <button style="display:flex;align-items:center;gap:4px;font-size:11px;color:#888;background:none;border:none;cursor:pointer">♡ Like</button>
+          <button style="display:flex;align-items:center;gap:4px;font-size:11px;color:#888;background:none;border:none;cursor:pointer">💬 Reply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Proposed Post Card</div>
+    <div class="mockup-body" style="background:#f5f6f7;padding:12px;font-family:system-ui">
+      <div style="background:white;border-radius:12px;padding:12px;margin-bottom:8px">
+        <!-- Post number -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="width:36px;height:36px;border-radius:50%;background:#3558F0;color:white;font-size:14px;display:flex;align-items:center;justify-content:center;font-weight:600">J</div>
+            <div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:13px;font-weight:600;color:#1a1a1a">jyoti06</span>
+                <span style="font-size:9px;padding:1px 6px;border-radius:4px;background:#e8edff;color:#3558F0;font-weight:600">OP</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;margin-top:1px">
+                <span style="font-size:9px;padding:1px 5px;border-radius:3px;background:#f0fdf4;color:#16a34a;font-weight:500">Sparkler</span>
+                <span style="font-size:10px;color:#aaa">· Just now</span>
+              </div>
+            </div>
+          </div>
+          <span style="font-size:11px;color:#bbb;font-weight:500">#1</span>
+        </div>
+        <div style="font-size:12.5px;color:#333;line-height:1.5">Post content goes here with the message body...</div>
+        <div style="display:flex;gap:4px;margin-top:10px;padding-top:8px;border-top:1px solid #f0f0f0">
+          <button style="display:flex;align-items:center;gap:4px;font-size:11px;color:#888;background:#f8f8f8;border:none;cursor:pointer;padding:5px 10px;border-radius:6px">❤️ Like</button>
+          <button style="display:flex;align-items:center;gap:4px;font-size:11px;color:#888;background:#f8f8f8;border:none;cursor:pointer;padding:5px 10px;border-radius:6px">💬 Reply</button>
+          <button style="display:flex;align-items:center;gap:4px;font-size:11px;color:#888;background:#f8f8f8;border:none;cursor:pointer;padding:5px 10px;border-radius:6px">❝ Quote</button>
+          <button style="margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;color:#888;background:#f8f8f8;border:none;cursor:pointer;padding:5px 10px;border-radius:6px">⤴ Share</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:32px">Summary of All Changes</h3>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="forums-list" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>Forums List Improvements</h3>
+      <p>Add post count + last activity info to each forum card. Show followers count inline. Add "last post by X" line for recency context.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="thread-cards" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>Topic Listing (ThreadCard) Improvements</h3>
+      <p>Add description preview (2-line clamp), pinned/locked badges inline, author avatar initial, separated stats row with border-top, larger touch target. Remove the left emoji avatar to give more space to content.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="topic-detail" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content">
+      <h3>Topic Detail (Post Cards) Improvements</h3>
+      <p>Add post numbering (#1, #2...), user reputation badge (Sparkler, Rocker etc.), Quote button per post, Share button, pill-styled action buttons instead of text links. Larger avatar (36px).</p>
+    </div>
+  </div>
+</div>
