@@ -1,0 +1,254 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   DEV TOOLBAR — Lives OUTSIDE PhoneShell, in the browser chrome
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.toolbarWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #ffffff;
+  border: 1px solid #e2e2e2;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  font-family: 'Roboto', system-ui, sans-serif;
+  color: #4b5563;
+  font-size: 12px;
+  user-select: none;
+  flex-wrap: wrap;
+  min-height: 40px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.toolbar + .toolbar {
+  border-top: 1px solid #f0f0f0;
+  background: #fafbfc;
+}
+
+/* ── Logo ──────────────────────────────────────────────────────────────── */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.logoText {
+  font-weight: 700;
+  font-size: 13px;
+  color: #1a1a1a;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* ── Separator ─────────────────────────────────────────────────────────── */
+.sep {
+  width: 1px;
+  height: 24px;
+  background: #e2e2e2;
+  flex-shrink: 0;
+}
+
+/* ── Control group ─────────────────────────────────────────────────────── */
+.control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+/* ── Select dropdown ───────────────────────────────────────────────────── */
+.select {
+  background: #f9fafb;
+  color: #1a1a1a;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  max-width: 220px;
+  transition: border-color 0.2s;
+}
+
+.select:hover {
+  border-color: #9ca3af;
+}
+
+.select:focus {
+  border-color: #3558F0;
+  box-shadow: 0 0 0 2px rgba(53, 88, 240, 0.15);
+}
+
+.select option {
+  background: #ffffff;
+  color: #1a1a1a;
+}
+
+.select optgroup {
+  color: #6b7280;
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* ── Icon button ───────────────────────────────────────────────────────── */
+.iconBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #f9fafb;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.iconBtn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.iconBtnActive {
+  background: #ede9fe;
+  border-color: #7C3AED;
+  color: #6d28d9;
+}
+
+.btnLabel {
+  font-size: 11px;
+}
+
+/* ── Theme dots ────────────────────────────────────────────────────────── */
+.themeRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.themeDot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--dot-color);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.themeDot:hover {
+  transform: scale(1.15);
+}
+
+.themeDotActive {
+  border-color: #1a1a1a;
+  box-shadow: 0 0 0 2px var(--dot-color), 0 0 8px var(--dot-color);
+}
+
+/* ── Spacer ────────────────────────────────────────────────────────────── */
+.spacer {
+  flex: 1 1 0;
+  min-width: 8px;
+}
+
+/* ── Dimensions badge ──────────────────────────────────────────────────── */
+.dims {
+  font-family: 'Roboto Mono', ui-monospace, monospace;
+  font-size: 12px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 3px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+/* ── Range slider ──────────────────────────────────────────────────────── */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 4px;
+  background: #e2e2e2;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3558F0;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3558F0;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+
+.sliderValue {
+  font-family: 'Roboto Mono', ui-monospace, monospace;
+  font-size: 11px;
+  color: #6b7280;
+  min-width: 32px;
+  text-align: center;
+}
+
+/* ── Reset button ──────────────────────────────────────────────────────── */
+.resetBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.resetBtn:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}
