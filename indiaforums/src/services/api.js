@@ -653,6 +653,7 @@ function transformTopic(raw) {
     locked:       raw.locked ?? false,
     pinned:       (raw.priority ?? 0) > 0,
     tags,
+    flairId:      raw.flairId ?? 0,
     topicImage:   raw.topicImage || null,
     pageUrl:      raw.pageUrl || '',
   };
@@ -727,9 +728,24 @@ export async function fetchForumTopics(forumId, pageNumber = 1, pageSize = 20, c
   const rawTopics = data?.topics || [];
   const forumDetail = data?.forumDetail || null;
 
+  // Parse flair definitions from forumDetail.flairJson
+  let flairs = [];
+  if (forumDetail?.flairJson) {
+    try {
+      const parsed = JSON.parse(forumDetail.flairJson);
+      flairs = (parsed?.json || []).map(f => ({
+        id:      f.id,
+        name:    f.nm,
+        bgColor: f.bgcolor,
+        fgColor: f.fgcolor,
+      }));
+    } catch (_) { /* malformed JSON */ }
+  }
+
   console.log('[API] fetchForumTopics:', {
     forumId,
     count: rawTopics.length,
+    flairCount: flairs.length,
     hasMore: data?.hasMore,
     nextCursor: data?.nextCursor,
   });
@@ -737,6 +753,7 @@ export async function fetchForumTopics(forumId, pageNumber = 1, pageSize = 20, c
   return {
     topics:      rawTopics.map(transformTopic),
     forumDetail: forumDetail ? transformForum(forumDetail, {}) : null,
+    flairs,
     nextCursor:  data?.nextCursor ?? null,
     hasMore:     data?.hasMore ?? false,
   };

@@ -39,17 +39,17 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .forumBadge {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 
@@ -57,33 +57,33 @@
   font-family: var(--font-body);
   font-size: 12px;
   font-weight: 700;
-  color: var(--text2);
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--brand);
+}
+
+/* Badge row */
+.badgeRow {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .lockedBadge,
 .pinnedBadge {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   padding: 3px 8px;
-  border-radius: 10px;
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
 }
 
 .lockedBadge {
   background: var(--red-surface);
   color: var(--red);
-  border: 1px solid var(--red);
 }
 
 .pinnedBadge {
   background: var(--amber-surface);
   color: var(--amber);
-  border: 1px solid var(--amber);
 }
 
 /* Title */
@@ -125,66 +125,112 @@
   border: 1px solid var(--brand-border);
 }
 
-/* Meta bar — author + stats in one compact row */
-.metaBar {
+/* ── Topic stats bar ── */
+.topicStatsBar {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 10px;
+  gap: 0;
+  padding: 10px 0;
+  margin-bottom: 10px;
   border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
+.topicStatItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.topicStatVal {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1;
+}
+
+.topicStatLbl {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Author chip */
 .authorChip {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .authorAvatar {
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-on-brand);
   font-weight: 800;
-  font-size: 10px;
+  font-size: 13px;
   flex-shrink: 0;
+}
+
+.authorInfo {
+  display: flex;
+  flex-direction: column;
 }
 
 .authorName {
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--dark);
 }
 
-.dot {
-  color: var(--text3);
-  font-size: 12px;
-}
-
 .authorTime {
   font-family: var(--font-body);
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text3);
 }
 
-.statsRow {
+/* ── Sort row ── */
+.sortRow {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
 }
 
-.stat {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.sortLabel {
   font-family: var(--font-body);
   font-size: 11px;
   font-weight: 600;
   color: var(--text3);
+}
+
+.sortBtn {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.sortBtnActive {
+  background: var(--brand);
+  color: var(--text-on-brand);
+  border-color: var(--brand);
 }
 
 /* ── Section label ─────────────────────────────────────────────────────────── */
@@ -209,10 +255,12 @@
 .sectionCount {
   font-size: 10px;
   font-weight: 700;
-  color: var(--text3);
-  background: var(--surface);
-  padding: 2px 7px;
-  border-radius: 8px;
+  color: var(--text-on-brand);
+  background: var(--brand);
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
 }
 
 /* ── Posts list ────────────────────────────────────────────────────────────── */
@@ -231,25 +279,37 @@
   animation: fadeInUp 0.3s ease both;
 }
 
+/* ── Post header ── */
 .postHeader {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .postAvatar {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--brand), #6B7FFF);
-  color: var(--text-on-brand);
-  font-weight: 800;
-  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.postAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.postAvatarLetter {
+  color: var(--text-on-brand);
+  font-weight: 800;
+  font-size: 14px;
 }
 
 .postAuthorInfo {
@@ -257,18 +317,17 @@
   min-width: 0;
 }
 
-.postAuthor {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--dark);
-  display: block;
+.postAuthorRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.postTime {
+.postAuthor {
   font-family: var(--font-body);
-  font-size: 10px;
-  color: var(--text3);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
 }
 
 .opBadge {
@@ -277,16 +336,33 @@
   color: var(--brand);
   background: var(--brand-light);
   padding: 2px 7px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   border: 1px solid var(--brand-border);
   flex-shrink: 0;
 }
 
+.postTime {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 1px;
+}
+
+.postNumber {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ── Post body ── */
 .postBody {
   font-family: var(--font-body);
   font-size: 12.5px;
   color: var(--text);
-  line-height: 1.55;
+  line-height: 1.6;
   word-break: break-word;
 }
 .postBody img { max-width: 100%; border-radius: var(--radius-sm); margin: 6px 0; }
@@ -300,13 +376,15 @@
   margin-top: 10px;
 }
 
+/* ── Post footer ── */
 .postFooter {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 8px;
-  padding-top: 8px;
+  gap: 4px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid var(--border);
+  flex-wrap: wrap;
 }
 
 .postAction {
@@ -317,14 +395,21 @@
   font-size: 11px;
   font-weight: 600;
   color: var(--text3);
-  background: none;
+  background: var(--surface);
   border: none;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px 10px;
   border-radius: var(--radius-sm);
-  transition: background var(--duration-fast) var(--ease-out);
+  transition: all var(--duration-fast) var(--ease-out);
 }
-.postAction:active { background: var(--surface); }
+.postAction:active {
+  background: var(--brand-light);
+  color: var(--brand);
+}
+
+.postActionRight {
+  margin-left: auto;
+}
 
 /* ── Reply bar (fixed at bottom) ───────────────────────────────────────────── */
 .replyBar {
@@ -499,8 +584,8 @@
 }
 
 .skeletonAvatar {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   flex-shrink: 0;
   background: linear-gradient(90deg, var(--surface) 25%, var(--bg) 50%, var(--surface) 75%);

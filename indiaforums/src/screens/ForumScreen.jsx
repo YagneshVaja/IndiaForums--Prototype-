@@ -10,11 +10,6 @@ const TOP_TABS = [
   { id: 'all-topics', label: 'All Topics' },
 ];
 
-const THREAD_TABS = [
-  { id: 'latest',  label: 'Latest' },
-  { id: 'popular', label: 'Popular' },
-  { id: 'hot',     label: 'Hot' },
-];
 
 function formatCount(n) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
@@ -32,7 +27,8 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
   const [activeCat, setActiveCat]             = useState('all');
   const [activeSubCat, setActiveSubCat]       = useState('all');
   const [search, setSearch]                   = useState('');
-  const [activeThreadTab, setActiveThreadTab] = useState('latest');
+  const [activeFlairId, setActiveFlairId]     = useState(null); // null = "All"
+  const [flairDropdownOpen, setFlairDropdownOpen] = useState(false);
 
   const scrollRef = useRef(null);
 
@@ -63,7 +59,7 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
 
   // Forum topics — only fetched when a forum is selected
   const {
-    topics, forumDetail,
+    topics, forumDetail, flairs,
     loading: topicsLoading, loadingMore: topicsLoadingMore,
     error: topicsError, hasMore: topicsHasMore,
     loadMore: loadMoreTopics, refresh: refreshTopics,
@@ -94,7 +90,8 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
 
   function openForum(forum) {
     setSelectedForum(forum);
-    setActiveThreadTab('latest');
+    setActiveFlairId(null);
+    setFlairDropdownOpen(false);
     setView('threads');
     onForumDrill?.(forum);
     scrollTop();
@@ -124,7 +121,7 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
   }, [forums, search]);
 
   const topicCards = useMemo(() => {
-    return topics.map(t => ({
+    const mapped = topics.map(t => ({
       ...t,
       forumName:  t.forumName || selectedForum?.name || '',
       forumBg:    selectedForum?.bg || 'linear-gradient(135deg,#1e3a5e,#2563eb)',
@@ -132,7 +129,15 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
       ago:        t.time,
       comments:   t.replies,
     }));
-  }, [topics, selectedForum]);
+    if (activeFlairId == null) return mapped;
+    return mapped.filter(t => t.flairId === activeFlairId);
+  }, [topics, selectedForum, activeFlairId]);
+
+  // Active flair label for the dropdown trigger
+  const activeFlairLabel = useMemo(() => {
+    if (activeFlairId == null) return 'All';
+    return flairs.find(f => f.id === activeFlairId)?.name || 'All';
+  }, [activeFlairId, flairs]);
 
   // ── Thread drill-down ─────────────────────────────────────────────────────
   if (view === 'threads' && selectedForum) {
@@ -140,12 +145,27 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
     return (
       <div className={`${styles.screen} ${styles.slideIn}`} ref={scrollRef}>
 
+        {/* Forum banner */}
+        {detail.bannerUrl && (
+          <div className={styles.forumBanner}>
+            <img src={detail.bannerUrl} alt="" className={styles.forumBannerImg} />
+          </div>
+        )}
+
         {/* Forum identity */}
         <div className={styles.forumIdentity}>
           <div className={styles.forumIdentityAvatar} style={{ background: detail.bg }}>
-            {detail.emoji}
+            {detail.thumbnailUrl
+              ? <img src={detail.thumbnailUrl} alt="" className={styles.forumAvatarImg} />
+              : detail.emoji
+            }
           </div>
-          <div className={styles.forumIdentityName}>{detail.name}</div>
+          <div className={styles.forumIdentityInfo}>
+            <div className={styles.forumIdentityName}>{detail.name}</div>
+            {detail.description && (
+              <div className={styles.forumIdentityDesc}>{detail.description}</div>
+            )}
+          </div>
           <button className={styles.followBtn}>Follow</button>
         </div>
 
@@ -154,6 +174,11 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
           <div className={styles.forumStatItem}>
             <span className={styles.forumStatNum}>{formatCount(detail.topicCount)}</span>
             <span className={styles.forumStatLabel}>Topics</span>
+          </div>
+          <div className={styles.statDivider}/>
+          <div className={styles.forumStatItem}>
+            <span className={styles.forumStatNum}>{formatCount(detail.postCount ?? 0)}</span>
+            <span className={styles.forumStatLabel}>Posts</span>
           </div>
           <div className={styles.statDivider}/>
           <div className={styles.forumStatItem}>
@@ -167,15 +192,49 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
           </div>
         </div>
 
-        {/* Thread sort tabs */}
-        <div className={styles.threadTabs}>
-          {THREAD_TABS.map(({ id, label }) => (
-            <div key={id}
-              className={`${styles.threadTab} ${activeThreadTab === id ? styles.threadTabActive : ''}`}
-              onClick={() => setActiveThreadTab(id)}
-            >{label}</div>
-          ))}
-        </div>
+        {/* Flair filter dropdown */}
+        {flairs.length > 0 && (
+          <div className={styles.flairFilterWrap}>
+            <button
+              className={styles.flairTrigger}
+              onClick={() => setFlairDropdownOpen(o => !o)}
+            >
+              {activeFlairId != null && (
+                <span
+                  className={styles.flairDot}
+                  style={{ background: flairs.find(f => f.id === activeFlairId)?.bgColor }}
+                />
+              )}
+              <span className={styles.flairTriggerLabel}>{activeFlairLabel}</span>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={flairDropdownOpen ? styles.chevronUp : ''}>
+                <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            {flairDropdownOpen && (
+              <>
+                <div className={styles.flairBackdrop} onClick={() => setFlairDropdownOpen(false)} />
+                <div className={styles.flairDropdown}>
+                  <div
+                    className={`${styles.flairOption} ${activeFlairId == null ? styles.flairOptionActive : ''}`}
+                    onClick={() => { setActiveFlairId(null); setFlairDropdownOpen(false); }}
+                  >
+                    <span className={styles.flairOptionName}>All</span>
+                  </div>
+                  {flairs.map(f => (
+                    <div
+                      key={f.id}
+                      className={`${styles.flairOption} ${activeFlairId === f.id ? styles.flairOptionActive : ''}`}
+                      onClick={() => { setActiveFlairId(f.id); setFlairDropdownOpen(false); }}
+                    >
+                      <span className={styles.flairDot} style={{ background: f.bgColor }} />
+                      <span className={styles.flairOptionName}>{f.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Loading skeleton */}
         {topicsLoading && (
@@ -215,8 +274,8 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
                 <ThreadCard
                   forumName={detail.name}
                   bg={detail.bg}
-                  emoji={detail.emoji}
                   title={t.title}
+                  description={t.description}
                   poster={t.poster}
                   ago={t.time}
                   likes={formatCount(t.likes)}
@@ -224,6 +283,10 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
                   views={formatCount(t.views)}
                   lastBy={t.lastBy}
                   lastTime={t.lastTime}
+                  locked={t.locked}
+                  pinned={t.pinned}
+                  tags={t.tags}
+                  topicImage={t.topicImage}
                   delay={i * 0.04}
                 />
               </div>
