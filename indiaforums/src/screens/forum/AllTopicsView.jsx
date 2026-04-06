@@ -1,9 +1,114 @@
 import { useState, useMemo } from 'react';
 import styles from './AllTopicsView.module.css';
-import ThreadCard from '../../components/cards/ThreadCard';
 import ErrorState from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
 import { formatCount } from './forumHelpers';
+
+function TopicRow({ topic, viewMode, onPress }) {
+  const [expanded, setExpanded] = useState(false);
+  const isDetailed = viewMode === 'detailed';
+  const hasDesc = isDetailed && topic.description?.trim();
+  const longDesc = topic.description?.length > 120;
+
+  return (
+    <div className={styles.topicCard} onClick={() => onPress?.(topic)}>
+      {/* Left accent */}
+      <div className={styles.cardAccent} />
+
+      <div className={styles.cardContent}>
+        {/* Header: avatar + forum name + posted by */}
+        <div className={styles.topicHeader}>
+          <div className={styles.forumAvatar}>
+            {topic.forumName?.charAt(0)?.toUpperCase() || 'F'}
+          </div>
+          <div className={styles.headerInfo}>
+            <span className={styles.forumName}>{topic.forumName}</span>
+          </div>
+        </div>
+
+        {/* Title */}
+        <div className={styles.topicTitle}>{topic.title}</div>
+
+        {/* Posted by */}
+        <div className={styles.postedBy}>
+          Posted by: <strong>{topic.poster}</strong> · {topic.time}
+        </div>
+
+        {/* Description (detailed view only) */}
+        {hasDesc && (
+          <div className={styles.topicDescWrap}>
+            <div className={`${styles.topicDesc} ${expanded ? styles.topicDescExpanded : ''}`}>
+              {topic.description}
+            </div>
+            {longDesc && (
+              <button
+                className={styles.expandBtn}
+                onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
+              >
+                {expanded ? 'Collapse' : 'Expand'} <span className={styles.expandArrow}>{expanded ? '\u25B2' : '\u25BC'}</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Topic image */}
+        {isDetailed && topic.topicImage && (
+          <div className={styles.topicImageWrap}>
+            <img src={topic.topicImage} alt="" className={styles.topicImage} />
+          </div>
+        )}
+
+        {/* Bottom stats row */}
+        <div className={styles.bottomRow}>
+          <div className={styles.statsLeft}>
+            {/* Thumbs up */}
+            <span className={styles.stat}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 22V11l5-9 1.5 1L12 7h8a2 2 0 012 2v2a6 6 0 01-.3 1.8l-2.4 6A2 2 0 0117.4 20H7z"/>
+                <path d="M2 11h3v11H2z"/>
+              </svg>
+              {formatCount(topic.likes)}
+            </span>
+            {/* Views */}
+            <span className={styles.stat}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              {formatCount(topic.views)}
+            </span>
+            {/* Comments */}
+            <span className={styles.stat}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+              </svg>
+              {formatCount(topic.replies)}
+            </span>
+            {/* Share */}
+            <span className={styles.stat}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+              Share
+            </span>
+          </div>
+          {topic.lastBy && (
+            <div className={styles.lastReply}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/>
+              </svg>
+              <span>{topic.lastTime} by {topic.lastBy}</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M4.5 2.5l3.5 3.5-3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AllTopicsView({
   allTopics, allTopicsTotal,
@@ -23,11 +128,18 @@ export default function AllTopicsView({
     return allTopics;
   }, [allTopics, sortMode]);
 
+  function handleTopicPress(t) {
+    onTopicPress?.({
+      ...t,
+      forumBg: 'linear-gradient(135deg,#1e3a5e,#2563eb)',
+      forumEmoji: '💬',
+    });
+  }
+
   return (
     <>
       {/* ── Sort & view bar ──────────────────────────────────────────── */}
       <div className={styles.topicSortBar}>
-        {/* Left: sort dropdown */}
         <div className={styles.topicSortWrap}>
           <button
             className={`${styles.topicSortTrigger} ${sortDropdownOpen ? styles.topicSortTriggerOpen : ''}`}
@@ -71,12 +183,9 @@ export default function AllTopicsView({
           )}
         </div>
 
-        {/* Right: view toggles + count */}
         <div className={styles.topicSortRight}>
           {!allTopicsLoading && (
-            <span className={styles.topicSortCount}>
-              {formatCount(allTopicsTotal)}
-            </span>
+            <span className={styles.topicSortCount}>{formatCount(allTopicsTotal)}</span>
           )}
           <button
             className={`${styles.viewToggle} ${viewMode === 'detailed' ? styles.viewToggleActive : ''}`}
@@ -106,14 +215,20 @@ export default function AllTopicsView({
 
       {/* Loading skeleton */}
       {allTopicsLoading && (
-        <div className={styles.threadList}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className={styles.skeletonThread}>
-              <div className={styles.skeletonAvatar} />
-              <div className={styles.skeletonBody}>
-                <div className={styles.skeletonLine} />
-                <div className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
-                <div className={`${styles.skeletonLine} ${styles.skeletonLineTiny}`} />
+        <div className={styles.topicList}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className={styles.skeletonCard}>
+              <div className={styles.skeletonAccent} />
+              <div className={styles.skeletonContent}>
+                <div className={styles.skeletonHeader}>
+                  <div className={styles.skeletonAvatarSm} />
+                  <div className={styles.skeletonHeaderLines}>
+                    <div className={styles.skeletonLine} style={{ width: '40%' }} />
+                  </div>
+                </div>
+                <div className={styles.skeletonLine} style={{ width: '90%', height: 13 }} />
+                <div className={styles.skeletonLine} style={{ width: '55%' }} />
+                <div className={styles.skeletonLine} style={{ width: '70%' }} />
               </div>
             </div>
           ))}
@@ -127,67 +242,31 @@ export default function AllTopicsView({
 
       {/* Topic feed */}
       {!allTopicsLoading && !allTopicsError && (
-        <div className={styles.threadList}>
+        <div className={styles.topicList}>
           {sortedAllTopics.length === 0 ? (
             <EmptyState icon="📭" title="No topics yet" />
-          ) : sortedAllTopics.map((t, i) => (
-            <div key={t.id} onClick={() => onTopicPress?.({
-              ...t,
-              forumBg: 'linear-gradient(135deg,#1e3a5e,#2563eb)',
-              forumEmoji: '💬',
-            })}>
-              {viewMode === 'compact' ? (
-                <div className={styles.compactTopic}>
-                  <div className={styles.compactBody}>
-                    <span className={styles.compactForum}>{t.forumName}</span>
-                    <div className={styles.compactTitle}>{t.title}</div>
-                    <div className={styles.compactMeta}>
-                      <span>{t.poster}</span>
-                      <span className={styles.compactDot}/>
-                      <span>{t.time}</span>
-                      <span className={styles.compactDot}/>
-                      <span>{formatCount(t.replies)} replies</span>
-                    </div>
-                  </div>
-                  <div className={styles.compactViews}>{formatCount(t.views)}</div>
-                </div>
-              ) : (
-                <ThreadCard
-                  forumName={t.forumName}
-                  bg="linear-gradient(135deg,#1e3a5e,#2563eb)"
-                  title={t.title}
-                  description={t.description}
-                  poster={t.poster}
-                  ago={t.time}
-                  likes={formatCount(t.likes)}
-                  comments={formatCount(t.replies)}
-                  views={formatCount(t.views)}
-                  lastBy={t.lastBy}
-                  lastTime={t.lastTime}
-                  locked={t.locked}
-                  pinned={t.pinned}
-                  tags={t.tags}
-                  topicImage={t.topicImage}
-                  delay={i * 0.03}
-                />
-              )}
-            </div>
+          ) : sortedAllTopics.map(t => (
+            <TopicRow key={t.id} topic={t} viewMode={viewMode} onPress={handleTopicPress} />
           ))}
 
-          {/* Load more skeleton */}
           {allTopicsLoadingMore && Array.from({ length: 3 }).map((_, i) => (
-            <div key={`atlm-${i}`} className={styles.skeletonThread}>
-              <div className={styles.skeletonAvatar} />
-              <div className={styles.skeletonBody}>
-                <div className={styles.skeletonLine} />
-                <div className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+            <div key={`atlm-${i}`} className={styles.skeletonCard}>
+              <div className={styles.skeletonAccent} />
+              <div className={styles.skeletonContent}>
+                <div className={styles.skeletonHeader}>
+                  <div className={styles.skeletonAvatarSm} />
+                  <div className={styles.skeletonHeaderLines}>
+                    <div className={styles.skeletonLine} style={{ width: '40%' }} />
+                  </div>
+                </div>
+                <div className={styles.skeletonLine} style={{ width: '80%', height: 13 }} />
+                <div className={styles.skeletonLine} style={{ width: '50%' }} />
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Load More */}
       {allTopicsHasMore && !allTopicsLoadingMore && !allTopicsLoading && (
         <button className={styles.loadMore} onClick={loadMoreAllTopics}>
           Load More Topics
