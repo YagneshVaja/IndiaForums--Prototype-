@@ -29,8 +29,8 @@
 /* ── Topic card (OP) ───────────────────────────────────────────────────────── */
 .topicCard {
   background: var(--card);
-  padding: 16px;
-  border-bottom: 4px solid var(--surface);
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
   animation: fadeInUp 0.3s ease both;
 }
 
@@ -40,40 +40,59 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 10px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border-radius: 10px;
+}
+
+.forumThumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .forumBadge {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   flex-shrink: 0;
 }
 
 .forumName {
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   color: var(--brand);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Badge row */
+/* Badge row (inline with forum row) */
 .badgeRow {
   display: flex;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .lockedBadge,
 .pinnedBadge {
-  font-size: 10px;
+  font-family: var(--font-body);
+  font-size: 9px;
   font-weight: 700;
-  padding: 3px 8px;
-  border-radius: var(--radius-xs);
+  padding: 2px 7px;
+  border-radius: 10px;
   flex-shrink: 0;
+  letter-spacing: 0.2px;
 }
 
 .lockedBadge {
@@ -89,11 +108,55 @@
 /* Title */
 .topicTitle {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--dark);
-  line-height: 1.3;
+  line-height: 1.35;
   margin: 0 0 8px;
+}
+
+/* Author chip */
+.authorChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.authorAvatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-on-brand);
+  font-weight: 800;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.authorInfo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.authorName {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.authorTime {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  color: var(--text3);
+}
+.authorTime::before {
+  content: '·';
+  margin-right: 6px;
 }
 
 /* Body */
@@ -101,38 +164,60 @@
   font-family: var(--font-body);
   font-size: 13px;
   color: var(--text2);
-  line-height: 1.55;
-  margin: 0 0 10px;
+  line-height: 1.6;
+  margin: 0 0 6px;
   word-break: break-word;
+}
+
+/* Topic image */
+.topicImageWrap {
+  margin: 8px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.topicImage {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  display: block;
 }
 
 /* Tags */
 .tagRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 12px;
+  gap: 5px;
+  margin: 8px 0;
 }
 
 .tag {
   font-family: var(--font-body);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   color: var(--brand);
-  background: var(--brand-lighter);
-  padding: 4px 10px;
-  border-radius: 12px;
-  border: 1px solid var(--brand-border);
+  background: var(--brand-light);
+  padding: 3px 9px;
+  border-radius: 10px;
+}
+
+/* Embeds row inside posts / topic card */
+.embedsRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 /* ── Topic stats bar ── */
 .topicStatsBar {
   display: flex;
   gap: 0;
-  padding: 10px 0;
-  margin-bottom: 10px;
+  padding: 10px 0 2px;
+  margin-top: 6px;
   border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
 }
 
 .topicStatItem {
@@ -140,7 +225,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
+  cursor: default;
+}
+
+.topicStatItem svg {
+  opacity: 0.45;
 }
 
 .topicStatVal {
@@ -152,57 +242,20 @@
 }
 
 .topicStatLbl {
+  font-family: var(--font-body);
   font-size: 9px;
   font-weight: 600;
   color: var(--text3);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
 }
 
-/* Author chip */
-.authorChip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.authorAvatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-on-brand);
-  font-weight: 800;
-  font-size: 13px;
-  flex-shrink: 0;
-}
-
-.authorInfo {
-  display: flex;
-  flex-direction: column;
-}
-
-.authorName {
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--dark);
-}
-
-.authorTime {
-  font-family: var(--font-body);
-  font-size: 10px;
-  color: var(--text3);
-}
-
-/* ── Sort row ── */
+/* ── Replies header (sort + count combined) ── */
 .sortRow {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 8px 14px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
 }
@@ -218,19 +271,19 @@
   font-family: var(--font-body);
   font-size: 11px;
   font-weight: 700;
-  padding: 5px 12px;
-  border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
-  background: var(--card);
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: none;
+  background: var(--surface);
   color: var(--text2);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
 }
+.sortBtn:hover { background: var(--bg); }
 
 .sortBtnActive {
   background: var(--brand);
   color: var(--text-on-brand);
-  border-color: var(--brand);
 }
 
 /* ── Section label ─────────────────────────────────────────────────────────── */
@@ -238,7 +291,6 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 12px 16px 8px;
 }
 
 .sectionText {
@@ -248,24 +300,25 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text3);
-  padding-bottom: 4px;
-  border-bottom: 2px solid var(--red);
+  padding-bottom: 3px;
+  border-bottom: 2px solid var(--brand);
 }
 
 .sectionCount {
+  font-family: var(--font-body);
   font-size: 10px;
   font-weight: 700;
   color: var(--text-on-brand);
   background: var(--brand);
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: 10px;
-  min-width: 20px;
+  min-width: 18px;
   text-align: center;
 }
 
 /* ── Posts list ────────────────────────────────────────────────────────────── */
 .postsList {
-  padding: 0 10px;
+  padding: 4px 10px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -273,10 +326,10 @@
 
 .postCard {
   background: var(--card);
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   border: 1px solid var(--border);
   padding: 12px;
-  animation: fadeInUp 0.3s ease both;
+  animation: fadeInUp 0.25s ease both;
 }
 
 /* ── Post header ── */
@@ -284,12 +337,12 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .postAvatar {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--brand), #6B7FFF);
   display: flex;
@@ -297,6 +350,7 @@
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,.10);
 }
 
 .postAvatarImg {
@@ -309,7 +363,7 @@
 .postAvatarLetter {
   color: var(--text-on-brand);
   font-weight: 800;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .postAuthorInfo {
@@ -320,39 +374,84 @@
 .postAuthorRow {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  flex-wrap: wrap;
 }
 
 .postAuthor {
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
   color: var(--dark);
 }
 
 .opBadge {
-  font-size: 9px;
-  font-weight: 700;
+  font-family: var(--font-body);
+  font-size: 8.5px;
+  font-weight: 800;
   color: var(--brand);
   background: var(--brand-light);
-  padding: 2px 7px;
-  border-radius: var(--radius-xs);
+  padding: 1px 6px;
+  border-radius: 8px;
   border: 1px solid var(--brand-border);
   flex-shrink: 0;
+  letter-spacing: 0.3px;
+}
+
+.countryFlag {
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.postMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.rankBadge {
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--amber);
+  background: var(--amber-surface);
+  padding: 1px 6px;
+  border-radius: 8px;
+  line-height: 1.3;
 }
 
 .postTime {
   font-family: var(--font-body);
   font-size: 10px;
   color: var(--text3);
-  margin-top: 1px;
+}
+
+/* User badges row */
+.userBadges {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 6px;
+  margin-left: 44px;
+  flex-wrap: wrap;
+}
+.userBadgeImg {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  object-fit: contain;
+  opacity: 0.85;
 }
 
 .postNumber {
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--text3);
+  background: var(--surface);
+  padding: 2px 6px;
+  border-radius: 8px;
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -365,26 +464,18 @@
   line-height: 1.6;
   word-break: break-word;
 }
-.postBody img { max-width: 100%; border-radius: var(--radius-sm); margin: 6px 0; }
-.postBody a { color: var(--brand); text-decoration: underline; }
-
-/* Embeds row inside posts / topic card */
-.embedsRow {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
-}
+.postBody img { max-width: 100%; border-radius: 8px; margin: 6px 0; }
+.postBody a { color: var(--brand); text-decoration: none; }
+.postBody a:hover { text-decoration: underline; }
 
 /* ── Post footer ── */
 .postFooter {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-top: 10px;
-  padding-top: 10px;
+  gap: 2px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid var(--border);
-  flex-wrap: wrap;
 }
 
 .postAction {
@@ -392,15 +483,19 @@
   align-items: center;
   gap: 4px;
   font-family: var(--font-body);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   color: var(--text3);
-  background: var(--surface);
+  background: transparent;
   border: none;
   cursor: pointer;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  border-radius: 8px;
   transition: all var(--duration-fast) var(--ease-out);
+}
+.postAction:hover {
+  background: var(--surface);
+  color: var(--text2);
 }
 .postAction:active {
   background: var(--brand-light);
@@ -424,13 +519,13 @@
 }
 
 .replyAvatar {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--brand), #6B7FFF);
+  background: var(--brand);
   color: var(--text-on-brand);
   font-weight: 800;
-  font-size: 13px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -441,9 +536,9 @@
   flex: 1;
   border: 1.5px solid var(--border);
   border-radius: 20px;
-  padding: 8px 14px;
+  padding: 7px 14px;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--text);
   background: var(--bg);
   outline: none;
@@ -456,8 +551,8 @@
 .replyInput::placeholder { color: var(--text3); }
 
 .sendBtn {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
   background: var(--surface);
@@ -495,7 +590,7 @@
   font-size: 11px;
   font-weight: 600;
   padding: 6px 10px;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   margin-bottom: 4px;
 }
 
@@ -509,7 +604,7 @@
   border-top: 1px solid var(--border);
   background: var(--card);
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text3);
   flex-shrink: 0;
@@ -521,20 +616,25 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  width: calc(100% - 24px);
-  margin: 10px 12px 4px;
-  padding: 10px 0;
+  width: calc(100% - 20px);
+  margin: 8px 10px 4px;
+  padding: 9px 0;
   border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--card);
   color: var(--text2);
   font-family: var(--font-body);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.loadMoreBtn:hover {
+  border-color: var(--brand-border);
+  color: var(--brand);
 }
 .loadMoreBtn:active {
-  background: var(--surface);
+  background: var(--brand-light);
   border-color: var(--brand);
   color: var(--brand);
 }
@@ -584,8 +684,8 @@
 }
 
 .skeletonAvatar {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   flex-shrink: 0;
   background: linear-gradient(90deg, var(--surface) 25%, var(--bg) 50%, var(--surface) 75%);

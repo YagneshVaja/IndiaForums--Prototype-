@@ -2,25 +2,57 @@ import { useState, useMemo } from 'react';
 import styles from './AllTopicsView.module.css';
 import ErrorState from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
+import SocialEmbed, { detectPlatform } from '../../components/ui/SocialEmbed';
 import { formatCount } from './forumHelpers';
+
+/** Extract all social-media URLs from text + linkTypeValue */
+function extractSocialUrls(topic) {
+  const urls = new Set();
+  // Primary: linkTypeValue from the API
+  if (topic.linkTypeValue && detectPlatform(topic.linkTypeValue)) {
+    urls.add(topic.linkTypeValue);
+  }
+  // Secondary: URLs found in the description text
+  const urlRegex = /https?:\/\/[^\s<>"')\]]+/gi;
+  const matches = topic.description?.match(urlRegex) || [];
+  matches.forEach(u => {
+    const cleaned = u.replace(/[.,;:!?]+$/, '');
+    if (detectPlatform(cleaned)) urls.add(cleaned);
+  });
+  return [...urls];
+}
 
 function TopicRow({ topic, viewMode, onPress }) {
   const [expanded, setExpanded] = useState(false);
   const isDetailed = viewMode === 'detailed';
-  const hasDesc = isDetailed && topic.description?.trim();
-  const longDesc = topic.description?.length > 120;
+  const socialUrls = useMemo(() => extractSocialUrls(topic), [topic]);
+
+  // Strip social URLs from description so they render as embeds instead of raw text
+  const cleanDesc = useMemo(() => {
+    if (!topic.description) return '';
+    const urlRegex = /https?:\/\/[^\s<>"')\]]+/gi;
+    return topic.description.replace(urlRegex, (match) => {
+      const cleaned = match.replace(/[.,;:!?]+$/, '');
+      return detectPlatform(cleaned) ? '' : match;
+    }).replace(/\s{2,}/g, ' ').trim();
+  }, [topic.description]);
+
+  const hasDesc = isDetailed && cleanDesc;
+  const longDesc = cleanDesc.length > 120;
+  const hasEmbeds = socialUrls.length > 0;
 
   return (
     <div className={styles.topicCard} onClick={() => onPress?.(topic)}>
-      {/* Left accent */}
-      <div className={styles.cardAccent} />
-
       <div className={styles.cardContent}>
         {/* Header: avatar + forum name + posted by */}
         <div className={styles.topicHeader}>
-          <div className={styles.forumAvatar}>
-            {topic.forumName?.charAt(0)?.toUpperCase() || 'F'}
-          </div>
+          {topic.forumThumbnail ? (
+            <img src={topic.forumThumbnail} alt="" className={styles.forumAvatar} />
+          ) : (
+            <div className={styles.forumAvatarFallback}>
+              {topic.forumName?.charAt(0)?.toUpperCase() || 'F'}
+            </div>
+          )}
           <div className={styles.headerInfo}>
             <span className={styles.forumName}>{topic.forumName}</span>
           </div>
@@ -38,7 +70,7 @@ function TopicRow({ topic, viewMode, onPress }) {
         {hasDesc && (
           <div className={styles.topicDescWrap}>
             <div className={`${styles.topicDesc} ${expanded ? styles.topicDescExpanded : ''}`}>
-              {topic.description}
+              {cleanDesc}
             </div>
             {longDesc && (
               <button
@@ -48,6 +80,17 @@ function TopicRow({ topic, viewMode, onPress }) {
                 {expanded ? 'Collapse' : 'Expand'} <span className={styles.expandArrow}>{expanded ? '\u25B2' : '\u25BC'}</span>
               </button>
             )}
+          </div>
+        )}
+
+        {/* Social embeds — always visible inline when present */}
+        {isDetailed && hasEmbeds && (
+          <div className={styles.embedSection}>
+            {socialUrls.map(url => (
+              <div key={url} className={styles.embedItem} onClick={e => e.stopPropagation()}>
+                <SocialEmbed url={url} />
+              </div>
+            ))}
           </div>
         )}
 
@@ -185,31 +228,33 @@ export default function AllTopicsView({
 
         <div className={styles.topicSortRight}>
           {!allTopicsLoading && (
-            <span className={styles.topicSortCount}>{formatCount(allTopicsTotal)}</span>
+            <span className={styles.topicSortCount}>{formatCount(allTopicsTotal)} topics</span>
           )}
-          <button
-            className={`${styles.viewToggle} ${viewMode === 'detailed' ? styles.viewToggleActive : ''}`}
-            onClick={() => setViewMode('detailed')}
-            title="Detailed view"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <rect x="1" y="1" width="14" height="4" rx="1"/>
-              <rect x="1" y="7" width="14" height="4" rx="1"/>
-              <line x1="1" y1="14" x2="15" y2="14"/>
-            </svg>
-          </button>
-          <button
-            className={`${styles.viewToggle} ${viewMode === 'compact' ? styles.viewToggleActive : ''}`}
-            onClick={() => setViewMode('compact')}
-            title="Compact view"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <line x1="1" y1="2.5" x2="15" y2="2.5"/>
-              <line x1="1" y1="6.5" x2="15" y2="6.5"/>
-              <line x1="1" y1="10.5" x2="15" y2="10.5"/>
-              <line x1="1" y1="14.5" x2="15" y2="14.5"/>
-            </svg>
-          </button>
+          <div className={styles.viewToggleGroup}>
+            <button
+              className={`${styles.viewToggle} ${viewMode === 'detailed' ? styles.viewToggleActive : ''}`}
+              onClick={() => setViewMode('detailed')}
+              title="Detailed view"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <rect x="1.5" y="1.5" width="13" height="3.5" rx="1"/>
+                <rect x="1.5" y="7.5" width="13" height="3.5" rx="1"/>
+                <line x1="1.5" y1="14" x2="14.5" y2="14"/>
+              </svg>
+            </button>
+            <button
+              className={`${styles.viewToggle} ${viewMode === 'compact' ? styles.viewToggleActive : ''}`}
+              onClick={() => setViewMode('compact')}
+              title="Compact view"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <line x1="1.5" y1="3" x2="14.5" y2="3"/>
+                <line x1="1.5" y1="6.5" x2="14.5" y2="6.5"/>
+                <line x1="1.5" y1="10" x2="14.5" y2="10"/>
+                <line x1="1.5" y1="13.5" x2="14.5" y2="13.5"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -218,7 +263,6 @@ export default function AllTopicsView({
         <div className={styles.topicList}>
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className={styles.skeletonCard}>
-              <div className={styles.skeletonAccent} />
               <div className={styles.skeletonContent}>
                 <div className={styles.skeletonHeader}>
                   <div className={styles.skeletonAvatarSm} />
@@ -251,7 +295,6 @@ export default function AllTopicsView({
 
           {allTopicsLoadingMore && Array.from({ length: 3 }).map((_, i) => (
             <div key={`atlm-${i}`} className={styles.skeletonCard}>
-              <div className={styles.skeletonAccent} />
               <div className={styles.skeletonContent}>
                 <div className={styles.skeletonHeader}>
                   <div className={styles.skeletonAvatarSm} />
