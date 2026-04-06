@@ -1,4 +1,4 @@
-import styles from './PlaceholderScreen.module.css';
+import styles from './SearchScreen.module.css';
 
 export default function SearchScreen() {
   return (

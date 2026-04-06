@@ -31,6 +31,11 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
   const [activeFlairId, setActiveFlairId]     = useState(null); // null = "All"
   const [flairDropdownOpen, setFlairDropdownOpen] = useState(false);
 
+  // All Topics tab state
+  const [allTopicsSort, setAllTopicsSort]       = useState('latest'); // 'latest' | 'popular'
+  const [allTopicsSortOpen, setAllTopicsSortOpen] = useState(false);
+  const [allTopicsView, setAllTopicsView]       = useState('detailed'); // 'detailed' | 'compact'
+
   const scrollRef = useRef(null);
 
   // Sync back when App-level back button clears drilledForum
@@ -147,6 +152,14 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
     if (activeFlairId == null) return 'All';
     return flairs.find(f => f.id === activeFlairId)?.name || 'All';
   }, [activeFlairId, flairs]);
+
+  // Sorted all-topics list
+  const sortedAllTopics = useMemo(() => {
+    if (allTopicsSort === 'popular') {
+      return [...allTopics].sort((a, b) => b.views - a.views);
+    }
+    return allTopics; // API default is latest
+  }, [allTopics, allTopicsSort]);
 
   // ── Thread drill-down ─────────────────────────────────────────────────────
   if (view === 'threads' && selectedForum) {
@@ -525,11 +538,82 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
       ════════════════════════════════════════════ */}
       {topTab === 'all-topics' && (
         <>
-          {/* Header with count */}
-          <div className={styles.allTopicsIntro}>
-            <div className={styles.allTopicsLabel}>All Topics</div>
-            <div className={styles.allTopicsSub}>
-              {allTopicsLoading ? 'Loading...' : `${formatCount(allTopicsTotal)} topics across all forums`}
+          {/* ── Sort & view bar ──────────────────────────────────────────── */}
+          <div className={styles.topicSortBar}>
+            {/* Left: sort dropdown */}
+            <div className={styles.topicSortWrap}>
+              <button
+                className={`${styles.topicSortTrigger} ${allTopicsSortOpen ? styles.topicSortTriggerOpen : ''}`}
+                onClick={() => setAllTopicsSortOpen(o => !o)}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <span>{allTopicsSort === 'latest' ? 'Latest' : 'Popular'}</span>
+                <svg width="10" height="6" viewBox="0 0 10 6" fill="none"
+                  className={`${styles.topicSortChevron} ${allTopicsSortOpen ? styles.topicSortChevronOpen : ''}`}
+                >
+                  <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              {allTopicsSortOpen && (
+                <>
+                  <div className={styles.flairBackdrop} onClick={() => setAllTopicsSortOpen(false)} />
+                  <div className={styles.topicSortDropdown}>
+                    <div
+                      className={`${styles.topicSortOption} ${allTopicsSort === 'latest' ? styles.topicSortOptionActive : ''}`}
+                      onClick={() => { setAllTopicsSort('latest'); setAllTopicsSortOpen(false); }}
+                    >
+                      <span>Latest</span>
+                      {allTopicsSort === 'latest' && (
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5l3 3 6-6.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      )}
+                    </div>
+                    <div
+                      className={`${styles.topicSortOption} ${allTopicsSort === 'popular' ? styles.topicSortOptionActive : ''}`}
+                      onClick={() => { setAllTopicsSort('popular'); setAllTopicsSortOpen(false); }}
+                    >
+                      <span>Popular</span>
+                      {allTopicsSort === 'popular' && (
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5l3 3 6-6.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Right: view toggles + count */}
+            <div className={styles.topicSortRight}>
+              {!allTopicsLoading && (
+                <span className={styles.topicSortCount}>
+                  {formatCount(allTopicsTotal)}
+                </span>
+              )}
+              <button
+                className={`${styles.viewToggle} ${allTopicsView === 'detailed' ? styles.viewToggleActive : ''}`}
+                onClick={() => setAllTopicsView('detailed')}
+                title="Detailed view"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <rect x="1" y="1" width="14" height="4" rx="1"/>
+                  <rect x="1" y="7" width="14" height="4" rx="1"/>
+                  <line x1="1" y1="14" x2="15" y2="14"/>
+                </svg>
+              </button>
+              <button
+                className={`${styles.viewToggle} ${allTopicsView === 'compact' ? styles.viewToggleActive : ''}`}
+                onClick={() => setAllTopicsView('compact')}
+                title="Compact view"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <line x1="1" y1="2.5" x2="15" y2="2.5"/>
+                  <line x1="1" y1="6.5" x2="15" y2="6.5"/>
+                  <line x1="1" y1="10.5" x2="15" y2="10.5"/>
+                  <line x1="1" y1="14.5" x2="15" y2="14.5"/>
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -560,35 +644,52 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
           {/* Topic feed */}
           {!allTopicsLoading && !allTopicsError && (
             <div className={styles.threadList}>
-              {allTopics.length === 0 ? (
+              {sortedAllTopics.length === 0 ? (
                 <div className={styles.empty}>
                   <div className={styles.emptyIcon}>📭</div>
                   <div className={styles.emptyText}>No topics yet</div>
                 </div>
-              ) : allTopics.map((t, i) => (
+              ) : sortedAllTopics.map((t, i) => (
                 <div key={t.id} onClick={() => onTopicPress?.({
                   ...t,
                   forumBg: 'linear-gradient(135deg,#1e3a5e,#2563eb)',
                   forumEmoji: '💬',
                 })}>
-                  <ThreadCard
-                    forumName={t.forumName}
-                    bg="linear-gradient(135deg,#1e3a5e,#2563eb)"
-                    title={t.title}
-                    description={t.description}
-                    poster={t.poster}
-                    ago={t.time}
-                    likes={formatCount(t.likes)}
-                    comments={formatCount(t.replies)}
-                    views={formatCount(t.views)}
-                    lastBy={t.lastBy}
-                    lastTime={t.lastTime}
-                    locked={t.locked}
-                    pinned={t.pinned}
-                    tags={t.tags}
-                    topicImage={t.topicImage}
-                    delay={i * 0.03}
-                  />
+                  {allTopicsView === 'compact' ? (
+                    <div className={styles.compactTopic}>
+                      <div className={styles.compactBody}>
+                        <span className={styles.compactForum}>{t.forumName}</span>
+                        <div className={styles.compactTitle}>{t.title}</div>
+                        <div className={styles.compactMeta}>
+                          <span>{t.poster}</span>
+                          <span className={styles.compactDot}/>
+                          <span>{t.time}</span>
+                          <span className={styles.compactDot}/>
+                          <span>{formatCount(t.replies)} replies</span>
+                        </div>
+                      </div>
+                      <div className={styles.compactViews}>{formatCount(t.views)}</div>
+                    </div>
+                  ) : (
+                    <ThreadCard
+                      forumName={t.forumName}
+                      bg="linear-gradient(135deg,#1e3a5e,#2563eb)"
+                      title={t.title}
+                      description={t.description}
+                      poster={t.poster}
+                      ago={t.time}
+                      likes={formatCount(t.likes)}
+                      comments={formatCount(t.replies)}
+                      views={formatCount(t.views)}
+                      lastBy={t.lastBy}
+                      lastTime={t.lastTime}
+                      locked={t.locked}
+                      pinned={t.pinned}
+                      tags={t.tags}
+                      topicImage={t.topicImage}
+                      delay={i * 0.03}
+                    />
+                  )}
                 </div>
               ))}
 
