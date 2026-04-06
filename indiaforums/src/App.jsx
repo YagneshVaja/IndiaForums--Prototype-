@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useDevToolbar } from './contexts/DevToolbarContext';
+import useAppNavigation from './hooks/useAppNavigation';
 
 import PhoneShell    from './components/layout/PhoneShell';
 import DynamicIsland from './components/layout/DynamicIsland';
@@ -36,77 +37,34 @@ const TAB_SCREENS = {
 };
 
 export default function App() {
-  /* ── Navigation state ─────────────────────────────────────────────────────── */
-  const [activeTab,       setActiveTab]       = useState('explore');
-  const [selectedArticle, setSelectedArticle] = useState(null);
-  const [selectedVideo,   setSelectedVideo]   = useState(null);
-  const [showGalleries,   setShowGalleries]   = useState(false);
-  const [selectedGallery, setSelectedGallery] = useState(null);
-  const [activeStory,     setActiveStory]     = useState(null);
-  const [selectedTopic,   setSelectedTopic]   = useState(null);
-  const [selectedCeleb,   setSelectedCeleb]   = useState(null);
-  const [drilledForum,    setDrilledForum]    = useState(null);
-  const [selectedTag,     setSelectedTag]     = useState(null);
-
-  /* ── UI state ─────────────────────────────────────────────────────────────── */
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const nav = useAppNavigation();
   const { darkMode, toggleDarkMode, navResetTrigger } = useDevToolbar();
 
   /* ── Reset all navigation when toolbar reset button is pressed ────────── */
   useEffect(() => {
     if (navResetTrigger === 0) return;
-    setActiveTab('explore');
-    setSelectedArticle(null);
-    setSelectedVideo(null);
-    setShowGalleries(false);
-    setSelectedGallery(null);
-    setActiveStory(null);
-    setSelectedTopic(null);
-    setSelectedCeleb(null);
-    setDrilledForum(null);
-    setSelectedTag(null);
-    setDrawerOpen(false);
+    nav.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navResetTrigger]);
 
   /* ── Handlers ─────────────────────────────────────────────────────────────── */
-  function handleGalleryPress(gallery) { setSelectedGallery(gallery); }
-  function handleGalleryBack()         { setSelectedGallery(null); }
-  function handleGalleriesOpen()       { setShowGalleries(true); }
-  function handleGalleriesBack()       { setShowGalleries(false); }
-  function handleStoryPress(story)     { setActiveStory(story.label.toLowerCase()); }
-  function handleStoryBack()           { setActiveStory(null); }
-
-  function handleNavTabChange(tab) {
-    setActiveStory(null);
-    setShowGalleries(false);
-    setSelectedGallery(null);
-    setSelectedArticle(null);
-    setSelectedVideo(null);
-    setSelectedTopic(null);
-    setSelectedCeleb(null);
-    setDrilledForum(null);
-    setSelectedTag(null);
-    setActiveTab(tab);
-  }
+  function handleStoryPress(story) { nav.setStory(story.label.toLowerCase()); }
 
   /* Drawer navigation — maps label to app state */
   function handleDrawerNavigate(target) {
-    setDrawerOpen(false);
+    nav.closeDrawer();
     const storyTargets = [
       'celebrities', 'videos', 'galleries', 'fan fictions',
       'quizzes', 'shorts', 'web stories',
     ];
     if (target === 'home') {
-      handleNavTabChange('explore');
+      nav.setTab('explore');
     } else if (target === 'news') {
-      handleNavTabChange('news');
+      nav.setTab('news');
     } else if (target === 'forums') {
-      handleNavTabChange('forums');
+      nav.setTab('forums');
     } else if (storyTargets.includes(target)) {
-      setSelectedArticle(null);
-      setSelectedGallery(null);
-      setShowGalleries(false);
-      setActiveStory(target);
+      nav.setStory(target);
     }
   }
 
@@ -115,110 +73,110 @@ export default function App() {
   let topNavBack  = null;
   let content     = null;
 
-  if (selectedGallery) {
-    topNavTitle = selectedGallery.title;
-    topNavBack  = handleGalleryBack;
-    content     = <GalleryDetailScreen gallery={selectedGallery} onBack={handleGalleryBack} onGalleryPress={handleGalleryPress} />;
+  if (nav.selectedGallery) {
+    topNavTitle = nav.selectedGallery.title;
+    topNavBack  = nav.clearGallery;
+    content     = <GalleryDetailScreen gallery={nav.selectedGallery} onBack={nav.clearGallery} onGalleryPress={nav.selectGallery} />;
 
-  } else if (activeStory === 'galleries' || showGalleries) {
+  } else if (nav.activeStory === 'galleries' || nav.showGalleries) {
     topNavTitle = 'Photo Gallery';
-    topNavBack  = showGalleries ? handleGalleriesBack : handleStoryBack;
-    content     = <GalleryScreen onBack={topNavBack} onGalleryPress={handleGalleryPress} />;
+    topNavBack  = nav.showGalleries ? nav.closeGalleries : nav.clearStory;
+    content     = <GalleryScreen onBack={topNavBack} onGalleryPress={nav.selectGallery} />;
 
-  } else if (selectedCeleb) {
-    topNavTitle = selectedCeleb.name;
-    topNavBack  = () => setSelectedCeleb(null);
-    content     = <CelebrityDetailScreen celebrity={selectedCeleb} />;
+  } else if (nav.selectedCeleb) {
+    topNavTitle = nav.selectedCeleb.name;
+    topNavBack  = nav.clearCeleb;
+    content     = <CelebrityDetailScreen celebrity={nav.selectedCeleb} />;
 
-  } else if (activeStory === 'celebrities') {
+  } else if (nav.activeStory === 'celebrities') {
     topNavTitle = 'Celebrities';
-    topNavBack  = handleStoryBack;
-    content     = <CelebritiesScreen onBack={handleStoryBack} onCelebPress={setSelectedCeleb} />;
+    topNavBack  = nav.clearStory;
+    content     = <CelebritiesScreen onBack={nav.clearStory} onCelebPress={nav.selectCeleb} />;
 
-  } else if (selectedVideo) {
+  } else if (nav.selectedVideo) {
     topNavTitle = 'Video';
-    topNavBack  = () => setSelectedVideo(null);
+    topNavBack  = nav.clearVideo;
     content     = (
       <VideoDetailScreen
-        video={selectedVideo}
-        onBack={() => setSelectedVideo(null)}
-        onVideoPress={setSelectedVideo}
+        video={nav.selectedVideo}
+        onBack={nav.clearVideo}
+        onVideoPress={nav.selectVideo}
       />
     );
 
-  } else if (activeStory === 'videos') {
+  } else if (nav.activeStory === 'videos') {
     topNavTitle = 'Videos';
-    topNavBack  = handleStoryBack;
-    content     = <VideoScreen onBack={handleStoryBack} onVideoPress={setSelectedVideo} />;
+    topNavBack  = nav.clearStory;
+    content     = <VideoScreen onBack={nav.clearStory} onVideoPress={nav.selectVideo} />;
 
-  } else if (activeStory === 'fan fictions') {
+  } else if (nav.activeStory === 'fan fictions') {
     topNavTitle = 'Fan Fictions';
-    topNavBack  = handleStoryBack;
-    content     = <FanFictionScreen onBack={handleStoryBack} />;
+    topNavBack  = nav.clearStory;
+    content     = <FanFictionScreen onBack={nav.clearStory} />;
 
-  } else if (activeStory === 'quizzes') {
+  } else if (nav.activeStory === 'quizzes') {
     topNavTitle = 'Fan Quizzes';
-    topNavBack  = handleStoryBack;
-    content     = <QuizzesScreen onBack={handleStoryBack} />;
+    topNavBack  = nav.clearStory;
+    content     = <QuizzesScreen onBack={nav.clearStory} />;
 
-  } else if (activeStory === 'shorts') {
+  } else if (nav.activeStory === 'shorts') {
     topNavTitle = 'Shorts';
-    topNavBack  = handleStoryBack;
-    content     = <ShortsScreen onBack={handleStoryBack} />;
+    topNavBack  = nav.clearStory;
+    content     = <ShortsScreen onBack={nav.clearStory} />;
 
-  } else if (activeStory === 'web stories') {
+  } else if (nav.activeStory === 'web stories') {
     topNavTitle = 'Web Stories';
-    topNavBack  = handleStoryBack;
-    content     = <WebStoriesScreen onBack={handleStoryBack} />;
+    topNavBack  = nav.clearStory;
+    content     = <WebStoriesScreen onBack={nav.clearStory} />;
 
-  } else if (selectedTopic) {
-    topNavBack  = () => setSelectedTopic(null);
-    content     = <TopicDetailScreen topic={selectedTopic} />;
+  } else if (nav.selectedTopic) {
+    topNavBack  = nav.clearTopic;
+    content     = <TopicDetailScreen topic={nav.selectedTopic} />;
 
-  } else if (selectedTag) {
-    topNavTitle = selectedTag.name;
-    topNavBack  = () => setSelectedTag(null);
+  } else if (nav.selectedTag) {
+    topNavTitle = nav.selectedTag.name;
+    topNavBack  = nav.clearTag;
     content     = (
       <TagDetailScreen
-        tag={selectedTag}
-        onBack={() => setSelectedTag(null)}
-        onArticlePress={setSelectedArticle}
-        onVideoPress={setSelectedVideo}
-        onGalleryPress={handleGalleryPress}
+        tag={nav.selectedTag}
+        onBack={nav.clearTag}
+        onArticlePress={nav.selectArticle}
+        onVideoPress={nav.selectVideo}
+        onGalleryPress={nav.selectGallery}
       />
     );
 
-  } else if (selectedArticle) {
+  } else if (nav.selectedArticle) {
     topNavTitle = 'Article';
-    topNavBack  = () => setSelectedArticle(null);
+    topNavBack  = nav.clearArticle;
     content     = (
       <ArticleScreen
-        article={selectedArticle}
-        onArticlePress={setSelectedArticle}
-        onTagPress={setSelectedTag}
+        article={nav.selectedArticle}
+        onArticlePress={nav.selectArticle}
+        onTagPress={nav.selectTag}
       />
     );
 
-  } else if (activeTab === 'forums') {
-    if (drilledForum) {
-      topNavBack = () => setDrilledForum(null);
+  } else if (nav.activeTab === 'forums') {
+    if (nav.drilledForum) {
+      topNavBack = nav.clearDrilledForum;
     }
     content = (
       <ForumScreen
-        onTopicPress={setSelectedTopic}
-        onForumDrill={setDrilledForum}
-        drilledForum={drilledForum}
+        onTopicPress={nav.selectTopic}
+        onForumDrill={nav.drillForum}
+        drilledForum={nav.drilledForum}
       />
     );
 
   } else {
-    const ActiveScreen = TAB_SCREENS[activeTab];
+    const ActiveScreen = TAB_SCREENS[nav.activeTab];
     content = (
       <ActiveScreen
-        onArticlePress={setSelectedArticle}
-        onVideoPress={setSelectedVideo}
-        onGalleryPress={handleGalleryPress}
-        onGalleriesOpen={handleGalleriesOpen}
+        onArticlePress={nav.selectArticle}
+        onVideoPress={nav.selectVideo}
+        onGalleryPress={nav.selectGallery}
+        onGalleriesOpen={nav.openGalleries}
         onStoryPress={handleStoryPress}
       />
     );
@@ -233,20 +191,20 @@ export default function App() {
       <TopNav
         title={topNavTitle}
         onBack={topNavBack}
-        onMenuOpen={() => setDrawerOpen(true)}
+        onMenuOpen={nav.openDrawer}
       />
 
       {content}
 
       <BottomNav
-        activeTab={activeTab}
-        onTabChange={topNavBack ? handleNavTabChange : setActiveTab}
+        activeTab={nav.activeTab}
+        onTabChange={nav.setTab}
       />
 
       {/* Side drawer — rendered inside PhoneShell so it's clipped to the frame */}
       <SideDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        open={nav.drawerOpen}
+        onClose={nav.closeDrawer}
         darkMode={darkMode}
         onDarkModeToggle={toggleDarkMode}
         onNavigate={handleDrawerNavigate}
