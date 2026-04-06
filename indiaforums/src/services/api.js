@@ -656,22 +656,46 @@ function transformTopic(raw) {
     flairId:      raw.flairId ?? 0,
     topicImage:   raw.topicImage || null,
     pageUrl:      raw.pageUrl || '',
+    linkTypeId:   raw.linkTypeId ?? 0,
+    linkTypeValue: raw.linkTypeValue || '',
+    forumThumbnail: raw.updateChecksum
+      ? `https://img.indiaforums.com/forumavatar/200x200/0/${String(raw.forumId).padStart(3, '0')}.webp?uc=${raw.updateChecksum}`
+      : null,
   };
 }
 
 // ── Transform post from API ──────────────────────────────────────────────────
 function transformPost(raw) {
+  // Parse user badges
+  let badges = [];
+  if (raw.badgeJson) {
+    try {
+      const parsed = JSON.parse(raw.badgeJson);
+      badges = (parsed?.json || []).slice(0, 3).map(b => ({
+        id: b.id,
+        name: b.nm,
+        imageUrl: `https://img.indiaforums.com/badge/200x200/0/${b.lid}.webp${b.uc ? '?uc=' + b.uc : ''}`,
+      }));
+    } catch (_) { /* malformed */ }
+  }
+
   return {
-    id:         raw.threadId ?? raw.postId ?? raw.id,
-    topicId:    raw.topicId ?? 0,
-    authorId:   raw.authorId ?? 0,
-    author:     raw.authorName ?? raw.userName ?? 'Anonymous',
-    message:    raw.message ?? raw.body ?? raw.content ?? '',
-    time:       timeAgo(raw.postedWhen ?? raw.createdAt ?? new Date().toISOString()),
-    rawTime:    raw.postedWhen ?? raw.createdAt ?? '',
-    likes:      raw.likeCount ?? 0,
-    avatarUrl:  raw.avatarUrl ?? null,
-    isOp:       raw.isOriginalPoster ?? false,
+    id:           raw.threadId ?? raw.postId ?? raw.id,
+    topicId:      raw.topicId ?? 0,
+    authorId:     raw.userId ?? raw.authorId ?? 0,
+    author:       raw.userName ?? raw.authorName ?? 'Anonymous',
+    realName:     raw.realName || '',
+    rank:         raw.name || '',
+    message:      raw.message ?? raw.body ?? raw.content ?? '',
+    time:         timeAgo(raw.messageDate ?? raw.postedWhen ?? raw.createdAt ?? new Date().toISOString()),
+    rawTime:      raw.messageDate ?? raw.postedWhen ?? raw.createdAt ?? '',
+    likes:        raw.likeCount ?? 0,
+    avatarUrl:    raw.avatarUrl ?? null,
+    avatarAccent: raw.avatarAccent || null,
+    countryCode:  raw.countryCode || '',
+    badges,
+    isOp:         raw.isOriginalPoster ?? false,
+    wordCount:    raw.wordCount ?? 0,
   };
 }
 
@@ -795,8 +819,15 @@ export async function fetchTopicPosts(topicId, pageNumber = 1, pageSize = 20) {
     hasMore: data?.hasMore,
   });
 
+  const startAuthorId = topicDetail?.startAuthorId ?? null;
+  const posts = rawPosts.map(raw => {
+    const post = transformPost(raw);
+    if (startAuthorId && post.authorId === startAuthorId) post.isOp = true;
+    return post;
+  });
+
   return {
-    posts:       rawPosts.map(transformPost),
+    posts,
     topicDetail: topicDetail ? transformTopic(topicDetail) : null,
     nextCursor:  data?.nextCursor ?? null,
     hasMore:     data?.hasMore ?? false,

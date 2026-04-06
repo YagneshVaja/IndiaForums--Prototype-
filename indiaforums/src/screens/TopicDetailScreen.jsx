@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import styles from './TopicDetailScreen.module.css';
 import useTopicPosts from '../hooks/useTopicPosts';
 import { replyToTopic } from '../services/api';
-import SocialEmbed from '../components/ui/SocialEmbed';
+import SocialEmbed, { detectPlatform } from '../components/ui/SocialEmbed';
 
 function formatNum(n) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
@@ -10,7 +10,7 @@ function formatNum(n) {
   return String(n);
 }
 
-// ── Extract social-media URLs from HTML message ─────────────────────────────
+// ── Extract social-media URLs from text/html ────────────────────────────────
 const SOCIAL_URL_RE = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com|instagram\.com|facebook\.com|fb\.watch|tiktok\.com|reddit\.com|youtube\.com|youtu\.be)[^\s"'<)]+/gi;
 
 function extractSocialUrls(html) {
@@ -20,17 +20,46 @@ function extractSocialUrls(html) {
   return [...new Set(matches)];
 }
 
+/** Strip social URLs from plain text so they render as embeds instead */
+function cleanDescription(text) {
+  if (!text) return '';
+  const urlRegex = /https?:\/\/[^\s<>"')\]]+/gi;
+  return text.replace(urlRegex, (match) => {
+    const cleaned = match.replace(/[.,;:!?]+$/, '');
+    return detectPlatform(cleaned) ? '' : match;
+  }).replace(/\s{2,}/g, ' ').trim();
+}
+
+/** Collect all social URLs from topic description + linkTypeValue */
+function getTopicSocialUrls(topic) {
+  const urls = new Set();
+  if (topic.linkTypeValue && detectPlatform(topic.linkTypeValue)) {
+    urls.add(topic.linkTypeValue);
+  }
+  const matches = topic.description?.match(SOCIAL_URL_RE) || [];
+  matches.forEach(u => {
+    const cleaned = u.replace(/[.,;:!?]+$/, '');
+    if (detectPlatform(cleaned)) urls.add(cleaned);
+  });
+  return [...urls];
+}
+
+// Country code → flag emoji
+function countryFlag(code) {
+  if (!code || code.length !== 2) return '';
+  return String.fromCodePoint(
+    ...[...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)
+  );
+}
+
 // ── Topic description with embedded social content ──────────────────────────
-function TopicBodyWithEmbeds({ text }) {
-  const socialUrls = useMemo(() => {
-    if (!text) return [];
-    const matches = text.match(SOCIAL_URL_RE);
-    return matches ? [...new Set(matches)] : [];
-  }, [text]);
+function TopicBodyWithEmbeds({ topic }) {
+  const cleanText = useMemo(() => cleanDescription(topic.description), [topic.description]);
+  const socialUrls = useMemo(() => getTopicSocialUrls(topic), [topic]);
 
   return (
     <>
-      <p className={styles.topicBody}>{text}</p>
+      {cleanText && <p className={styles.topicBody}>{cleanText}</p>}
       {socialUrls.length > 0 && (
         <div className={styles.embedsRow}>
           {socialUrls.map(url => (
@@ -97,26 +126,46 @@ export default function TopicDetailScreen({ topic }) {
 
           {/* Forum breadcrumb */}
           <div className={styles.forumRow}>
-            <div className={styles.forumBadge} style={{ background: topic.forumBg || 'var(--brand)' }}>
-              {topic.forumEmoji || '💬'}
-            </div>
+            {topic.forumThumbnail ? (
+              <img src={topic.forumThumbnail} alt="" className={styles.forumThumb} />
+            ) : (
+              <div className={styles.forumBadge} style={{ background: topic.forumBg || 'var(--brand)' }}>
+                {topic.forumEmoji || '💬'}
+              </div>
+            )}
             <span className={styles.forumName}>{topic.forumName || 'Forum'}</span>
+            {(topic.locked || topic.pinned) && (
+              <div className={styles.badgeRow}>
+                {topic.pinned && <span className={styles.pinnedBadge}>Pinned</span>}
+                {topic.locked && <span className={styles.lockedBadge}>Locked</span>}
+              </div>
+            )}
           </div>
-
-          {/* Badges */}
-          {(topic.locked || topic.pinned) && (
-            <div className={styles.badgeRow}>
-              {topic.locked && <span className={styles.lockedBadge}>Locked</span>}
-              {topic.pinned && <span className={styles.pinnedBadge}>Pinned</span>}
-            </div>
-          )}
 
           {/* Title */}
           <h2 className={styles.topicTitle}>{topic.title}</h2>
 
-          {/* Description + embeds */}
+          {/* Author + time row */}
+          <div className={styles.authorChip}>
+            <div className={styles.authorAvatar} style={{ background: topic.forumBg || 'var(--brand)' }}>
+              {(topic.poster || 'A').charAt(0).toUpperCase()}
+            </div>
+            <div className={styles.authorInfo}>
+              <span className={styles.authorName}>{topic.poster || 'Anonymous'}</span>
+              <span className={styles.authorTime}>{topic.time || ''}</span>
+            </div>
+          </div>
+
+          {/* Description + social embeds */}
           {topic.description && (
-            <TopicBodyWithEmbeds text={topic.description} />
+            <TopicBodyWithEmbeds topic={topic} />
+          )}
+
+          {/* Topic image */}
+          {topic.topicImage && (
+            <div className={styles.topicImageWrap}>
+              <img src={topic.topicImage} alt="" className={styles.topicImage} />
+            </div>
           )}
 
           {/* Tags */}
@@ -131,51 +180,39 @@ export default function TopicDetailScreen({ topic }) {
           {/* Stats bar */}
           <div className={styles.topicStatsBar}>
             <div className={styles.topicStatItem}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.6"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
               <span className={styles.topicStatVal}>{formatNum(topic.replies ?? 0)}</span>
               <span className={styles.topicStatLbl}>Replies</span>
             </div>
             <div className={styles.topicStatItem}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.6"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               <span className={styles.topicStatVal}>{formatNum(topic.views ?? 0)}</span>
               <span className={styles.topicStatLbl}>Views</span>
             </div>
             <div className={styles.topicStatItem}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.6"><path d="M7 22V11l5-9 1.5 1L12 7h8a2 2 0 012 2v2a6 6 0 01-.3 1.8l-2.4 6A2 2 0 0117.4 20H7z"/><path d="M2 11h3v11H2z"/></svg>
               <span className={styles.topicStatVal}>{formatNum(topic.likes ?? 0)}</span>
               <span className={styles.topicStatLbl}>Likes</span>
             </div>
           </div>
-
-          {/* Author */}
-          <div className={styles.authorChip}>
-            <div className={styles.authorAvatar} style={{ background: topic.forumBg || 'var(--brand)' }}>
-              {(topic.poster || 'A').charAt(0).toUpperCase()}
-            </div>
-            <div className={styles.authorInfo}>
-              <span className={styles.authorName}>{topic.poster || 'Anonymous'}</span>
-              <span className={styles.authorTime}>Created {topic.time || ''}</span>
-            </div>
-          </div>
         </div>
 
-        {/* ── Sort controls ── */}
+        {/* ── Replies header (label + sort) ── */}
         {!loading && posts.length > 0 && (
           <div className={styles.sortRow}>
-            <span className={styles.sortLabel}>Sort:</span>
+            <div className={styles.sectionLabel}>
+              <span className={styles.sectionText}>Replies</span>
+              <span className={styles.sectionCount}>{posts.length}</span>
+            </div>
+            <div style={{ flex: 1 }} />
             <button
               className={`${styles.sortBtn} ${sortBy === 'date' ? styles.sortBtnActive : ''}`}
               onClick={() => setSortBy('date')}
-            >By Date</button>
+            >Latest</button>
             <button
               className={`${styles.sortBtn} ${sortBy === 'likes' ? styles.sortBtnActive : ''}`}
               onClick={() => setSortBy('likes')}
-            >By Likes</button>
-          </div>
-        )}
-
-        {/* ── Posts section label ── */}
-        {!loading && posts.length > 0 && (
-          <div className={styles.sectionLabel}>
-            <span className={styles.sectionText}>Replies</span>
-            <span className={styles.sectionCount}>{posts.length}</span>
+            >Top</button>
           </div>
         )}
 
@@ -219,7 +256,7 @@ export default function TopicDetailScreen({ topic }) {
               <div key={post.id} className={styles.postCard} style={{ animationDelay: `${i * 0.04}s` }}>
                 {/* Post header */}
                 <div className={styles.postHeader}>
-                  <div className={styles.postAvatar}>
+                  <div className={styles.postAvatar} style={post.avatarAccent ? { background: post.avatarAccent } : undefined}>
                     {post.avatarUrl
                       ? <img src={post.avatarUrl} alt="" className={styles.postAvatarImg} />
                       : <span className={styles.postAvatarLetter}>{(post.author || 'A').charAt(0).toUpperCase()}</span>
@@ -229,11 +266,28 @@ export default function TopicDetailScreen({ topic }) {
                     <div className={styles.postAuthorRow}>
                       <span className={styles.postAuthor}>{post.author}</span>
                       {post.isOp && <span className={styles.opBadge}>OP</span>}
+                      {post.countryCode && (
+                        <span className={styles.countryFlag} title={post.countryCode}>
+                          {countryFlag(post.countryCode)}
+                        </span>
+                      )}
                     </div>
-                    <span className={styles.postTime}>{post.time}</span>
+                    <div className={styles.postMetaRow}>
+                      {post.rank && <span className={styles.rankBadge}>{post.rank}</span>}
+                      <span className={styles.postTime}>{post.time}</span>
+                    </div>
                   </div>
                   <span className={styles.postNumber}>#{i + 1}</span>
                 </div>
+
+                {/* User badges */}
+                {post.badges?.length > 0 && (
+                  <div className={styles.userBadges}>
+                    {post.badges.map(b => (
+                      <img key={b.id} src={b.imageUrl} alt={b.name} title={b.name} className={styles.userBadgeImg} />
+                    ))}
+                  </div>
+                )}
 
                 {/* Post content */}
                 <PostBodyWithEmbeds html={post.message} />
@@ -241,8 +295,9 @@ export default function TopicDetailScreen({ topic }) {
                 {/* Post footer with actions */}
                 <div className={styles.postFooter}>
                   <button className={styles.postAction}>
-                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                      <path d="M6.5 11s-5-3.5-5-7a5 5 0 0110 0c0 3.5-5 7-5 7z" stroke="currentColor" strokeWidth="1.1"/>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                      <path d="M7 22V11l5-9 1.5 1L12 7h8a2 2 0 012 2v2a6 6 0 01-.3 1.8l-2.4 6A2 2 0 0117.4 20H7z"/>
+                      <path d="M2 11h3v11H2z"/>
                     </svg>
                     {post.likes > 0 ? formatNum(post.likes) : 'Like'}
                   </button>
