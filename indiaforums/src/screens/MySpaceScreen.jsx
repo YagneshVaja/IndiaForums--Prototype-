@@ -1,4 +1,4 @@
-import styles from './PlaceholderScreen.module.css';
+import styles from './MySpaceScreen.module.css';
 
 export default function MySpaceScreen() {
   return (
