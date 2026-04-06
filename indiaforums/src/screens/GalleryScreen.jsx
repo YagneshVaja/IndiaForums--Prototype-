@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import styles from './GalleryScreen.module.css';
+import ErrorState from '../components/ui/ErrorState';
 import { GALLERY_CATS } from '../data/galleryData';
 import useMediaGalleries from '../hooks/useMediaGalleries';
 
@@ -43,12 +44,7 @@ export default function GalleryScreen({ onGalleryPress }) {
       <div className={styles.scrollArea}>
 
         {/* ── Error state ── */}
-        {error && !loading && (
-          <div className={styles.errorBox}>
-            <span className={styles.errorText}>{error}</span>
-            <button className={styles.retryBtn} onClick={refresh}>Retry</button>
-          </div>
-        )}
+        {error && !loading && <ErrorState message={error} onRetry={refresh} />}
 
         {/* ── Loading skeleton ── */}
         {loading && (

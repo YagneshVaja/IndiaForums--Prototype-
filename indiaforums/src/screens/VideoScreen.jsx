@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import styles from './VideoScreen.module.css';
+import ErrorState from '../components/ui/ErrorState';
 import SectionHeader from '../components/ui/SectionHeader';
 import { CAT_ACCENT } from '../data/videoData';
 import { VIDEO_CAT_TABS } from '../services/api';
@@ -177,13 +178,7 @@ export default function VideoScreen({ onVideoPress }) {
       </div>
 
       {/* ── Error state ───────────────────────────────────────────────── */}
-      {error && (
-        <div className={styles.errorWrap}>
-          <div className={styles.errorIcon}>!</div>
-          <div className={styles.errorText}>{error}</div>
-          <button className={styles.retryBtn} onClick={refresh}>Retry</button>
-        </div>
-      )}
+      {error && <ErrorState message={error} onRetry={refresh} />}
 
       {/* ── Loading skeleton ──────────────────────────────────────────── */}
       {loading && videos.length === 0 && !error && (
