@@ -1,0 +1,235 @@
+/* ── Sort & view bar ─────────────────────────────────────────────────────── */
+.topicSortBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.topicSortWrap { position: relative; }
+.topicSortTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.topicSortTrigger:hover {
+  border-color: var(--brand-border);
+  box-shadow: 0 1px 4px var(--brand-glow);
+}
+.topicSortTriggerOpen {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-glow);
+}
+.topicSortChevron {
+  transition: transform 0.2s var(--ease-out);
+  color: var(--text3);
+  flex-shrink: 0;
+}
+.topicSortChevronOpen { transform: rotate(180deg); color: var(--brand); }
+
+/* Backdrop */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+}
+
+@keyframes flairSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.topicSortDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 160px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+  padding: 4px 0;
+  animation: flairSlideIn 0.15s ease both;
+}
+.topicSortOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  transition: background 0.12s ease;
+}
+.topicSortOption:hover { background: var(--bg); }
+.topicSortOptionActive { color: var(--brand); font-weight: 700; background: var(--brand-light); }
+.topicSortRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.topicSortCount {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+  margin-right: 2px;
+}
+.viewToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--text3);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.viewToggle:hover {
+  color: var(--text2);
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+}
+.viewToggleActive {
+  color: var(--brand);
+  border-color: var(--brand);
+  background: var(--brand-light);
+}
+
+/* ── Thread list ─────────────────────────────────────────────────────────── */
+.threadList { padding: var(--sp-1) var(--content-px) 0; }
+
+/* ── Compact topic row ───────────────────────────────────────────────────── */
+.compactTopic {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.compactTopic:hover { background: var(--surface-raised); }
+.compactTopic:active { background: var(--brand-light); }
+.compactBody { flex: 1; min-width: 0; }
+.compactForum {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--brand);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.compactTitle {
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.compactMeta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--text3);
+  font-weight: 600;
+}
+.compactDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text3);
+  flex-shrink: 0;
+}
+.compactViews {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text3);
+  flex-shrink: 0;
+  text-align: right;
+  min-width: 32px;
+}
+
+/* ── Load more ────────────────────────────────────────────────────────────── */
+.loadMore {
+  display: block;
+  margin: 16px auto 0;
+  padding: 10px 30px;
+  border-radius: 22px;
+  background: var(--dark);
+  color: var(--text-on-brand);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.loadMore:hover { opacity: 0.9; }
+.loadMore:active { transform: scale(0.96); opacity: 0.9; }
+
+/* ── Skeleton shimmer ──────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+
+.skeletonThread {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.skeletonAvatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, var(--surface) 25%, var(--bg) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.skeletonBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.skeletonLine {
+  height: 11px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--surface) 25%, var(--bg) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.skeletonLineShort { width: 60%; }
+.skeletonLineTiny  { width: 35%; }
