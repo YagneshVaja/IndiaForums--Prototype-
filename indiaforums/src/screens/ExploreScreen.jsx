@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import styles from './ExploreScreen.module.css';
 
+import ErrorState from '../components/ui/ErrorState';
 import StoriesStrip from '../components/strips/StoriesStrip';
 import FeaturedCarousel from '../components/strips/FeaturedCarousel';
 import ChipsRow from '../components/strips/ChipsRow';
@@ -70,13 +71,7 @@ export default function ExploreScreen({ onArticlePress, onGalleryPress, onGaller
         )}
 
         {/* Error state */}
-        {error && (
-          <div className={styles.errorWrap}>
-            <div className={styles.errorIcon}>!</div>
-            <div className={styles.errorText}>{error}</div>
-            <button className={styles.retryBtn} onClick={refresh}>Retry</button>
-          </div>
-        )}
+        {error && <ErrorState message={error} onRetry={refresh} />}
 
         {/* Articles list */}
         {!loading && !error && filteredArticles.length === 0 && (
