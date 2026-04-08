@@ -1,0 +1,417 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   FanFictionDetailScreen — story header + chapter list
+   Uses tokens.css throughout. Same visual language as FanFictionScreen.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.screen::-webkit-scrollbar { display: none; }
+
+/* ── Hero ─────────────────────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  height: 280px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.heroBg {
+  position: absolute;
+  inset: 0;
+}
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.92) 0%,
+    rgba(0, 0, 0, 0.55) 45%,
+    rgba(0, 0, 0, 0.10) 100%
+  );
+}
+
+.heroBody {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--sp-4) var(--content-px) var(--sp-5);
+  gap: var(--sp-2);
+}
+
+.fandom {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.78);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+/* ── Author row ──────────────────────────────────────────────────────────── */
+.authorRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  margin-top: var(--sp-1);
+}
+.authorRow:disabled { cursor: default; }
+
+.authorAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.authorMeta {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+.authorLabel {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 500;
+}
+.authorName {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.35);
+  text-underline-offset: 3px;
+}
+
+/* ── Badge row ───────────────────────────────────────────────────────────── */
+.badgeRow {
+  display: flex;
+  gap: 6px;
+  margin-top: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.statusBadge,
+.ratingBadge,
+.typeBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.statusComplete { background: rgba(0, 186, 124, 0.28);  color: #6df0c2; }
+.statusOngoing  { background: rgba(247, 169, 40, 0.28); color: #fcd878; }
+
+.ratingBadge {
+  background: rgba(220, 38, 38, 0.28);
+  color: #fca5a5;
+}
+.typeBadge {
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* ── Stats strip ─────────────────────────────────────────────────────────── */
+.statsStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--sp-3) var(--sp-1);
+  background: var(--card);
+  text-align: center;
+}
+.statIcon {
+  font-size: 16px;
+  line-height: 1;
+}
+.statValue {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1.1;
+}
+.statLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* ── Discuss CTA — links to the forum topicId returned by the detail API ─ */
+.discussBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin: var(--sp-4) var(--content-px) 0;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--brand);
+  background: var(--brand-light);
+  color: var(--brand);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.discussBtn:hover {
+  background: var(--brand);
+  color: var(--text-on-brand);
+}
+.discussArrow {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* ── Sections ────────────────────────────────────────────────────────────── */
+.section {
+  padding: var(--sp-4) var(--content-px) 0;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--dark);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin: 0 0 var(--sp-3);
+}
+.sectionCount {
+  color: var(--text3);
+  font-weight: 600;
+}
+
+.synopsis {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text);
+  margin: 0;
+  background: var(--card);
+  padding: var(--sp-4);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Warning callout — yellow/amber surface */
+.warning {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.55;
+  color: #92400e;
+  margin: 0;
+  background: var(--amber-surface);
+  border: 1px solid rgba(247, 169, 40, 0.3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-md);
+}
+
+/* Author's note — softer than the synopsis */
+.authorNote {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text2);
+  font-style: italic;
+  margin: 0;
+  background: var(--card);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--brand);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ── Tags ────────────────────────────────────────────────────────────────── */
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  background: var(--brand-light);
+  color: var(--brand);
+}
+/* Secondary chip style — subtler so it pairs with .tag without competing */
+.tagAlt {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  background: var(--bg);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+.entityTag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--dark);
+  border: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ── Detail grid ─────────────────────────────────────────────────────────── */
+.detailGrid {
+  background: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+.detailRow:last-child { border-bottom: none; }
+.detailRow span { color: var(--text2); font-weight: 500; }
+.detailRow strong { color: var(--dark); font-weight: 700; }
+
+/* ── Chapter list ────────────────────────────────────────────────────────── */
+.chapterList {
+  background: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+
+.chapterRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--card);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.chapterRow:last-child { border-bottom: none; }
+.chapterRow:hover  { background: var(--bg); }
+.chapterRow:active { background: var(--surface); }
+
+.chapterNum {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-light);
+  color: var(--brand);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chapterMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chapterTitle {
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chapterSub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 500;
+}
+.chapterDot { color: var(--text3); }
+
+/* Chapter flags — members-only / mature content badges */
+.chapterFlags {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.flagMembers,
+.flagMature {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+.flagMembers { background: var(--brand-light); color: var(--brand); }
+.flagMature  { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+
+.chapterArrow {
+  font-size: 22px;
+  color: var(--text3);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.spacer { height: var(--sp-6); flex-shrink: 0; }

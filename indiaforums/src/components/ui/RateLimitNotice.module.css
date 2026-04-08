@@ -1,0 +1,58 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-8) var(--sp-4);
+}
+
+.icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--amber-surface, var(--brand-light));
+  color: var(--amber, var(--brand));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.title {
+  font-family: var(--font-heading, var(--font-body));
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: var(--sp-1);
+}
+
+.text {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text2);
+  text-align: center;
+  max-width: 260px;
+}
+
+.retryBtn {
+  margin-top: var(--sp-2);
+  padding: 8px 22px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--brand);
+  background: transparent;
+  color: var(--brand);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
+}
+
+.retryBtn:hover:not(:disabled) {
+  background: var(--brand-light);
+}
+
+.retryBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

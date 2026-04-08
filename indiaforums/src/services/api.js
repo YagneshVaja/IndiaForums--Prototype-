@@ -1,12 +1,92 @@
 import axios from 'axios';
+import { getTokens, setTokens, clearAll } from './tokenStorage';
 
 const API_VERSION = 1;
 
 const api = axios.create({
   baseURL: `/api/v${API_VERSION}`,
   timeout: 15000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+    'api-key': 'Api2IndiaForums@2026',
+  },
 });
+
+// ── Endpoints that don't need an Authorization header ────────────────────────
+const PUBLIC_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/check-username',
+  '/auth/check-email',
+  '/auth/external-login',
+];
+
+// ── Request interceptor — attach access token ────────────────────────────────
+api.interceptors.request.use((config) => {
+  const isPublic = PUBLIC_PATHS.some((p) => config.url?.includes(p));
+  if (!isPublic) {
+    const { accessToken } = getTokens();
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+  }
+  return config;
+});
+
+// ── Response interceptor — handle 401 with silent refresh ────────────────────
+let refreshPromise = null;
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const original = error.config;
+
+    // Only intercept 401s, skip if already retried or if it's the refresh call itself
+    if (
+      error.response?.status !== 401 ||
+      original._retry ||
+      original.url?.includes('/auth/refresh-token')
+    ) {
+      return Promise.reject(error);
+    }
+
+    original._retry = true;
+
+    // If a refresh is already in flight, wait for it
+    if (!refreshPromise) {
+      const { refreshToken } = getTokens();
+      if (!refreshToken) {
+        clearAll();
+        return Promise.reject(error);
+      }
+
+      refreshPromise = api
+        .post('/auth/refresh-token', { refreshToken })
+        .then((res) => {
+          const { accessToken: newAccess, refreshToken: newRefresh } = res.data;
+          setTokens(newAccess, newRefresh);
+          return newAccess;
+        })
+        .catch((refreshErr) => {
+          clearAll();
+          throw refreshErr;
+        })
+        .finally(() => {
+          refreshPromise = null;
+        });
+    }
+
+    try {
+      const newAccessToken = await refreshPromise;
+      original.headers.Authorization = `Bearer ${newAccessToken}`;
+      return api(original);
+    } catch {
+      return Promise.reject(error);
+    }
+  },
+);
 
 // ── Article category hierarchy (maps API defaultCategoryId to parent categories)
 // Parent categories (top-level tabs)
@@ -58,6 +138,71 @@ const CATEGORY_EMOJIS = {
   SPORTS:     '🏏',
   DIGITAL:    '🎞️',
 };
+
+// ── Pagination defaults ──────────────────────────────────────────────────────
+// All paginated list endpoints use the same default page size. Centralised
+// here so we can tune it once instead of touching every service. `pn` is the
+// 1-based page number; `ps` is the page size. Spread `PAGINATION_DEFAULTS`
+// before caller params so callers can override either field.
+export const DEFAULT_PAGE      = 1;
+export const DEFAULT_PAGE_SIZE = 24;
+export const PAGINATION_DEFAULTS = { pn: DEFAULT_PAGE, ps: DEFAULT_PAGE_SIZE };
+
+// ── Error message extraction ─────────────────────────────────────────────────
+// API uses RFC 7807 problem details: { type, title, status, detail }
+// Some endpoints also return { message } or plain strings.
+export function extractApiError(err, fallback = 'Something went wrong. Please try again.') {
+  // 429 takes precedence over the response body so the rate-limit message is
+  // never masked by a generic "internal error" body.
+  if (err?.response?.status === 429) {
+    return formatRateLimitMessage(err);
+  }
+  const d = err?.response?.data;
+  if (typeof d === 'string') return d;
+  return d?.message || d?.detail || d?.title || d?.error || fallback;
+}
+
+/**
+ * Returns true if the axios error is a 429 (rate-limited).
+ * Use this in screens that want to render a richer rate-limit treatment via
+ * `<RateLimitNotice />` instead of the generic `<ErrorState />`.
+ */
+export function isRateLimitError(err) {
+  return err?.response?.status === 429;
+}
+
+/**
+ * Build a user-facing rate-limit message that respects the Retry-After header.
+ * Per RFC 7231 the header is either an integer (seconds) or an HTTP-date.
+ */
+export function formatRateLimitMessage(err) {
+  const retryAfter = parseRetryAfter(err);
+  if (retryAfter == null) {
+    return 'Too many requests. Please wait a moment and try again.';
+  }
+  if (retryAfter < 60) {
+    return `Too many requests. Please try again in ${retryAfter} second${retryAfter === 1 ? '' : 's'}.`;
+  }
+  const mins = Math.ceil(retryAfter / 60);
+  return `Too many requests. Please try again in about ${mins} minute${mins === 1 ? '' : 's'}.`;
+}
+
+/**
+ * Parse the Retry-After header (seconds or HTTP-date) into a positive integer
+ * number of seconds. Returns null if absent or unparseable.
+ */
+export function parseRetryAfter(err) {
+  const headers = err?.response?.headers;
+  const raw = headers?.['retry-after'] || headers?.['Retry-After'];
+  if (!raw) return null;
+  const asInt = Number(raw);
+  if (Number.isFinite(asInt) && asInt >= 0) return Math.floor(asInt);
+  const asDate = new Date(raw).getTime();
+  if (Number.isFinite(asDate)) {
+    return Math.max(0, Math.ceil((asDate - Date.now()) / 1000));
+  }
+  return null;
+}
 
 // ── Time formatting ──────────────────────────────────────────────────────────
 export function timeAgo(dateStr) {
@@ -627,6 +772,35 @@ function transformForum(raw, categoriesMap) {
   };
 }
 
+// ── Transform poll attached to a topic ──────────────────────────────────────
+// The backend returns poll data either as a `poll`/`pollData` object or
+// embedded in `pollJson`. Normalise into:
+//   { pollId, question, multiple, totalVotes, hasVoted, options: [{id,text,votes}] }
+function transformPoll(rawPoll) {
+  if (!rawPoll) return null;
+  let p = rawPoll;
+  if (typeof p === 'string') {
+    try { p = JSON.parse(p); } catch (_) { return null; }
+  }
+  const pollId   = p.pollId ?? p.id ?? p.PollId;
+  if (pollId == null) return null;
+  const rawOpts  = p.options || p.pollOptions || p.choices || p.pollChoices || [];
+  const options  = rawOpts.map((o) => ({
+    id:    o.id ?? o.pollChoiceId ?? o.optionId,
+    text:  o.text ?? o.choiceText ?? o.option ?? o.label ?? '',
+    votes: o.votes ?? o.voteCount ?? o.count ?? 0,
+  })).filter((o) => o.id != null);
+  const totalVotes = options.reduce((s, o) => s + (o.votes || 0), 0);
+  return {
+    pollId,
+    question:  p.question ?? p.title ?? p.subject ?? '',
+    multiple:  p.multiple ?? p.allowMultiple ?? false,
+    hasVoted:  p.hasVoted ?? p.userVoted ?? false,
+    totalVotes,
+    options,
+  };
+}
+
 // ── Transform topic from API ─────────────────────────────────────────────────
 function transformTopic(raw) {
   // Parse celebrity/entity tags from jsonData
@@ -658,6 +832,7 @@ function transformTopic(raw) {
     pageUrl:      raw.pageUrl || '',
     linkTypeId:   raw.linkTypeId ?? 0,
     linkTypeValue: raw.linkTypeValue || '',
+    poll:         transformPoll(raw.poll || raw.pollData || raw.pollJson),
     forumThumbnail: raw.updateChecksum
       ? `https://img.indiaforums.com/forumavatar/200x200/0/${String(raw.forumId).padStart(3, '0')}.webp?uc=${raw.updateChecksum}`
       : null,
@@ -679,6 +854,13 @@ function transformPost(raw) {
     } catch (_) { /* malformed */ }
   }
 
+  // Edit-history indicators — backend field names vary across endpoints, so
+  // probe the common ones defensively. Used to render a "(edited)" affordance
+  // that opens the history viewer.
+  const editedWhen = raw.editedWhen ?? raw.updatedWhen ?? raw.lastEditedWhen ?? raw.modifiedWhen ?? null;
+  const editCount  = Number(raw.editCount ?? raw.editHistoryCount ?? 0);
+  const isEdited   = Boolean(raw.isEdited ?? editedWhen ?? editCount > 0);
+
   return {
     id:           raw.threadId ?? raw.postId ?? raw.id,
     topicId:      raw.topicId ?? 0,
@@ -696,6 +878,9 @@ function transformPost(raw) {
     badges,
     isOp:         raw.isOriginalPoster ?? false,
     wordCount:    raw.wordCount ?? 0,
+    isEdited,
+    editedWhen,
+    editCount,
   };
 }
 
@@ -834,27 +1019,9 @@ export async function fetchTopicPosts(topicId, pageNumber = 1, pageSize = 20) {
   };
 }
 
-// ── Create Topic (POST) ─────────────────────────────────────────────────────
-export async function createForumTopic(forumId, subject, message) {
-  const { data } = await api.post('/forums/topics', {
-    forumId,
-    subject,
-    message,
-  });
-
-  console.log('[API] createForumTopic:', { forumId, subject: subject.substring(0, 40) });
-  return data;
-}
-
-// ── Reply to Topic (POST) ───────────────────────────────────────────────────
-export async function replyToTopic(topicId, message) {
-  const { data } = await api.post(`/forums/topics/${topicId}/reply`, {
-    message,
-  });
-
-  console.log('[API] replyToTopic:', { topicId });
-  return data;
-}
+// Forum write APIs (createTopic, replyToTopic, editPost, reactToThread,
+// castPollVote, getThreadLikes, getPostEditHistory) now live in
+// services/forumsApi.js. Import from there.
 
 // ══════════════════════════════════════════════════════════════════════════════
 // CELEBRITIES API
@@ -1098,41 +1265,7 @@ export async function fetchTagGalleries(contentType, contentId, page = 1, pageSi
 }
 
 // ── Comments ────────────────────────────────────────────────────────────────
-function transformComment(raw) {
-  return {
-    id:          raw.commentId,
-    user:        raw.userName || 'Anonymous',
-    initial:     (raw.userName || 'A').charAt(0).toUpperCase(),
-    accentColor: raw.avatarAccent || '#3558F0',
-    time:        timeAgo(raw.createdWhen),
-    text:        raw.contents || '',
-    likes:       raw.likeCount || 0,
-    dislikes:    raw.disLikeCount || 0,
-    replyCount:  raw.replyCount || 0,
-    groupId:     raw.groupId || 0,
-  };
-}
-
-export async function fetchComments(contentTypeId, contentTypeValue, { cursor, pageSize = 25, parentCommentId = 0 } = {}) {
-  const params = { contentTypeId, contentTypeValue, parentCommentId, pageSize };
-  if (cursor) params.cursor = cursor;
-
-  const { data } = await api.get('/comments', { params });
-  const payload = data?.data || data;
-  const rawComments = payload?.comments || [];
-
-  return {
-    comments: rawComments.map(transformComment),
-    pagination: payload?.pagination || {
-      currentPage: 1,
-      pageSize,
-      totalItems: 0,
-      totalPages: 0,
-      hasNextPage: false,
-      hasPreviousPage: false,
-      nextCursor: null,
-    },
-  };
-}
+// Comment read/write APIs and the transformComment helper now live in
+// services/commentsApi.js. Import from there.
 
 export default api;

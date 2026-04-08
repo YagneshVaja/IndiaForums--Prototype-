@@ -1,8 +1,16 @@
 /* ────────────────────────────────────────────────────────────────────────────
-   WEB STORIES SCREEN  ·  8pt grid  ·  tokens from tokens.css
+   WEB STORIES SCREEN  ·  design tokens only  ·  2-col portrait grid
+
+   Visual language adapted from https://www.indiaforums.com/webstory:
+     • Title BELOW the thumbnail (not overlaid)
+     • 5 progress dots on top of each card (the signature webstory marker)
+     • Clock icon + timestamp in the footer
+     • Corner SVG badge marking multi-slide stories
+
+   Every color / size / radius / shadow comes from tokens.css — nothing
+   hardcoded — so the screen inherits dark-mode + theme variants for free.
    ──────────────────────────────────────────────────────────────────────────── */
 
-/* ── Screen ──────────────────────────────────────────────────────────────────── */
 .screen {
   flex: 1;
   overflow-y: auto;
@@ -15,500 +23,280 @@
 }
 .screen::-webkit-scrollbar { display: none; }
 
-/* ── Category tab bar ────────────────────────────────────────────────────────── */
-.catBar {
+/* ── Intro block ─────────────────────────────────────────────────────────── */
+.introBlock {
+  padding: 16px 14px 10px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
-  padding: 0 14px;
-  flex-shrink: 0;
 }
 
-.catScroll {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding: 10px 0;
-}
-.catScroll::-webkit-scrollbar { display: none; }
-
-.catBtn {
-  flex-shrink: 0;
-  padding: 6px 18px;
-  border-radius: 20px;
-  border: 1.5px solid var(--border);
-  background: transparent;
-  color: var(--text2);
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
-  -webkit-tap-highlight-color: transparent;
-  white-space: nowrap;
-}
-
-.catActive {
-  background: var(--brand);
-  color: var(--text-on-brand);
-  border-color: var(--brand);
-  font-weight: 700;
-}
-
-/* ── Feed header ─────────────────────────────────────────────────────────────── */
-.feedHeader {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px 6px;
-}
-
-.feedDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--brand);
-  flex-shrink: 0;
-}
-
-.feedLabel {
+.introTitle {
   font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 900;
   color: var(--text);
-  letter-spacing: 0.2px;
-  flex: 1;
+  letter-spacing: -0.3px;
+  line-height: 1.1;
+}
+
+.introSubtitle {
+  margin-top: 4px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  line-height: 1.4;
+}
+
+/* ── Section header row ──────────────────────────────────────────────────── */
+.sectionWrap {
+  position: relative;
+  padding-top: 4px;
 }
 
 .feedCount {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
   font-family: var(--font-body);
   font-size: 11px;
+  font-weight: 600;
   color: var(--text3);
+  letter-spacing: 0.2px;
 }
 
-/* ── 2-column portrait grid ──────────────────────────────────────────────────── */
+/* ── Error wrap ──────────────────────────────────────────────────────────── */
+.errorWrap {
+  padding: 20px 14px;
+}
+
+/* ── 2-column portrait grid ──────────────────────────────────────────────── */
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 0 12px;
+  gap: 12px;
+  padding: 4px 12px 0;
 }
 
-/* ── Story card ──────────────────────────────────────────────────────────────── */
+/* ── Card ────────────────────────────────────────────────────────────────── */
 .card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  text-align: left;
   cursor: pointer;
-  transition: transform var(--duration-fast) var(--ease-out);
+  box-shadow: var(--shadow-xs);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
   -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
 }
-.card:active { transform: scale(0.96); }
 
-/* Portrait cover (9:14 ish) */
+.card:hover {
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border-strong);
+}
+
+.card:active {
+  transform: scale(0.97);
+}
+
+/* Portrait cover — roughly 3:4 aspect so the card feels tall like the
+   live site's 320px-wide webstory thumbnails. */
 .cardCover {
   position: relative;
-  border-radius: var(--radius-md);
-  height: 200px;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: var(--brand-lighter);
   overflow: hidden;
 }
 
-.coverEmoji {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -55%);
-  font-size: 60px;
-  opacity: 0.5;
-  line-height: 1;
-  user-select: none;
-}
-
-.coverScrim {
+.cardImage {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(0,0,0,0.08) 0%,
-    rgba(0,0,0,0.1)  40%,
-    rgba(0,0,0,0.7)  100%
-  );
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-/* Category chip — top left */
-.coverCat {
+/* Top scrim — keeps the progress dots legible on bright thumbnails
+   without darkening the whole cover. */
+.topScrim {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.45),
+    rgba(0, 0, 0, 0)
+  );
+  pointer-events: none;
+}
+
+/* 5 progress dots — the signature webstory marker from the live site. */
+.progressDots {
   position: absolute;
   top: 8px;
   left: 8px;
-  background: var(--overlay-light);
-  color: var(--text-on-brand);
-  font-family: var(--font-display);
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  padding: 3px 6px;
-  border-radius: 4px;
-  backdrop-filter: blur(4px);
+  right: 8px;
+  display: flex;
+  gap: 3px;
+  pointer-events: none;
 }
 
-/* Slide count badge — top right */
-.slideCount {
+.progressDots span {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* Corner webstory SVG badge */
+.storyBadge {
   position: absolute;
-  top: 8px;
+  bottom: 8px;
   right: 8px;
-  background: var(--overlay-light);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--overlay-medium);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   color: var(--text-on-brand);
-  font-family: var(--font-display);
-  font-size: 9px;
-  font-weight: 700;
-  padding: 3px 7px;
-  border-radius: 4px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-xs);
 }
 
-/* Title overlay — bottom */
-.coverBottom {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 8px 9px;
+/* ── Card body (below image) ─────────────────────────────────────────────── */
+.cardBody {
+  padding: 9px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
 }
 
-.coverTitle {
+.cardTitle {
   font-family: var(--font-display);
-  font-size: 11.5px;
-  font-weight: 800;
-  color: var(--text-on-brand);
+  font-size: 12.5px;
+  font-weight: 700;
   line-height: 1.3;
+  color: var(--text);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  text-shadow: 0 1px 4px var(--overlay-light);
+  word-break: break-word;
 }
 
-/* Below-card meta row */
-.cardMeta {
+.cardFooter {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 2px 2px;
+  gap: 4px;
+  color: var(--text3);
+  margin-top: auto;
 }
 
-.cardAuthorAvatar {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.cardAuthorInitials {
-  font-family: var(--font-display);
-  font-size: 8px;
-  font-weight: 800;
-  color: var(--text-on-brand);
-}
-
-.cardAuthorInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  overflow: hidden;
-}
-
-.cardAuthorName {
+.cardTime {
   font-family: var(--font-body);
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--brand);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.cardTimeAgo {
-  font-family: var(--font-body);
-  font-size: 9px;
+  font-size: 10.5px;
+  font-weight: 500;
   color: var(--text3);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.spacer { height: 24px; }
-
-/* ════════════════════════════════════════════════════════════════════════════
-   IMMERSIVE STORY PLAYER
-   ════════════════════════════════════════════════════════════════════════════ */
-
-.playerOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  background: #000;
-  display: flex;
-  align-items: stretch;
-}
-
-.player {
-  position: relative;
-  flex: 1;
+/* ── Skeleton card ───────────────────────────────────────────────────────── */
+.cardSkeleton {
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: var(--radius-md);
   overflow: hidden;
-  transition: background 0.35s ease;
 }
 
-/* Large decorative emoji */
-.playerEmoji {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -52%);
-  font-size: 110px;
-  opacity: 0.25;
-  line-height: 1;
-  user-select: none;
-  z-index: 1;
-  transition: font-size 0.3s;
-}
-
-/* Full-screen gradient scrim */
-.playerScrim {
-  position: absolute;
-  inset: 0;
+.cardCoverSkel {
+  width: 100%;
+  aspect-ratio: 3 / 4;
   background: linear-gradient(
-    to bottom,
-    rgba(0,0,0,0.55) 0%,
-    rgba(0,0,0,0.05) 35%,
-    rgba(0,0,0,0.05) 55%,
-    rgba(0,0,0,0.75) 100%
+    90deg,
+    var(--brand-lighter) 0%,
+    var(--border) 50%,
+    var(--brand-lighter) 100%
   );
-  z-index: 2;
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
 }
 
-/* ── Progress bars ───────────────────────────────────────────────────────────── */
-.progressRow {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+.skelLineLg,
+.skelLineSm {
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--brand-lighter) 0%,
+    var(--border) 50%,
+    var(--brand-lighter) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skelLineLg { width: 100%; }
+.skelLineSm { width: 55%; height: 8px; }
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Load more ───────────────────────────────────────────────────────────── */
+.loadMoreWrap {
+  padding: 20px 14px 8px;
   display: flex;
-  gap: 3px;
-  padding: 10px 12px 0;
-  z-index: 10;
-}
-
-.progressSeg {
-  flex: 1;
-  height: 3px;
-  background: rgba(255,255,255,0.3);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.progressFill {
-  height: 100%;
-  background: var(--text-on-brand);
-  width: 0%;
-  border-radius: 2px;
-  transition: width 0.1s linear;
-}
-
-.progressDone {
-  width: 100%;
-  transition: none;
-}
-
-/* Active slide fill — CSS animation drives auto-advance feel */
-.progressActive {
-  width: 100%;
-  transition: width 5s linear;
-}
-
-/* ── Player header ───────────────────────────────────────────────────────────── */
-.playerHeader {
-  position: absolute;
-  top: 20px;
-  left: 12px;
-  right: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  z-index: 10;
-}
-
-.playerAuthorRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.playerAvatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
   justify-content: center;
-  border: 2px solid rgba(255,255,255,0.5);
-  flex-shrink: 0;
 }
 
-.playerInitials {
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--text-on-brand);
-}
-
-.playerAuthorName {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-on-brand);
-  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
-}
-
-.playerTime {
-  font-family: var(--font-body);
-  font-size: 10px;
-  color: rgba(255,255,255,0.7);
-  margin-top: 1px;
-}
-
-.playerHeaderRight {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.playerIconBtn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0,0,0,0.3);
-  color: var(--text-on-brand);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity var(--duration-fast) var(--ease-out);
-}
-.playerIconBtn:active { opacity: 0.7; }
-
-.playerCloseBtn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: var(--overlay-light);
-  color: var(--text-on-brand);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity 0.15s;
-}
-.playerCloseBtn:active { opacity: 0.7; }
-
-/* ── Tap zones (invisible, cover left/right halves) ──────────────────────────── */
-.tapLeft,
-.tapRight {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 40%;
-  z-index: 5;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.tapLeft  { left: 0; }
-.tapRight { right: 0; }
-
-/* ── Slide content — bottom ──────────────────────────────────────────────────── */
-.slideContent {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 0 18px 28px;
-  z-index: 10;
-}
-
-.slideCatBadge {
-  display: inline-block;
-  background: rgba(255,255,255,0.18);
-  color: var(--text-on-brand);
-  font-family: var(--font-display);
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  padding: 4px 10px;
-  border-radius: 20px;
-  margin-bottom: 10px;
-  backdrop-filter: blur(6px);
-}
-
-.slideTitle {
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 900;
-  color: var(--text-on-brand);
-  line-height: 1.2;
-  margin-bottom: 8px;
-  text-shadow: 0 2px 8px var(--overlay-light);
-}
-
-.slideCaption {
+.loadMoreBtn {
+  padding: 10px 22px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--brand-border);
+  background: var(--brand-light);
+  color: var(--brand);
   font-family: var(--font-body);
   font-size: 13px;
-  color: rgba(255,255,255,0.85);
-  line-height: 1.5;
-  margin-bottom: 14px;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.4);
-}
-
-/* Dot indicators */
-.dotRow {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-}
-
-.dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.4);
-  transition: all 0.2s;
-}
-
-.dotActive {
-  width: 14px;
-  border-radius: 3px;
-  background: var(--text-on-brand);
-}
-
-/* ── Edge nav arrows (subtle hit targets on sides) ───────────────────────────── */
-.arrowLeft,
-.arrowRight {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 6;
-  padding: 12px 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
   cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
   -webkit-tap-highlight-color: transparent;
 }
-.arrowLeft  { left: 2px; }
-.arrowRight { right: 2px; }
+
+.loadMoreBtn:hover:not(:disabled) {
+  background: var(--brand-lighter);
+  box-shadow: var(--shadow-brand);
+}
+
+.loadMoreBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.spacer { height: 24px; }

@@ -1,0 +1,195 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   FanFictionAuthorsScreen — top authors leaderboard
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.screen::-webkit-scrollbar { display: none; }
+
+/* ── Intro ───────────────────────────────────────────────────────────────── */
+.intro {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-5) var(--content-px) var(--sp-4);
+  background: linear-gradient(135deg, var(--brand-light), var(--brand-lighter));
+  border-bottom: 1px solid var(--brand-border);
+  flex-shrink: 0;
+}
+.introIcon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+.introBody {
+  flex: 1;
+  min-width: 0;
+}
+.introTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1.2;
+}
+.introSub {
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 2px;
+}
+
+/* ── List ────────────────────────────────────────────────────────────────── */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-4) var(--content-px) 0;
+}
+
+.row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-3);
+  background: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+  transition: box-shadow var(--duration-fast);
+}
+.row:hover { box-shadow: var(--shadow-sm); }
+
+/* ── Rank column ─────────────────────────────────────────────────────────── */
+.rank {
+  width: 56px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+}
+.rankTop {
+  background: linear-gradient(180deg, var(--amber-surface), var(--card));
+}
+.medal { font-size: 22px; line-height: 1; }
+.rankNum {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text2);
+}
+.rankTop .rankNum { color: var(--amber); }
+
+/* ── Author body (button-style for press feedback) ───────────────────────── */
+.author {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.author:hover { background: var(--surface-raised); }
+.author:active { background: var(--surface); }
+
+.avatar,
+.avatarFallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+.avatarFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tagline {
+  font-size: 11.5px;
+  color: var(--text2);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.statsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.statPill {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: var(--bg);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+.statPillLink {
+  cursor: pointer;
+  color: var(--brand);
+  background: var(--brand-light);
+  border-color: var(--brand-border);
+}
+.statPillLink:hover { background: var(--brand-lighter); }
+
+/* ── Load more ───────────────────────────────────────────────────────────── */
+.loadMore {
+  margin: var(--sp-4) var(--content-px) 0;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--brand);
+  background: transparent;
+  color: var(--brand);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+.loadMore:hover:not(:disabled) { background: var(--brand-light); }
+.loadMore:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.spacer { height: var(--sp-6); flex-shrink: 0; }
