@@ -1,0 +1,266 @@
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--content-px);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.backBtn {
+  padding: var(--sp-1) var(--sp-2);
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--brand);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+/* ── Content ──────────────────────────────────────────────────────────────── */
+.content {
+  flex: 1;
+  padding: var(--sp-4) var(--content-px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+/* ── Current username ─────────────────────────────────────────────────────── */
+.currentSection {
+  padding: var(--sp-4);
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.currentLabel {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: var(--sp-1);
+}
+
+.currentValue {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ── Form ─────────────────────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.inputWrap {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  overflow: hidden;
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.inputWrap:focus-within {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-glow);
+}
+
+.inputPrefix {
+  padding: 0 0 0 var(--sp-3);
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  height: 100%;
+  padding: 0 var(--sp-3) 0 var(--sp-1);
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--text3);
+}
+
+/* ── Availability hints ───────────────────────────────────────────────────── */
+.hintChecking {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.hintAvailable {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--success);
+  font-weight: 500;
+}
+
+.hintTaken {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--error);
+  font-weight: 500;
+}
+
+/* ── Feedback messages ────────────────────────────────────────────────────── */
+.error {
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--error-surface);
+  color: var(--error);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.success {
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--success-surface);
+  color: var(--success);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+/* ── Save button ──────────────────────────────────────────────────────────── */
+.saveBtn {
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--brand);
+  color: var(--text-on-brand);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.saveBtn:hover:not(:disabled) {
+  background: var(--brand-hover);
+  box-shadow: var(--shadow-brand);
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── History section ──────────────────────────────────────────────────────── */
+.historySection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.historyTitle {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.historyItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.historyNames {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.historyOld {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text3);
+  text-decoration: line-through;
+}
+
+.historyArrow {
+  font-size: 12px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.historyNew {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.historyTime {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  flex-shrink: 0;
+}

@@ -312,6 +312,14 @@
   font-family: var(--font-body);
 }
 
+.reactError {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #b91c1c;
+  font-family: var(--font-body);
+  text-align: center;
+}
+
 /* ── Divider ───────────────────────────────────────────────────────────────── */
 .divider {
   height: 6px;

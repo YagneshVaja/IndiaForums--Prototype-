@@ -12,6 +12,14 @@ const initialState = {
   drilledForum:    null,
   selectedTag:     null,
   drawerOpen:      false,
+  // Fan-fiction sub-views (only set when activeStory === 'fan fictions')
+  selectedFanfic:           null,  // { id, title? }
+  selectedFanficChapter:    null,  // { chapterId, storyId? }
+  showFanficAuthors:        false,
+  selectedFanficAuthor:     null,  // { id, name } — for followers screen
+  // Web story player — owns its own top-level screen so the immersive
+  // viewer doesn't get clipped inside whatever screen launched it.
+  selectedWebStory:         null,  // { stories: WebStory[], idx: number }
 };
 
 function navReducer(state, action) {
@@ -75,6 +83,41 @@ function navReducer(state, action) {
     case 'CLOSE_DRAWER':
       return { ...state, drawerOpen: false };
 
+    case 'SELECT_FANFIC':
+      return { ...state, selectedFanfic: action.payload };
+    case 'CLEAR_FANFIC':
+      return { ...state, selectedFanfic: null };
+
+    case 'SELECT_FANFIC_CHAPTER':
+      return { ...state, selectedFanficChapter: action.payload };
+    case 'CLEAR_FANFIC_CHAPTER':
+      return { ...state, selectedFanficChapter: null };
+
+    case 'OPEN_FANFIC_AUTHORS':
+      return { ...state, showFanficAuthors: true };
+    case 'CLOSE_FANFIC_AUTHORS':
+      return { ...state, showFanficAuthors: false };
+
+    case 'SELECT_FANFIC_AUTHOR':
+      return { ...state, selectedFanficAuthor: action.payload };
+    case 'CLEAR_FANFIC_AUTHOR':
+      return { ...state, selectedFanficAuthor: null };
+
+    case 'OPEN_WEB_STORY':
+      // payload: { stories, idx }
+      return { ...state, selectedWebStory: action.payload };
+    case 'CLOSE_WEB_STORY':
+      return { ...state, selectedWebStory: null };
+    case 'SET_WEB_STORY_IDX': {
+      const cur = state.selectedWebStory;
+      if (!cur) return state;
+      const newIdx = action.payload;
+      if (newIdx < 0 || newIdx >= cur.stories.length) {
+        return { ...state, selectedWebStory: null };
+      }
+      return { ...state, selectedWebStory: { ...cur, idx: newIdx } };
+    }
+
     case 'RESET':
       return { ...initialState };
 
@@ -108,6 +151,20 @@ export default function useAppNavigation() {
     clearTag:         useCallback(()    => dispatch({ type: 'CLEAR_TAG' }), []),
     openDrawer:       useCallback(()    => dispatch({ type: 'OPEN_DRAWER' }), []),
     closeDrawer:      useCallback(()    => dispatch({ type: 'CLOSE_DRAWER' }), []),
+
+    selectFanfic:        useCallback((s) => dispatch({ type: 'SELECT_FANFIC', payload: s }), []),
+    clearFanfic:         useCallback(()  => dispatch({ type: 'CLEAR_FANFIC' }), []),
+    selectFanficChapter: useCallback((c) => dispatch({ type: 'SELECT_FANFIC_CHAPTER', payload: c }), []),
+    clearFanficChapter:  useCallback(()  => dispatch({ type: 'CLEAR_FANFIC_CHAPTER' }), []),
+    openFanficAuthors:   useCallback(()  => dispatch({ type: 'OPEN_FANFIC_AUTHORS' }), []),
+    closeFanficAuthors:  useCallback(()  => dispatch({ type: 'CLOSE_FANFIC_AUTHORS' }), []),
+    selectFanficAuthor:  useCallback((a) => dispatch({ type: 'SELECT_FANFIC_AUTHOR', payload: a }), []),
+    clearFanficAuthor:   useCallback(()  => dispatch({ type: 'CLEAR_FANFIC_AUTHOR' }), []),
+
+    openWebStory:    useCallback((p)   => dispatch({ type: 'OPEN_WEB_STORY', payload: p }), []),
+    closeWebStory:   useCallback(()    => dispatch({ type: 'CLOSE_WEB_STORY' }), []),
+    setWebStoryIdx:  useCallback((i)   => dispatch({ type: 'SET_WEB_STORY_IDX', payload: i }), []),
+
     reset:            useCallback(()    => dispatch({ type: 'RESET' }), []),
   };
 

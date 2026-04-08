@@ -23,9 +23,14 @@ import CelebrityDetailScreen from './screens/CelebrityDetailScreen';
 import VideoScreen         from './screens/VideoScreen';
 import VideoDetailScreen   from './screens/VideoDetailScreen';
 import FanFictionScreen    from './screens/FanFictionScreen';
-import QuizzesScreen       from './screens/QuizzesScreen';
+import FanFictionDetailScreen   from './screens/fanfiction/FanFictionDetailScreen';
+import ChapterReaderScreen      from './screens/fanfiction/ChapterReaderScreen';
+import FanFictionAuthorsScreen  from './screens/fanfiction/FanFictionAuthorsScreen';
+import AuthorFollowersScreen    from './screens/fanfiction/AuthorFollowersScreen';
+import QuizzesScreen       from './screens/quizzes/QuizzesScreen';
 import ShortsScreen        from './screens/ShortsScreen';
 import WebStoriesScreen    from './screens/WebStoriesScreen';
+import WebStoryPlayer      from './components/stories/WebStoryPlayer';
 import TagDetailScreen     from './screens/TagDetailScreen';
 
 const TAB_SCREENS = {
@@ -50,6 +55,14 @@ export default function App() {
   /* ── Handlers ─────────────────────────────────────────────────────────────── */
   function handleStoryPress(story) { nav.setStory(story.label.toLowerCase()); }
 
+  /* Open the immersive web-story player. Callers pass the full list snapshot
+     plus the index of the tapped story so the player can navigate sideways
+     between siblings without re-fetching. */
+  function handleWebStorySelect({ stories, idx }) {
+    if (!stories || stories.length === 0 || idx == null) return;
+    nav.openWebStory({ stories, idx });
+  }
+
   /* Drawer navigation — maps label to app state */
   function handleDrawerNavigate(target) {
     nav.closeDrawer();
@@ -73,7 +86,25 @@ export default function App() {
   let topNavBack  = null;
   let content     = null;
 
-  if (nav.selectedGallery) {
+  if (nav.selectedWebStory) {
+    // Highest priority — the immersive web-story player owns the entire
+    // content slot so it isn't clipped by whichever screen launched it.
+    const { stories, idx } = nav.selectedWebStory;
+    const currentStory = stories[idx];
+    topNavTitle = 'Web Stories';
+    topNavBack  = nav.closeWebStory;
+    content = currentStory ? (
+      <WebStoryPlayer
+        key={currentStory.id}
+        story={currentStory}
+        allStories={stories}
+        storyIdx={idx}
+        onClose={nav.closeWebStory}
+        onNavigateStory={nav.setWebStoryIdx}
+      />
+    ) : null;
+
+  } else if (nav.selectedGallery) {
     topNavTitle = nav.selectedGallery.title;
     topNavBack  = nav.clearGallery;
     content     = <GalleryDetailScreen gallery={nav.selectedGallery} onBack={nav.clearGallery} onGalleryPress={nav.selectGallery} />;
@@ -109,10 +140,58 @@ export default function App() {
     topNavBack  = nav.clearStory;
     content     = <VideoScreen onBack={nav.clearStory} onVideoPress={nav.selectVideo} />;
 
+  } else if (nav.selectedFanficChapter) {
+    topNavTitle = 'Reader';
+    topNavBack  = nav.clearFanficChapter;
+    content     = (
+      <ChapterReaderScreen
+        chapterId={nav.selectedFanficChapter.chapterId}
+        onBack={nav.clearFanficChapter}
+      />
+    );
+
+  } else if (nav.selectedFanficAuthor) {
+    topNavTitle = nav.selectedFanficAuthor.name || 'Followers';
+    topNavBack  = nav.clearFanficAuthor;
+    content     = (
+      <AuthorFollowersScreen
+        authorId={nav.selectedFanficAuthor.id}
+        authorName={nav.selectedFanficAuthor.name}
+      />
+    );
+
+  } else if (nav.selectedFanfic) {
+    topNavTitle = nav.selectedFanfic.title || 'Story';
+    topNavBack  = nav.clearFanfic;
+    content     = (
+      <FanFictionDetailScreen
+        storyId={nav.selectedFanfic.id}
+        onChapterPress={(chapterId) => nav.selectFanficChapter({ chapterId, storyId: nav.selectedFanfic.id })}
+        onAuthorPress={(id, name) => nav.selectFanficAuthor({ id, name })}
+        onDiscussPress={() => nav.setTab('forum')}
+      />
+    );
+
+  } else if (nav.showFanficAuthors) {
+    topNavTitle = 'Top Authors';
+    topNavBack  = nav.closeFanficAuthors;
+    content     = (
+      <FanFictionAuthorsScreen
+        onAuthorPress={(id, author) => nav.selectFanficAuthor({ id, name: author?.authorName || author?.userName || author?.name })}
+        onAuthorFollowersPress={(id, name) => nav.selectFanficAuthor({ id, name })}
+      />
+    );
+
   } else if (nav.activeStory === 'fan fictions') {
     topNavTitle = 'Fan Fictions';
     topNavBack  = nav.clearStory;
-    content     = <FanFictionScreen onBack={nav.clearStory} />;
+    content     = (
+      <FanFictionScreen
+        onBack={nav.clearStory}
+        onStoryPress={(story) => nav.selectFanfic({ id: story.id, title: story.title })}
+        onAuthorsPress={() => nav.openFanficAuthors()}
+      />
+    );
 
   } else if (nav.activeStory === 'quizzes') {
     topNavTitle = 'Fan Quizzes';
@@ -127,7 +206,12 @@ export default function App() {
   } else if (nav.activeStory === 'web stories') {
     topNavTitle = 'Web Stories';
     topNavBack  = nav.clearStory;
-    content     = <WebStoriesScreen onBack={nav.clearStory} />;
+    content     = (
+      <WebStoriesScreen
+        onBack={nav.clearStory}
+        onWebStorySelect={handleWebStorySelect}
+      />
+    );
 
   } else if (nav.selectedTopic) {
     topNavBack  = nav.clearTopic;
@@ -178,6 +262,7 @@ export default function App() {
         onGalleryPress={nav.selectGallery}
         onGalleriesOpen={nav.openGalleries}
         onStoryPress={handleStoryPress}
+        onWebStorySelect={handleWebStorySelect}
       />
     );
   }

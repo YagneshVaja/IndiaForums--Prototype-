@@ -1,0 +1,469 @@
+/* ── Shared layout for all messages sub-screens ─────────────────────────── */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--content-px);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.backBtn {
+  padding: var(--sp-1) var(--sp-2);
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--brand);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.title {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.headerAction {
+  flex-shrink: 0;
+  padding: var(--sp-1) var(--sp-2);
+  border: none;
+  background: none;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+  cursor: pointer;
+}
+
+/* ── Tabs / pills row ─────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--content-px);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  flex-shrink: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+.tabActive {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--text-on-brand);
+}
+
+/* ── Toolbar (search box + folder picker) ────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--content-px);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.searchInput,
+.select {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.select {
+  flex: 0 0 auto;
+  max-width: 130px;
+}
+
+.searchInput:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+/* ── Content ──────────────────────────────────────────────────────────────── */
+.content {
+  flex: 1;
+  padding: var(--sp-4) var(--content-px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+/* ── Message row (Inbox/Outbox/Drafts list) ──────────────────────────────── */
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+}
+
+.rowUnread {
+  border-left: 3px solid var(--brand);
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--text-on-brand);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.rowBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowTopline {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.rowFrom {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowFromUnread {
+  color: var(--brand);
+}
+
+.rowDate {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.rowSubject {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowSubjectUnread {
+  font-weight: 700;
+}
+
+.rowMeta {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Thread view ─────────────────────────────────────────────────────────── */
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.threadSubject {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 var(--sp-2) 0;
+}
+
+.message {
+  padding: var(--sp-3);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.messageHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.messageAuthor {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.messageDate {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.messageBody {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Compose form ────────────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--content-px);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.label {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+}
+
+.input,
+.textarea {
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text2);
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.primaryBtn,
+.ghostBtn,
+.dangerBtn {
+  height: 36px;
+  padding: 0 var(--sp-4);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.primaryBtn {
+  border: none;
+  background: var(--brand);
+  color: var(--text-on-brand);
+  flex: 1;
+}
+
+.primaryBtn:hover:not(:disabled) {
+  background: var(--brand-hover);
+}
+
+.ghostBtn {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text2);
+}
+
+.ghostBtn:hover:not(:disabled) {
+  border-color: var(--text3);
+  color: var(--text);
+}
+
+.dangerBtn {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text2);
+}
+
+.dangerBtn:hover:not(:disabled) {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.primaryBtn:disabled,
+.ghostBtn:disabled,
+.dangerBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Folders manager ─────────────────────────────────────────────────────── */
+.folderRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.folderName {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folderCount {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.addFolder {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.addFolder .input {
+  flex: 1;
+}
+
+/* ── Feedback ─────────────────────────────────────────────────────────────── */
+.error {
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--error-surface);
+  color: var(--error);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.success {
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--success-surface, rgba(16, 185, 129, 0.1));
+  color: var(--success, #10b981);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.note {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+}

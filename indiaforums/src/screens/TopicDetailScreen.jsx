@@ -1,14 +1,40 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import styles from './TopicDetailScreen.module.css';
 import useTopicPosts from '../hooks/useTopicPosts';
-import { replyToTopic } from '../services/api';
+import { extractApiError } from '../services/api';
+import {
+  replyToTopic,
+  editPost,
+  reactToThread,
+  castPollVote,
+  getPostEditHistory,
+  trashPost,
+  THREAD_REACTION_TYPES,
+} from '../services/forumsApi';
+import { useAuth } from '../contexts/AuthContext';
 import SocialEmbed, { detectPlatform } from '../components/ui/SocialEmbed';
+import AdminPanel from '../components/forum/AdminPanel';
 
 function formatNum(n) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
   if (n >= 1000)    return (n / 1000).toFixed(1) + 'k';
   return String(n);
 }
+
+// Forum thread reactions (mirrors THREAD_REACTION_TYPES from forumsApi)
+const REACTION_OPTIONS = [
+  { code: THREAD_REACTION_TYPES.LIKE,  emoji: '👍', label: 'Like'  },
+  { code: THREAD_REACTION_TYPES.LOVE,  emoji: '❤️', label: 'Love'  },
+  { code: THREAD_REACTION_TYPES.WOW,   emoji: '😮', label: 'Wow'   },
+  { code: THREAD_REACTION_TYPES.LOL,   emoji: '😂', label: 'Lol'   },
+  { code: THREAD_REACTION_TYPES.SHOCK, emoji: '😱', label: 'Shock' },
+  { code: THREAD_REACTION_TYPES.SAD,   emoji: '😢', label: 'Sad'   },
+  { code: THREAD_REACTION_TYPES.ANGRY, emoji: '😠', label: 'Angry' },
+];
+const REACTION_LABELS = REACTION_OPTIONS.reduce((acc, o) => {
+  acc[o.code] = o.label;
+  return acc;
+}, {});
 
 // ── Extract social-media URLs from text/html ────────────────────────────────
 const SOCIAL_URL_RE = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com|instagram\.com|facebook\.com|fb\.watch|tiktok\.com|reddit\.com|youtube\.com|youtu\.be)[^\s"'<)]+/gi;
@@ -71,6 +97,48 @@ function TopicBodyWithEmbeds({ topic }) {
   );
 }
 
+// ── Poll widget ──────────────────────────────────────────────────────────────
+function PollWidget({ poll, voted, votedIds, voting, error, onVote }) {
+  if (!poll) return null;
+  const total = poll.totalVotes || 0;
+  return (
+    <div className={styles.pollBox}>
+      {poll.question && <div className={styles.pollQuestion}>{poll.question}</div>}
+      <div className={styles.pollOptions}>
+        {poll.options.map((opt) => {
+          const pct = total > 0 ? Math.round((opt.votes / total) * 100) : 0;
+          const mine = votedIds.includes(opt.id);
+          if (voted) {
+            return (
+              <div key={opt.id} className={`${styles.pollResult} ${mine ? styles.pollResultMine : ''}`}>
+                <div className={styles.pollResultBar} style={{ width: `${pct}%` }} />
+                <div className={styles.pollResultRow}>
+                  <span className={styles.pollResultText}>{opt.text}</span>
+                  <span className={styles.pollResultPct}>{pct}%</span>
+                </div>
+              </div>
+            );
+          }
+          return (
+            <button
+              key={opt.id}
+              className={styles.pollOptionBtn}
+              onClick={() => onVote(opt.id)}
+              disabled={voting}
+            >
+              {opt.text}
+            </button>
+          );
+        })}
+      </div>
+      <div className={styles.pollMeta}>
+        {total} {total === 1 ? 'vote' : 'votes'}
+      </div>
+      {error && <div className={styles.pollError}>{error}</div>}
+    </div>
+  );
+}
+
 // ── Post body with embedded social content ──────────────────────────────────
 function PostBodyWithEmbeds({ html }) {
   const socialUrls = useMemo(() => extractSocialUrls(html), [html]);
@@ -90,13 +158,35 @@ function PostBodyWithEmbeds({ html }) {
 }
 
 export default function TopicDetailScreen({ topic }) {
-  const { posts, loading, loadingMore, error, hasMore, loadMore, refresh } = useTopicPosts(topic?.id);
+  const { posts, topicDetail, loading, loadingMore, error, hasMore, loadMore, refresh } = useTopicPosts(topic?.id);
+  const { user, isAuthenticated, isModerator } = useAuth();
+
   const [replyText, setReplyText] = useState('');
   const [sending, setSending]     = useState(false);
   const [replyError, setReplyError] = useState(null);
   const [sortBy, setSortBy] = useState('date');
 
+  // Per-post UI state for edit + reactions
+  const [editingId, setEditingId]   = useState(null);
+  const [editText, setEditText]     = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError]   = useState(null);
+  const [postReactions, setPostReactions] = useState({}); // { [postId]: reactionTypeCode }
+  const [reactionPickerFor, setReactionPickerFor] = useState(null);
+
+  // Poll vote state
+  const [pollVoting, setPollVoting]   = useState(false);
+  const [pollError, setPollError]     = useState(null);
+  const [pollVotedIds, setPollVotedIds] = useState(null); // null = use server hasVoted
+
+  // Post edit-history modal
+  const [historyForPostId, setHistoryForPostId] = useState(null);
+
   if (!topic) return null;
+
+  // Merge in any topicDetail returned from the posts call (forumId, latest stats)
+  const liveTopic = topicDetail ? { ...topic, ...topicDetail } : topic;
+  const forumId = liveTopic.forumId;
 
   const sortedPosts = sortBy === 'likes'
     ? [...posts].sort((a, b) => (b.likes || 0) - (a.likes || 0))
@@ -104,21 +194,114 @@ export default function TopicDetailScreen({ topic }) {
 
   async function handleReply() {
     if (!replyText.trim() || sending) return;
+    if (!isAuthenticated) {
+      setReplyError('Please sign in to reply.');
+      return;
+    }
     setSending(true);
     setReplyError(null);
     try {
-      await replyToTopic(topic.id, replyText.trim());
+      await replyToTopic(liveTopic.id, {
+        forumId,
+        message: replyText.trim(),
+      });
       setReplyText('');
       refresh();
     } catch (err) {
-      setReplyError(err.message || 'Failed to send reply');
+      setReplyError(extractApiError(err, 'Failed to send reply'));
     } finally {
       setSending(false);
     }
   }
 
+  function startEdit(post) {
+    setEditingId(post.id);
+    // Strip basic HTML for the textarea — backend re-formats on save
+    const plain = (post.message || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+    setEditText(plain);
+    setEditError(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditText('');
+    setEditError(null);
+  }
+
+  async function saveEdit(post) {
+    if (!editText.trim() || editSaving) return;
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      await editPost(post.id, {
+        topicId: liveTopic.id,
+        message: editText.trim(),
+      });
+      setEditingId(null);
+      setEditText('');
+      refresh();
+    } catch (err) {
+      setEditError(extractApiError(err, 'Failed to save edit'));
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  async function handlePollVote(poll, optionId) {
+    if (pollVoting) return;
+    if (!isAuthenticated) {
+      setPollError('Please sign in to vote.');
+      return;
+    }
+    setPollVoting(true);
+    setPollError(null);
+    try {
+      await castPollVote(poll.pollId, [optionId]);
+      setPollVotedIds([optionId]);
+    } catch (err) {
+      setPollError(extractApiError(err, 'Failed to record vote'));
+    } finally {
+      setPollVoting(false);
+    }
+  }
+
+  async function handleTrashPost(post) {
+    if (!confirm('Trash this post? It will be moved to the trash topic.')) return;
+    try {
+      await trashPost({ threadId: post.id, topicId: liveTopic.id });
+      refresh();
+    } catch (err) {
+      setReplyError(extractApiError(err, 'Failed to trash post'));
+    }
+  }
+
+  async function handleReact(post, reactionCode) {
+    if (!isAuthenticated) {
+      setReplyError('Please sign in to react.');
+      return;
+    }
+    const prev = postReactions[post.id] ?? null;
+    // Optimistic toggle
+    setPostReactions((m) => ({ ...m, [post.id]: reactionCode }));
+    setReactionPickerFor(null);
+    try {
+      await reactToThread({
+        threadId: post.id,
+        forumId,
+        reactionType: reactionCode,
+      });
+    } catch (err) {
+      // Rollback
+      setPostReactions((m) => ({ ...m, [post.id]: prev }));
+      setReplyError(extractApiError(err, 'Failed to record reaction'));
+    }
+  }
+
   return (
     <div className={styles.screen}>
+      {/* Floating moderator action panel — hidden for non-moderators */}
+      <AdminPanel topic={liveTopic} onActionComplete={refresh} />
+
       <div className={styles.scrollArea}>
 
         {/* ── Topic card (OP) ── */}
@@ -157,14 +340,26 @@ export default function TopicDetailScreen({ topic }) {
           </div>
 
           {/* Description + social embeds */}
-          {topic.description && (
-            <TopicBodyWithEmbeds topic={topic} />
+          {liveTopic.description && (
+            <TopicBodyWithEmbeds topic={liveTopic} />
+          )}
+
+          {/* Poll (if attached to topic) */}
+          {liveTopic.poll && (
+            <PollWidget
+              poll={liveTopic.poll}
+              voted={pollVotedIds != null || liveTopic.poll.hasVoted}
+              votedIds={pollVotedIds || []}
+              voting={pollVoting}
+              error={pollError}
+              onVote={(optId) => handlePollVote(liveTopic.poll, optId)}
+            />
           )}
 
           {/* Topic image */}
-          {topic.topicImage && (
+          {liveTopic.topicImage && (
             <div className={styles.topicImageWrap}>
-              <img src={topic.topicImage} alt="" className={styles.topicImage} />
+              <img src={liveTopic.topicImage} alt="" className={styles.topicImage} />
             </div>
           )}
 
@@ -248,11 +443,17 @@ export default function TopicDetailScreen({ topic }) {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <path d="M2 2h20a1 1 0 011 1v14a1 1 0 01-1 1H6l-5 4V3a1 1 0 011-1z" stroke="var(--text3)" strokeWidth="1.6" strokeLinejoin="round"/>
                 </svg>
-                <span className={styles.emptyText}>No replies yet{!topic.locked ? ' — be the first!' : ''}</span>
+                <span className={styles.emptyText}>No replies yet{!liveTopic.locked ? ' — be the first!' : ''}</span>
               </div>
             )}
 
-            {sortedPosts.map((post, i) => (
+            {sortedPosts.map((post, i) => {
+              const isMine    = isAuthenticated && user?.userId && post.authorId === user.userId;
+              const isEditing = editingId === post.id;
+              const myReact   = postReactions[post.id] ?? null;
+              const pickerOpen = reactionPickerFor === post.id;
+
+              return (
               <div key={post.id} className={styles.postCard} style={{ animationDelay: `${i * 0.04}s` }}>
                 {/* Post header */}
                 <div className={styles.postHeader}>
@@ -275,6 +476,16 @@ export default function TopicDetailScreen({ topic }) {
                     <div className={styles.postMetaRow}>
                       {post.rank && <span className={styles.rankBadge}>{post.rank}</span>}
                       <span className={styles.postTime}>{post.time}</span>
+                      {post.isEdited && (
+                        <button
+                          type="button"
+                          className={styles.editedChip}
+                          onClick={() => setHistoryForPostId(post.id)}
+                          title="View edit history"
+                        >
+                          (edited)
+                        </button>
+                      )}
                     </div>
                   </div>
                   <span className={styles.postNumber}>#{i + 1}</span>
@@ -289,41 +500,115 @@ export default function TopicDetailScreen({ topic }) {
                   </div>
                 )}
 
-                {/* Post content */}
-                <PostBodyWithEmbeds html={post.message} />
+                {/* Post content (or edit textarea) */}
+                {isEditing ? (
+                  <div className={styles.editBox}>
+                    <textarea
+                      className={styles.editTextarea}
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      disabled={editSaving}
+                      rows={4}
+                    />
+                    {editError && <div className={styles.editError}>{editError}</div>}
+                    <div className={styles.editActions}>
+                      <button className={styles.editCancel} onClick={cancelEdit} disabled={editSaving}>
+                        Cancel
+                      </button>
+                      <button
+                        className={styles.editSave}
+                        onClick={() => saveEdit(post)}
+                        disabled={editSaving || !editText.trim()}
+                      >
+                        {editSaving ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <PostBodyWithEmbeds html={post.message} />
+                )}
 
                 {/* Post footer with actions */}
-                <div className={styles.postFooter}>
-                  <button className={styles.postAction}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-                      <path d="M7 22V11l5-9 1.5 1L12 7h8a2 2 0 012 2v2a6 6 0 01-.3 1.8l-2.4 6A2 2 0 0117.4 20H7z"/>
-                      <path d="M2 11h3v11H2z"/>
-                    </svg>
-                    {post.likes > 0 ? formatNum(post.likes) : 'Like'}
-                  </button>
-                  <button className={styles.postAction}>
-                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                      <path d="M2 2h9a1 1 0 011 1v5a1 1 0 01-1 1H4l-3 2.5V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
-                    </svg>
-                    Reply
-                  </button>
-                  <button className={styles.postAction}>
-                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                      <path d="M2 3h6v7H2z" stroke="currentColor" strokeWidth="1.1"/>
-                      <path d="M5 1h6v7" stroke="currentColor" strokeWidth="1.1"/>
-                    </svg>
-                    Quote
-                  </button>
-                  <button className={`${styles.postAction} ${styles.postActionRight}`}>
-                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                      <path d="M8 1l4 4-4 4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M12 5H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-                    </svg>
-                    Share
-                  </button>
-                </div>
+                {!isEditing && (
+                  <div className={styles.postFooter}>
+                    <div className={styles.reactWrap}>
+                      <button
+                        className={`${styles.postAction} ${myReact != null ? styles.postActionActive : ''}`}
+                        onClick={() => setReactionPickerFor(pickerOpen ? null : post.id)}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                          <path d="M7 22V11l5-9 1.5 1L12 7h8a2 2 0 012 2v2a6 6 0 01-.3 1.8l-2.4 6A2 2 0 0117.4 20H7z"/>
+                          <path d="M2 11h3v11H2z"/>
+                        </svg>
+                        {REACTION_LABELS[myReact] || (post.likes > 0 ? formatNum(post.likes) : 'Like')}
+                      </button>
+                      {pickerOpen && (
+                        <>
+                          <div className={styles.reactBackdrop} onClick={() => setReactionPickerFor(null)} />
+                          <div className={styles.reactPicker}>
+                            {REACTION_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.code}
+                                className={styles.reactOption}
+                                title={opt.label}
+                                onClick={() => handleReact(post, opt.code)}
+                              >
+                                <span className={styles.reactEmoji}>{opt.emoji}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <button className={styles.postAction}>
+                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                        <path d="M2 2h9a1 1 0 011 1v5a1 1 0 01-1 1H4l-3 2.5V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+                      </svg>
+                      Reply
+                    </button>
+                    {isMine ? (
+                      <button className={styles.postAction} onClick={() => startEdit(post)}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                          <path d="M12 20h9"/>
+                          <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                        </svg>
+                        Edit
+                      </button>
+                    ) : (
+                      <button className={styles.postAction}>
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                          <path d="M2 3h6v7H2z" stroke="currentColor" strokeWidth="1.1"/>
+                          <path d="M5 1h6v7" stroke="currentColor" strokeWidth="1.1"/>
+                        </svg>
+                        Quote
+                      </button>
+                    )}
+                    {isModerator && !isMine && (
+                      <button
+                        className={`${styles.postAction} ${styles.postActionDanger}`}
+                        onClick={() => handleTrashPost(post)}
+                        title="Trash this post (moderator)"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                          <path d="M3 6h18"/>
+                          <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                          <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                        </svg>
+                        Trash
+                      </button>
+                    )}
+                    <button className={`${styles.postAction} ${styles.postActionRight}`}>
+                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                        <path d="M8 1l4 4-4 4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M12 5H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                      </svg>
+                      Share
+                    </button>
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
 
             {loadingMore && Array.from({ length: 2 }).map((_, i) => (
               <div key={`lm-${i}`} className={styles.skeletonPost}>
@@ -347,7 +632,7 @@ export default function TopicDetailScreen({ topic }) {
       </div>
 
       {/* ── Reply input (fixed at bottom) ── */}
-      {!topic.locked && (
+      {!liveTopic.locked && (
         <div className={styles.replyBar}>
           <div className={styles.replyAvatar}>Y</div>
           <input
@@ -374,7 +659,7 @@ export default function TopicDetailScreen({ topic }) {
           {replyError && <div className={styles.replyError}>{replyError}</div>}
         </div>
       )}
-      {topic.locked && (
+      {liveTopic.locked && (
         <div className={styles.lockedBar}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <rect x="2" y="6" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
@@ -383,6 +668,78 @@ export default function TopicDetailScreen({ topic }) {
           This topic is locked
         </div>
       )}
+      {historyForPostId != null && (
+        <PostEditHistoryModal
+          postId={historyForPostId}
+          onClose={() => setHistoryForPostId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Edit history modal ──────────────────────────────────────────────────── */
+function PostEditHistoryModal({ postId, onClose }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
+  const [entries, setEntries] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPostEditHistory(postId)
+      .then((res) => {
+        if (cancelled) return;
+        const d = res?.data;
+        const list =
+          (Array.isArray(d) && d) ||
+          d?.history ||
+          d?.data?.history ||
+          d?.editHistory ||
+          d?.items ||
+          [];
+        setEntries(Array.isArray(list) ? list : []);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(extractApiError(err, 'Failed to load edit history'));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [postId]);
+
+  return (
+    <div className={styles.historyOverlay} onClick={onClose}>
+      <div className={styles.historyModal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.historyHeader}>
+          <span className={styles.historyTitle}>Edit history</span>
+          <button className={styles.historyClose} onClick={onClose} aria-label="Close">×</button>
+        </div>
+        <div className={styles.historyBody}>
+          {loading && <div className={styles.historyState}>Loading...</div>}
+          {!loading && error && <div className={styles.historyState}>{error}</div>}
+          {!loading && !error && entries.length === 0 && (
+            <div className={styles.historyState}>No edit history recorded.</div>
+          )}
+          {!loading && !error && entries.length > 0 && entries.map((entry, i) => {
+            const when = entry.editedWhen || entry.updatedWhen || entry.modifiedWhen || entry.createdWhen;
+            const body = entry.message || entry.oldMessage || entry.content || entry.text || '';
+            const editor = entry.editedByUserName || entry.editorName || entry.userName || '';
+            return (
+              <div key={entry.id || entry.historyId || i} className={styles.historyEntry}>
+                <div className={styles.historyEntryMeta}>
+                  <span>{editor || 'Unknown'}</span>
+                  <span>{when ? new Date(when).toLocaleString() : ''}</span>
+                </div>
+                <div
+                  className={styles.historyEntryBody}
+                  dangerouslySetInnerHTML={{ __html: body }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

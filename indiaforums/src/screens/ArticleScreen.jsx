@@ -2,18 +2,22 @@ import { useState, useMemo, useRef } from 'react';
 import styles from './ArticleScreen.module.css';
 import { getRelatedArticles } from '../data/newsData';
 import useArticleDetails from '../hooks/useArticleDetails';
-import useComments from '../hooks/useComments';
 import SocialEmbed from '../components/ui/SocialEmbed';
+import CommentsSection from '../components/comments/CommentsSection';
+import { COMMENT_CONTENT_TYPES, REACTION_TYPES, reactToContent } from '../services/commentsApi';
+import { extractApiError } from '../services/api';
 
 // ── Reactions ─────────────────────────────────────────────────────────────────
+// `apiCode` maps each UI reaction to the backend REACTION_TYPES enum from
+// commentsApi.js so we can call POST /content/reactions.
 const REACTIONS = [
-  { id: 'nice',  emoji: '😊', label: 'Nice'  },
-  { id: 'great', emoji: '👍', label: 'Great' },
-  { id: 'loved', emoji: '❤️', label: 'Loved' },
-  { id: 'lol',   emoji: '😂', label: 'LOL'   },
-  { id: 'omg',   emoji: '😮', label: 'OMG'   },
-  { id: 'cry',   emoji: '😢', label: 'Cry'   },
-  { id: 'fail',  emoji: '👎', label: 'Fail'  },
+  { id: 'nice',  emoji: '😊', label: 'Nice',  apiCode: REACTION_TYPES.NICE    },
+  { id: 'great', emoji: '👍', label: 'Great', apiCode: REACTION_TYPES.AWESOME },
+  { id: 'loved', emoji: '❤️', label: 'Loved', apiCode: REACTION_TYPES.LOVED   },
+  { id: 'lol',   emoji: '😂', label: 'LOL',   apiCode: REACTION_TYPES.LOL     },
+  { id: 'omg',   emoji: '😮', label: 'OMG',   apiCode: REACTION_TYPES.OMG     },
+  { id: 'cry',   emoji: '😢', label: 'Cry',   apiCode: REACTION_TYPES.CRY     },
+  { id: 'fail',  emoji: '👎', label: 'Fail',  apiCode: REACTION_TYPES.FAIL    },
 ];
 
 // ── Static data ───────────────────────────────────────────────────────────────
@@ -46,8 +50,8 @@ const CATEGORY_ENTITIES = {
   ],
 };
 
-// contentTypeId 7 = articles
-const COMMENT_CONTENT_TYPE = 7;
+// Article comment content type id from spec
+const COMMENT_CONTENT_TYPE = COMMENT_CONTENT_TYPES.ARTICLE;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function seededN(seed, min, max) {
@@ -107,13 +111,32 @@ function buildBody(article) {
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function ArticleScreen({ article, onArticlePress, onTagPress }) {
   const [reaction, setReaction] = useState(null);
+  const [reactionError, setReactionError] = useState(null);
   const scrollRef = useRef(null);
+
+  // Fire-and-forget POST to /content/reactions, with optimistic UI rollback
+  // on error so the user gets immediate feedback. Toggling the same reaction
+  // off is purely client-side — the spec doesn't define an "unreact" call.
+  async function handleReact(r) {
+    const next = reaction === r.id ? null : r.id;
+    setReaction(next);
+    if (next == null) return;
+    setReactionError(null);
+    try {
+      await reactToContent({
+        contentType:  COMMENT_CONTENT_TYPES.ARTICLE,
+        contentId:    article.id,
+        reactionType: r.apiCode,
+      });
+    } catch (err) {
+      // Revert and surface the error inline so the user knows it didn't stick.
+      setReaction(null);
+      setReactionError(extractApiError(err, 'Failed to record reaction'));
+    }
+  }
 
   // Fetch enriched details from API
   const { details } = useArticleDetails(article.id);
-
-  // Fetch live comments
-  const { comments: liveComments, loading: commentsLoading, hasMore, loadMore, totalItems: liveCommentTotal } = useComments(COMMENT_CONTENT_TYPE, article.id);
 
   // Merge list-level article with fetched details
   // Skip null/undefined detail values so list-level data is preserved
@@ -375,7 +398,7 @@ export default function ArticleScreen({ article, onArticlePress, onTagPress }) {
                   <button
                     key={r.id}
                     className={`${styles.reactBtn} ${active ? styles.reactActive : ''}`}
-                    onClick={() => setReaction(p => p === r.id ? null : r.id)}
+                    onClick={() => handleReact(r)}
                   >
                     <span className={styles.reactEmoji}>{r.emoji}</span>
                     <span className={styles.reactCount}>{count}</span>
@@ -384,6 +407,9 @@ export default function ArticleScreen({ article, onArticlePress, onTagPress }) {
                 );
               })}
             </div>
+            {reactionError && (
+              <div className={styles.reactError}>{reactionError}</div>
+            )}
           </div>
 
           <div className={styles.divider} />
@@ -425,56 +451,10 @@ export default function ArticleScreen({ article, onArticlePress, onTagPress }) {
           <div className={styles.divider} />
 
           {/* Comments */}
-          <div className={styles.commentsBox}>
-            <div className={styles.commentsHeader}>
-              <span className={styles.commentsTitle}>Comments</span>
-              <span className={styles.commentsCount}>
-                {liveCommentTotal > 0 ? liveCommentTotal : commentCount} comments
-              </span>
-            </div>
-
-            <div className={styles.commentInput}>
-              <div className={styles.inputAv} style={{ background: 'linear-gradient(135deg,var(--brand),#6B7FFF)' }}>Y</div>
-              <div className={styles.inputPlaceholder}>Add a comment...</div>
-            </div>
-
-            {commentsLoading && liveComments.length === 0 && (
-              <div className={styles.commentsLoading}>Loading comments...</div>
-            )}
-
-            {!commentsLoading && liveComments.length === 0 && (
-              <div className={styles.commentsEmpty}>No comments yet. Be the first to comment!</div>
-            )}
-
-            {liveComments.map(c => (
-              <div key={c.id} className={styles.comment}>
-                <div className={styles.commentAv} style={{ background: c.accentColor }}>
-                  {c.initial}
-                </div>
-                <div className={styles.commentContent}>
-                  <div className={styles.commentTop}>
-                    <span className={styles.commentUser}>{c.user}</span>
-                    <span className={styles.commentTime}>{c.time}</span>
-                  </div>
-                  <div className={styles.commentText}>{c.text}</div>
-                  <div className={styles.commentActions}>
-                    <button className={styles.likeBtn}>👍 {c.likes}</button>
-                    <button className={styles.likeBtn}>👎 {c.dislikes}</button>
-                    <button className={styles.replyBtn}>Reply</button>
-                    {c.replyCount > 0 && (
-                      <span className={styles.replyCount}>{c.replyCount} {c.replyCount === 1 ? 'reply' : 'replies'}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {hasMore && (
-              <button className={styles.loadMoreBtn} onClick={loadMore}>
-                Load more comments
-              </button>
-            )}
-          </div>
+          <CommentsSection
+            contentTypeId={COMMENT_CONTENT_TYPE}
+            contentTypeValue={article.id}
+          />
 
           <div className={styles.divider} />
 

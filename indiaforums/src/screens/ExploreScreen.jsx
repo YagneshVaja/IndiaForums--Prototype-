@@ -3,6 +3,7 @@ import styles from './ExploreScreen.module.css';
 
 import ErrorState from '../components/ui/ErrorState';
 import StoriesStrip from '../components/strips/StoriesStrip';
+import WebStoriesStrip from '../components/stories/WebStoriesStrip';
 import FeaturedCarousel from '../components/strips/FeaturedCarousel';
 import ChipsRow from '../components/strips/ChipsRow';
 import SectionHeader from '../components/ui/SectionHeader';
@@ -18,7 +19,7 @@ import useArticles from '../hooks/useArticles';
 
 const PREVIEW_GALLERIES = GALLERIES.slice(0, 4);
 
-export default function ExploreScreen({ onArticlePress, onGalleryPress, onGalleriesOpen, onStoryPress }) {
+export default function ExploreScreen({ onArticlePress, onGalleryPress, onGalleriesOpen, onStoryPress, onWebStorySelect }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeForumTab, setActiveForumTab] = useState('announcements');
 
@@ -88,6 +89,12 @@ export default function ExploreScreen({ onArticlePress, onGalleryPress, onGaller
         galleries={PREVIEW_GALLERIES}
         onSeeAll={onGalleriesOpen}
         onGalleryPress={onGalleryPress}
+      />
+
+      {/* Web Stories horizontal strip */}
+      <WebStoriesStrip
+        onSeeAll={() => onStoryPress && onStoryPress({ label: 'Web Stories' })}
+        onWebStorySelect={onWebStorySelect}
       />
 
       <SectionHeader title="Forums" />

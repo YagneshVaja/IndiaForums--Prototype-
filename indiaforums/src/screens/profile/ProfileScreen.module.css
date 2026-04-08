@@ -1,0 +1,525 @@
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+/* ── Profile header ───────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--sp-5) var(--content-px) var(--sp-4);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: var(--sp-3);
+  box-shadow: var(--shadow-brand);
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarLetter {
+  color: var(--text-on-brand);
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.info {
+  text-align: center;
+  margin-bottom: var(--sp-2);
+}
+
+.displayName {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.userName {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text2);
+  margin-top: 2px;
+}
+
+.joined {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: var(--sp-1);
+}
+
+.bio {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text2);
+  text-align: center;
+  line-height: 1.5;
+  margin: var(--sp-2) 0 0;
+  max-width: 300px;
+}
+
+.stats {
+  display: flex;
+  gap: var(--sp-6);
+  margin-top: var(--sp-4);
+}
+
+/* ── Profile actions (other-user only) ─────────────────────────────────────── */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+  width: 100%;
+  max-width: 320px;
+}
+
+.primaryBtn {
+  flex: 1;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--brand);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.primaryBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.secondaryBtn {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.secondaryBtn:hover:not(:disabled) {
+  background: var(--surface-hover, var(--background));
+}
+
+.secondaryBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.actionStatus {
+  width: 100%;
+  max-width: 320px;
+  margin-top: var(--sp-2);
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text2);
+  text-align: center;
+}
+
+.actionStatusErr {
+  color: var(--red, var(--error));
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.statLabel {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ── Tabs ──────────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  overflow-x: auto;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  flex-shrink: 0;
+  padding: var(--sp-3) var(--sp-4);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text3);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+.tabActive {
+  color: var(--brand);
+  border-bottom-color: var(--brand);
+}
+
+/* ── Content area ─────────────────────────────────────────────────────────── */
+.content {
+  flex: 1;
+  padding: var(--sp-3) 0;
+}
+
+/* ── Sub-tabs (inside Favorites) ──────────────────────────────────────────── */
+.subTabs {
+  display: flex;
+  gap: var(--sp-2);
+  padding: 0 var(--content-px) var(--sp-3);
+}
+
+.subTab {
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--card);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.subTabActive {
+  background: var(--brand);
+  color: var(--text-on-brand);
+  border-color: var(--brand);
+}
+
+/* ── List items ───────────────────────────────────────────────────────────── */
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.activityItem {
+  padding: var(--sp-3) var(--content-px);
+  border-bottom: 1px solid var(--border);
+}
+
+.activityText {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.activityTime {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: var(--sp-1);
+}
+
+.postItem {
+  padding: var(--sp-3) var(--content-px);
+  border-bottom: 1px solid var(--border);
+}
+
+.postTitle {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.postMeta {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.postTopic {
+  color: var(--brand);
+  font-weight: 500;
+}
+
+.postTime {
+  color: var(--text3);
+}
+
+.commentItem {
+  padding: var(--sp-3) var(--content-px);
+  border-bottom: 1px solid var(--border);
+}
+
+.commentText {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.commentMeta {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+  font-family: var(--font-body);
+  font-size: 11px;
+}
+
+.commentSource {
+  color: var(--brand);
+  font-weight: 500;
+}
+
+.forumItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--content-px);
+  border-bottom: 1px solid var(--border);
+}
+
+.forumName {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.forumMeta {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.favItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--content-px);
+  border-bottom: 1px solid var(--border);
+}
+
+.favThumb {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.favName {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* ── Favorites poster grid (Phase 7) ──────────────────────────────────────── */
+.posterGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-3);
+  padding: 0 var(--content-px);
+}
+
+.posterCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  padding-bottom: var(--sp-2);
+}
+
+.posterImg {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  background: var(--surface);
+  display: block;
+}
+
+.posterPlaceholder {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background: var(--brand-light);
+  color: var(--brand);
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.posterName {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text);
+  padding: 0 6px;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.posterMeta {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--text3);
+  padding: 0 6px;
+}
+
+/* ── Grid layouts ─────────────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-3);
+  padding: 0 var(--content-px);
+}
+
+.buddyCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.buddyAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--brand-light);
+  color: var(--brand);
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.buddyName {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.badgeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-3);
+  padding: 0 var(--content-px);
+}
+
+.badgeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.badgeIcon {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.badgePlaceholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--amber-surface);
+  color: var(--amber);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badgeName {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: center;
+}

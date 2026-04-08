@@ -3,6 +3,7 @@ import styles from './ForumThreadView.module.css';
 import ThreadCard from '../../components/cards/ThreadCard';
 import ErrorState from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
+import NewTopicComposer from '../../components/forum/NewTopicComposer';
 import { formatCount } from './forumHelpers';
 
 export default function ForumThreadView({
@@ -14,6 +15,7 @@ export default function ForumThreadView({
 }) {
   const [activeFlairId, setActiveFlairId] = useState(null);
   const [flairDropdownOpen, setFlairDropdownOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
   const scrollRef = useRef(null);
 
   const detail = forumDetail || selectedForum;
@@ -151,7 +153,7 @@ export default function ForumThreadView({
               {topicCards.length} topic{topicCards.length !== 1 ? 's' : ''}
             </span>
           )}
-          <button className={styles.newTopicBtn}>
+          <button className={styles.newTopicBtn} onClick={() => setComposerOpen(true)}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
             </svg>
@@ -228,6 +230,18 @@ export default function ForumThreadView({
       )}
 
       <div className={styles.spacer}/>
+
+      {composerOpen && (
+        <NewTopicComposer
+          forum={detail}
+          flairs={flairs}
+          onClose={() => setComposerOpen(false)}
+          onCreated={() => {
+            setComposerOpen(false);
+            refreshTopics?.();
+          }}
+        />
+      )}
     </div>
   );
 }

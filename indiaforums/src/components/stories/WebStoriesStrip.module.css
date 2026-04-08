@@ -1,0 +1,157 @@
+/* ────────────────────────────────────────────────────────────────────────────
+   WebStoriesStrip — Instagram-style horizontal row of web story tiles.
+   Follows the standard section pattern: SectionHeader + horizontal scroll.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.wrap {
+  position: relative;
+  background: var(--card, #ffffff);
+  padding-bottom: 10px;
+  margin-bottom: 8px;
+}
+
+/* ── Horizontal scroll row ─────────────────────────────────────────────── */
+.row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 14px 8px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+}
+.row::-webkit-scrollbar { display: none; }
+
+/* ── Tile ──────────────────────────────────────────────────────────────── */
+.card {
+  flex-shrink: 0;
+  width: 104px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  scroll-snap-align: start;
+  transition: transform var(--duration-fast, 160ms) var(--ease-out, ease-out);
+}
+
+.card:hover  { transform: translateY(-2px); }
+.card:active { transform: translateY(0) scale(0.98); }
+
+/* ── Ring + cover (the tall portrait "story") ──────────────────────────── */
+.ring {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  border-radius: 14px;
+  padding: 2px;
+  background: linear-gradient(135deg, #3558F0 0%, #7c3aed 50%, #ec4899 100%);
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.cover,
+.coverFallback {
+  position: absolute;
+  inset: 2px;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  border-radius: 12px;
+  object-fit: cover;
+  display: block;
+}
+
+.coverFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fallbackInitials {
+  color: #fff;
+  font-family: var(--font-display, inherit);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.coverScrim {
+  position: absolute;
+  inset: 2px;
+  border-radius: 12px;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.0) 45%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  pointer-events: none;
+}
+
+/* ── Title overlaid on cover ───────────────────────────────────────────── */
+.cardTitle {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 7px;
+  color: #fff;
+  font-family: var(--font-display, inherit);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: left;
+}
+
+/* ── Meta line below card ──────────────────────────────────────────────── */
+.cardMeta {
+  font-size: 10px;
+  color: var(--text2, #6b7280);
+  font-weight: 500;
+  padding: 0 2px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Loading skeleton ──────────────────────────────────────────────────── */
+.skelCard {
+  flex-shrink: 0;
+  width: 104px;
+  height: 150px;
+  border-radius: 14px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.05) 25%,
+    rgba(0, 0, 0, 0.1)  50%,
+    rgba(0, 0, 0, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  position: relative;
+  overflow: hidden;
+  animation: shimmer 1400ms linear infinite;
+}
+
+.skelShimmer {
+  display: none;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Error box ─────────────────────────────────────────────────────────── */
+.errorBox {
+  padding: 8px 14px 12px;
+}

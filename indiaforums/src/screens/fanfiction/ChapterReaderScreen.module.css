@@ -1,0 +1,258 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   ChapterReaderScreen — focused long-form reader
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+}
+.screen::-webkit-scrollbar { display: none; }
+
+/* ── Reader header — sticky breadcrumb + font controls ─────────────────── */
+.readerHeader {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--content-px);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.readerCrumb {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text2);
+  min-width: 0;
+}
+.crumbThumb {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-xs);
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+.crumbStory {
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crumbDot { color: var(--text3); }
+.crumbChapter {
+  font-weight: 600;
+  color: var(--text2);
+  flex-shrink: 0;
+}
+
+/* Font toggle — 3 buttons, ascending sizes */
+.fontToggle {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+.fontBtn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-xs);
+  color: var(--text2);
+  font-family: var(--font-display);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.fontBtnActive {
+  background: var(--card);
+  color: var(--brand);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ── Title block ───────────────────────────────────────────────────────── */
+.titleBlock {
+  padding: var(--sp-6) var(--content-px) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+  margin: 0 0 var(--sp-2);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text2);
+  flex-wrap: wrap;
+}
+.meta strong { color: var(--dark); font-weight: 700; }
+.metaDot { color: var(--text3); }
+
+/* Compact engagement stats row under the date */
+.metaStats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+/* Members-only / mature flag row */
+.flagRow {
+  display: flex;
+  gap: 6px;
+  margin-bottom: var(--sp-2);
+  flex-wrap: wrap;
+}
+.flagMembers,
+.flagMature,
+.flagStatus {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px var(--sp-2);
+  border-radius: var(--radius-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.flagMembers { background: var(--brand-light);  color: var(--brand); }
+.flagMature  { background: var(--red-surface);  color: var(--red);   }
+.flagStatus  { background: var(--green-surface); color: var(--green); }
+
+/* ── Body ──────────────────────────────────────────────────────────────── */
+.body {
+  padding: var(--sp-5) var(--content-px) var(--sp-6);
+  font-family: var(--font-body);
+  color: var(--text);
+}
+.body p {
+  margin: 0 0 var(--sp-4);
+}
+.body p:last-child { margin-bottom: 0; }
+.empty {
+  color: var(--text3);
+  text-align: center;
+  font-style: italic;
+}
+
+/* ── Reactions strip — likeJsonData breakdown ─────────────────────────── */
+.reactionsBlock {
+  padding: var(--sp-4) var(--content-px);
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.reactionsLabel {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: var(--sp-3);
+}
+.reactionsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.reactionPill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+}
+.reactionPillActive {
+  background: var(--brand-light);
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.reactionIcon { font-size: 14px; line-height: 1; }
+.reactionCount { font-family: var(--font-display); }
+
+/* ── Nav row ───────────────────────────────────────────────────────────── */
+.navRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-4) var(--content-px);
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+
+.navBtn {
+  flex: 1;
+  height: 38px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.navBtn:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.navBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.backBtn {
+  flex: 1;
+  height: 38px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--brand);
+  color: var(--text-on-brand);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity var(--duration-fast);
+}
+.backBtn:hover  { opacity: 0.9; }
+.backBtn:active { opacity: 0.8; }
+
+.spacer { height: var(--sp-6); flex-shrink: 0; }

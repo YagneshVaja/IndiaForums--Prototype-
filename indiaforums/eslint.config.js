@@ -26,4 +26,26 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  // Architectural rule: only files under src/services/ are allowed to import
+  // the raw axios instance (the default export from services/api). Everything
+  // else must go through a wrapper function in a *Api.js service file so that
+  // we have one place to add auth, logging, retries, error normalisation, etc.
+  // Named imports like extractApiError, timeAgo, PAGINATION_DEFAULTS, etc. are
+  // still allowed everywhere.
+  {
+    files: ['src/**/*.{js,jsx}'],
+    ignores: ['src/services/**'],
+    rules: {
+      'no-restricted-imports': ['warn', {
+        patterns: [{
+          group: ['**/services/api', '**/services/api.js'],
+          importNames: ['default'],
+          message:
+            'Do not import the raw axios instance outside of src/services/. ' +
+            'Add a wrapper function in the appropriate services/*Api.js file ' +
+            'and import that instead.',
+        }],
+      }],
+    },
+  },
 ])
