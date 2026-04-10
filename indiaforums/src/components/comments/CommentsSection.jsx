@@ -268,7 +268,7 @@ export default function CommentsSection({ contentTypeId, contentTypeValue, title
             <>
               {c.text && <div className={styles.commentText}>{c.text}</div>}
               {c.imageUrl && (
-                <img className={styles.commentImage} src={c.imageUrl} alt="" loading="lazy" />
+                <img className={styles.commentImage} src={c.imageUrl} alt="" loading="lazy" decoding="async" />
               )}
             </>
           )}

@@ -47,7 +47,7 @@ function TopicRow({ topic, viewMode, onPress }) {
         {/* Header: avatar + forum name + posted by */}
         <div className={styles.topicHeader}>
           {topic.forumThumbnail ? (
-            <img src={topic.forumThumbnail} alt="" className={styles.forumAvatar} />
+            <img src={topic.forumThumbnail} alt="" className={styles.forumAvatar} loading="lazy" decoding="async" />
           ) : (
             <div className={styles.forumAvatarFallback}>
               {topic.forumName?.charAt(0)?.toUpperCase() || 'F'}
@@ -97,7 +97,7 @@ function TopicRow({ topic, viewMode, onPress }) {
         {/* Topic image */}
         {isDetailed && topic.topicImage && (
           <div className={styles.topicImageWrap}>
-            <img src={topic.topicImage} alt="" className={styles.topicImage} />
+            <img src={topic.topicImage} alt="" className={styles.topicImage} loading="lazy" decoding="async" />
           </div>
         )}
 

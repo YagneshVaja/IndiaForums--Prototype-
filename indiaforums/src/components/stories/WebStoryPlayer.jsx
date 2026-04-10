@@ -156,7 +156,7 @@ export default function WebStoryPlayer({
     if (!currentSlide) {
       // No slide yet (loading) — show the cover thumbnail behind the spinner.
       if (merged?.coverImage) {
-        return <img className={styles.media} src={merged.coverImage} alt="" draggable={false} />;
+        return <img className={styles.media} src={merged.coverImage} alt="" draggable={false} loading="lazy" decoding="async" />;
       }
       return <div className={styles.media} style={{ background: merged?.coverBg || '#0b0b0b' }} />;
     }

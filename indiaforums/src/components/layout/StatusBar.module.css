@@ -8,6 +8,11 @@
   background: var(--bg);
 }
 
+/* Android: punch-hole is smaller so needs less top clearance */
+.android {
+  padding-top: 6px;
+}
+
 .time {
   font-family: var(--font-display);
   font-size: 15px;
@@ -20,4 +25,5 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  color: var(--dark);
 }

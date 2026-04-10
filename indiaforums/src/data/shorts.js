@@ -4,12 +4,14 @@
    Categories mirror IndiaForums site: All, TV, Movies, OTT, Sports
    ───────────────────────────────────────────────────────────────────────────── */
 
+// apiId = parentCategoryId sent to GET /api/v1/shorts
+// null  = "All" (no filter — fetch everything)
 export const SHORTS_CATEGORIES = [
-  { id: 'all',    label: 'All' },
-  { id: 'tv',     label: 'TV' },
-  { id: 'movies', label: 'Movies' },
-  { id: 'ott',    label: 'OTT' },
-  { id: 'sports', label: 'Sports' },
+  { id: 'all',    label: 'All',    apiId: null },
+  { id: 'tv',     label: 'TV',     apiId: 2    },
+  { id: 'movies', label: 'Movies', apiId: 3    },
+  { id: 'ott',    label: 'OTT',    apiId: 4    },
+  { id: 'sports', label: 'Sports', apiId: 5    },
 ];
 
 export const SHORTS = [

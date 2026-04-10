@@ -148,7 +148,7 @@ Note: `POST /shows/{id}/rate` returns clean 401 — the write path is healthy. S
 
 ---
 
-## Class D — EF Core `FromSql` Column-Mapping Errors (5 endpoints)
+## Class D — EF Core `FromSql` Column-Mapping Errors (6 endpoints)
 
 **Root cause:** Raw SQL `SELECT` list is out of sync with the C# projection type. One fix likely clears all.
 
@@ -159,6 +159,36 @@ Note: `POST /shows/{id}/rate` returns clean 401 — the write path is healthy. S
 | `GET /search?contentType=1` (Article) | `ArticleAttribute` | 500 with FromSql detail |
 | `GET /search?contentType=2` (Movie) | `AlternateForumId` | 500 with FromSql detail |
 | `GET /search?contentType=3` (Show) | `AlternateForumId` | 500 with FromSql detail |
+| `POST /quizzes/{quizId}/response` | `FinalResultForUser` | 400 with FromSql detail |
+
+### D-6 (NEW 2026-04-08): `POST /api/v1/quizzes/{quizId}/response` — 400
+
+Found during Quizzes API integration (Phase 11). The submit endpoint accepts the request (route resolves, auth passes, body binds) but fails inside the SQL handler.
+
+**Confirmed payload shape** (tested against live API):
+```json
+{ "answers": [{ "questionId": 443, "optionId": 1808 }] }
+```
+
+**Error response:**
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+  "title": "Invalid Operation",
+  "status": 400,
+  "detail": "The required column 'FinalResultForUser' was not present in the results of a 'FromSql' operation."
+}
+```
+
+**Reproduce:**
+```bash
+curl -i -X POST "https://api2.indiaforums.com/api/v1/quizzes/36/response" \
+  -H "api-key: Api2IndiaForums@2026" \
+  -H "Content-Type: application/json" \
+  -d '{"answers":[{"questionId":443,"optionId":1808}]}'
+```
+
+**Impact:** Quiz score cannot be saved to the leaderboard. The frontend handles this gracefully — `QuizResult` shows the locally computed score. The leaderboard (`GET /quizzes/{id}/players`) and all read endpoints are unaffected.
 
 `GET /search?contentType=0` (Google CSE) works — it's an external API call, not a DB query.
 

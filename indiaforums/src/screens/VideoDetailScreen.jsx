@@ -82,26 +82,6 @@ export default function VideoDetailScreen({ video, onBack, onVideoPress }) {
   return (
     <div className={styles.screen}>
 
-      {/* ── Top bar ──────────────────────────────────────────────────── */}
-      <div className={styles.topBar}>
-        <button className={styles.backBtn} onClick={onBack}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M12.5 5l-5 5 5 5" stroke="var(--dark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        <span className={styles.topTitle}>Video{detailsLoading ? '...' : ''}</span>
-        <div className={styles.topActions}>
-          <button className={styles.iconBtn}>
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <circle cx="14" cy="4"  r="1.8" stroke="var(--text2)" strokeWidth="1.4"/>
-              <circle cx="4"  cy="9"  r="1.8" stroke="var(--text2)" strokeWidth="1.4"/>
-              <circle cx="14" cy="14" r="1.8" stroke="var(--text2)" strokeWidth="1.4"/>
-              <path d="M5.8 8l6.4-3.2M5.8 10.2l6.4 3" stroke="var(--text2)" strokeWidth="1.3"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-
       {/* ── Scroll ───────────────────────────────────────────────────── */}
       <div className={styles.scroll} ref={scrollRef}>
 
@@ -118,7 +98,7 @@ export default function VideoDetailScreen({ video, onBack, onVideoPress }) {
           ) : (
             <div className={styles.playerFallback} style={{ background: enriched.bg }}>
               {enriched.thumbnail ? (
-                <img src={enriched.thumbnail} alt="" className={styles.playerImg} />
+                <img src={enriched.thumbnail} alt="" className={styles.playerImg} decoding="async" />
               ) : (
                 <span className={styles.playerEmoji}>{enriched.emoji}</span>
               )}
@@ -283,7 +263,7 @@ export default function VideoDetailScreen({ video, onBack, onVideoPress }) {
                   <div key={v.id} className={styles.relCard} onClick={() => onVideoPress && onVideoPress(v)}>
                     <div className={styles.relThumb} style={{ background: v.bg }}>
                       {v.thumbnail ? (
-                        <img src={v.thumbnail} alt="" className={styles.relThumbImg} />
+                        <img src={v.thumbnail} alt="" className={styles.relThumbImg} loading="lazy" decoding="async" />
                       ) : (
                         <span className={styles.relEmoji}>{v.emoji}</span>
                       )}

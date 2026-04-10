@@ -25,12 +25,71 @@
     height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ── Android frame — less rounded corners ──────────────────────────────── */
+.phone[data-os="android"] {
+  border-radius: 24px;
+}
+
+/* ── iOS home indicator ─────────────────────────────────────────────────── */
+.homeIndicator {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--bg);
+}
+
+.homeIndicatorPill {
+  width: 134px;
+  height: 5px;
+  background: var(--dark);
+  border-radius: 3px;
+  opacity: 0.2;
+}
+
+/* ── Android gesture nav bar ─────────────────────────────────────────────── */
+.gestureBar {
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--bg);
+}
+
+.gesturePill {
+  width: 128px;
+  height: 4px;
+  background: var(--dark);
+  border-radius: 2px;
+  opacity: 0.25;
+}
+
 /* ── Slow animations — multiply all transition durations ───────────────── */
 .phone[data-slow-anim] *,
 .phone[data-slow-anim] *::before,
 .phone[data-slow-anim] *::after {
   transition-duration: calc(var(--anim-mult, 1) * 0.25s) !important;
   animation-duration: calc(var(--anim-mult, 1) * 0.25s) !important;
+}
+
+/* ── Real mobile device — go full-screen, let dvh handle keyboard ─────── */
+/* interactive-widget=resizes-content in index.html makes dvh shrink when   */
+/* the virtual keyboard opens, so the layout reflows automatically.         */
+@media (max-width: 500px) {
+  /* Remove the zoom transform so it doesn't fight with the real viewport */
+  .zoomWrap {
+    transform: none !important;
+  }
+  /* Expand phone frame to fill the actual screen */
+  .phone {
+    width: 100% !important;
+    height: 100dvh !important; /* dvh = dynamic viewport height, shrinks on keyboard */
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
 }
 
 /* ── Grid overlay ──────────────────────────────────────────────────────── */

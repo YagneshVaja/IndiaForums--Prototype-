@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import styles from './TopicDetailScreen.module.css';
 import useTopicPosts from '../hooks/useTopicPosts';
 import { extractApiError } from '../services/api';
@@ -31,10 +31,6 @@ const REACTION_OPTIONS = [
   { code: THREAD_REACTION_TYPES.SAD,   emoji: '😢', label: 'Sad'   },
   { code: THREAD_REACTION_TYPES.ANGRY, emoji: '😠', label: 'Angry' },
 ];
-const REACTION_LABELS = REACTION_OPTIONS.reduce((acc, o) => {
-  acc[o.code] = o.label;
-  return acc;
-}, {});
 
 // ── Extract social-media URLs from text/html ────────────────────────────────
 const SOCIAL_URL_RE = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com|instagram\.com|facebook\.com|fb\.watch|tiktok\.com|reddit\.com|youtube\.com|youtu\.be)[^\s"'<)]+/gi;
@@ -85,7 +81,12 @@ function TopicBodyWithEmbeds({ topic }) {
 
   return (
     <>
-      {cleanText && <p className={styles.topicBody}>{cleanText}</p>}
+      {cleanText && (
+        <div
+          className={styles.topicBody}
+          dangerouslySetInnerHTML={{ __html: cleanText }}
+        />
+      )}
       {socialUrls.length > 0 && (
         <div className={styles.embedsRow}>
           {socialUrls.map(url => (
@@ -139,6 +140,35 @@ function PollWidget({ poll, voted, votedIds, voting, error, onVote }) {
   );
 }
 
+// ── Rank badge — smart role detection ────────────────────────────────────────
+function RankBadge({ rank }) {
+  if (!rank) return null;
+  const lower = rank.toLowerCase();
+  const isMod   = lower.includes('moderator') || lower.includes('mod');
+  const isAdmin = lower.includes('admin') || lower.includes('super');
+
+  if (isMod || isAdmin) {
+    return (
+      <span className={`${styles.rankBadge} ${isAdmin ? styles.rankBadgeAdmin : styles.rankBadgeMod}`}>
+        {isAdmin ? (
+          /* Crown for admin */
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2 20h20v2H2v-2zM4 17l4-8 4 4 4-6 4 10H4z"/>
+          </svg>
+        ) : (
+          /* Shield for moderator */
+          <svg width="8" height="9" viewBox="0 0 12 14" fill="currentColor">
+            <path d="M6 0L0 2.5V7c0 3.9 2.56 6.73 6 7 3.44-.27 6-3.1 6-7V2.5L6 0z"/>
+          </svg>
+        )}
+        {rank}
+      </span>
+    );
+  }
+
+  return <span className={styles.rankBadge}>{rank}</span>;
+}
+
 // ── Post body with embedded social content ──────────────────────────────────
 function PostBodyWithEmbeds({ html }) {
   const socialUrls = useMemo(() => extractSocialUrls(html), [html]);
@@ -181,6 +211,12 @@ export default function TopicDetailScreen({ topic }) {
 
   // Post edit-history modal
   const [historyForPostId, setHistoryForPostId] = useState(null);
+
+  // Sticky header
+  const [stickyVisible, setStickyVisible] = useState(false);
+  function handleScroll(e) {
+    setStickyVisible(e.currentTarget.scrollTop > 110);
+  }
 
   if (!topic) return null;
 
@@ -302,7 +338,21 @@ export default function TopicDetailScreen({ topic }) {
       {/* Floating moderator action panel — hidden for non-moderators */}
       <AdminPanel topic={liveTopic} onActionComplete={refresh} />
 
-      <div className={styles.scrollArea}>
+      {/* Sticky collapsed header */}
+      <div className={`${styles.stickyHeader} ${stickyVisible ? styles.stickyHeaderVisible : ''}`}>
+        <div className={styles.stickyInner}>
+          {topic.forumThumbnail
+            ? <img src={topic.forumThumbnail} alt="" className={styles.stickyThumb} decoding="async" />
+            : <div className={styles.stickyThumbFallback} style={{ background: topic.forumBg || 'var(--brand)' }}>{topic.forumEmoji || '💬'}</div>
+          }
+          <div className={styles.stickyText}>
+            <span className={styles.stickyForum}>{topic.forumName}</span>
+            <span className={styles.stickyTitle}>{topic.title}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.scrollArea} onScroll={handleScroll}>
 
         {/* ── Topic card (OP) ── */}
         <div className={styles.topicCard}>
@@ -310,7 +360,7 @@ export default function TopicDetailScreen({ topic }) {
           {/* Forum breadcrumb */}
           <div className={styles.forumRow}>
             {topic.forumThumbnail ? (
-              <img src={topic.forumThumbnail} alt="" className={styles.forumThumb} />
+              <img src={topic.forumThumbnail} alt="" className={styles.forumThumb} decoding="async" />
             ) : (
               <div className={styles.forumBadge} style={{ background: topic.forumBg || 'var(--brand)' }}>
                 {topic.forumEmoji || '💬'}
@@ -328,20 +378,33 @@ export default function TopicDetailScreen({ topic }) {
           {/* Title */}
           <h2 className={styles.topicTitle}>{topic.title}</h2>
 
-          {/* Author + time row */}
-          <div className={styles.authorChip}>
-            <div className={styles.authorAvatar} style={{ background: topic.forumBg || 'var(--brand)' }}>
-              {(topic.poster || 'A').charAt(0).toUpperCase()}
+          {/* Author chip */}
+          {liveTopic.poster && (
+            <div className={styles.authorChip}>
+              <div className={styles.authorAvatar} style={{ background: 'var(--brand)' }}>
+                {liveTopic.poster.charAt(0).toUpperCase()}
+              </div>
+              <div className={styles.authorInfo}>
+                <span className={styles.authorName}>{liveTopic.poster}</span>
+                <span className={styles.authorTime}>{liveTopic.time}</span>
+              </div>
             </div>
-            <div className={styles.authorInfo}>
-              <span className={styles.authorName}>{topic.poster || 'Anonymous'}</span>
-              <span className={styles.authorTime}>{topic.time || ''}</span>
-            </div>
-          </div>
+          )}
 
-          {/* Description + social embeds */}
-          {liveTopic.description && (
-            <TopicBodyWithEmbeds topic={liveTopic} />
+          {/* Topic description */}
+          <TopicBodyWithEmbeds topic={liveTopic} />
+
+          {/* Topic image */}
+          {liveTopic.topicImage && (
+            <div className={styles.topicImageWrap}>
+              <img
+                src={liveTopic.topicImage}
+                alt=""
+                className={styles.topicImage}
+                loading="lazy"
+                onError={e => { e.currentTarget.closest('.' + styles.topicImageWrap).style.display = 'none'; }}
+              />
+            </div>
           )}
 
           {/* Poll (if attached to topic) */}
@@ -356,13 +419,6 @@ export default function TopicDetailScreen({ topic }) {
             />
           )}
 
-          {/* Topic image */}
-          {liveTopic.topicImage && (
-            <div className={styles.topicImageWrap}>
-              <img src={liveTopic.topicImage} alt="" className={styles.topicImage} />
-            </div>
-          )}
-
           {/* Tags */}
           {topic.tags?.length > 0 && (
             <div className={styles.tagRow}>
@@ -372,44 +428,7 @@ export default function TopicDetailScreen({ topic }) {
             </div>
           )}
 
-          {/* Stats bar */}
-          <div className={styles.topicStatsBar}>
-            <div className={styles.topicStatItem}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.6"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-              <span className={styles.topicStatVal}>{formatNum(topic.replies ?? 0)}</span>
-              <span className={styles.topicStatLbl}>Replies</span>
-            </div>
-            <div className={styles.topicStatItem}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.6"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              <span className={styles.topicStatVal}>{formatNum(topic.views ?? 0)}</span>
-              <span className={styles.topicStatLbl}>Views</span>
-            </div>
-            <div className={styles.topicStatItem}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.6"><path d="M7 22V11l5-9 1.5 1L12 7h8a2 2 0 012 2v2a6 6 0 01-.3 1.8l-2.4 6A2 2 0 0117.4 20H7z"/><path d="M2 11h3v11H2z"/></svg>
-              <span className={styles.topicStatVal}>{formatNum(topic.likes ?? 0)}</span>
-              <span className={styles.topicStatLbl}>Likes</span>
-            </div>
-          </div>
         </div>
-
-        {/* ── Replies header (label + sort) ── */}
-        {!loading && posts.length > 0 && (
-          <div className={styles.sortRow}>
-            <div className={styles.sectionLabel}>
-              <span className={styles.sectionText}>Replies</span>
-              <span className={styles.sectionCount}>{posts.length}</span>
-            </div>
-            <div style={{ flex: 1 }} />
-            <button
-              className={`${styles.sortBtn} ${sortBy === 'date' ? styles.sortBtnActive : ''}`}
-              onClick={() => setSortBy('date')}
-            >Latest</button>
-            <button
-              className={`${styles.sortBtn} ${sortBy === 'likes' ? styles.sortBtnActive : ''}`}
-              onClick={() => setSortBy('likes')}
-            >Top</button>
-          </div>
-        )}
 
         {/* ── Loading skeleton ── */}
         {loading && (
@@ -440,10 +459,16 @@ export default function TopicDetailScreen({ topic }) {
           <div className={styles.postsList}>
             {posts.length === 0 && (
               <div className={styles.emptyBox}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M2 2h20a1 1 0 011 1v14a1 1 0 01-1 1H6l-5 4V3a1 1 0 011-1z" stroke="var(--text3)" strokeWidth="1.6" strokeLinejoin="round"/>
-                </svg>
-                <span className={styles.emptyText}>No replies yet{!liveTopic.locked ? ' — be the first!' : ''}</span>
+                <div className={styles.emptyIcon}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <path d="M2 2h20a1 1 0 011 1v14a1 1 0 01-1 1H6l-5 4V3a1 1 0 011-1z" stroke="var(--brand)" strokeWidth="1.5" strokeLinejoin="round"/>
+                    <path d="M7 8h10M7 12h6" stroke="var(--brand)" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <span className={styles.emptyTitle}>No replies yet</span>
+                {!liveTopic.locked && (
+                  <span className={styles.emptyText}>Be the first to share your thoughts!</span>
+                )}
               </div>
             )}
 
@@ -454,14 +479,32 @@ export default function TopicDetailScreen({ topic }) {
               const pickerOpen = reactionPickerFor === post.id;
 
               return (
-              <div key={post.id} className={styles.postCard} style={{ animationDelay: `${i * 0.04}s` }}>
+              <React.Fragment key={post.id}>
+              <div className={`${styles.postCard} ${post.isOp ? styles.postCardOp : ''}`} style={{ animationDelay: `${Math.min(i * 0.04, 0.3)}s` }}>
                 {/* Post header */}
                 <div className={styles.postHeader}>
-                  <div className={styles.postAvatar} style={post.avatarAccent ? { background: post.avatarAccent } : undefined}>
-                    {post.avatarUrl
-                      ? <img src={post.avatarUrl} alt="" className={styles.postAvatarImg} />
-                      : <span className={styles.postAvatarLetter}>{(post.author || 'A').charAt(0).toUpperCase()}</span>
-                    }
+                  <div className={`${styles.postAvatar} ${post.isOp ? styles.postAvatarOp : ''}`} style={post.avatarAccent ? { background: post.avatarAccent } : undefined}>
+                    {post.avatarUrl ? (
+                      <>
+                        <img
+                          src={post.avatarUrl}
+                          alt=""
+                          className={styles.postAvatarImg}
+                          loading="lazy"
+                          onError={e => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling.style.display = 'flex';
+                          }}
+                        />
+                        <span className={styles.postAvatarLetter} style={{ display: 'none' }}>
+                          {(post.author || 'A').charAt(0).toUpperCase()}
+                        </span>
+                      </>
+                    ) : (
+                      <span className={styles.postAvatarLetter}>
+                        {(post.author || 'A').charAt(0).toUpperCase()}
+                      </span>
+                    )}
                   </div>
                   <div className={styles.postAuthorInfo}>
                     <div className={styles.postAuthorRow}>
@@ -473,9 +516,16 @@ export default function TopicDetailScreen({ topic }) {
                         </span>
                       )}
                     </div>
+                    {post.realName && (
+                      <span className={styles.postRealName}>{post.realName}</span>
+                    )}
                     <div className={styles.postMetaRow}>
-                      {post.rank && <span className={styles.rankBadge}>{post.rank}</span>}
-                      <span className={styles.postTime}>{post.time}</span>
+                      {post.rank && <RankBadge rank={post.rank} />}
+                      {post.rank && <span className={styles.metaDot}>·</span>}
+                      <span
+                        className={styles.postTime}
+                        title={post.rawTime ? new Date(post.rawTime).toLocaleString() : undefined}
+                      >{post.time}</span>
                       {post.isEdited && (
                         <button
                           type="button"
@@ -483,22 +533,21 @@ export default function TopicDetailScreen({ topic }) {
                           onClick={() => setHistoryForPostId(post.id)}
                           title="View edit history"
                         >
-                          (edited)
+                          edited
                         </button>
                       )}
                     </div>
+                    {/* Achievement badges inline under meta */}
+                    {post.badges?.length > 0 && (
+                      <div className={styles.userBadges}>
+                        {post.badges.map(b => (
+                          <img key={b.id} src={b.imageUrl} alt={b.name} title={b.name} className={styles.userBadgeImg} loading="lazy" decoding="async" />
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <span className={styles.postNumber}>#{i + 1}</span>
                 </div>
-
-                {/* User badges */}
-                {post.badges?.length > 0 && (
-                  <div className={styles.userBadges}>
-                    {post.badges.map(b => (
-                      <img key={b.id} src={b.imageUrl} alt={b.name} title={b.name} className={styles.userBadgeImg} />
-                    ))}
-                  </div>
-                )}
 
                 {/* Post content (or edit textarea) */}
                 {isEditing ? (
@@ -531,16 +580,18 @@ export default function TopicDetailScreen({ topic }) {
                 {/* Post footer with actions */}
                 {!isEditing && (
                   <div className={styles.postFooter}>
+                    {/* Reaction pill */}
                     <div className={styles.reactWrap}>
                       <button
-                        className={`${styles.postAction} ${myReact != null ? styles.postActionActive : ''}`}
+                        className={`${styles.reactBtn} ${myReact != null ? styles.reactBtnActive : ''}`}
                         onClick={() => setReactionPickerFor(pickerOpen ? null : post.id)}
                       >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-                          <path d="M7 22V11l5-9 1.5 1L12 7h8a2 2 0 012 2v2a6 6 0 01-.3 1.8l-2.4 6A2 2 0 0117.4 20H7z"/>
-                          <path d="M2 11h3v11H2z"/>
-                        </svg>
-                        {REACTION_LABELS[myReact] || (post.likes > 0 ? formatNum(post.likes) : 'Like')}
+                        <span className={styles.reactBtnEmoji}>
+                          {myReact ? REACTION_OPTIONS.find(o => o.code === myReact)?.emoji : '👍'}
+                        </span>
+                        {post.likes > 0 && (
+                          <span className={styles.reactBtnCount}>{formatNum(post.likes)}</span>
+                        )}
                       </button>
                       {pickerOpen && (
                         <>
@@ -560,15 +611,17 @@ export default function TopicDetailScreen({ topic }) {
                         </>
                       )}
                     </div>
+
+                    {/* Action buttons */}
                     <button className={styles.postAction}>
-                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                        <path d="M2 2h9a1 1 0 011 1v5a1 1 0 01-1 1H4l-3 2.5V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+                      <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
+                        <path d="M2 2h9a1 1 0 011 1v5a1 1 0 01-1 1H4l-3 2.5V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
                       </svg>
                       Reply
                     </button>
                     {isMine ? (
                       <button className={styles.postAction} onClick={() => startEdit(post)}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                           <path d="M12 20h9"/>
                           <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z"/>
                         </svg>
@@ -576,9 +629,9 @@ export default function TopicDetailScreen({ topic }) {
                       </button>
                     ) : (
                       <button className={styles.postAction}>
-                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                          <path d="M2 3h6v7H2z" stroke="currentColor" strokeWidth="1.1"/>
-                          <path d="M5 1h6v7" stroke="currentColor" strokeWidth="1.1"/>
+                        <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
+                          <path d="M2 3h6v7H2z" stroke="currentColor" strokeWidth="1.2"/>
+                          <path d="M5 1h6v7" stroke="currentColor" strokeWidth="1.2"/>
                         </svg>
                         Quote
                       </button>
@@ -589,7 +642,7 @@ export default function TopicDetailScreen({ topic }) {
                         onClick={() => handleTrashPost(post)}
                         title="Trash this post (moderator)"
                       >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                           <path d="M3 6h18"/>
                           <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                           <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
@@ -598,15 +651,52 @@ export default function TopicDetailScreen({ topic }) {
                       </button>
                     )}
                     <button className={`${styles.postAction} ${styles.postActionRight}`}>
-                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                        <path d="M8 1l4 4-4 4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M12 5H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                      <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
+                        <path d="M8 1l4 4-4 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M12 5H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
                       </svg>
                       Share
                     </button>
                   </div>
                 )}
               </div>
+              {i === 0 && (
+                <div className={styles.topicStatsBar}>
+                  <div className={styles.topicStatItem}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.6"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    <span className={styles.topicStatVal}>{formatNum(liveTopic.replies ?? 0)}</span>
+                    <span className={styles.topicStatLbl}>Replies</span>
+                  </div>
+                  <div className={styles.topicStatItem}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.6"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span className={styles.topicStatVal}>{formatNum(liveTopic.views ?? 0)}</span>
+                    <span className={styles.topicStatLbl}>Views</span>
+                  </div>
+                  <div className={styles.topicStatItem}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.6"><path d="M7 22V11l5-9 1.5 1L12 7h8a2 2 0 012 2v2a6 6 0 01-.3 1.8l-2.4 6A2 2 0 0117.4 20H7z"/><path d="M2 11h3v11H2z"/></svg>
+                    <span className={styles.topicStatVal}>{formatNum(liveTopic.likes ?? 0)}</span>
+                    <span className={styles.topicStatLbl}>Likes</span>
+                  </div>
+                </div>
+              )}
+              {i === 0 && (
+                <div className={styles.sortRow}>
+                  <div className={styles.sectionLabel}>
+                    <span className={styles.sectionText}>Replies</span>
+                    <span className={styles.sectionCount}>{posts.length}</span>
+                  </div>
+                  <div style={{ flex: 1 }} />
+                  <button
+                    className={`${styles.sortBtn} ${sortBy === 'date' ? styles.sortBtnActive : ''}`}
+                    onClick={() => setSortBy('date')}
+                  >Latest</button>
+                  <button
+                    className={`${styles.sortBtn} ${sortBy === 'likes' ? styles.sortBtnActive : ''}`}
+                    onClick={() => setSortBy('likes')}
+                  >Top</button>
+                </div>
+              )}
+              </React.Fragment>
               );
             })}
 
@@ -624,6 +714,9 @@ export default function TopicDetailScreen({ topic }) {
 
         {hasMore && !loadingMore && !loading && (
           <button className={styles.loadMoreBtn} onClick={loadMore}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
             Load More Replies
           </button>
         )}
@@ -634,10 +727,10 @@ export default function TopicDetailScreen({ topic }) {
       {/* ── Reply input (fixed at bottom) ── */}
       {!liveTopic.locked && (
         <div className={styles.replyBar}>
-          <div className={styles.replyAvatar}>Y</div>
+          <div className={styles.replyAvatar}>{user?.userName?.charAt(0)?.toUpperCase() || '?'}</div>
           <input
             className={styles.replyInput}
-            placeholder="Write a reply..."
+            placeholder={isAuthenticated ? `Reply as ${user?.userName || 'you'}…` : 'Sign in to reply…'}
             value={replyText}
             onChange={e => setReplyText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleReply(); }}

@@ -2,64 +2,54 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import * as quizzesApi from '../services/quizzesApi';
 import { extractApiError } from '../services/api';
 
-// ── Envelope helpers ─────────────────────────────────────────────────────────
-// API response shapes are assumed (see design spec §7 — verify once live).
-// Multiple envelope patterns handled so hook works across API shape variants.
-
-function unwrapList(data, ...keys) {
-  if (!data) return [];
-  const root = data?.data || data;
-  for (const key of keys) {
-    if (Array.isArray(root?.[key])) return root[key];
-    if (Array.isArray(data?.[key])) return data[key];
-  }
-  if (Array.isArray(root?.items))   return root.items;
-  if (Array.isArray(root?.results)) return root.results;
-  if (Array.isArray(root))          return root;
-  return [];
-}
-
-function unwrapPagination(data) {
-  return data?.pagination || null;
-}
-
-function unwrapObject(data, ...keys) {
-  if (!data) return null;
-  for (const key of keys) {
-    if (data?.[key] && typeof data[key] === 'object' && !Array.isArray(data[key]))
-      return data[key];
-  }
-  const root = data?.data || data;
-  for (const key of keys) {
-    if (root?.[key] && typeof root[key] === 'object' && !Array.isArray(root[key]))
-      return root[key];
-  }
-  return root;
-}
+// ── Verified API response shapes (live-tested 2026-04-08) ────────────────────
+//
+// GET /quizzes
+//   { data: { quizzes: Quiz[], categories: Category[] }, pagination: {...} }
+//
+// GET /quizzes/{id}/details
+//   { data: { ...quizFields, questions: Question[], options: Option[], results: [] } }
+//   NOTE: questions[].options is always [] — options are in the TOP-LEVEL options[]
+//         array, linked by optionId/questionId.
+//
+// GET /quizzes/{id}/players
+//   Plain array (no wrapper): [{ totalScore, userId, userName, realName, privacy, totalRank }]
+//
+// GET /quizzes/creators
+//   Plain array (no wrapper): [{ userId, userName, realName, quizCount, privacy }]
+//
+// POST /quizzes/{id}/response
+//   Payload: { answers: [{ questionId, optionId }] }
+//   ⚠️ Currently 400 — "FinalResultForUser" column missing from FromSql query.
+//   Tracked in docs/backend-issues-2026-04-07.md (Class D).
+//   Frontend handles gracefully: shows local score on failure.
 
 // ── Visual helpers ───────────────────────────────────────────────────────────
-// The API does not return CSS gradients — generate them from the category.
+// API-confirmed categoryIds → gradients / emojis
 
-const QUIZ_GRADIENTS = {
-  bollywood: 'linear-gradient(135deg,#7c3aed,#ec4899)',
-  tv:        'linear-gradient(135deg,#1d4ed8,#7c3aed)',
-  reality:   'linear-gradient(135deg,#0891b2,#10b981)',
-  general:   'linear-gradient(135deg,#374151,#6b7280)',
-  movies:    'linear-gradient(135deg,#7f1d1d,#ef4444)',
-  sports:    'linear-gradient(135deg,#14532d,#16a34a)',
+const CAT_GRADIENTS = {
+  1:  'linear-gradient(135deg,#7f1d1d,#ef4444)',   // Movies
+  2:  'linear-gradient(135deg,#1d4ed8,#7c3aed)',   // TV Shows
+  3:  'linear-gradient(135deg,#9d174d,#db2777)',   // Music
+  4:  'linear-gradient(135deg,#7c3aed,#ec4899)',   // Celebrities
+  5:  'linear-gradient(135deg,#78350f,#d97706)',   // Mythology
+  6:  'linear-gradient(135deg,#1e3a5f,#2563eb)',   // Books & Literature
+  7:  'linear-gradient(135deg,#831843,#f9a8d4)',   // Fashion & Style
+  8:  'linear-gradient(135deg,#14532d,#16a34a)',   // Sports & Fitness
+  9:  'linear-gradient(135deg,#f59e0b,#ef4444)',   // Fun & Random
+  10: 'linear-gradient(135deg,#1e293b,#334155)',   // Business & Finance
+  11: 'linear-gradient(135deg,#374151,#6b7280)',   // General Knowledge
 };
-const QUIZ_GRADIENT_FALLBACKS = [
+const CAT_EMOJIS = {
+  1: '🎬', 2: '📺', 3: '🎵', 4: '⭐', 5: '🔱',
+  6: '📚', 7: '👗', 8: '🏏', 9: '🎲', 10: '💼', 11: '🌟',
+};
+const FALLBACK_GRADIENTS = [
   'linear-gradient(135deg,#7c3aed,#ec4899)',
   'linear-gradient(135deg,#0ea5e9,#6366f1)',
-  'linear-gradient(135deg,#f59e0b,#ef4444)',
   'linear-gradient(135deg,#10b981,#0ea5e9)',
-  'linear-gradient(135deg,#6366f1,#8b5cf6)',
+  'linear-gradient(135deg,#f59e0b,#ef4444)',
 ];
-const QUIZ_EMOJIS = {
-  bollywood: '🎬', tv: '📺', reality: '🎤', general: '🌟',
-  movies: '🎬', sports: '🏏',
-};
-const QUIZ_EMOJI_FALLBACKS = ['🧠', '💡', '⚡', '🔥', '🎯', '🏆'];
 const AVATAR_GRADIENTS = [
   'linear-gradient(135deg,#7c3aed,#a78bfa)',
   'linear-gradient(135deg,#0ea5e9,#38bdf8)',
@@ -68,14 +58,19 @@ const AVATAR_GRADIENTS = [
   'linear-gradient(135deg,#10b981,#6ee7b7)',
 ];
 
-function pickGradient(cat, index) {
-  const key = (cat || '').toLowerCase();
-  return QUIZ_GRADIENTS[key] || QUIZ_GRADIENT_FALLBACKS[index % QUIZ_GRADIENT_FALLBACKS.length];
+function pickGradient(categoryId, index) {
+  return CAT_GRADIENTS[categoryId] || FALLBACK_GRADIENTS[index % FALLBACK_GRADIENTS.length];
 }
-
-function pickEmoji(cat, index) {
-  const key = (cat || '').toLowerCase();
-  return QUIZ_EMOJIS[key] || QUIZ_EMOJI_FALLBACKS[(index || 0) % QUIZ_EMOJI_FALLBACKS.length];
+function pickEmoji(categoryId) {
+  return CAT_EMOJIS[categoryId] || '🧠';
+}
+function formatPublishedDate(raw) {
+  if (!raw) return null;
+  try {
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch { return null; }
 }
 
 function formatCount(n) {
@@ -84,109 +79,209 @@ function formatCount(n) {
   if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
 }
+function getInitials(realName, userName) {
+  const name = (realName || userName || '').trim();
+  if (!name) return '?';
+  const words = name.split(/\s+/);
+  return ((words[0]?.[0] || '') + (words[1]?.[0] || '')).toUpperCase() || '?';
+}
 
 // ── Transforms ───────────────────────────────────────────────────────────────
-// Field names are assumed — adjust once API response shape is confirmed.
 
+// Quiz type label derived from quizTypeId
+function quizTypeName(quizTypeId) {
+  if (quizTypeId === 4)                      return 'Range-Based';
+  if (quizTypeId === 2 || quizTypeId === 3)  return 'Personality';
+  return 'Trivia';
+}
+
+// Quiz list item  →  UI shape
 function transformQuiz(raw, index) {
-  const cat = (raw.categoryName || raw.category || '').toString().toLowerCase();
-  const playsRaw = raw.playCount || raw.plays_raw || raw.playsRaw || 0;
   return {
-    id:            raw.quizId       || raw.id,
-    title:         raw.title        || raw.quizTitle    || 'Untitled Quiz',
-    category:      cat,
-    categoryLabel: raw.categoryName || raw.categoryLabel || cat || 'General',
-    difficulty:    (raw.difficulty  || raw.level         || 'medium').toLowerCase(),
-    questions:     raw.totalQuestions || raw.questionCount || raw.questions || 0,
-    plays:         raw.playCountFormatted || raw.plays || formatCount(playsRaw),
-    plays_raw:     playsRaw,
-    rating:        raw.rating       || '0.0',
-    thumbnail:     raw.thumbnailUrl || raw.thumbnail    || null,
-    bg:            pickGradient(cat, index),
-    emoji:         pickEmoji(cat, index),
+    id:            raw.quizId,
+    title:         raw.title         || 'Untitled Quiz',
+    description:   raw.description   || '',
+    categoryId:    raw.categoryId    || 0,
+    categoryLabel: '',                             // filled by caller with categories map
+    quizTypeId:    raw.quizTypeId    || 1,
+    quizTypeName:  quizTypeName(raw.quizTypeId || 1),
+    questions:     raw.questionCount || 0,
+    plays:         formatCount(raw.responseCount  || 0),
+    plays_raw:     raw.responseCount || 0,
+    views:         raw.viewCount     || 0,
+    thumbnail:     raw.thumbnailUrl  || raw.imageUrl || null,
+    pageUrl:           raw.pageUrl           || '',
+    publishedWhen:     raw.publishedWhen     || '',
+    publishedFormatted: formatPublishedDate(raw.publishedWhen),
+    author:            raw.realName || raw.userName || raw.uploaderName || 'IndiaForums',
+    bg:            pickGradient(raw.categoryId, index),
+    emoji:         pickEmoji(raw.categoryId),
+    // Detail-only fields (absent from list, populated by transformQuizDetail)
+    quiz_questions:   null,
+    estimatedTime:    0,
+    directCommentCount: 0,
+    tags:             [],
+    results:          [],
   };
 }
 
-function transformQuestion(q, index) {
-  const rawOptions = q.options || q.answers || [];
-  const options = rawOptions.map(o =>
-    typeof o === 'string' ? o : (o.optionText || o.text || o.option || o.answer || '')
-  );
-  return {
-    questionId:    q.questionId  || q.id    || index,
-    question:      q.questionText || q.question || q.title || '',
-    options,
-    correct:       q.correctOptionIndex ?? q.correctAnswerIndex ?? q.correct ?? 0,
-  };
+// Merge flat options array into each question; determine correct index.
+// isCorrect: true on an option → trivia quiz (show correct/wrong feedback).
+// All isCorrect: false → personality quiz (no feedback, just collect points).
+function buildQuestions(questions, options) {
+  // Group options by questionId
+  const byQuestion = {};
+  for (const opt of options) {
+    (byQuestion[opt.questionId] = byQuestion[opt.questionId] || []).push(opt);
+  }
+
+  return questions
+    .slice()
+    .sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0))
+    .map((q) => {
+      const opts = byQuestion[q.questionId] || [];
+      const correctIdx = opts.findIndex(o => o.isCorrect === true);
+
+      // Handle both camelCase and PascalCase field names from API
+      const imgUrl = q.questionImageUrl || q.QuestionImageUrl
+        || q.imageUrl || q.ImageUrl
+        || q.gifUrl   || q.GifUrl
+        || null;
+
+      // Question image credit: provider name (e.g. "tenor") → "via Tenor"
+      const credits = q.questionImageCredits || q.QuestionImageCredits;
+      const creditLabel = credits
+        ? (credits.provider || credits.uploader || credits.uploaderName || credits.source || null)
+        : null;
+
+      return {
+        questionId:  q.questionId,
+        question:    q.question || '',
+        options:     opts.map(o => o.text || ''),
+        optionIds:   opts.map(o => o.optionId),   // for submit payload
+        points:      opts.map(o => o.points || 0),
+        correct:     correctIdx,                   // -1 = personality quiz (no single correct)
+        isTrivia:    correctIdx >= 0,
+        // Question image (GIF / photo shown above options)
+        questionImageUrl:    imgUrl,
+        questionImageCredit: creditLabel ? `via ${creditLabel.charAt(0).toUpperCase()}${creditLabel.slice(1)}` : null,
+        // Reveal content (shown after answering — optional)
+        revealTitle:       q.revealTitle       || null,
+        revealDescription: q.revealDescription || null,
+        revealImageUrl:    q.revealThumbnailUrl || q.revealImageUrl || null,
+      };
+    });
 }
 
+// Full quiz detail  →  UI shape
 function transformQuizDetail(raw, index) {
   const base = transformQuiz(raw, index ?? 0);
+  const estimatedSec = raw.estimatedTimeInSeconds || 0;
+
+  let tags = [];
+  if (raw.tagsJsonData) {
+    try {
+      const parsed = JSON.parse(raw.tagsJsonData);
+      tags = Array.isArray(parsed) ? parsed.map(t => t.name || t).filter(Boolean) : [];
+    } catch { /* ignore malformed JSON */ }
+  }
+
   return {
     ...base,
-    author:        raw.creatorName  || raw.author         || 'IndiaForums',
-    avg_score:     raw.avgScore     || raw.averageScore    || 0,
-    time_limit:    raw.timeLimitMinutes || raw.timeLimit   || 10,
-    points:        raw.totalPoints  || raw.points          || 0,
-    description:   raw.description  || raw.about           || '',
-    tags:          Array.isArray(raw.tags) ? raw.tags : [],
-    comments:      Array.isArray(raw.comments) ? raw.comments : [],
-    quiz_questions: (raw.questions || raw.quizQuestions || []).map(transformQuestion),
+    countdownTimer:      raw.estimatedTimeInSeconds || 0,  // per-question time limit in seconds
+    estimatedTime:       estimatedSec,
+    estimatedTimeLabel:  estimatedSec > 0 ? `${Math.ceil(estimatedSec / 60)} min` : null,
+    directCommentCount:  raw.directCommentCount || 0,
+    tags,
+    // Possible results for range-based / personality quizzes
+    results: (raw.results || []).map(r => ({
+      resultId:    r.resultId    ?? 0,
+      title:       r.title       || '',
+      description: r.description || '',
+      lowerRange:  r.lowerRange  ?? 0,
+      upperRange:  r.upperRange  ?? 0,
+    })),
+    // Merge options into questions
+    quiz_questions: buildQuestions(raw.questions || [], raw.options || []),
   };
 }
 
-function transformPlayer(p, index) {
-  const name = p.displayName || p.userName || p.name || `Player ${index + 1}`;
-  const words = name.trim().split(/\s+/);
-  const initials = (words[0]?.[0] || '') + (words[1]?.[0] || '');
+// Player (leaderboard row)  →  UI shape
+function transformPlayer(raw, index) {
+  const isPrivate = raw.privacy === 1;
+  const displayName = isPrivate
+    ? 'Anonymous'
+    : ((raw.realName || raw.userName || '').trim() || `Player ${index + 1}`);
   return {
-    id:       p.userId    || p.playerId   || index,
-    name,
-    initials: initials.toUpperCase() || 'P',
-    score:    p.score     || p.correctAnswers || 0,
-    totalQ:   p.totalQuestions || 0,
-    time:     p.timeTaken || p.completionTime || p.time || '',
-    rank:     p.rank      || index + 1,
+    id:       raw.userId    || index,
+    name:     displayName,
+    initials: isPrivate ? '?' : getInitials(raw.realName, raw.userName),
+    score:    raw.totalScore ?? 0,
+    rank:     raw.totalRank  ?? index + 1,
     avatarBg: AVATAR_GRADIENTS[index % AVATAR_GRADIENTS.length],
   };
 }
 
-function transformCreator(c, index) {
-  const name = c.displayName || c.userName || c.name || `Creator ${index + 1}`;
-  const words = name.trim().split(/\s+/);
-  const initials = (words[0]?.[0] || '') + (words[1]?.[0] || '');
+// Creator  →  UI shape
+function transformCreator(raw, index) {
+  const isPrivate = raw.privacy === 1;
+  const displayName = isPrivate
+    ? 'Anonymous'
+    : ((raw.realName || raw.userName || '').trim() || `Creator ${index + 1}`);
   return {
-    id:       c.userId    || c.creatorId  || index,
-    name,
-    initials: initials.toUpperCase() || 'C',
-    quizCount: c.quizCount || c.totalQuizzes || 0,
+    id:        raw.userId   || index,
+    name:      displayName,
+    initials:  isPrivate ? '?' : getInitials(raw.realName, raw.userName),
+    quizCount: raw.quizCount || 0,
     avatarBg:  AVATAR_GRADIENTS[index % AVATAR_GRADIENTS.length],
-    thumbnail: c.thumbnailUrl || c.avatar || null,
+    thumbnail: null,
   };
 }
 
 // ── 1. Paginated quiz list ───────────────────────────────────────────────────
+// Also exposes `categories` from the list response for dynamic tab building.
 export function useQuizzes(initialParams = {}) {
-  const [allQuizzes, setAllQuizzes] = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const [params, setParams]         = useState(initialParams);
+  const [allQuizzes,  setAllQuizzes]  = useState([]);
+  const [categories,  setCategories]  = useState([]);   // [{categoryId, categoryName, quizCount}]
+  const [pagination,  setPagination]  = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(null);
+  const [params,      setParams]      = useState(initialParams);
   const loadingRef = useRef(false);
 
   const load = useCallback(async (pageNum = 1, replace = true) => {
     if (!replace && loadingRef.current) return;
     loadingRef.current = true;
-    if (replace) {
-      setLoading(true);
-      setError(null);
-    }
+    if (replace) { setLoading(true); setError(null); }
     try {
-      const res = await quizzesApi.getQuizzes({ page: pageNum, pageSize: params.pageSize || 20 });
-      const raw = unwrapList(res.data, 'quizzes', 'items', 'data');
-      const items = raw.map((q, i) => transformQuiz(q, i));
+      const res = await quizzesApi.getQuizzes({ page: pageNum, pageSize: params.pageSize || 25 });
+      // Confirmed shape: { data: { quizzes, categories }, pagination }
+      const data       = res.data?.data || res.data || {};
+      const rawQuizzes = data.quizzes   || [];
+      const rawCats    = data.categories || [];
+      const paginationRaw = res.data?.pagination || null;
+
+      // Normalize pagination — API may use `pageNumber` or `currentPage`
+      const pagination = paginationRaw ? {
+        ...paginationRaw,
+        currentPage: paginationRaw.currentPage ?? paginationRaw.pageNumber ?? pageNum,
+        hasNextPage:  paginationRaw.hasNextPage  ?? false,
+      } : null;
+
+      // Build a categoryId → name lookup
+      const catMap = {};
+      for (const c of rawCats) catMap[c.categoryId] = c.categoryName;
+
+      const items = rawQuizzes.map((q, i) => {
+        const quiz = transformQuiz(q, i);
+        quiz.categoryLabel = catMap[q.categoryId] || '';
+        return quiz;
+      });
+
       setAllQuizzes(prev => replace ? items : [...prev, ...items]);
-      setPagination(unwrapPagination(res.data));
+      // Only set categories on first load
+      if (replace && rawCats.length > 0) setCategories(rawCats);
+      setPagination(pagination);
     } catch (err) {
       setError(extractApiError(err, 'Failed to load quizzes'));
     } finally {
@@ -195,31 +290,28 @@ export function useQuizzes(initialParams = {}) {
     }
   }, [params.pageSize]);
 
-  useEffect(() => {
-    load(1, true);
-  }, [load]);
+  useEffect(() => { load(1, true); }, [load]);
 
-  const refresh = useCallback(() => load(1, true), [load]);
-
+  const refresh  = useCallback(() => load(1, true), [load]);
   const loadMore = useCallback(() => {
     if (pagination?.hasNextPage && !loadingRef.current) {
       load(pagination.currentPage + 1, false);
     }
   }, [pagination, load]);
 
-  // Client-side category filter (decision B from design spec)
-  const quizzes = params.category && params.category !== 'all'
-    ? allQuizzes.filter(q => q.category === params.category)
+  // Client-side filter by categoryId (null/0 = show all)
+  const quizzes = params.categoryId
+    ? allQuizzes.filter(q => q.categoryId === params.categoryId)
     : allQuizzes;
 
-  return { quizzes, allQuizzes, pagination, loading, error, params, setParams, refresh, loadMore };
+  return { quizzes, allQuizzes, categories, pagination, loading, error, params, setParams, refresh, loadMore };
 }
 
 // ── 2. Single quiz detail ────────────────────────────────────────────────────
 export function useQuizDetails(quizId) {
-  const [quiz, setQuiz]     = useState(null);
+  const [quiz,    setQuiz]    = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState(null);
+  const [error,   setError]   = useState(null);
 
   const fetch = useCallback(async () => {
     if (!quizId) return;
@@ -227,7 +319,8 @@ export function useQuizDetails(quizId) {
     setError(null);
     try {
       const res = await quizzesApi.getQuizDetails(quizId);
-      const raw = unwrapObject(res.data, 'quiz', 'quizDetails', 'data');
+      // Confirmed shape: { data: { ...quizFields, questions[], options[] } }
+      const raw = res.data?.data || res.data || {};
       setQuiz(transformQuizDetail(raw));
     } catch (err) {
       setError(extractApiError(err, 'Failed to load quiz details'));
@@ -245,7 +338,7 @@ export function useQuizDetails(quizId) {
 export function useQuizPlayers(quizId) {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState(null);
+  const [error,   setError]   = useState(null);
 
   const fetch = useCallback(async () => {
     if (!quizId) return;
@@ -253,7 +346,8 @@ export function useQuizPlayers(quizId) {
     setError(null);
     try {
       const res = await quizzesApi.getQuizPlayers(quizId);
-      const raw = unwrapList(res.data, 'players', 'leaderboard', 'items');
+      // Confirmed shape: plain array (no wrapper)
+      const raw = Array.isArray(res.data) ? res.data : (res.data?.data || []);
       setPlayers(raw.map((p, i) => transformPlayer(p, i)));
     } catch (err) {
       setError(extractApiError(err, 'Failed to load leaderboard'));
@@ -268,26 +362,23 @@ export function useQuizPlayers(quizId) {
 }
 
 // ── 4. Quiz creators ─────────────────────────────────────────────────────────
-// Non-blocking — error is suppressed; the creators strip simply won't render.
+// Non-blocking — errors silently suppressed; the strip just won't render.
 export function useQuizCreators() {
   const [creators, setCreators] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     quizzesApi.getQuizCreators({ pageSize: 10 })
       .then(res => {
         if (cancelled) return;
-        const raw = unwrapList(res.data, 'creators', 'users', 'items');
+        // Confirmed shape: plain array (no wrapper)
+        const raw = Array.isArray(res.data) ? res.data : (res.data?.data || []);
         setCreators(raw.map((c, i) => transformCreator(c, i)));
       })
-      .catch(err => {
-        if (!cancelled) setError(extractApiError(err));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .catch(err => { if (!cancelled) setError(extractApiError(err)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
 
@@ -295,31 +386,32 @@ export function useQuizCreators() {
 }
 
 // ── 5. Submit quiz answers ───────────────────────────────────────────────────
+// Payload: { answers: [{ questionId, optionId }] }
+//
+// ⚠️ POST /quizzes/{id}/response currently returns 400:
+//   "The required column 'FinalResultForUser' was not present in the results
+//    of a 'FromSql' operation." — Class D backend bug, same pattern as search/helpcenter.
+// QuizResult gracefully falls back to the locally computed score on failure.
 export function useSubmitQuiz() {
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult]         = useState(null);
-  const [error, setError]           = useState(null);
+  const [result,     setResult]     = useState(null);
+  const [error,      setError]      = useState(null);
 
   const submit = useCallback(async (quizId, answers) => {
     setSubmitting(true);
     setError(null);
     try {
       const res = await quizzesApi.submitQuizResponse(quizId, answers);
-      // Assumed response shape: { score, totalQuestions, rank }
-      // Falls back gracefully if server returns different shape.
       setResult(res.data?.data || res.data || null);
     } catch (err) {
-      // Non-fatal — QuizResult falls back to locally computed score
-      setError(extractApiError(err, 'Could not save your score. Local result shown.'));
+      // Non-fatal — result screen shows local score as fallback
+      setError(extractApiError(err, 'Score could not be saved. Showing local result.'));
     } finally {
       setSubmitting(false);
     }
   }, []);
 
-  const reset = useCallback(() => {
-    setResult(null);
-    setError(null);
-  }, []);
+  const reset = useCallback(() => { setResult(null); setError(null); }, []);
 
   return { submit, submitting, result, error, reset };
 }

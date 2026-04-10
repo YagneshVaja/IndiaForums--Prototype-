@@ -81,6 +81,7 @@ export function DevToolbarProvider({ children }) {
   const device = DEVICES[deviceIndex];
   const width  = orientation === 'portrait' ? device.w : device.h;
   const height = orientation === 'portrait' ? device.h : device.w;
+  const os     = device.brand === 'Apple' ? 'ios' : 'android';
 
   const value = useMemo(() => ({
     // state
@@ -96,6 +97,7 @@ export function DevToolbarProvider({ children }) {
     showGrid,
     slowAnimations,
     navResetTrigger,
+    os,
     // setters
     setDeviceIndex,
     toggleOrientation: () => setOrientation((o) => o === 'portrait' ? 'landscape' : 'portrait'),
@@ -106,7 +108,7 @@ export function DevToolbarProvider({ children }) {
     toggleGrid:           () => setShowGrid((g) => !g),
     toggleSlowAnimations: () => setSlowAnimations((s) => !s),
     resetNav:             () => setNavResetTrigger((n) => n + 1),
-  }), [device, deviceIndex, orientation, darkMode, themeId, width, height, zoom, fontScale, showGrid, slowAnimations, navResetTrigger]);
+  }), [device, deviceIndex, orientation, darkMode, themeId, width, height, zoom, fontScale, showGrid, slowAnimations, navResetTrigger, os]);
 
   return (
     <DevToolbarContext.Provider value={value}>

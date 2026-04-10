@@ -1,11 +1,12 @@
+import { memo } from 'react';
 import styles from './ArticleCard.module.css';
 
-export default function ArticleCard({ cat, tag, breaking, title, time, bg, emoji, thumbnail, delay = 0, onClick }) {
+function ArticleCard({ cat, tag, breaking, title, time, bg, emoji, thumbnail, delay = 0, onClick }) {
   return (
     <div className={styles.card} style={{ animationDelay: `${delay}s` }} onClick={onClick} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && onClick?.()}>
       <div className={styles.thumb}>
         {thumbnail ? (
-          <img src={thumbnail} alt="" className={styles.thumbImg} loading="lazy" />
+          <img src={thumbnail} alt="" className={styles.thumbImg} loading="lazy" decoding="async" />
         ) : (
           <div className={styles.thumbInner} style={{ background: bg }}>{emoji}</div>
         )}
@@ -28,3 +29,5 @@ export default function ArticleCard({ cat, tag, breaking, title, time, bg, emoji
     </div>
   );
 }
+
+export default memo(ArticleCard);

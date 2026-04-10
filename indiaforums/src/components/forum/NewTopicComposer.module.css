@@ -1,147 +1,905 @@
-/* ── Modal overlay ──────────────────────────────────────────────────── */
-.overlay {
+/* ─────────────────────────────────────────────────────────────────────────────
+   NEW TOPIC COMPOSER
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ── Screen wrapper ───────────────────────────────────────────────────────── */
+.screen {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  z-index: 100;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.26s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/* ── Top bar ──────────────────────────────────────────────────────────────── */
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.cancelBtn {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px 4px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  transition: color var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+}
+.cancelBtn:hover  { color: var(--text); }
+.cancelBtn:active { color: var(--dark); }
+
+.topBarCenter {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.topBarTitle {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--dark);
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+}
+
+.topBarForum {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
-  padding: 20px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+.iconBtn:hover { background: var(--surface); }
+
+.iconBtnActive {
+  background: var(--brand-light) !important;
+  color: var(--brand) !important;
 }
 
-.modal {
-  background: var(--card);
-  border-radius: var(--radius-lg);
-  width: 100%;
-  max-width: 340px;
-  max-height: 90%;
+.postBtn {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 18px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--surface);
+  color: var(--text3);
+  cursor: not-allowed;
+  flex-shrink: 0;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+.postBtnActive {
+  background: var(--brand);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--shadow-brand);
+}
+.postBtnActive:hover  { opacity: 0.88; }
+.postBtnActive:active { transform: scale(0.95); }
+
+/* ── Scrollable body ──────────────────────────────────────────────────────── */
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.body::-webkit-scrollbar { display: none; }
+
+/* ── Auth banner ──────────────────────────────────────────────────────────── */
+.authBanner {
   display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
+  align-items: center;
+  gap: 9px;
+  background: #fff7ed;
+  border-bottom: 1px solid #fed7aa;
+  color: #9a3412;
+  padding: 9px 16px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.header {
+/* ── Type selector — horizontal pill tab bar ─────────────────────────────── */
+.typeTabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.typeTabs::-webkit-scrollbar { display: none; }
+
+.typeTab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.typeTab:hover {
+  border-color: var(--brand-border);
+  color: var(--brand);
+  background: var(--brand-light);
+}
+.typeTabActive {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  box-shadow: var(--shadow-brand);
+}
+.typeTabActive:hover { background: var(--brand-hover); }
+
+.typeTabIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.typeTabLabel {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+/* ── Post card — Title + Body share one visual container ─────────────────── */
+.postCard {
+  margin: 14px 16px 0;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+}
+.postCard:focus-within {
+  box-shadow: var(--shadow-md);
+}
+
+/* Subject (title) row */
+.subjectRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 14px 12px;
+}
+
+.subjectInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--dark);
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  padding: 0;
+  line-height: 1.4;
+  min-width: 0;
+}
+.subjectInput::placeholder {
+  color: var(--text3);
+  font-weight: 400;
+}
+
+/* Character counter — appears as you type */
+.subjectCount {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text3);
+  flex-shrink: 0;
+  padding-top: 4px;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.subjectCountWarn { color: var(--red); }
+
+/* Thin horizontal rule between title and body */
+.postCardDivider {
+  height: 1px;
+  background: var(--border);
+}
+
+/* WYSIWYG body editor — no border (postCard provides it) */
+.messageArea {
+  min-height: 200px;
+  padding: 12px 14px 8px;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  color: var(--text);
+  line-height: 1.75;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: text;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* Placeholder */
+.messageArea:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text3);
+  pointer-events: none;
+  display: block;
+}
+
+/* Rich content inside editor */
+.quoteFmt {
+  display: block;
+  margin: 5px 0;
+  padding: 7px 12px;
+  border-left: 3px solid var(--brand);
+  background: var(--brand-light);
+  border-radius: 0 8px 8px 0;
+  color: var(--text2);
+  font-style: italic;
+  font-size: 13px;
+}
+
+.codeFmt {
+  font-family: monospace;
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: #c7254e;
+}
+
+.messageArea pre {
+  font-family: monospace;
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 5px 0;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--text);
+}
+
+.messageArea ul,
+.messageArea ol { margin: 4px 0; padding-left: 20px; }
+.messageArea li { margin-bottom: 2px; line-height: 1.6; }
+
+.messageArea a {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.messageArea img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 4px 0;
+  display: block;
+}
+
+/* Word count pill */
+.metaRow {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 12px 6px;
+}
+
+.wordPill {
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 2px 9px;
+}
+
+/* Members Only / Matured Content toggles — bottom strip of the postCard */
+.contentToggles {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.contentToggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.contentToggle:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Members Only — amber when active */
+.contentToggleAmber:hover:not(:disabled) {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: var(--amber-surface);
+}
+.contentToggleAmber.contentToggleActive {
+  background: var(--amber-surface);
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+/* Matured Content — red when active */
+.contentToggleRose:hover:not(:disabled) {
+  border-color: var(--red-light);
+  color: var(--red);
+  background: var(--red-surface);
+}
+.contentToggleRose.contentToggleActive {
+  background: var(--red-surface);
+  border-color: var(--red-light);
+  color: var(--red);
+}
+
+/* ── Post Settings — collapsible section trigger ─────────────────────────── */
+.settingsToggle {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 13px 16px;
+  background: var(--card);
+  border: none;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  margin-top: 14px;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.settingsToggle:hover { background: var(--surface); }
+
+.settingsToggleLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text2);
+  position: relative;
+}
+
+/* Dot indicator — shows when any setting has been changed from default */
+.settingsBadge {
+  width: 6px;
+  height: 6px;
+  background: var(--brand);
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.settingsChevron {
+  color: var(--text3);
+  transition: transform var(--duration-fast) var(--ease-out);
+  flex-shrink: 0;
+}
+.settingsChevronOpen {
+  transform: rotate(180deg);
+}
+
+/* ── Post Settings body — expandable content ─────────────────────────────── */
+@keyframes expandDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.settingsBody {
+  background: var(--bg);
+  animation: expandDown 0.2s var(--ease-out) both;
+}
+
+/* ── Thin dividers inside settingsBody ───────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0;
+}
+
+/* ── Field rows (used inside settingsBody) ───────────────────────────────── */
+.fieldRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: 14px 16px;
+}
+
+.fieldLabel {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.fieldInput {
+  width: 100%;
+  border: none;
+  border-bottom: 1.5px solid var(--border);
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  color: var(--text);
+  outline: none;
+  padding: 2px 0 6px;
+  box-sizing: border-box;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.fieldInput:focus { border-bottom-color: var(--brand); }
+.fieldInput::placeholder { color: var(--text3); }
+
+/* ── Flair chips ──────────────────────────────────────────────────────────── */
+.flairChips {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.flairChip {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.flairChip:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-light);
+}
+.flairChipActive {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--text-on-brand);
+}
+
+/* ── Options group — checkboxes inside a surface card ────────────────────── */
+.optionsGroup {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  padding: 0 16px;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.checkRow:last-child { border-bottom: none; }
+
+/* Custom checkbox — replaces native */
+.checkBox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--card);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+.checkBox:checked {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.checkBox:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 5px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+.checkBox:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.checkLabel {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+  flex: 1;
+}
+
+/* ── Error box ────────────────────────────────────────────────────────────── */
+.errorBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  background: var(--error-surface);
+  border: 1px solid rgba(220,38,38,.25);
+  color: var(--error);
+  padding: 10px 14px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  margin: 12px 16px 0;
+  border-radius: var(--radius-md);
+}
+.errorBox svg { flex-shrink: 0; margin-top: 1px; }
+
+/* ── Footer — Save Draft + My Drafts ─────────────────────────────────────── */
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 4px;
+}
+
+.draftBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text2);
+  background: var(--card);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.draftBtn:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-light);
+}
+.draftBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.draftsLink {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--brand);
+  background: none;
+  border: none;
+  padding: 0 4px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.draftsLink:hover { opacity: 0.75; }
+
+/* ── Formatting toolbar — pinned above keyboard ───────────────────────────
+   Sits OUTSIDE .body as a direct flex child of .screen.
+   When the virtual keyboard opens, .body shrinks (flex:1 min-height:0)
+   and this bar stays pinned at the bottom — like WhatsApp / Telegram.
+   ─────────────────────────────────────────────────────────────────────────── */
+.formatBar {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+  padding: 4px 0;
+  animation: slideDown 0.18s ease both;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-6px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.formatTools {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px 6px;
+}
+.formatTools::-webkit-scrollbar { display: none; }
+
+.formatBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 7px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.formatBtn:hover { background: var(--surface); color: var(--dark); }
+
+.formatBtnActive {
+  background: var(--brand-light) !important;
+  color: var(--brand) !important;
+}
+
+.formatBtn.bold   { font-weight: 900; }
+.formatBtn.italic { font-style: italic; }
+.formatBtn.under  { text-decoration: underline; text-underline-offset: 2px; }
+.formatBtn.strike { text-decoration: line-through; }
+
+.formatSep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+/* ── Poll section (inside postCard, shown when type = Poll) ─────────────── */
+.pollSection {
+  background: var(--bg);
+}
+
+/* Each logical block inside poll (question / options / settings) */
+.pollBlock {
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
 }
 
-.title {
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--dark);
+.pollBlockLabel {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  margin-bottom: 8px;
 }
 
-.close {
-  background: none;
+/* Poll question input */
+.pollInput {
+  width: 100%;
   border: none;
-  font-size: 18px;
-  color: var(--text3);
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
+  border-bottom: 1.5px solid var(--border);
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  padding: 2px 0 6px;
+  box-sizing: border-box;
+  transition: border-color var(--duration-fast) var(--ease-out);
 }
+.pollInput:focus { border-bottom-color: var(--brand); }
+.pollInput::placeholder { color: var(--text3); }
 
-.body {
-  padding: 14px 16px;
-  overflow-y: auto;
+/* Options list */
+.pollOptions {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.label {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.input,
-.textarea,
-.select {
-  width: 100%;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  font-family: var(--font-body);
-  font-size: 12.5px;
-  color: var(--text);
-  background: var(--bg);
-  outline: none;
-}
-.input:focus,
-.textarea:focus,
-.select:focus { border-color: var(--brand); }
-
-.textarea {
-  min-height: 90px;
-  resize: vertical;
-  line-height: 1.5;
-}
-
-.checkbox {
+.pollOption {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: var(--font-body);
-  font-size: 12px;
-  color: var(--text);
-  cursor: pointer;
 }
 
-.error {
-  background: #fee2e2;
-  border: 1px solid #fca5a5;
-  color: #991b1b;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 11.5px;
-  font-family: var(--font-body);
-}
-
-.footer {
+/* Numbered badge: 1 · 2 · 3… */
+.pollOptionNum {
+  width: 20px;
+  height: 20px;
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--border);
-}
-
-.btnPrimary {
-  background: var(--brand);
-  color: var(--text-on-brand);
-  border: none;
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: var(--font-body);
-}
-.btnPrimary:disabled { opacity: 0.55; cursor: not-allowed; }
-
-.btnGhost {
-  background: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--surface);
   border: 1px solid var(--border);
-  color: var(--text);
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
+  border-radius: 50%;
   font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text2);
+}
+
+.pollOptionInput {
+  flex: 1;
+  border: none;
+  border-bottom: 1.5px solid var(--border);
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--text);
+  outline: none;
+  padding: 3px 0 5px;
+  min-width: 0;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.pollOptionInput:focus { border-bottom-color: var(--brand); }
+.pollOptionInput::placeholder { color: var(--text3); }
+
+/* Remove option button */
+.pollOptionDelete {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+.pollOptionDelete:hover:not(:disabled) {
+  background: var(--error-surface);
+  color: var(--error);
+}
+.pollOptionDelete:disabled { opacity: 0.25; cursor: not-allowed; }
+
+/* Add option — dashed brand button */
+.pollAddBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--brand);
+  background: transparent;
+  border: 1.5px dashed var(--brand-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  cursor: pointer;
+  margin-top: 2px;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+.pollAddBtn:hover:not(:disabled) {
+  background: var(--brand-light);
+  border-color: var(--brand);
+}
+.pollAddBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Poll settings checkboxes */
+.pollChecksBlock {
+  padding: 2px 14px;
+}
+
+.pollCheckRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  border-bottom: 1px solid var(--border);
+}
+.pollCheckRow:last-child { border-bottom: none; }
+
+/* ── Spinner (inside send button while submitting) ────────────────────────── */
+.spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }

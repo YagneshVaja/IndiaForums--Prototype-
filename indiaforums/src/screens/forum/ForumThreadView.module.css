@@ -1,4 +1,16 @@
-/* ── Base screen ──────────────────────────────────────────────────────────── */
+/* ── Outer shell — non-scrolling positioned container ─────────────────────── */
+/* The composer uses position:absolute inset:0 so it must anchor here, not   */
+/* inside the overflow-y:auto scroll container below.                          */
+.shell {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Inner scroll area ────────────────────────────────────────────────────── */
 .screen {
   flex: 1;
   overflow-y: auto;

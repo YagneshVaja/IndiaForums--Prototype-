@@ -135,13 +135,13 @@ export default function ForumListView({ onForumPress }) {
             <EmptyState icon="🔍" title="No forums found" subtitle="Try a different search or category" />
           ) : displayForums.map((forum, i) => (
             <div key={forum.id} className={styles.forumCard}
-              style={{ animationDelay: `${i * 0.04}s` }}
+              style={{ animationDelay: `${Math.min(i * 0.04, 0.28)}s` }}
               onClick={() => onForumPress(forum)}
               role="button" tabIndex={0}
             >
               <div className={styles.forumAvatar} style={{ background: forum.bg }}>
                 {forum.thumbnailUrl
-                  ? <img src={forum.thumbnailUrl} alt="" className={styles.forumAvatarImg} />
+                  ? <img src={forum.thumbnailUrl} alt="" className={styles.forumAvatarImg} loading="lazy" decoding="async" />
                   : forum.emoji
                 }
               </div>

@@ -3,7 +3,12 @@
    ───────────────────────────────────────────────────────────────────────────── */
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-100%); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -14,6 +19,83 @@
   flex-direction: column;
   background: var(--bg);
   min-height: 0;
+  position: relative;
+}
+
+/* ── Sticky collapsed header ───────────────────────────────────────────────── */
+.stickyHeader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 14px;
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+  box-shadow: 0 2px 12px rgba(0,0,0,.10);
+}
+
+.stickyHeaderVisible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.stickyInner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stickyThumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border);
+}
+
+.stickyThumbFallback {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.stickyText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.stickyForum {
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--brand);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.stickyTitle {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── Scroll area ───────────────────────────────────────────────────────────── */
@@ -29,7 +111,7 @@
 /* ── Topic card (OP) ───────────────────────────────────────────────────────── */
 .topicCard {
   background: var(--card);
-  padding: 14px 16px 12px;
+  padding: 14px 16px 14px;
   border-bottom: 1px solid var(--border);
   animation: fadeInUp 0.3s ease both;
 }
@@ -39,15 +121,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
-  padding: 6px 10px;
+  margin-bottom: 11px;
+  padding: 5px 10px;
   background: var(--surface);
   border-radius: 10px;
 }
 
 .forumThumb {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: 1.5px solid var(--border);
   object-fit: cover;
@@ -55,19 +137,19 @@
 }
 
 .forumBadge {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
 .forumName {
   font-family: var(--font-body);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--brand);
   flex: 1;
@@ -108,11 +190,12 @@
 /* Title */
 .topicTitle {
   font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 17px;
+  font-weight: 900;
   color: var(--dark);
-  line-height: 1.35;
-  margin: 0 0 8px;
+  line-height: 1.3;
+  margin: 0 0 10px;
+  letter-spacing: -0.2px;
 }
 
 /* Author chip */
@@ -124,15 +207,15 @@
 }
 
 .authorAvatar {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-on-brand);
   font-weight: 800;
-  font-size: 11px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
@@ -144,7 +227,7 @@
 
 .authorName {
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   color: var(--text);
 }
@@ -162,25 +245,44 @@
 /* Body */
 .topicBody {
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--text2);
-  line-height: 1.6;
-  margin: 0 0 6px;
+  line-height: 1.65;
+  margin: 0 0 8px;
   word-break: break-word;
 }
+.topicBody p { margin: 0 0 8px; }
+.topicBody p:last-child { margin-bottom: 0; }
+.topicBody strong, .topicBody b { font-weight: 700; color: var(--dark); }
+.topicBody a { color: var(--brand); text-decoration: none; font-weight: 500; }
+.topicBody a:hover { text-decoration: underline; }
+.topicBody img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  margin: 8px 0;
+  display: block;
+  box-shadow: 0 2px 10px rgba(0,0,0,.10);
+  border: 1px solid var(--border);
+}
+.topicBody ul, .topicBody ol { padding-left: 20px; margin: 6px 0; }
+.topicBody li { margin-bottom: 4px; }
 
 /* Topic image */
 .topicImageWrap {
-  margin: 8px 0;
-  border-radius: 10px;
+  margin: 10px 0;
+  border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--border);
+  background: var(--surface);
 }
 .topicImage {
   width: 100%;
-  max-height: 220px;
+  height: auto;
+  max-height: 340px;
   object-fit: cover;
   display: block;
+  transition: opacity 0.2s ease;
 }
 
 /* Tags */
@@ -188,7 +290,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  margin: 8px 0;
+  margin: 8px 0 2px;
 }
 
 .tag {
@@ -197,27 +299,29 @@
   font-weight: 600;
   color: var(--brand);
   background: var(--brand-light);
-  padding: 3px 9px;
+  padding: 3px 10px;
   border-radius: 10px;
+  border: 1px solid var(--brand-border);
 }
 
 /* Embeds row inside posts / topic card */
 .embedsRow {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 8px 0;
+  gap: 10px;
+  margin: 10px 0;
   border-radius: 10px;
-  overflow: hidden;
 }
 
-/* ── Topic stats bar ── */
+/* ── Topic stats bar (shown after post #1) ─────────────────────────────────── */
 .topicStatsBar {
   display: flex;
   gap: 0;
-  padding: 10px 0 2px;
-  margin-top: 6px;
+  padding: 12px 6px 6px;
+  margin: 4px -10px 0;
+  background: var(--card);
   border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
 .topicStatItem {
@@ -225,18 +329,23 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   cursor: default;
+  padding: 4px 0;
+}
+
+.topicStatItem + .topicStatItem {
+  border-left: 1px solid var(--border);
 }
 
 .topicStatItem svg {
-  opacity: 0.45;
+  opacity: 0.4;
 }
 
 .topicStatVal {
   font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 900;
   color: var(--dark);
   line-height: 1;
 }
@@ -255,35 +364,30 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
+  padding: 10px 14px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
-}
-
-.sortLabel {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text3);
+  margin: 0 -10px;
 }
 
 .sortBtn {
   font-family: var(--font-body);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 14px;
-  border: none;
-  background: var(--surface);
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: transparent;
   color: var(--text2);
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
+  transition: all 0.15s ease;
 }
-.sortBtn:hover { background: var(--bg); }
+.sortBtn:hover { border-color: var(--brand); color: var(--brand); }
 
 .sortBtnActive {
   background: var(--brand);
   color: var(--text-on-brand);
+  border-color: var(--brand);
 }
 
 /* ── Section label ─────────────────────────────────────────────────────────── */
@@ -318,18 +422,30 @@
 
 /* ── Posts list ────────────────────────────────────────────────────────────── */
 .postsList {
-  padding: 4px 10px;
+  padding: 6px 10px 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
+/* ── Post card ─────────────────────────────────────────────────────────────── */
 .postCard {
   background: var(--card);
-  border-radius: 12px;
+  border-radius: 14px;
   border: 1px solid var(--border);
-  padding: 12px;
+  padding: 13px 13px 10px;
   animation: fadeInUp 0.25s ease both;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  transition: box-shadow 0.15s ease;
+}
+
+.postCard:hover {
+  box-shadow: 0 3px 12px rgba(0,0,0,.08);
+}
+
+/* OP post gets a subtle background tint */
+.postCardOp {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 4%, var(--card)) 0%, var(--card) 48px);
 }
 
 /* ── Post header ── */
@@ -337,12 +453,12 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .postAvatar {
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--brand), #6B7FFF);
   display: flex;
@@ -350,7 +466,12 @@
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0,0,0,.10);
+  box-shadow: 0 2px 8px rgba(53,88,240,.18);
+}
+
+/* OP avatar gets a glowing brand ring */
+.postAvatarOp {
+  box-shadow: 0 0 0 2.5px var(--brand), 0 0 0 4.5px color-mix(in srgb, var(--brand) 25%, transparent), 0 2px 8px rgba(53,88,240,.20);
 }
 
 .postAvatarImg {
@@ -363,7 +484,7 @@
 .postAvatarLetter {
   color: var(--text-on-brand);
   font-weight: 800;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .postAuthorInfo {
@@ -380,110 +501,264 @@
 
 .postAuthor {
   font-family: var(--font-body);
-  font-size: 12.5px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 800;
   color: var(--dark);
+  letter-spacing: -0.1px;
 }
 
 .opBadge {
   font-family: var(--font-body);
-  font-size: 8.5px;
-  font-weight: 800;
+  font-size: 8px;
+  font-weight: 900;
   color: var(--brand);
   background: var(--brand-light);
-  padding: 1px 6px;
-  border-radius: 8px;
+  padding: 2px 6px;
+  border-radius: 6px;
   border: 1px solid var(--brand-border);
   flex-shrink: 0;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .countryFlag {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   flex-shrink: 0;
+}
+
+/* Real name — sits between username row and meta row */
+.postRealName {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text2);
+  font-style: italic;
+  margin-top: 2px;
+  opacity: 0.75;
 }
 
 .postMetaRow {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-top: 2px;
+  gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
 }
 
+/* Rank badge — clearly a role, not just metadata */
 .rankBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-family: var(--font-body);
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 700;
   color: var(--amber);
   background: var(--amber-surface);
-  padding: 1px 6px;
-  border-radius: 8px;
-  line-height: 1.3;
+  padding: 2px 8px;
+  border-radius: 6px;
+  line-height: 1.4;
+  letter-spacing: 0.1px;
+  border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
+}
+
+/* Moderator — green shield */
+.rankBadgeMod {
+  color: #0a9e6e;
+  background: #e6f8f2;
+  border-color: #a7e9d5;
+}
+
+/* Admin — brand crown */
+.rankBadgeAdmin {
+  color: var(--brand);
+  background: var(--brand-light);
+  border-color: var(--brand-border);
+}
+
+/* Dot separator between rank and time */
+.metaDot {
+  color: var(--text3);
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.5;
 }
 
 .postTime {
   font-family: var(--font-body);
-  font-size: 10px;
+  font-size: 10.5px;
   color: var(--text3);
+  cursor: default;
 }
 
-/* User badges row */
+/* User achievement badges — compact strip under meta */
 .userBadges {
   display: flex;
-  gap: 3px;
-  margin-bottom: 6px;
-  margin-left: 44px;
+  gap: 4px;
+  margin-top: 6px;
   flex-wrap: wrap;
 }
 .userBadgeImg {
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
   object-fit: contain;
   opacity: 0.85;
+  box-shadow: 0 1px 3px rgba(0,0,0,.10);
 }
 
+/* Post number — subtle, top-right corner */
 .postNumber {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text3);
   background: var(--surface);
-  padding: 2px 6px;
-  border-radius: 8px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 1px;
+  letter-spacing: 0.2px;
+  opacity: 0.8;
 }
 
 /* ── Post body ── */
 .postBody {
   font-family: var(--font-body);
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--text);
-  line-height: 1.6;
+  line-height: 1.7;
   word-break: break-word;
+  margin-bottom: 2px;
 }
-.postBody img { max-width: 100%; border-radius: 8px; margin: 6px 0; }
-.postBody a { color: var(--brand); text-decoration: none; }
+.postBody p { margin: 0 0 8px; }
+.postBody p:last-child { margin-bottom: 0; }
+.postBody strong,
+.postBody b { font-weight: 700; color: var(--dark); }
+.postBody em,
+.postBody i { font-style: italic; }
+.postBody ul,
+.postBody ol { padding-left: 20px; margin: 6px 0; }
+.postBody li { margin-bottom: 4px; line-height: 1.6; }
+.postBody img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  margin: 10px 0;
+  display: block;
+  box-shadow: 0 2px 10px rgba(0,0,0,.10);
+  border: 1px solid var(--border);
+  cursor: zoom-in;
+}
+.postBody a { color: var(--brand); text-decoration: none; font-weight: 500; }
 .postBody a:hover { text-decoration: underline; }
+
+/* Horizontal rule */
+.postBody hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 14px 0;
+}
+
+/* Tables */
+.postBody table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin: 10px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.postBody th {
+  background: var(--surface);
+  font-weight: 700;
+  color: var(--dark);
+  padding: 7px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.postBody td {
+  padding: 6px 10px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.postBody tr:last-child td { border-bottom: none; }
+.postBody tr:nth-child(even) td { background: var(--surface); }
+
+/* Quote blocks */
+.postBody blockquote {
+  margin: 10px 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--brand);
+  background: var(--surface);
+  border-radius: 0 10px 10px 0;
+  font-size: 12.5px;
+  color: var(--text2);
+  font-style: italic;
+  line-height: 1.6;
+}
+.postBody blockquote p { margin: 0; }
 
 /* ── Post footer ── */
 .postFooter {
   display: flex;
   align-items: center;
   gap: 2px;
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: 10px;
+  padding-top: 9px;
   border-top: 1px solid var(--border);
 }
 
+/* Reaction pill button */
+.reactBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.reactBtn:hover {
+  border-color: var(--brand);
+  background: var(--brand-light);
+}
+
+.reactBtnActive {
+  background: var(--brand-light);
+  border-color: var(--brand-border);
+}
+
+.reactBtnEmoji {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.reactBtnCount {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+}
+
+.reactBtnActive .reactBtnCount {
+  color: var(--brand);
+}
+
+/* Action buttons */
 .postAction {
   display: flex;
   align-items: center;
   gap: 4px;
   font-family: var(--font-body);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text3);
   background: transparent;
@@ -491,7 +766,7 @@
   cursor: pointer;
   padding: 5px 8px;
   border-radius: 8px;
-  transition: all var(--duration-fast) var(--ease-out);
+  transition: all 0.13s ease;
 }
 .postAction:hover {
   background: var(--surface);
@@ -510,8 +785,64 @@
   color: var(--red, #d33);
 }
 .postActionDanger:hover {
-  background: var(--red-surface, rgba(221, 51, 51, 0.08));
+  background: var(--red-surface, rgba(221,51,51,0.08));
   color: var(--red, #d33);
+}
+
+/* ── Reaction picker ── */
+.reactWrap {
+  position: relative;
+  display: inline-block;
+}
+
+.postActionActive {
+  background: var(--brand-light) !important;
+  color: var(--brand) !important;
+}
+
+.reactBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.reactPicker {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.14);
+  z-index: 11;
+  animation: fadeInUp 0.15s ease both;
+}
+
+.reactOption {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease, background 0.12s;
+  padding: 0;
+}
+.reactOption:hover {
+  background: var(--surface);
+  transform: scale(1.22);
+}
+
+.reactEmoji {
+  font-size: 18px;
+  line-height: 1;
 }
 
 /* ── Reply bar (fixed at bottom) ───────────────────────────────────────────── */
@@ -519,16 +850,17 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border-top: 1px solid var(--border);
   background: var(--card);
   flex-shrink: 0;
   position: relative;
+  box-shadow: 0 -2px 12px rgba(0,0,0,.06);
 }
 
 .replyAvatar {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: var(--brand);
   color: var(--text-on-brand);
@@ -543,14 +875,14 @@
 .replyInput {
   flex: 1;
   border: 1.5px solid var(--border);
-  border-radius: 20px;
-  padding: 7px 14px;
+  border-radius: 22px;
+  padding: 8px 16px;
   font-family: var(--font-body);
   font-size: 12.5px;
   color: var(--text);
   background: var(--bg);
   outline: none;
-  transition: border-color var(--duration-fast) var(--ease-out);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .replyInput:focus {
   border-color: var(--brand);
@@ -559,8 +891,8 @@
 .replyInput::placeholder { color: var(--text3); }
 
 .sendBtn {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: none;
   background: var(--surface);
@@ -575,6 +907,7 @@
 .sendActive {
   background: var(--brand);
   color: var(--text-on-brand);
+  box-shadow: 0 2px 8px rgba(53,88,240,.30);
 }
 .sendBtn:active { transform: scale(0.9); }
 
@@ -602,13 +935,13 @@
   margin-bottom: 4px;
 }
 
-/* ── Locked bar ────────────────────────────────────────────────────────────── */
+/* ── Locked bar ── */
 .lockedBar {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px;
+  padding: 12px;
   border-top: 1px solid var(--border);
   background: var(--card);
   font-family: var(--font-body);
@@ -618,15 +951,15 @@
   flex-shrink: 0;
 }
 
-/* ── Load more ─────────────────────────────────────────────────────────────── */
+/* ── Load more ── */
 .loadMoreBtn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   width: calc(100% - 20px);
-  margin: 8px 10px 4px;
-  padding: 9px 0;
+  margin: 6px 10px 4px;
+  padding: 10px 0;
   border: 1.5px solid var(--border);
   border-radius: 12px;
   background: var(--card);
@@ -635,28 +968,43 @@
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
+  transition: all 0.15s ease;
 }
 .loadMoreBtn:hover {
   border-color: var(--brand-border);
   color: var(--brand);
-}
-.loadMoreBtn:active {
   background: var(--brand-light);
-  border-color: var(--brand);
-  color: var(--brand);
 }
 
-/* ── Error / Empty ─────────────────────────────────────────────────────────── */
+/* ── Error / Empty ── */
 .errorBox,
 .emptyBox {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 32px 16px;
+  gap: 6px;
+  padding: 40px 16px;
   animation: fadeInUp 0.3s ease both;
 }
+
+.emptyIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--brand-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.emptyTitle {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--dark);
+}
+
 .errorText,
 .emptyText {
   font-family: var(--font-body);
@@ -674,9 +1022,10 @@
   padding: 6px 20px;
   border-radius: 20px;
   cursor: pointer;
+  margin-top: 4px;
 }
 
-/* ── Skeleton ──────────────────────────────────────────────────────────────── */
+/* ── Skeleton ── */
 @keyframes shimmer {
   from { background-position: -200% 0; }
   to   { background-position:  200% 0; }
@@ -685,15 +1034,15 @@
 .skeletonPost {
   display: flex;
   gap: 10px;
-  padding: 12px;
+  padding: 13px;
   background: var(--card);
-  border-radius: 12px;
+  border-radius: 14px;
   border: 1px solid var(--border);
 }
 
 .skeletonAvatar {
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   flex-shrink: 0;
   background: linear-gradient(90deg, var(--surface) 25%, var(--bg) 50%, var(--surface) 75%);
@@ -719,14 +1068,14 @@
 .skeletonShort { width: 55%; }
 .skeletonMed   { width: 75%; }
 
-.spacer { height: 20px; }
+.spacer { height: 24px; }
 
-/* ── Poll widget ───────────────────────────────────────────────────────────── */
+/* ── Poll widget ── */
 .pollBox {
   margin: 10px 0;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid var(--brand-border);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--brand-light);
 }
 
@@ -741,7 +1090,7 @@
 .pollOptions {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 
 .pollOptionBtn {
@@ -749,19 +1098,18 @@
   width: 100%;
   text-align: left;
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text);
   background: var(--card);
   border: 1.5px solid var(--border);
   border-radius: 10px;
-  padding: 9px 12px;
+  padding: 9px 14px;
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
+  transition: all 0.15s ease;
 }
 .pollOptionBtn:hover:not(:disabled) {
   border-color: var(--brand);
-  background: var(--card);
   color: var(--brand);
 }
 .pollOptionBtn:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -774,17 +1122,13 @@
   border: 1.5px solid var(--border);
 }
 
-.pollResultMine {
-  border-color: var(--brand);
-}
+.pollResultMine { border-color: var(--brand); }
 
 .pollResultBar {
   position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
+  top: 0; left: 0; bottom: 0;
   background: var(--brand-light);
-  transition: width 0.4s var(--ease-out);
+  transition: width 0.45s ease;
 }
 
 .pollResultRow {
@@ -792,17 +1136,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 12px;
+  padding: 9px 14px;
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text);
 }
 
-.pollResultPct {
-  font-weight: 800;
-  color: var(--brand);
-}
+.pollResultPct { font-weight: 800; color: var(--brand); }
 
 .pollMeta {
   margin-top: 8px;
@@ -823,7 +1164,7 @@
   border-radius: 8px;
 }
 
-/* ── Edit-in-place ─────────────────────────────────────────────────────────── */
+/* ── Edit-in-place ── */
 .editBox {
   display: flex;
   flex-direction: column;
@@ -833,10 +1174,10 @@
 
 .editTextarea {
   width: 100%;
-  min-height: 70px;
+  min-height: 80px;
   border: 1.5px solid var(--brand-border);
   border-radius: 10px;
-  padding: 8px 10px;
+  padding: 9px 12px;
   font-family: var(--font-body);
   font-size: 12.5px;
   color: var(--text);
@@ -872,11 +1213,11 @@
   font-family: var(--font-body);
   font-size: 11px;
   font-weight: 700;
-  padding: 5px 12px;
-  border-radius: 14px;
+  padding: 6px 14px;
+  border-radius: 16px;
   border: none;
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
+  transition: all 0.13s ease;
 }
 
 .editCancel {
@@ -896,84 +1237,28 @@
   cursor: not-allowed;
 }
 
-/* ── Reaction picker ───────────────────────────────────────────────────────── */
-.reactWrap {
-  position: relative;
-  display: inline-block;
-}
-
-.postActionActive {
-  background: var(--brand-light) !important;
-  color: var(--brand) !important;
-}
-
-.reactBackdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-}
-
-.reactPicker {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 0;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 6px 8px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  box-shadow: 0 6px 20px rgba(0,0,0,.12);
-  z-index: 11;
-  animation: fadeInUp 0.18s ease both;
-}
-
-.reactOption {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.12s var(--ease-out), background 0.12s;
-  padding: 0;
-}
-.reactOption:hover {
-  background: var(--surface);
-  transform: scale(1.18);
-}
-
-.reactEmoji {
-  font-size: 17px;
-  line-height: 1;
-}
-
-/* ── Edit history (chip + modal) ──────────────────────────────────────── */
+/* ── Edit history ── */
 .editedChip {
   font-family: var(--font-body);
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text3);
-  background: none;
-  border: none;
-  padding: 0;
-  margin-left: var(--sp-1);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 6px;
   cursor: pointer;
   font-style: italic;
+  transition: color 0.12s;
 }
-
 .editedChip:hover {
   color: var(--brand);
-  text-decoration: underline;
+  border-color: var(--brand-border);
 }
 
 .historyOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.48);
+  background: rgba(0,0,0,0.48);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -989,7 +1274,7 @@
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.2));
+  box-shadow: 0 12px 40px rgba(0,0,0,.22);
   overflow: hidden;
 }
 
@@ -1036,10 +1321,7 @@
   padding: var(--sp-3) 0;
   border-bottom: 1px solid var(--border);
 }
-
-.historyEntry:last-child {
-  border-bottom: none;
-}
+.historyEntry:last-child { border-bottom: none; }
 
 .historyEntryMeta {
   display: flex;
