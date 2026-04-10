@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import styles from './ThreadCard.module.css';
 
-export default function ThreadCard({
+function ThreadCard({
   forumName, bg, title, description, poster, ago,
   likes, views, comments, lastBy, lastTime,
   locked, pinned, tags, topicImage,
@@ -32,7 +33,7 @@ export default function ThreadCard({
         {/* Topic image */}
         {topicImage && (
           <div className={styles.topicImageWrap}>
-            <img src={topicImage} alt="" className={styles.topicImage} />
+            <img src={topicImage} alt="" className={styles.topicImage} loading="lazy" decoding="async" />
           </div>
         )}
 
@@ -91,3 +92,5 @@ export default function ThreadCard({
     </div>
   );
 }
+
+export default memo(ThreadCard);

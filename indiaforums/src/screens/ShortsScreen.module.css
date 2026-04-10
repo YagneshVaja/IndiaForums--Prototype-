@@ -1,26 +1,43 @@
 /* ────────────────────────────────────────────────────────────────────────────
-   SHORTS SCREEN  ·  8pt spacing grid  ·  tokens from tokens.css
+   SHORTS SCREEN — Reel Player  ·  8pt grid  ·  tokens.css
+   Theme strategy:
+     · .screen / .center / .feedWrap → var(--bg) aware
+     · .catBar                       → frosted dark glass (always, over media)
+     · .card / media / overlay       → always cinematic dark (media player)
+     · Skeletons                     → var(--surface) token-aware
    ──────────────────────────────────────────────────────────────────────────── */
 
-/* ── Screen ──────────────────────────────────────────────────────────────────── */
+/* ── Outermost screen shell ───────────────────────────────────────────────────── */
 .screen {
-  flex: 1;
-  overflow-y: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
-  position: relative;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
 }
-.screen::-webkit-scrollbar { display: none; }
 
-/* ── Category tab bar ────────────────────────────────────────────────────────── */
+/* ── Feed wrapper — relative so catBar can float over it ─────────────────────── */
+.feedWrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Category tab bar — floats over the feed, always dark frosted glass ─────── */
+/*    Works in both light and dark theme because it's always over a dark image.   */
 .catBar {
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0 14px;
-  flex-shrink: 0;
 }
 
 .catScroll {
@@ -28,517 +45,389 @@
   gap: 6px;
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 10px 0;
+  padding: 8px 0;
 }
 .catScroll::-webkit-scrollbar { display: none; }
 
 .catBtn {
   flex-shrink: 0;
-  padding: 6px 18px;
-  border-radius: 20px;
-  border: 1.5px solid var(--border);
+  padding: 5px 15px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
   background: transparent;
-  color: var(--text2);
+  color: rgba(255, 255, 255, 0.6);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color      var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
   -webkit-tap-highlight-color: transparent;
   white-space: nowrap;
 }
-
 .catActive {
   background: var(--brand);
-  color: var(--text-on-brand);
   border-color: var(--brand);
+  color: #fff;
   font-weight: 700;
 }
 
-/* ── Feed header strip ───────────────────────────────────────────────────────── */
-.feedHeader {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px 6px;
-}
-
-.feedDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--red);
-  flex-shrink: 0;
-}
-
-.feedLabel {
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--text);
-  letter-spacing: 0.2px;
+/* ── Snap-scroll feed ─────────────────────────────────────────────────────────── */
+.feed {
   flex: 1;
+  min-height: 0;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  background: #000;
 }
+.feed::-webkit-scrollbar { display: none; }
 
-.feedCount {
-  font-family: var(--font-body);
-  font-size: 11px;
-  color: var(--text3);
-}
-
-/* ── 2-column grid ───────────────────────────────────────────────────────────── */
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 0 12px;
-}
-
-/* ── Short card ──────────────────────────────────────────────────────────────── */
+/* ── Short card ───────────────────────────────────────────────────────────────── */
 .card {
-  background: var(--card);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--shadow-xs);
-  cursor: pointer;
-  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
-  -webkit-tap-highlight-color: transparent;
-}
-.card:active {
-  transform: scale(0.96);
-  box-shadow: none;
-}
-
-/* Thumbnail */
-.thumb {
+  height: 100%;
+  scroll-snap-align: start;
+  flex-shrink: 0;
   position: relative;
-  height: 158px;
+  background: #0a0a0a;
   overflow: hidden;
-}
-
-.thumbEmoji {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -55%);
-  font-size: 52px;
-  opacity: 0.55;
-  line-height: 1;
   user-select: none;
+  cursor: pointer;
 }
 
-.thumbScrim {
+/* ── Media container — blurred bg + sharp foreground ─────────────────────────── */
+.mediaWrap {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+}
+
+/* Blurred ambient background — fills black bars for non-16:9 images */
+.thumbBg {
+  position: absolute;
+  inset: -14px;
+  width: calc(100% + 28px);
+  height: calc(100% + 28px);
+  object-fit: cover;
+  filter: blur(24px) brightness(0.32) saturate(1.3);
+  transform: scale(1.05);
+  pointer-events: none;
+}
+
+/* Foreground — complete image, never cropped */
+.thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Gradient fallback when thumbnail is null */
+.thumbFallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Gradient scrim — bottom-heavy, reads text clearly ───────────────────────── */
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   background: linear-gradient(
     to bottom,
-    rgba(0,0,0,0.05) 0%,
-    rgba(0,0,0,0.08) 40%,
-    rgba(0,0,0,0.65) 100%
+    rgba(0, 0, 0, 0.00) 0%,
+    rgba(0, 0, 0, 0.00) 28%,
+    rgba(0, 0, 0, 0.18) 45%,
+    rgba(0, 0, 0, 0.60) 65%,
+    rgba(0, 0, 0, 0.92) 100%
   );
+  pointer-events: none;
 }
 
-/* Category chip — top left */
-.catChip {
+/* ── Progress bar — sits just below the floating catBar ──────────────────────── */
+/*    catBar height ≈ 44px  (8px padding × 2 + 28px chip height)                 */
+.progressTrack {
   position: absolute;
-  top: 7px;
-  left: 7px;
-  background: var(--overlay-light);
-  color: var(--text-on-brand);
-  font-family: var(--font-display);
-  font-size: 8.5px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  padding: 3px 6px;
-  border-radius: 4px;
+  top: 44px;
+  left: 14px;
+  right: 14px;
+  height: 2.5px;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 2px;
+  z-index: 5;
+  overflow: hidden;
+}
+.progressFill {
+  height: 100%;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+  will-change: width;
 }
 
-/* Duration badge — top right */
-.durBadge {
+/* ── Source credit pill — frosted glass, sits below progress bar ─────────────── */
+.sourcePill {
   position: absolute;
-  top: 7px;
-  right: 7px;
-  background: var(--overlay-medium);
-  color: var(--text-on-brand);
-  font-family: var(--font-display);
+  top: 57px;           /* 44px catBar + 2.5px bar + 10px gap = 56.5 ≈ 57 */
+  left: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.88);
   font-size: 9px;
   font-weight: 700;
-  padding: 3px 6px;
-  border-radius: 4px;
+  font-family: var(--font-body);
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  z-index: 4;
 }
 
-/* Play button — center */
-.playWrap {
+/* ── Tap flash — brief pause/play icon centred on the card ───────────────────── */
+.flashWrap {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  z-index: 6;
+  animation: flashFade 0.7s ease forwards;
+  pointer-events: none;
+}
+@keyframes flashFade {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  60%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
 }
 
-/* Views — bottom */
-.viewsRow {
+/* ── Bottom overlay ───────────────────────────────────────────────────────────── */
+.overlay {
   position: absolute;
-  bottom: 7px;
+  bottom: 0;
   left: 0;
   right: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  color: rgba(255,255,255,0.85);
-  font-family: var(--font-body);
-  font-size: 10px;
-  font-weight: 500;
+  padding: 0 16px 22px;
+  z-index: 3;
 }
 
-/* Card body */
-.cardBody {
-  padding: 8px 9px 10px;
-}
-
-.cardTitle {
+.title {
+  color: #fff;
   font-family: var(--font-display);
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.35;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.32;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.1px;
+}
+
+.desc {
+  color: rgba(255, 255, 255, 0.68);
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: 10px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin-bottom: 5px;
 }
 
-.cardMeta {
+/* Date + card counter row */
+.metaRow {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 4px;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
-.cardAuthor {
+.date {
+  color: rgba(255, 255, 255, 0.4);
   font-family: var(--font-body);
+  font-size: 10.5px;
+}
+
+.counter {
+  color: rgba(255, 255, 255, 0.38);
+  font-family: var(--font-display);
   font-size: 10px;
   font-weight: 600;
-  color: var(--brand);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-}
-
-.cardTime {
-  font-family: var(--font-body);
-  font-size: 10px;
-  color: var(--text3);
-  flex-shrink: 0;
-}
-
-/* ── Bottom sheet overlay ────────────────────────────────────────────────────── */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--overlay-light);
-  z-index: 100;
-  display: flex;
-  align-items: flex-end;
-}
-
-.sheet {
-  width: 100%;
-  max-height: 88vh;
-  background: var(--card);
-  border-radius: 20px 20px 0 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Sheet hero */
-.sheetHero {
-  position: relative;
-  height: 200px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding-top: 10px;
-}
-
-.sheetPill {
-  width: 36px;
-  height: 4px;
-  background: rgba(255,255,255,0.45);
-  border-radius: 2px;
-  flex-shrink: 0;
-  z-index: 2;
-}
-
-.sheetHeroScrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.45) 100%);
-  pointer-events: none;
-}
-
-.sheetTopRow {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  right: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  z-index: 3;
-}
-
-.sheetCloseBtn {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: none;
-  background: var(--overlay-light);
-  color: var(--text-on-brand);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity var(--duration-fast) var(--ease-out);
-}
-.sheetCloseBtn:active { opacity: 0.7; }
-
-.sheetCatBadge {
-  background: rgba(255,255,255,0.2);
-  color: var(--text-on-brand);
-  font-family: var(--font-display);
-  font-size: 10px;
-  font-weight: 700;
   letter-spacing: 0.5px;
-  text-transform: uppercase;
-  padding: 4px 9px;
-  border-radius: 6px;
-  backdrop-filter: blur(4px);
 }
 
-.sheetDurBadge {
-  margin-left: auto;
-  background: var(--overlay-light);
-  color: var(--text-on-brand);
-  font-family: var(--font-display);
-  font-size: 11px;
+/* Full-width CTA button */
+.readBtn {
+  display: block;
+  width: 100%;
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 11px 18px;
+  font-size: 13px;
   font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 6px;
+  font-family: var(--font-display);
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), var(--shadow-brand);
+  transition: opacity var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
+.readBtn:active {
+  opacity: 0.85;
+  transform: scale(0.98);
 }
 
-.sheetEmoji {
+/* ── Swipe-up hint — first card, before user scrolls ─────────────────────────── */
+.swipeHint {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -58%);
-  font-size: 64px;
-  opacity: 0.45;
-  line-height: 1;
-  user-select: none;
-  z-index: 1;
-}
-
-.sheetPlayRow {
-  position: absolute;
-  bottom: 20px;
+  bottom: 100px;      /* sits above the overlay content */
   left: 50%;
   transform: translateX(-50%);
-  z-index: 3;
-}
-
-.sheetPlayBtn {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.22);
-  border: 2px solid rgba(255,255,255,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform 0.15s;
-}
-.sheetPlayBtn:active { transform: scale(0.93); }
-
-/* Sheet body */
-.sheetBody {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 16px 0;
-  scrollbar-width: none;
-}
-.sheetBody::-webkit-scrollbar { display: none; }
-
-.sheetTitle {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--text);
-  line-height: 1.3;
-  margin-bottom: 12px;
-}
-
-/* Author row */
-.authorRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.authorAvatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.authorInitials {
-  font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--text-on-brand);
-}
-
-.authorName {
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  line-height: 1.2;
-}
-
-.authorTime {
-  font-family: var(--font-body);
-  font-size: 11px;
-  color: var(--text3);
-  margin-top: 2px;
-}
-
-/* Stats row — mirrors QuizzesScreen stat tiles */
-.statsRow {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.statTile {
-  flex: 1;
-  border-radius: 10px;
-  padding: 10px 6px;
+  z-index: 4;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
+  pointer-events: none;
+  animation: hintPulse 1.8s ease-in-out infinite;
 }
-
-.statVal {
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--text);
+.swipeChevrons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: -4px;
+  opacity: 0.75;
 }
-
-.statLbl {
+.swipeChevrons svg:first-child { opacity: 0.45; }
+.swipeLabel {
+  color: rgba(255, 255, 255, 0.55);
   font-family: var(--font-body);
   font-size: 10px;
-  color: var(--text3);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+@keyframes hintPulse {
+  0%, 100% { transform: translateX(-50%) translateY(0);   opacity: 1; }
+  50%       { transform: translateX(-50%) translateY(-6px); opacity: 0.6; }
 }
 
-/* Description */
-.sheetDesc {
-  font-family: var(--font-body);
-  font-size: 13px;
-  color: var(--text2);
-  line-height: 1.6;
-  margin: 0 0 14px;
-}
-
-/* Tags */
-.tagsRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 16px;
-}
-
-.tag {
-  background: var(--brand-light);
-  color: var(--brand);
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
-}
-
-/* Action row */
-.actionRow {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 4px;
-}
-
-.ctaBtn {
-  flex: 1;
-  border: none;
-  border-radius: var(--radius-md);
-  height: 46px;
-  cursor: pointer;
+/* ── Skeleton cards ───────────────────────────────────────────────────────────── */
+.skeleton {
+  height: 100%;
+  scroll-snap-align: start;
+  flex-shrink: 0;
+  background: #111;
   position: relative;
   overflow: hidden;
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity 0.15s;
 }
-.ctaBtn:active { opacity: 0.85; }
-
-.ctaScrim {
+.skeleton::after {
+  content: '';
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.22);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.6s infinite;
+  transform: translateX(-100%);
+}
+@keyframes shimmer {
+  to { transform: translateX(100%); }
 }
 
-.ctaText {
-  position: relative;
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--text-on-brand);
-  letter-spacing: 0.3px;
+/* Skeleton inner shapes mirror the real card layout */
+.skeletonOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+.skeletonBar {
+  margin: 50px 14px 0;
+  height: 2.5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+.skeletonChip {
+  margin: 10px 14px 0;
+  width: 64px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+}
+.skeletonBottom {
+  margin-top: auto;
+  padding: 0 16px 22px;
+}
+.skeletonTitle {
+  height: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.skeletonTitleShort {
+  height: 16px;
+  width: 65%;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+.skeletonDesc {
+  height: 11px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+.skeletonBtn {
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
 }
 
-.shareBtn {
+/* ── Error / empty centering ──────────────────────────────────────────────────── */
+.center {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 0 16px;
-  height: 46px;
-  border-radius: var(--radius-md);
-  border: 1.5px solid var(--border);
-  background: var(--card);
-  color: var(--text2);
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  flex-shrink: 0;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
+  background: var(--bg);
 }
-.shareBtn:active { background: var(--bg); }
 
-.spacer { height: 24px; }
-.sheetSpacer { height: 28px; }
+/* ── Load-more sentinel + spinner ────────────────────────────────────────────── */
+.sentinel {
+  height: 80px;
+  scroll-snap-align: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #000;
+}
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.72s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

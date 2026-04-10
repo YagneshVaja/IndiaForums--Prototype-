@@ -74,7 +74,7 @@ export default function AuthorFollowersScreen({ authorId, authorName }) {
             return (
               <div key={id} className={styles.card}>
                 {avatar
-                  ? <img className={styles.avatar} src={avatar} alt={name} />
+                  ? <img className={styles.avatar} src={avatar} alt={name} loading="lazy" decoding="async" />
                   : <div className={styles.avatarFallback} style={{ background: accentFor(name) }}>
                       {name.charAt(0).toUpperCase()}
                     </div>}

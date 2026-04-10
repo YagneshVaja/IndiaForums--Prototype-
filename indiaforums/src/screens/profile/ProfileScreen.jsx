@@ -54,7 +54,7 @@ export default function ProfileScreen({ userId }) {
       <div className={styles.header}>
         <div className={styles.avatar}>
           {profile.avatar
-            ? <img className={styles.avatarImg} src={profile.avatar} alt={profile.displayName || profile.userName} />
+            ? <img className={styles.avatarImg} src={profile.avatar} alt={profile.displayName || profile.userName} decoding="async" />
             : <span className={styles.avatarLetter}>{(profile.displayName || profile.userName || 'U')[0].toUpperCase()}</span>
           }
         </div>
@@ -407,7 +407,7 @@ function BadgesTab({ userId, isSelf }) {
       {data.map((badge, i) => (
         <div key={badge.id || badge.badgeId || i} className={styles.badgeCard}>
           {badge.icon
-            ? <img className={styles.badgeIcon} src={badge.icon} alt={badge.name} />
+            ? <img className={styles.badgeIcon} src={badge.icon} alt={badge.name} loading="lazy" decoding="async" />
             : <div className={styles.badgePlaceholder}>★</div>
           }
           <div className={styles.badgeName}>{badge.name || badge.title}</div>

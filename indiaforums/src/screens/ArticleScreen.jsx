@@ -172,7 +172,7 @@ export default function ArticleScreen({ article, onArticlePress, onTagPress }) {
   const topCat       = useMemo(() => getTopCat(enriched), [enriched]);
   const jsonEntities = enriched.jsonEntities || [];
   const entities     = useMemo(() => CATEGORY_ENTITIES[topCat] || CATEGORY_ENTITIES.MOVIES, [topCat]);
-  const crumbs       = ['Home', ...(enriched.cat || '').split('·').map(s => s.trim()).filter(Boolean)];
+  const crumbs       = useMemo(() => ['Home', ...(enriched.cat || '').split('·').map(s => s.trim()).filter(Boolean)], [enriched.cat]);
 
   // Scroll to top when article changes
   useMemo(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [enriched.id]);
@@ -186,7 +186,7 @@ export default function ArticleScreen({ article, onArticlePress, onTagPress }) {
         {/* Hero */}
         <div className={styles.hero} style={{ background: enriched.bg }}>
           {enriched.thumbnail ? (
-            <img src={enriched.thumbnail} alt="" className={styles.heroImg} />
+            <img src={enriched.thumbnail} alt="" className={styles.heroImg} decoding="async" />
           ) : (
             <span className={styles.heroEmoji}>{enriched.emoji}</span>
           )}

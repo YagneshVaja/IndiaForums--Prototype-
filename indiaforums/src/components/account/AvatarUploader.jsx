@@ -97,7 +97,7 @@ export default function AvatarUploader({
 
       <div className={`${styles.previewWrap} ${isBanner ? styles.banner : styles.avatar}`}>
         {preview ? (
-          <img src={preview} alt={fieldLabel} className={styles.previewImg} />
+          <img src={preview} alt={fieldLabel} className={styles.previewImg} decoding="async" />
         ) : (
           <div className={styles.placeholder}>
             {isBanner ? 'No banner uploaded' : 'No photo'}

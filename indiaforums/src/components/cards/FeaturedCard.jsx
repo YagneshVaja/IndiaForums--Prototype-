@@ -1,10 +1,11 @@
+import { memo } from 'react';
 import styles from './FeaturedCard.module.css';
 
-export default function FeaturedCard({ tag, tagColor, title, source, time, emoji, bg, thumbnail, onClick }) {
+function FeaturedCard({ tag, tagColor, title, source, time, emoji, bg, thumbnail, onClick }) {
   return (
     <div className={styles.card} onClick={onClick} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && onClick?.()}>
       {thumbnail ? (
-        <img src={thumbnail} alt="" className={styles.thumb} loading="lazy" />
+        <img src={thumbnail} alt="" className={styles.thumb} loading="lazy" decoding="async" />
       ) : (
         <div className={styles.bg} style={{ background: bg }}>{emoji}</div>
       )}
@@ -21,3 +22,5 @@ export default function FeaturedCard({ tag, tagColor, title, source, time, emoji
     </div>
   );
 }
+
+export default memo(FeaturedCard);

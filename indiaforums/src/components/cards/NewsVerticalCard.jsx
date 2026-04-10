@@ -1,11 +1,12 @@
+import { memo } from 'react';
 import styles from './NewsVerticalCard.module.css';
 
-export default function NewsVerticalCard({ cat, tag, breaking, title, time, bg, emoji, thumbnail, source, readTime, onClick }) {
+function NewsVerticalCard({ cat, tag, breaking, title, time, bg, emoji, thumbnail, source, readTime, onClick }) {
   return (
     <div className={styles.card} onClick={onClick} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && onClick?.()}>
       <div className={styles.img} style={{ background: bg }}>
         {thumbnail ? (
-          <img src={thumbnail} alt="" className={styles.thumbImg} loading="lazy" />
+          <img src={thumbnail} alt="" className={styles.thumbImg} loading="lazy" decoding="async" />
         ) : (
           emoji
         )}
@@ -32,3 +33,5 @@ export default function NewsVerticalCard({ cat, tag, breaking, title, time, bg, 
     </div>
   );
 }
+
+export default memo(NewsVerticalCard);

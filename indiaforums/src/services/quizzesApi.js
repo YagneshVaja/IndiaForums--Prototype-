@@ -19,7 +19,7 @@ const BASE = '/quizzes';
  * Assumed response: { quizzes: Quiz[] } or { data: { quizzes: Quiz[] }, pagination: {...} }
  */
 export function getQuizzes({ page = 1, pageSize = 20 } = {}) {
-  return api.get(BASE, { params: { page, pageSize } });
+  return api.get(BASE, { params: { pageNumber: page, pageSize } });
 }
 
 /**

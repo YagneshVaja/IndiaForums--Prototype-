@@ -8,6 +8,9 @@ const TABS = [
   { id: 'fans',      label: 'Fans' },
 ];
 
+// Compiled once at module load — reset lastIndex before each use
+const IMG_REGEX = /<img[^>]*src="([^"]+)"[^>]*alt="([^"]*)"[^>]*>/gi;
+
 // ── Image lightbox overlay ──────────────────────────────────────────────────
 function ImageLightbox({ images, startIndex, onClose }) {
   const [index, setIndex] = useState(startIndex);
@@ -41,7 +44,7 @@ function ImageLightbox({ images, startIndex, onClose }) {
         )}
 
         {/* Image */}
-        <img className={styles.lightboxImg} src={img.src} alt={img.alt} />
+        <img className={styles.lightboxImg} src={img.src} alt={img.alt} decoding="async" />
 
         {/* Caption */}
         {img.alt && <div className={styles.lightboxCaption}>{img.alt}</div>}
@@ -139,9 +142,9 @@ function parseBioHtml(html) {
   // Extract images from a chunk of HTML
   function extractImages(chunk) {
     const imgs = [];
-    const imgRegex = /<img[^>]*src="([^"]+)"[^>]*alt="([^"]*)"[^>]*>/gi;
+    IMG_REGEX.lastIndex = 0;
     let im;
-    while ((im = imgRegex.exec(chunk)) !== null) {
+    while ((im = IMG_REGEX.exec(chunk)) !== null) {
       if (!im[1].includes('icons.svg') && !im[1].includes('sign')) {
         imgs.push({ src: im[1], alt: im[2] || '' });
       }
@@ -554,7 +557,7 @@ export default function CelebrityDetailScreen({ celebrity }) {
       {/* Hero */}
       <div className={styles.hero}>
         {celebrity.thumbnail && (
-          <img className={styles.heroImg} src={celebrity.thumbnail} alt={celebrity.name} />
+          <img className={styles.heroImg} src={celebrity.thumbnail} alt={celebrity.name} decoding="async" />
         )}
         <div className={styles.heroScrim} />
 

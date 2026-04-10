@@ -159,6 +159,13 @@ export function extractApiError(err, fallback = 'Something went wrong. Please tr
   }
   const d = err?.response?.data;
   if (typeof d === 'string') return d;
+  // ASP.NET Core ValidationProblemDetails puts per-field errors in d.errors:
+  // { "Message": ["must be ≥ 10 chars"], "ForumId": ["must be > 0"] }
+  // Flatten them into a readable string instead of swallowing them.
+  if (d?.errors && typeof d.errors === 'object') {
+    const msgs = Object.values(d.errors).flat().filter(Boolean);
+    if (msgs.length) return msgs.join(' ');
+  }
   return d?.message || d?.detail || d?.title || d?.error || fallback;
 }
 

@@ -1,6 +1,9 @@
 import { useQuizPlayers } from '../../hooks/useQuizzes';
 import styles from './QuizzesScreen.module.css';
 
+// Confirmed API fields: totalScore, totalRank, realName, userName, privacy
+// privacy === 1 → display as "Anonymous"
+
 const MEDAL = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
 export default function QuizLeaderboard({ quizId, totalQuestions }) {
@@ -33,16 +36,19 @@ export default function QuizLeaderboard({ quizId, totalQuestions }) {
     );
   }
 
+  // Sort by rank ascending (API may not guarantee order)
+  const sorted = [...players].sort((a, b) => a.rank - b.rank);
+
   return (
     <div className={styles.sheetSection}>
       <div className={styles.sheetSectionRow}>
         <span className={styles.sheetSectionLabel}>Top Players</span>
-        <span className={styles.sheetStatLbl}>{players.length} players</span>
+        <span className={styles.sheetStatLbl}>{players.length} {players.length === 1 ? 'player' : 'players'}</span>
       </div>
-      {players.map((entry, i) => (
+      {sorted.map((entry) => (
         <div key={entry.id} className={styles.leaderRow}>
           <span className={styles.leaderRank}>
-            {i < 3 ? MEDAL[i + 1] : `#${i + 1}`}
+            {MEDAL[entry.rank] || `#${entry.rank}`}
           </span>
           <div className={styles.leaderAvatar} style={{ background: entry.avatarBg }}>
             <span className={styles.leaderInitials}>{entry.initials}</span>
@@ -50,10 +56,9 @@ export default function QuizLeaderboard({ quizId, totalQuestions }) {
           <div className={styles.leaderInfo}>
             <div className={styles.leaderName}>{entry.name}</div>
             <div className={styles.leaderScore}>
-              {entry.score}{totalQuestions ? `/${totalQuestions}` : ''} correct
+              Score: {entry.score}{totalQuestions ? ` / ${totalQuestions}` : ''}
             </div>
           </div>
-          {entry.time ? <span className={styles.leaderTime}>{entry.time}</span> : null}
         </div>
       ))}
     </div>

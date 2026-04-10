@@ -39,12 +39,13 @@ export default function ForumThreadView({
   }, [activeFlairId, flairs]);
 
   return (
-    <div className={`${styles.screen} ${styles.slideIn}`} ref={scrollRef}>
+    <div className={`${styles.shell} ${styles.slideIn}`}>
+    <div className={styles.screen} ref={scrollRef}>
 
       {/* Forum banner */}
       {detail.bannerUrl && (
         <div className={styles.forumBanner}>
-          <img src={detail.bannerUrl} alt="" className={styles.forumBannerImg} />
+          <img src={detail.bannerUrl} alt="" className={styles.forumBannerImg} decoding="async" />
         </div>
       )}
 
@@ -52,7 +53,7 @@ export default function ForumThreadView({
       <div className={styles.forumIdentity}>
         <div className={styles.forumIdentityAvatar} style={{ background: detail.bg }}>
           {detail.thumbnailUrl
-            ? <img src={detail.thumbnailUrl} alt="" className={styles.forumAvatarImg} />
+            ? <img src={detail.thumbnailUrl} alt="" className={styles.forumAvatarImg} decoding="async" />
             : detail.emoji
           }
         </div>
@@ -206,7 +207,7 @@ export default function ForumThreadView({
                 pinned={t.pinned}
                 tags={t.tags}
                 topicImage={t.topicImage}
-                delay={i * 0.04}
+                delay={Math.min(i * 0.04, 0.28)}
               />
             </div>
           ))}
@@ -230,6 +231,8 @@ export default function ForumThreadView({
       )}
 
       <div className={styles.spacer}/>
+
+    </div>
 
       {composerOpen && (
         <NewTopicComposer

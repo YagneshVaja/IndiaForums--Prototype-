@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import styles from './TopicCard.module.css';
 
 function formatNum(n) {
@@ -6,7 +7,7 @@ function formatNum(n) {
   return String(n);
 }
 
-export default function TopicCard({ forumName, forumBg, forumEmoji, title, poster, ago, likes, views, comments, preview, lastBy, lastTime, delay = 0 }) {
+function TopicCard({ forumName, forumBg, forumEmoji, title, poster, ago, likes, views, comments, preview, lastBy, lastTime, delay = 0 }) {
   return (
     <div className={styles.card} style={{ animationDelay: `${delay}s` }}>
 
@@ -77,3 +78,5 @@ export default function TopicCard({ forumName, forumBg, forumEmoji, title, poste
     </div>
   );
 }
+
+export default memo(TopicCard);

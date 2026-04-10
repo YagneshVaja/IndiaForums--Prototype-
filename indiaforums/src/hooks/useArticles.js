@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchArticles } from '../services/api';
 
 export default function useArticles() {
@@ -7,8 +7,12 @@ export default function useArticles() {
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState(null);
   const [page, setPage]               = useState(1);
+  const inFlightPage = useRef(null);
 
   const load = useCallback(async (pageNum) => {
+    // Guard: skip if this exact page is already being fetched
+    if (inFlightPage.current === pageNum) return;
+    inFlightPage.current = pageNum;
     setLoading(true);
     setError(null);
     try {
@@ -19,6 +23,7 @@ export default function useArticles() {
       setError(err.message || 'Failed to load articles');
     } finally {
       setLoading(false);
+      inFlightPage.current = null;
     }
   }, []);
 
