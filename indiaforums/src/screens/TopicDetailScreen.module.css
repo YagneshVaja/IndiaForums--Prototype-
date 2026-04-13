@@ -546,6 +546,41 @@
   flex-wrap: wrap;
 }
 
+/* Member meta — post count shown next to rank */
+.postMemberMeta {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+/* Visit Profile link-button */
+.visitProfileBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--brand);
+  background: var(--brand-light);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+  line-height: 1;
+}
+.visitProfileBtn:hover {
+  background: var(--brand);
+  color: var(--text-on-brand);
+}
+.visitProfileBtn svg {
+  flex-shrink: 0;
+}
+
 /* Rank badge — clearly a role, not just metadata */
 .rankBadge {
   display: inline-flex;
