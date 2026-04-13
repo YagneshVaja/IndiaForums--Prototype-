@@ -1,18 +1,121 @@
-/* ─────────────────────────────────────────────────────────────────────────────
-   ChapterReaderScreen — focused long-form reader
-   ───────────────────────────────────────────────────────────────────────────── */
+# Chapter Reader UI Overhaul Implementation Plan
 
-.screen {
-  flex: 1;
-  overflow-y: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-  display: flex;
-  flex-direction: column;
-  background: var(--card);
-}
-.screen::-webkit-scrollbar { display: none; }
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Goal:** Full top-to-bottom redesign of `ChapterReaderScreen` for an immersive, polished fanfiction reading experience.
+
+**Architecture:** All changes are confined to `ChapterReaderScreen.jsx` and `ChapterReaderScreen.module.css`. The JSX gains a scroll-progress state, reading-time computation, a redesigned header with progress bar, a dramatic chapter hero block, richer prose body styles, a larger reactions strip, and a branded footer. No new components or files are created.
+
+**Tech Stack:** React 19, CSS Modules, design tokens from `src/styles/tokens.css`
+
+---
+
+### Task 1: Add scroll-progress state and reading-time helper
+
+**Files:**
+- Modify: `indiaforums/src/screens/fanfiction/ChapterReaderScreen.jsx`
+
+- [ ] **Step 1: Add `scrollProgress` state and scroll listener**
+
+In `ChapterReaderScreen.jsx`, add a second `useState` and a second `useEffect` right after the existing ones (after line 84):
+
+```jsx
+const [scrollProgress, setScrollProgress] = useState(0);
+
+useEffect(() => {
+  const el = document.getElementById('chapter-scroll');
+  if (!el) return;
+  const onScroll = () => {
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    const max = scrollHeight - clientHeight;
+    setScrollProgress(max > 0 ? Math.round((scrollTop / max) * 100) : 0);
+  };
+  el.addEventListener('scroll', onScroll, { passive: true });
+  return () => el.removeEventListener('scroll', onScroll);
+}, [chapterId]);
+```
+
+- [ ] **Step 2: Add `readingTime` to the `view` memo**
+
+Inside the `useMemo` that builds `view` (currently lines 86-110), add one field at the end before the closing `}`:
+
+```js
+readingTime: (() => {
+  const text = (chapter.filteredChapterContent || chapter.chapterContent || '').replace(/<[^>]+>/g, ' ');
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const mins = Math.max(1, Math.round(words / 200));
+  return `${mins} min read`;
+})(),
+```
+
+- [ ] **Step 3: Verify dev server compiles cleanly**
+
+Run: `npm run dev` in `indiaforums/`
+Expected: no compile errors, HMR hot reloads
+
+---
+
+### Task 2: Redesign the sticky header
+
+**Files:**
+- Modify: `indiaforums/src/screens/fanfiction/ChapterReaderScreen.jsx`
+- Modify: `indiaforums/src/screens/fanfiction/ChapterReaderScreen.module.css`
+
+- [ ] **Step 1: Replace the header JSX**
+
+Replace the entire `{/* ── Reader header ─── */}` block (lines 121–157) with:
+
+```jsx
+{/* ── Reader header ─────────────────────────────────────────────────── */}
+<div className={styles.readerHeader}>
+  <div className={styles.headerTop}>
+    <div className={styles.readerCrumb}>
+      {view.storyThumb && (
+        <img
+          src={view.storyThumb}
+          alt=""
+          className={styles.crumbThumb}
+          loading="lazy"
+        />
+      )}
+      <div className={styles.crumbText}>
+        {view.number != null && (
+          <span className={styles.crumbChapter}>Chapter {view.number}</span>
+        )}
+        {view.authorId && (
+          <span className={styles.crumbAuthor}>by User #{view.authorId}</span>
+        )}
+      </div>
+    </div>
+
+    {/* Font size toggle */}
+    <div className={styles.fontToggle} role="group" aria-label="Reading size">
+      {FONT_SIZES.map((f, i) => (
+        <button
+          key={f.id}
+          className={`${styles.fontBtn} ${i === fontIdx ? styles.fontBtnActive : ''}`}
+          onClick={() => setFontIdx(i)}
+          style={{ fontSize: 10 + i * 2 }}
+          aria-label={`Font size ${f.id}`}
+        >
+          A
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {/* Reading progress bar */}
+  <div className={styles.progressTrack}>
+    <div className={styles.progressFill} style={{ width: `${scrollProgress}%` }} />
+  </div>
+</div>
+```
+
+- [ ] **Step 2: Replace header CSS**
+
+In `ChapterReaderScreen.module.css`, replace everything from `.readerHeader` through `.crumbDot { color: var(--text3); }` (lines 16–55) with:
+
+```css
 /* ── Reader header — sticky breadcrumb + font controls + progress ──── */
 .readerHeader {
   position: sticky;
@@ -111,7 +214,64 @@
   transition: width 0.1s linear;
   border-radius: 0 2px 2px 0;
 }
+```
 
+- [ ] **Step 3: Verify hot reload — header looks cleaner with stacked crumb text and progress bar**
+
+---
+
+### Task 3: Redesign the chapter hero / title block
+
+**Files:**
+- Modify: `indiaforums/src/screens/fanfiction/ChapterReaderScreen.jsx`
+- Modify: `indiaforums/src/screens/fanfiction/ChapterReaderScreen.module.css`
+
+- [ ] **Step 1: Replace the title block JSX**
+
+Replace the entire `{/* ── Title + meta ── */}` block (lines 159–188) with:
+
+```jsx
+{/* ── Chapter hero ────────────────────────────────────────────────────── */}
+<div className={styles.chapterHero}>
+  {view.number != null && (
+    <div className={styles.chapterNumLabel}>Chapter {view.number}</div>
+  )}
+  <h1 className={styles.chapterTitle}>{view.title}</h1>
+
+  <div className={styles.heroMeta}>
+    {view.authorId && (
+      <div className={styles.authorPill}>
+        <div className={styles.authorAvatar}>U</div>
+        <span>User #{view.authorId}</span>
+      </div>
+    )}
+    {view.readingTime && (
+      <span className={styles.readingTime}>{view.readingTime}</span>
+    )}
+  </div>
+
+  {(view.membersOnly || view.mature || view.status) && (
+    <div className={styles.flagRow}>
+      {view.status      && <span className={styles.flagStatus}>{view.status}</span>}
+      {view.membersOnly && <span className={styles.flagMembers}>🔒 Members only</span>}
+      {view.mature      && <span className={styles.flagMature}>18+ Mature</span>}
+    </div>
+  )}
+
+  <div className={styles.heroStats}>
+    {view.published && <span className={styles.heroStat}>{formatDate(view.published)}</span>}
+    <span className={styles.heroStat}>👁 {formatCount(view.views)}</span>
+    <span className={styles.heroStat}>♥ {formatCount(view.likes)}</span>
+    <span className={styles.heroStat}>💬 {formatCount(view.comments)}</span>
+  </div>
+</div>
+```
+
+- [ ] **Step 2: Replace title block CSS**
+
+Replace the entire `/* ── Title block ── */` section (lines 90–127 in the current CSS) with:
+
+```css
 /* ── Chapter hero ──────────────────────────────────────────────────── */
 .chapterHero {
   padding: var(--sp-6) var(--content-px) var(--sp-5);
@@ -210,7 +370,24 @@
   font-size: 11px;
   color: var(--text3);
 }
+```
 
+- [ ] **Step 3: Remove the old title-block CSS rules** — in `ChapterReaderScreen.module.css`, delete the blocks for `.title`, `.meta`, `.meta strong`, `.metaDot`, and `.metaStats`. These are replaced by the new classes added in Step 2 of this task. They appear in the current file around lines 96–127.
+
+- [ ] **Step 4: Verify hero block renders correctly with chapter number label, large title, author pill, reading time, and stats row**
+
+---
+
+### Task 4: Redesign the body — prose typography and rich HTML content styles
+
+**Files:**
+- Modify: `indiaforums/src/screens/fanfiction/ChapterReaderScreen.module.css`
+
+- [ ] **Step 1: Replace body CSS**
+
+Replace the existing `/* ── Body ── */` section (lines 149–163 in current CSS) with:
+
+```css
 /* ── Body — prose reading area ──────────────────────────────────────── */
 .body {
   padding: var(--sp-6) var(--content-px) var(--sp-8);
@@ -284,7 +461,22 @@
   font-style: italic;
   padding: var(--sp-8) 0;
 }
+```
 
+- [ ] **Step 2: Verify body renders with correct line-height, blockquotes styled blue, HR shows decorative ✦ ✦ ✦**
+
+---
+
+### Task 5: Redesign the reactions strip
+
+**Files:**
+- Modify: `indiaforums/src/screens/fanfiction/ChapterReaderScreen.module.css`
+
+- [ ] **Step 1: Replace reactions CSS**
+
+Replace the entire `/* ── Reactions strip ── */` section with:
+
+```css
 /* ── Reactions strip ────────────────────────────────────────────────── */
 .reactionsBlock {
   padding: var(--sp-5) var(--content-px);
@@ -332,7 +524,22 @@
   font-size: 12px;
   font-weight: 800;
 }
+```
 
+- [ ] **Step 2: Verify reactions render as taller vertical pills with larger emoji icons**
+
+---
+
+### Task 6: Redesign the footer nav
+
+**Files:**
+- Modify: `indiaforums/src/screens/fanfiction/ChapterReaderScreen.module.css`
+
+- [ ] **Step 1: Replace nav row and back-button CSS**
+
+Replace the entire `/* ── Nav row ── */` section (from `.navRow` through `.spacer`) with:
+
+```css
 /* ── Footer nav ─────────────────────────────────────────────────────── */
 .navRow {
   display: flex;
@@ -387,3 +594,19 @@
 }
 
 .spacer { height: var(--sp-6); flex-shrink: 0; }
+```
+
+- [ ] **Step 2: Update back button text in JSX**
+
+In `ChapterReaderScreen.jsx`, change the navRow JSX (currently just a back button) to:
+
+```jsx
+<div className={styles.navRow}>
+  <button className={styles.backBtn} onClick={onBack}>← Back to Story</button>
+</div>
+```
+
+- [ ] **Step 3: Final check — scroll through the full reader screen, verify all sections look polished**
+
+Run: `npm run lint` in `indiaforums/`
+Expected: no lint errors

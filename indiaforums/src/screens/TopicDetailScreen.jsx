@@ -11,6 +11,7 @@ import {
   trashPost,
   THREAD_REACTION_TYPES,
 } from '../services/forumsApi';
+import { getProfile } from '../services/userProfileApi';
 import { useAuth } from '../contexts/AuthContext';
 import SocialEmbed, { detectPlatform } from '../components/ui/SocialEmbed';
 import AdminPanel from '../components/forum/AdminPanel';
@@ -187,7 +188,228 @@ function PostBodyWithEmbeds({ html }) {
   );
 }
 
-export default function TopicDetailScreen({ topic, onVisitProfile }) {
+// ── User mini-card (bottom sheet popup on avatar tap) ──────────────────────
+function UserMiniCard({ post, onVisitProfile, onMessageUser, onClose }) {
+  const [profile, setProfile] = useState(null);
+  const [fetching, setFetching] = useState(!!post.authorId);
+
+  useEffect(() => {
+    if (!post.authorId) return;
+    let cancelled = false;
+    setFetching(true);
+    getProfile(post.authorId)
+      .then(res => {
+        if (cancelled) return;
+        const d = res.data;
+        setProfile(d?.user || d || null);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setFetching(false); });
+    return () => { cancelled = true; };
+  }, [post.authorId]);
+
+  // ── Data extraction ────────────────────────────────────────────────────────
+  // Confirmed profile endpoint fields: displayName, userName, avatarAccent,
+  // avatarType, updateChecksum, userId, lastVisitedDate, badgeJson,
+  // groupId, statusCode, privacy, showFeeds, showScrapbook, showSlambook, showTestimonial, email
+
+  const displayName = profile?.displayName || post.realName || post.author;
+  const username    = profile?.userName    || post.author;
+  const rank        = post.rank || '';
+  const flag        = countryFlag(post.countryCode);
+  const avatarBg    = profile?.avatarAccent || post.avatarAccent;
+
+  // Avatar: profile API returns thumbnailUrl directly
+  const avatarUrl = profile?.thumbnailUrl || post.avatarUrl;
+
+  // Banner: profile API returns bannerUrl directly (1200×400 cover photo)
+  const bannerUrl = profile?.bannerUrl || null;
+
+  // Badges: profile.badgeJson is the full set; post.badges is capped at 3
+  const badges = useMemo(() => {
+    if (profile?.badgeJson) {
+      try {
+        const parsed = JSON.parse(profile.badgeJson);
+        const list = parsed?.json || [];
+        return list.map(b => ({
+          id: b.id,
+          name: b.nm,
+          imageUrl: `https://img.indiaforums.com/badge/200x200/0/${b.lid}.webp${b.uc ? '?uc=' + b.uc : ''}`,
+        }));
+      } catch (_) { /* fall through */ }
+    }
+    return post.badges || [];
+  }, [profile?.badgeJson, post.badges]);
+
+  // Last visited — human-friendly: "13 Apr 2026"
+  const lastSeen = useMemo(() => {
+    const raw = profile?.lastVisitedDate;
+    if (!raw) return null;
+    const d = new Date(raw);
+    if (isNaN(d)) return null;
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  }, [profile?.lastVisitedDate]);
+
+  // Online: active within the last 24 hours
+  const isOnline = useMemo(() => {
+    const raw = profile?.lastVisitedDate;
+    if (!raw) return false;
+    const d = new Date(raw);
+    if (isNaN(d)) return false;
+    return (Date.now() - d.getTime()) < 24 * 60 * 60 * 1000;
+  }, [profile?.lastVisitedDate]);
+
+  // Post count from post data (API may include it)
+  const postCount = post.postCount ?? null;
+
+  return (
+    <>
+      <div className={styles.miniCardBackdrop} onClick={onClose} />
+      <div className={styles.miniCard} role="dialog" aria-modal="true">
+        <button type="button" className={styles.miniCardClose} onClick={onClose} aria-label="Close">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+
+        {/* ── Banner: real cover photo or blurred avatar fallback ── */}
+        <div className={styles.miniCardBanner}>
+          <div className={styles.miniCardHandle} />
+          {bannerUrl ? (
+            <img
+              src={bannerUrl}
+              alt=""
+              className={styles.miniCardBannerImg}
+              decoding="async"
+              aria-hidden="true"
+            />
+          ) : avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt=""
+              className={styles.miniCardBannerBg}
+              decoding="async"
+              aria-hidden="true"
+            />
+          ) : null}
+          {/* Soft white fade at the bottom so the avatar ring pops cleanly */}
+          <div className={styles.miniCardBannerFade} />
+        </div>
+
+        {/* ── Horizontal row: avatar LEFT + identity RIGHT ── */}
+        <div className={styles.miniCardProfileRow}>
+
+          {/* Avatar — lifts up into the banner */}
+          <div className={styles.miniCardAvatar} style={avatarBg ? { background: avatarBg } : undefined}>
+            {avatarUrl ? (
+              <>
+                <img src={avatarUrl} alt="" className={styles.miniCardAvatarImg}
+                  onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling.style.display = 'flex'; }}
+                />
+                <span className={styles.miniCardAvatarLetter} style={{ display: 'none' }}>
+                  {(displayName || 'A').charAt(0).toUpperCase()}
+                </span>
+              </>
+            ) : (
+              <span className={styles.miniCardAvatarLetter}>{(displayName || 'A').charAt(0).toUpperCase()}</span>
+            )}
+            {isOnline && <span className={styles.miniCardOnlineDot} aria-label="Online now" />}
+          </div>
+
+          {/* Identity — stacked on the right */}
+          <div className={styles.miniCardIdentity}>
+            <div className={styles.miniCardRealName}>{displayName}</div>
+            <div className={styles.miniCardUsernameRow}>
+              <span className={styles.miniCardUsername}>@{username}</span>
+              {post.countryCode && post.countryCode.length === 2 && (
+                <span className={styles.miniCardCountryCode}>{post.countryCode.toUpperCase()}</span>
+              )}
+            </div>
+            {(rank || postCount != null) && (
+              <div className={styles.miniCardRankRow}>
+                {rank && (
+                  <div className={styles.miniCardRankPill}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    {rank}
+                  </div>
+                )}
+                {postCount != null && (
+                  <span className={styles.miniCardPostCount}>{formatNum(postCount)} posts</span>
+                )}
+              </div>
+            )}
+            {!fetching && lastSeen && (
+              <div className={styles.miniCardLastSeenInline}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                {lastSeen}
+              </div>
+            )}
+          </div>
+        </div>{/* /miniCardProfileRow */}
+
+        {/* ── Badges ── */}
+        {fetching && badges.length === 0 ? (
+          <div className={styles.miniCardBadgesSkeleton}>
+            {[0,1,2].map(i => <div key={i} className={styles.miniCardBadgeSkeletonItem} />)}
+          </div>
+        ) : badges.length > 0 ? (
+          <div className={styles.miniCardBadges}>
+            {badges.slice(0, 6).map(b => (
+              <img
+                key={b.id}
+                src={b.imageUrl}
+                alt={b.name}
+                title={b.name}
+                className={styles.miniCardBadgeImg}
+                loading="lazy"
+                decoding="async"
+                onError={e => { e.currentTarget.style.display = 'none'; }}
+              />
+            ))}
+            {badges.length > 6 && (
+              <span className={styles.miniCardBadgeMore}>+{badges.length - 6}</span>
+            )}
+          </div>
+        ) : null}
+
+        {/* Action buttons */}
+        <div className={styles.miniCardActions}>
+          {post.authorId && onVisitProfile && (
+            <button
+              type="button"
+              className={styles.miniCardVisitBtn}
+              onClick={() => { onClose(); onVisitProfile({ userId: post.authorId, username: post.author }); }}
+            >
+              Visit Profile
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <path d="M2 8L8 2M8 2H4M8 2v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+          {post.authorId && onMessageUser && (
+            <button
+              type="button"
+              className={styles.miniCardMsgBtn}
+              onClick={() => { onClose(); onMessageUser({ userId: post.authorId, username: post.author }); }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <polyline points="22,6 12,13 2,6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Message
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser }) {
   const { posts, topicDetail, loading, loadingMore, error, hasMore, loadMore, refresh } = useTopicPosts(topic?.id);
   const { user, isAuthenticated, isModerator } = useAuth();
 
@@ -195,6 +417,9 @@ export default function TopicDetailScreen({ topic, onVisitProfile }) {
   const [sending, setSending]     = useState(false);
   const [replyError, setReplyError] = useState(null);
   const [sortBy, setSortBy] = useState('date');
+
+  // Mini user card (avatar tap)
+  const [activeUserCard, setActiveUserCard] = useState(null);
 
   // Per-post UI state for edit + reactions
   const [editingId, setEditingId]   = useState(null);
@@ -483,7 +708,15 @@ export default function TopicDetailScreen({ topic, onVisitProfile }) {
               <div className={`${styles.postCard} ${post.isOp ? styles.postCardOp : ''}`} style={{ animationDelay: `${Math.min(i * 0.04, 0.3)}s` }}>
                 {/* Post header */}
                 <div className={styles.postHeader}>
-                  <div className={`${styles.postAvatar} ${post.isOp ? styles.postAvatarOp : ''}`} style={post.avatarAccent ? { background: post.avatarAccent } : undefined}>
+                  <div
+                    className={`${styles.postAvatar} ${post.isOp ? styles.postAvatarOp : ''} ${styles.postAvatarTappable}`}
+                    style={post.avatarAccent ? { background: post.avatarAccent } : undefined}
+                    role="button"
+                    tabIndex={0}
+                    title={`View ${post.author}'s profile`}
+                    onClick={() => setActiveUserCard(post)}
+                    onKeyDown={e => e.key === 'Enter' && setActiveUserCard(post)}
+                  >
                     {post.avatarUrl ? (
                       <>
                         <img
@@ -782,6 +1015,16 @@ export default function TopicDetailScreen({ topic, onVisitProfile }) {
         <PostEditHistoryModal
           postId={historyForPostId}
           onClose={() => setHistoryForPostId(null)}
+        />
+      )}
+
+      {/* ── User mini-card popup (avatar tap) ── */}
+      {activeUserCard && (
+        <UserMiniCard
+          post={activeUserCard}
+          onVisitProfile={onVisitProfile}
+          onMessageUser={onMessageUser}
+          onClose={() => setActiveUserCard(null)}
         />
       )}
     </div>

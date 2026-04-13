@@ -1375,3 +1375,419 @@
   white-space: pre-wrap;
   word-wrap: break-word;
 }
+
+/* ── Tappable post avatar ─────────────────────────────────────────────────── */
+.postAvatarTappable {
+  cursor: pointer;
+  transition: transform 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+}
+.postAvatarTappable:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 0 3px var(--brand-border), 0 2px 10px rgba(53,88,240,.22);
+}
+.postAvatarTappable:active {
+  transform: scale(0.96);
+}
+
+/* ── User mini-card (bottom sheet popup) ─────────────────────────────────── */
+@keyframes miniCardFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes miniCardSlideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.miniCardBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 200;
+  animation: miniCardFadeIn 0.18s ease;
+}
+
+.miniCard {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 201;
+  background: var(--card);
+  border-radius: 20px 20px 0 0;
+  padding: 0 20px 28px;   /* no top padding — banner fills the top */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  overflow: hidden;        /* clips banner to rounded corners */
+  animation: miniCardSlideUp 0.26s var(--ease-out);
+  box-shadow: 0 -4px 32px rgba(0,0,0,.18);
+}
+
+/* ── Banner at the top of the card ── */
+.miniCardBanner {
+  align-self: stretch;          /* full width despite parent's padding */
+  margin: 0 -20px;              /* cancel parent horizontal padding */
+  height: 104px;
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;             /* clips the blur's scaled edges */
+  /* gradient fallback when no image */
+  background:
+    radial-gradient(ellipse at 20% 60%, rgba(255,255,255,0.12) 0%, transparent 55%),
+    linear-gradient(140deg, var(--brand-hover) 0%, var(--brand) 100%);
+}
+
+/* Real cover photo — shown when bannerUrl is available */
+.miniCardBannerImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Blurred avatar fallback — shown when no bannerUrl exists */
+.miniCardBannerBg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(22px) brightness(0.48) saturate(1.4);
+  transform: scale(1.2);    /* hide soft blur edges */
+}
+
+/* White fade at the bottom of the banner so the avatar ring pops cleanly.
+   Fades toward var(--card) = white, matching the card body below. */
+.miniCardBannerFade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.82) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Close (×) button — top-right corner, floats above banner */
+.miniCardClose {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 202;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.30);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.90);
+  transition: background 0.15s, transform 0.12s;
+  flex-shrink: 0;
+}
+.miniCardClose:hover  { background: rgba(0, 0, 0, 0.50); }
+.miniCardClose:active { transform: scale(0.90); }
+
+/* Handle bar — white/frosted on dark banner background */
+.miniCardHandle {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 4px;
+  background: rgba(255,255,255,0.55);
+  border-radius: 2px;
+  z-index: 2;
+}
+
+/* Horizontal profile row: avatar LEFT, identity RIGHT */
+.miniCardProfileRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding-top: 8px;
+  padding-bottom: 6px;
+}
+
+/* Identity column on the right side of the avatar */
+.miniCardIdentity {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding-top: 6px;   /* offset so text sits at the card boundary, not the banner top */
+}
+
+/* Avatar overlaps the banner-to-content boundary.
+   Only a clean white ring — no colored outer ring that clashes with banner photos. */
+.miniCardAvatar {
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand), #6B7FFF);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* no overflow:hidden — online dot needs to poke outside; img has its own border-radius */
+  box-shadow: 0 0 0 3px #fff, 0 2px 18px rgba(0,0,0,0.22);
+  margin-top: -41px;   /* pull avatar up so it straddles the banner edge (half of 82px) */
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;           /* sit above the banner fade overlay */
+}
+
+/* Green online indicator — bottom-right of avatar */
+.miniCardOnlineDot {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 12px;
+  height: 12px;
+  background: #22c55e;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.miniCardAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.miniCardAvatarLetter {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-on-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.miniCardRealName {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+}
+
+.miniCardUsernameRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.miniCardUsername {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text2);
+  margin-top: 1px;
+}
+
+/* Country code badge — text pill instead of emoji (flag emojis don't render on Windows) */
+.miniCardCountryCode {
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 4px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.miniCardRankPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--amber);
+  background: var(--amber-surface);
+  border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  line-height: 1.3;
+}
+
+/* Rank pill + post count on one line */
+.miniCardRankRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 2px;
+}
+
+.miniCardPostCount {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+/* Last seen — shown inline inside the identity column */
+.miniCardLastSeenInline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 3px;
+}
+.miniCardLastSeenInline svg {
+  flex-shrink: 0;
+  opacity: 0.65;
+}
+
+/* Badge loading skeleton */
+.miniCardBadgesSkeleton {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.miniCardBadgeSkeletonItem {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, var(--border) 25%, var(--bg) 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+/* Last seen row */
+.miniCardLastSeen {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--text3);
+  margin-top: 6px;
+}
+.miniCardLastSeen svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.miniCardLastSeenSkeleton {
+  width: 120px;
+  height: 14px;
+  border-radius: 4px;
+  margin-top: 8px;
+  background: linear-gradient(90deg, var(--border) 25%, var(--bg) 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.miniCardBadges {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 10px;
+  padding: 0;
+}
+
+.miniCardBadgeImg {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.miniCardBadgeMore {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--brand-light);
+  border: 1px solid var(--brand-border);
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--brand);
+  line-height: 1;
+}
+
+.miniCardActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  width: 100%;
+}
+
+.miniCardVisitBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-on-brand);
+  background: var(--brand);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: background 0.15s var(--ease-out), transform 0.12s var(--ease-out);
+  line-height: 1;
+}
+.miniCardVisitBtn:hover  { background: var(--brand-hover); }
+.miniCardVisitBtn:active { transform: scale(0.97); }
+
+.miniCardMsgBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+  background: transparent;
+  border: 1.5px solid var(--brand);
+  border-radius: var(--radius-full);
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out), transform 0.12s var(--ease-out);
+  line-height: 1;
+}
+.miniCardMsgBtn:hover  { background: var(--brand); color: var(--text-on-brand); }
+.miniCardMsgBtn:active { transform: scale(0.97); }
