@@ -241,6 +241,7 @@ export default function App() {
       <TopicDetailScreen
         topic={nav.selectedTopic}
         onVisitProfile={nav.selectProfileUser}
+        onMessageUser={nav.selectComposeUser}
       />
     );
 

@@ -868,6 +868,9 @@ function transformPost(raw) {
   const editCount  = Number(raw.editCount ?? raw.editHistoryCount ?? 0);
   const isEdited   = Boolean(raw.isEdited ?? editedWhen ?? editCount > 0);
 
+  const rawJoinDate = raw.registerDate ?? raw.joinDate ?? raw.memberSince ?? null;
+  const joinYear    = rawJoinDate ? new Date(rawJoinDate).getFullYear() : null;
+
   return {
     id:           raw.threadId ?? raw.postId ?? raw.id,
     topicId:      raw.topicId ?? 0,
@@ -888,6 +891,9 @@ function transformPost(raw) {
     isEdited,
     editedWhen,
     editCount,
+    postCount:    raw.postCount ?? raw.postsCount ?? raw.totalMessages ?? null,
+    joinYear,
+    totalLikes:   raw.totalLikes ?? raw.totalLikesReceived ?? raw.likesReceived ?? null,
   };
 }
 

@@ -83,6 +83,20 @@ export default function ChapterReaderScreen({ chapterId, onBack }) {
     if (el) el.scrollTop = 0;
   }, [chapterId]);
 
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    const el = document.getElementById('chapter-scroll');
+    if (!el) return;
+    const onScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const max = scrollHeight - clientHeight;
+      setScrollProgress(max > 0 ? Math.round((scrollTop / max) * 100) : 0);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [chapterId]);
+
   const view = useMemo(() => {
     if (!chapter) return null;
     return {
@@ -106,6 +120,12 @@ export default function ChapterReaderScreen({ chapterId, onBack }) {
       status:      chapterStatusLabel(chapter.statusCode),
       // 8-slot reaction breakdown (may be null if the backend omits it).
       reactions:   parseReactionMap(chapter.likeJsonData),
+      readingTime: (() => {
+        const text = (chapter.filteredChapterContent || chapter.chapterContent || '').replace(/<[^>]+>/g, ' ');
+        const words = text.trim().split(/\s+/).filter(Boolean).length;
+        const mins = Math.max(1, Math.round(words / 200));
+        return `${mins} min read`;
+      })(),
     };
   }, [chapter]);
 
@@ -120,70 +140,80 @@ export default function ChapterReaderScreen({ chapterId, onBack }) {
     <div className={styles.screen} id="chapter-scroll">
       {/* ── Reader header ─────────────────────────────────────────────────── */}
       <div className={styles.readerHeader}>
-        <div className={styles.readerCrumb}>
-          {view.storyThumb && (
-            <img
-              src={view.storyThumb}
-              alt=""
-              className={styles.crumbThumb}
-              loading="lazy"
-            />
-          )}
-          {view.number != null && (
-            <span className={styles.crumbChapter}>Chapter {view.number}</span>
-          )}
-          {view.authorId && (
-            <>
-              <span className={styles.crumbDot}>·</span>
-              <span className={styles.crumbStory}>by User #{view.authorId}</span>
-            </>
-          )}
+        <div className={styles.headerTop}>
+          <div className={styles.readerCrumb}>
+            {view.storyThumb && (
+              <img
+                src={view.storyThumb}
+                alt=""
+                className={styles.crumbThumb}
+                loading="lazy"
+              />
+            )}
+            <div className={styles.crumbText}>
+              {view.number != null && (
+                <span className={styles.crumbChapter}>Chapter {view.number}</span>
+              )}
+              {view.authorId && (
+                <span className={styles.crumbAuthor}>by User #{view.authorId}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Font size toggle */}
+          <div className={styles.fontToggle} role="group" aria-label="Reading size">
+            {FONT_SIZES.map((f, i) => (
+              <button
+                key={f.id}
+                className={`${styles.fontBtn} ${i === fontIdx ? styles.fontBtnActive : ''}`}
+                onClick={() => setFontIdx(i)}
+                style={{ fontSize: 10 + i * 2 }}
+                aria-label={`Font size ${f.id}`}
+              >
+                A
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Font size toggle */}
-        <div className={styles.fontToggle} role="group" aria-label="Reading size">
-          {FONT_SIZES.map((f, i) => (
-            <button
-              key={f.id}
-              className={`${styles.fontBtn} ${i === fontIdx ? styles.fontBtnActive : ''}`}
-              onClick={() => setFontIdx(i)}
-              style={{ fontSize: 10 + i * 2 }}
-              aria-label={`Font size ${f.id}`}
-            >
-              A
-            </button>
-          ))}
+        {/* Reading progress bar */}
+        <div className={styles.progressTrack}>
+          <div className={styles.progressFill} style={{ width: `${scrollProgress}%` }} />
         </div>
       </div>
 
-      {/* ── Title + meta ──────────────────────────────────────────────────── */}
-      <div className={styles.titleBlock}>
-        <h1 className={styles.title}>{view.title}</h1>
+      {/* ── Chapter hero ────────────────────────────────────────────────────── */}
+      <div className={styles.chapterHero}>
+        {view.number != null && (
+          <div className={styles.chapterNumLabel}>Chapter {view.number}</div>
+        )}
+        <h1 className={styles.chapterTitle}>{view.title}</h1>
+
+        <div className={styles.heroMeta}>
+          {view.authorId && (
+            <div className={styles.authorPill}>
+              <div className={styles.authorAvatar}>U</div>
+              <span>User #{view.authorId}</span>
+            </div>
+          )}
+          {view.readingTime && (
+            <span className={styles.readingTime}>{view.readingTime}</span>
+          )}
+        </div>
 
         {(view.membersOnly || view.mature || view.status) && (
           <div className={styles.flagRow}>
             {view.status      && <span className={styles.flagStatus}>{view.status}</span>}
             {view.membersOnly && <span className={styles.flagMembers}>🔒 Members only</span>}
-            {view.mature      && <span className={styles.flagMature}>18+ Mature content</span>}
+            {view.mature      && <span className={styles.flagMature}>18+ Mature</span>}
           </div>
         )}
 
-        <div className={styles.meta}>
-          {view.published && <span>{formatDate(view.published)}</span>}
-          {view.edited && view.edited !== view.published && (
-            <>
-              <span className={styles.metaDot}>·</span>
-              <span>edited {formatDate(view.edited)}</span>
-            </>
-          )}
-        </div>
-
-        <div className={styles.metaStats}>
-          <span>👁 {formatCount(view.views)} views</span>
-          <span className={styles.metaDot}>·</span>
-          <span>♥ {formatCount(view.likes)} likes</span>
-          <span className={styles.metaDot}>·</span>
-          <span>💬 {formatCount(view.comments)} comments</span>
+        <div className={styles.heroStats}>
+          {view.published && <span className={styles.heroStat}>{formatDate(view.published)}</span>}
+          <span className={styles.heroStat}>👁 {formatCount(view.views)}</span>
+          <span className={styles.heroStat}>♥ {formatCount(view.likes)}</span>
+          <span className={styles.heroStat}>💬 {formatCount(view.comments)}</span>
         </div>
       </div>
 
@@ -217,7 +247,7 @@ export default function ChapterReaderScreen({ chapterId, onBack }) {
 
       {/* ── Back to story ─────────────────────────────────────────────────── */}
       <div className={styles.navRow}>
-        <button className={styles.backBtn} onClick={onBack}>← Back to story</button>
+        <button className={styles.backBtn} onClick={onBack}>← Back to Story</button>
       </div>
 
       <div className={styles.spacer} />
