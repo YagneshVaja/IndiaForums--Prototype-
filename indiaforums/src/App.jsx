@@ -18,6 +18,7 @@ import ArticleScreen       from './screens/ArticleScreen';
 import GalleryScreen       from './screens/GalleryScreen';
 import GalleryDetailScreen from './screens/GalleryDetailScreen';
 import TopicDetailScreen   from './screens/TopicDetailScreen';
+import ProfileScreen       from './screens/profile/ProfileScreen';
 import CelebritiesScreen      from './screens/CelebritiesScreen';
 import CelebrityDetailScreen from './screens/CelebrityDetailScreen';
 import VideoScreen         from './screens/VideoScreen';
@@ -213,9 +214,21 @@ export default function App() {
       />
     );
 
+  } else if (nav.selectedProfileUser) {
+    topNavTitle = nav.selectedProfileUser.username || 'Profile';
+    topNavBack  = nav.clearProfileUser;
+    content = (
+      <ProfileScreen userId={nav.selectedProfileUser.userId} />
+    );
+
   } else if (nav.selectedTopic) {
     topNavBack  = nav.clearTopic;
-    content     = <TopicDetailScreen topic={nav.selectedTopic} />;
+    content = (
+      <TopicDetailScreen
+        topic={nav.selectedTopic}
+        onVisitProfile={nav.selectProfileUser}
+      />
+    );
 
   } else if (nav.selectedTag) {
     topNavTitle = nav.selectedTag.name;
