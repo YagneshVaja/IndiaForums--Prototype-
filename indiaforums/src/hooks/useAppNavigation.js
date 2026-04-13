@@ -9,6 +9,7 @@ const initialState = {
   activeStory:     null,
   selectedTopic:   null,
   selectedProfileUser: null,
+  composeToUser:       null,   // { userId, username } — pre-filled compose screen
   selectedCeleb:   null,
   drilledForum:    null,
   selectedTag:     null,
@@ -68,6 +69,11 @@ function navReducer(state, action) {
       return { ...state, selectedProfileUser: action.payload };
     case 'CLEAR_PROFILE_USER':
       return { ...state, selectedProfileUser: null };
+
+    case 'SELECT_COMPOSE_USER':
+      return { ...state, composeToUser: action.payload };
+    case 'CLEAR_COMPOSE_USER':
+      return { ...state, composeToUser: null };
 
     case 'SELECT_CELEB':
       return { ...state, selectedCeleb: action.payload };
@@ -151,6 +157,8 @@ export default function useAppNavigation() {
     clearTopic:       useCallback(()    => dispatch({ type: 'CLEAR_TOPIC' }), []),
     selectProfileUser: useCallback((u) => dispatch({ type: 'SELECT_PROFILE_USER', payload: u }), []),
     clearProfileUser:  useCallback(()   => dispatch({ type: 'CLEAR_PROFILE_USER' }), []),
+    selectComposeUser: useCallback((u) => dispatch({ type: 'SELECT_COMPOSE_USER', payload: u }), []),
+    clearComposeUser:  useCallback(()    => dispatch({ type: 'CLEAR_COMPOSE_USER' }), []),
     selectCeleb:      useCallback((c)   => dispatch({ type: 'SELECT_CELEB', payload: c }), []),
     clearCeleb:       useCallback(()    => dispatch({ type: 'CLEAR_CELEB' }), []),
     drillForum:       useCallback((f)   => dispatch({ type: 'DRILL_FORUM', payload: f }), []),
