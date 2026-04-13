@@ -33,6 +33,7 @@ import ShortsScreen        from './screens/ShortsScreen';
 import WebStoriesScreen    from './screens/WebStoriesScreen';
 import WebStoryPlayer      from './components/stories/WebStoryPlayer';
 import TagDetailScreen     from './screens/TagDetailScreen';
+import ComposeScreen       from './screens/messages/ComposeScreen';
 
 const TAB_SCREENS = {
   explore: ExploreScreen,
@@ -214,11 +215,24 @@ export default function App() {
       />
     );
 
+  } else if (nav.composeToUser) {
+    topNavTitle = 'New Message';
+    topNavBack  = nav.clearComposeUser;
+    content = (
+      <ComposeScreen
+        prefillTo={nav.composeToUser.username}
+        onBack={nav.clearComposeUser}
+      />
+    );
+
   } else if (nav.selectedProfileUser) {
     topNavTitle = nav.selectedProfileUser.username || 'Profile';
     topNavBack  = nav.clearProfileUser;
     content = (
-      <ProfileScreen userId={nav.selectedProfileUser.userId} />
+      <ProfileScreen
+        userId={nav.selectedProfileUser.userId}
+        onMessageUser={nav.selectComposeUser}
+      />
     );
 
   } else if (nav.selectedTopic) {
