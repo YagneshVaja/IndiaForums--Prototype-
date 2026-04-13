@@ -187,7 +187,7 @@ function PostBodyWithEmbeds({ html }) {
   );
 }
 
-export default function TopicDetailScreen({ topic }) {
+export default function TopicDetailScreen({ topic, onVisitProfile }) {
   const { posts, topicDetail, loading, loadingMore, error, hasMore, loadMore, refresh } = useTopicPosts(topic?.id);
   const { user, isAuthenticated, isModerator } = useAuth();
 
@@ -521,7 +521,12 @@ export default function TopicDetailScreen({ topic }) {
                     )}
                     <div className={styles.postMetaRow}>
                       {post.rank && <RankBadge rank={post.rank} />}
-                      {post.rank && <span className={styles.metaDot}>·</span>}
+                      {post.postCount != null && (
+                        <span className={styles.postMemberMeta}>
+                          {post.rank ? ' · ' : ''}{formatNum(post.postCount)} posts
+                        </span>
+                      )}
+                      {(post.rank || post.postCount != null) && <span className={styles.metaDot}>·</span>}
                       <span
                         className={styles.postTime}
                         title={post.rawTime ? new Date(post.rawTime).toLocaleString() : undefined}
@@ -544,6 +549,18 @@ export default function TopicDetailScreen({ topic }) {
                           <img key={b.id} src={b.imageUrl} alt={b.name} title={b.name} className={styles.userBadgeImg} loading="lazy" decoding="async" />
                         ))}
                       </div>
+                    )}
+                    {post.authorId && onVisitProfile && (
+                      <button
+                        type="button"
+                        className={styles.visitProfileBtn}
+                        onClick={() => onVisitProfile({ userId: post.authorId, username: post.author })}
+                      >
+                        Visit Profile
+                        <svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                          <path d="M2 8L8 2M8 2H4M8 2v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
                     )}
                   </div>
                   <span className={styles.postNumber}>#{i + 1}</span>
