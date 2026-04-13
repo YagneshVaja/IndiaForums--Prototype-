@@ -9,6 +9,13 @@ import ErrorState from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
 import styles from './ProfileScreen.module.css';
 
+function formatNum(n) {
+  if (!n) return '0';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
+  return String(n);
+}
+
 const BASE_TABS = [
   { key: 'activity',  label: 'Activity' },
   { key: 'posts',     label: 'Posts' },
@@ -31,7 +38,7 @@ const SELF_TABS = [
 /**
  * @param {number|null} userId - null = own profile (uses auth context data)
  */
-export default function ProfileScreen({ userId }) {
+export default function ProfileScreen({ userId, onMessageUser }) {
   const { user: authUser } = useAuth();
   const isOwnProfile = !userId || userId === authUser?.userId;
 
@@ -50,31 +57,84 @@ export default function ProfileScreen({ userId }) {
 
   return (
     <div className={styles.screen}>
-      {/* ── Profile header ──────────────────────────────────────────────── */}
-      <div className={styles.header}>
-        <div className={styles.avatar}>
-          {profile.avatar
-            ? <img className={styles.avatarImg} src={profile.avatar} alt={profile.displayName || profile.userName} decoding="async" />
-            : <span className={styles.avatarLetter}>{(profile.displayName || profile.userName || 'U')[0].toUpperCase()}</span>
-          }
-        </div>
-        <div className={styles.info}>
-          <div className={styles.displayName}>{profile.displayName || profile.userName}</div>
-          <div className={styles.userName}>@{profile.userName}</div>
-          {profile.joinDate && (
-            <div className={styles.joined}>Joined {timeAgo(profile.joinDate)}</div>
+      {/* ── Cover banner + Avatar ───────────────────────────────────────── */}
+      <div className={styles.headerOuter}>
+        <div className={styles.coverBanner}>
+          {profile.coverUrl && (
+            <img src={profile.coverUrl} alt="" className={styles.coverImg} decoding="async" />
           )}
         </div>
-        {profile.bio && <p className={styles.bio}>{profile.bio}</p>}
-        <div className={styles.stats}>
-          <Stat label="Posts" value={profile.postCount} />
-          <Stat label="Buddies" value={profile.buddyCount} />
-          <Stat label="Badges" value={profile.badgeCount} />
+        <div className={styles.avatarWrap}>
+          <div className={styles.avatar}>
+            {profile.avatar
+              ? <img className={styles.avatarImg} src={profile.avatar} alt={profile.displayName || profile.userName} decoding="async" />
+              : <span className={styles.avatarLetter}>{(profile.displayName || profile.userName || 'U')[0].toUpperCase()}</span>
+            }
+          </div>
         </div>
-        {!isOwnProfile && effectiveUserId && (
-          <ProfileActions targetUserId={effectiveUserId} />
+      </div>
+
+      {/* ── Identity ────────────────────────────────────────────────────── */}
+      <div className={styles.identity}>
+        <div className={styles.displayName}>{profile.displayName || profile.userName}</div>
+        <div className={styles.userName}>@{profile.userName}</div>
+        {profile.rank && (
+          <div className={styles.rankPill}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            {profile.rank}
+          </div>
+        )}
+        {(profile.location || profile.joinDate) && (
+          <div className={styles.locationRow}>
+            {profile.location && (
+              <span className={styles.locationItem}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                {profile.location}
+              </span>
+            )}
+            {profile.location && profile.joinDate && <span className={styles.locationDot}>·</span>}
+            {profile.joinDate && (
+              <span className={styles.locationItem}>
+                Member since {new Date(profile.joinDate).getFullYear()}
+              </span>
+            )}
+          </div>
+        )}
+        {(profile.signature || profile.bio) && (
+          <p className={styles.sigBio}>{profile.signature || profile.bio}</p>
         )}
       </div>
+
+      {/* ── Stats bar ───────────────────────────────────────────────────── */}
+      <div className={styles.statsBar}>
+        <button className={styles.statBtn} onClick={() => setActiveTab('posts')}>
+          <span className={styles.statVal}>{formatNum(profile.postCount)}</span>
+          <span className={styles.statLbl}>Posts</span>
+        </button>
+        <div className={styles.statDivider} />
+        <button className={styles.statBtn} onClick={() => setActiveTab('buddies')}>
+          <span className={styles.statVal}>{formatNum(profile.buddyCount)}</span>
+          <span className={styles.statLbl}>Buddies</span>
+        </button>
+        <div className={styles.statDivider} />
+        <button className={styles.statBtn} onClick={() => setActiveTab('badges')}>
+          <span className={styles.statVal}>{formatNum(profile.badgeCount)}</span>
+          <span className={styles.statLbl}>Badges</span>
+        </button>
+      </div>
+
+      {/* ── Profile actions (other-user only) ────────────────────────────── */}
+      {!isOwnProfile && effectiveUserId && (
+        <ProfileActions
+          targetUserId={effectiveUserId}
+          targetUsername={profile.userName}
+          onMessageUser={onMessageUser}
+        />
+      )}
 
       {/* ── Tabs ────────────────────────────────────────────────────────── */}
       <div className={styles.tabs}>
@@ -108,25 +168,12 @@ export default function ProfileScreen({ userId }) {
   );
 }
 
-/* ── Stat pill ─────────────────────────────────────────────────────────────── */
-function Stat({ label, value }) {
-  return (
-    <div className={styles.stat}>
-      <span className={styles.statValue}>{value ?? 0}</span>
-      <span className={styles.statLabel}>{label}</span>
-    </div>
-  );
-}
-
 /* ── Profile actions (other-user only) ─────────────────────────────────────── */
-// Renders "Add Buddy" + "Block" buttons under the header on other-user profiles.
-// Tracks a single inflight action with `busy` and surfaces success/error inline
-// so we don't fight with the rest of the screen's loading state.
-function ProfileActions({ targetUserId }) {
-  const [busy, setBusy]       = useState(false);
-  const [status, setStatus]   = useState(null); // { kind: 'ok'|'err', text }
+function ProfileActions({ targetUserId, targetUsername, onMessageUser }) {
+  const [busy, setBusy]             = useState(false);
+  const [status, setStatus]         = useState(null);
   const [requestSent, setRequestSent] = useState(false);
-  const [blocked, setBlocked] = useState(false);
+  const [blocked, setBlocked]       = useState(false);
 
   async function handleAddBuddy() {
     if (busy || requestSent) return;
@@ -168,10 +215,19 @@ function ProfileActions({ targetUserId }) {
           onClick={handleAddBuddy}
           disabled={busy || requestSent}
         >
-          {requestSent ? 'Request Sent' : 'Add Buddy'}
+          {requestSent ? 'Request Sent' : '+ Add Buddy'}
         </button>
+        {onMessageUser && (
+          <button
+            className={styles.secondaryBtn}
+            onClick={() => onMessageUser({ userId: targetUserId, username: targetUsername })}
+            disabled={busy}
+          >
+            ✉ Message
+          </button>
+        )}
         <button
-          className={styles.secondaryBtn}
+          className={`${styles.secondaryBtn} ${styles.blockBtn}`}
           onClick={handleBlock}
           disabled={busy}
           title={blocked ? 'Unblock user' : 'Block user'}
