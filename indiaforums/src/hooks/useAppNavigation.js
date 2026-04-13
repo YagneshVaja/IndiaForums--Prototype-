@@ -8,6 +8,7 @@ const initialState = {
   selectedGallery: null,
   activeStory:     null,
   selectedTopic:   null,
+  selectedProfileUser: null,
   selectedCeleb:   null,
   drilledForum:    null,
   selectedTag:     null,
@@ -62,6 +63,11 @@ function navReducer(state, action) {
       return { ...state, selectedTopic: action.payload };
     case 'CLEAR_TOPIC':
       return { ...state, selectedTopic: null };
+
+    case 'SELECT_PROFILE_USER':
+      return { ...state, selectedProfileUser: action.payload };
+    case 'CLEAR_PROFILE_USER':
+      return { ...state, selectedProfileUser: null };
 
     case 'SELECT_CELEB':
       return { ...state, selectedCeleb: action.payload };
@@ -143,6 +149,8 @@ export default function useAppNavigation() {
     clearStory:       useCallback(()    => dispatch({ type: 'CLEAR_STORY' }), []),
     selectTopic:      useCallback((t)   => dispatch({ type: 'SELECT_TOPIC', payload: t }), []),
     clearTopic:       useCallback(()    => dispatch({ type: 'CLEAR_TOPIC' }), []),
+    selectProfileUser: useCallback((u) => dispatch({ type: 'SELECT_PROFILE_USER', payload: u }), []),
+    clearProfileUser:  useCallback(()   => dispatch({ type: 'CLEAR_PROFILE_USER' }), []),
     selectCeleb:      useCallback((c)   => dispatch({ type: 'SELECT_CELEB', payload: c }), []),
     clearCeleb:       useCallback(()    => dispatch({ type: 'CLEAR_CELEB' }), []),
     drillForum:       useCallback((f)   => dispatch({ type: 'DRILL_FORUM', payload: f }), []),
