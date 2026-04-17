@@ -4,17 +4,12 @@ import ThreadCard from '../../components/cards/ThreadCard';
 import ErrorState from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
 import NewTopicComposer from '../../components/forum/NewTopicComposer';
+import ForumTopicSettingsSheet from '../../components/forum/ForumTopicSettingsSheet';
 import { formatCount } from './forumHelpers';
 import { search, CONTENT_TYPE } from '../../services/searchApi';
 import { timeAgo } from '../../services/api';
-import useForumTopics from '../../hooks/useForumTopics';
 
-const SORT_TABS = [
-  { id: 'latest',   label: 'Latest' },
-  { id: 'trending', label: 'Trending' },
-  { id: 'top',      label: 'Top' },
-];
-
+// Map a topic result from GET /search?contentType=8 → ThreadCard-compatible shape
 function mapSearchResult(r, forum) {
   return {
     id:          r.topicId ?? r.id ?? Math.random(),
@@ -39,32 +34,29 @@ function mapSearchResult(r, forum) {
   };
 }
 
-export default function ForumThreadView({ selectedForum, onTopicPress }) {
-  const [sortBy, setSortBy]                     = useState('latest');
-  const [activeFlairId, setActiveFlairId]       = useState(null);
+export default function ForumThreadView({
+  selectedForum, forumDetail, flairs,
+  topics, topicsLoading, topicsLoadingMore,
+  topicsError, topicsHasMore,
+  loadMoreTopics, refreshTopics,
+  onTopicPress,
+}) {
+  const [activeFlairId, setActiveFlairId] = useState(null);
   const [flairDropdownOpen, setFlairDropdownOpen] = useState(false);
-  const [composerOpen, setComposerOpen]         = useState(false);
-  const [searchQuery, setSearchQuery]           = useState('');
-  const [searchResults, setSearchResults]       = useState(null);
-  const [searchLoading, setSearchLoading]       = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  // null  = not searching | []+ = live API results | 'fallback' = use client-side
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   const scrollRef = useRef(null);
-
-  const {
-    topics, forumDetail, flairs,
-    loading: topicsLoading, loadingMore: topicsLoadingMore,
-    error: topicsError, hasMore: topicsHasMore,
-    loadMore: loadMoreTopics, refresh: refreshTopics,
-  } = useForumTopics(selectedForum?.id ?? null, sortBy);
 
   const detail = forumDetail || selectedForum;
   const forumId = selectedForum?.id ?? forumDetail?.forumId ?? null;
+  const hasModerationRights = detail &&
+    (detail.priorityPosts > 0 || detail.editPosts > 0 || detail.deletePosts > 0);
 
-  // Reset flair filter when sort changes
-  useEffect(() => {
-    setActiveFlairId(null);
-  }, [sortBy]);
-
-  // Live search with 350 ms debounce
+  // ── Live search with 350 ms debounce ──────────────────────────────────────
   useEffect(() => {
     const q = searchQuery.trim();
     if (!q) { setSearchResults(null); setSearchLoading(false); return; }
@@ -83,6 +75,7 @@ export default function ForumThreadView({ selectedForum, onTopicPress }) {
           Array.isArray(raw) ? raw.map(r => mapSearchResult(r, selectedForum)) : 'fallback'
         );
       } catch {
+        // Backend contentType=8 currently 500s — silently fall back to client-side filter
         setSearchResults('fallback');
       } finally {
         setSearchLoading(false);
@@ -92,9 +85,12 @@ export default function ForumThreadView({ selectedForum, onTopicPress }) {
     return () => clearTimeout(timer);
   }, [searchQuery, forumId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Topic card list ───────────────────────────────────────────────────────
   const topicCards = useMemo(() => {
+    // Live search returned API results — use them directly
     if (Array.isArray(searchResults)) return searchResults;
 
+    // Map base topics
     const mapped = topics.map(t => ({
       ...t,
       forumName:  t.forumName  || selectedForum?.name || '',
@@ -106,6 +102,7 @@ export default function ForumThreadView({ selectedForum, onTopicPress }) {
 
     let filtered = activeFlairId == null ? mapped : mapped.filter(t => t.flairId === activeFlairId);
 
+    // Client-side filter: used when search fallback triggered OR as default behaviour
     const q = searchQuery.trim().toLowerCase();
     if (q) {
       filtered = filtered.filter(t =>
@@ -115,15 +112,8 @@ export default function ForumThreadView({ selectedForum, onTopicPress }) {
       );
     }
 
-    // Client-side sort fallback (API may already sort server-side)
-    if (sortBy === 'top') {
-      filtered = [...filtered].sort((a, b) => (b.replies ?? 0) - (a.replies ?? 0));
-    } else if (sortBy === 'trending') {
-      filtered = [...filtered].sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
-    }
-
     return filtered;
-  }, [searchResults, topics, selectedForum, activeFlairId, searchQuery, sortBy]);
+  }, [searchResults, topics, selectedForum, activeFlairId, searchQuery]);
 
   const activeFlairLabel = useMemo(() => {
     if (activeFlairId == null) return 'All';
@@ -156,6 +146,20 @@ export default function ForumThreadView({ selectedForum, onTopicPress }) {
           )}
         </div>
         <button className={styles.followBtn}>Follow</button>
+        {hasModerationRights && (
+          <button
+            className={styles.gearBtn}
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Topic settings"
+            title="Topic settings"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Forum stats bar */}
@@ -179,19 +183,6 @@ export default function ForumThreadView({ selectedForum, onTopicPress }) {
           <span className={styles.forumStatNum}>#{detail.rank || '–'}</span>
           <span className={styles.forumStatLabel}>Ranked</span>
         </div>
-      </div>
-
-      {/* Sort tabs */}
-      <div className={styles.sortBar}>
-        {SORT_TABS.map(tab => (
-          <button
-            key={tab.id}
-            className={`${styles.sortTab} ${sortBy === tab.id ? styles.sortTabActive : ''}`}
-            onClick={() => setSortBy(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
       </div>
 
       {/* Search section */}
@@ -223,6 +214,7 @@ export default function ForumThreadView({ selectedForum, onTopicPress }) {
 
       {/* Flair filter bar */}
       <div className={styles.flairBar}>
+        {/* Left: flair dropdown (only if flairs exist) */}
         {flairs.length > 0 && (
           <div className={styles.flairFilterWrap}>
             <button
@@ -278,6 +270,7 @@ export default function ForumThreadView({ selectedForum, onTopicPress }) {
           </div>
         )}
 
+        {/* Right: topic count + new topic */}
         <div className={styles.flairBarRight}>
           {!topicsLoading && !searchLoading && (
             <span className={styles.flairTopicCount}>
@@ -380,6 +373,15 @@ export default function ForumThreadView({ selectedForum, onTopicPress }) {
             setComposerOpen(false);
             refreshTopics?.();
           }}
+        />
+      )}
+      {settingsOpen && (
+        <ForumTopicSettingsSheet
+          forumDetail={detail}
+          topics={topicCards}
+          selectedForum={selectedForum}
+          onClose={() => setSettingsOpen(false)}
+          onActionComplete={() => refreshTopics?.()}
         />
       )}
     </div>
