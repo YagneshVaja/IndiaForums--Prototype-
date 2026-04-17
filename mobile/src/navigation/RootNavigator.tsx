@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types';
 import { hasSeenOnboarding } from '../store/onboardingStore';
 import OnboardingStack from './OnboardingStack';
+import MainTabNavigator from './MainTabNavigator';
 
 // ---------------------------------------------------------------------------
 // Placeholder screens — replace with real stacks in subsequent phases
@@ -71,7 +72,7 @@ export default function RootNavigator() {
       <Root.Screen name="Onboarding" component={OnboardingStack} />
       <Root.Screen name="Guest" component={GuestStackPlaceholder} />
       <Root.Screen name="Auth" component={AuthStackPlaceholder} />
-      <Root.Screen name="Main" component={MainTabsPlaceholder} />
+      <Root.Screen name="Main" component={MainTabNavigator} />
     </Root.Navigator>
   );
 }
