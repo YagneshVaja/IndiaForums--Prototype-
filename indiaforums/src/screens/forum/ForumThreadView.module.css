@@ -134,6 +134,41 @@
 }
 .statDivider { width: 1px; height: 28px; background: var(--border); }
 
+/* ── Sort tabs ──────────────────────────────────────────────────────────────── */
+.sortBar {
+  display: flex;
+  align-items: center;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 14px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.sortTab {
+  padding: 10px 14px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text3);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+  margin-bottom: -1px;
+}
+
+.sortTab:hover { color: var(--text2); }
+
+.sortTabActive {
+  color: var(--brand);
+  border-bottom-color: var(--brand);
+  font-weight: 700;
+}
+
 /* ── Topic search bar ────────────────────────────────────────────────────── */
 .searchSection {
   background: var(--card);
