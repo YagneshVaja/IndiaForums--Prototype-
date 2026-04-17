@@ -12,6 +12,9 @@ import {
 import type { Banner } from '../../../services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_MARGIN = 16;
+const CARD_WIDTH = SCREEN_WIDTH - CARD_MARGIN * 2;
+const CARD_HEIGHT = 220;
 
 interface Props {
   banners: Banner[];
@@ -27,7 +30,7 @@ function BannerItem({
 }) {
   return (
     <Pressable
-      style={styles.itemContainer}
+      style={({ pressed }) => [styles.itemContainer, pressed && styles.itemPressed]}
       onPress={() => onPress(banner)}
       accessibilityRole="button"
       accessibilityLabel={banner.title}
@@ -41,11 +44,22 @@ function BannerItem({
       ) : (
         <View style={styles.imagePlaceholder} />
       )}
-      {/* Text overlay — dark semi-transparent strip at the bottom */}
+
+      {/* Category badge — top left */}
+      {banner.category ? (
+        <View style={styles.categoryBadge}>
+          <Text style={styles.categoryBadgeText}>{banner.category.toUpperCase()}</Text>
+        </View>
+      ) : null}
+
+      {/* Bottom gradient overlay */}
       <View style={styles.overlay}>
         <Text style={styles.title} numberOfLines={2}>
           {banner.title}
         </Text>
+        {banner.source ? (
+          <Text style={styles.source} numberOfLines={1}>{banner.source}</Text>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -107,8 +121,11 @@ export default function FeaturedBannerCarousel({ banners, onPress }: Props) {
         viewabilityConfig={viewabilityConfig}
         getItemLayout={getItemLayout}
         style={styles.flatList}
+        contentContainerStyle={styles.flatListContent}
+        snapToAlignment="center"
       />
-      {/* Pagination dots */}
+
+      {/* Pagination dots — inside container, overlapping carousel */}
       {banners.length > 1 && (
         <View style={styles.dotsContainer}>
           {banners.map((_, i) => (
@@ -131,12 +148,26 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   flatList: {
-    height: 200,
+    height: CARD_HEIGHT,
+  },
+  flatListContent: {
+    paddingHorizontal: CARD_MARGIN,
+    gap: 12,
   },
   itemContainer: {
-    width: SCREEN_WIDTH,
-    height: 200,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: 14,
     overflow: 'hidden',
+    backgroundColor: '#E8E8E8',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  itemPressed: {
+    opacity: 0.92,
   },
   image: {
     width: '100%',
@@ -145,42 +176,64 @@ const styles = StyleSheet.create({
   imagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#CCCCCC',
+    backgroundColor: '#D0D5E8',
+  },
+  categoryBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: '#3558F0',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  categoryBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   overlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 80,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    height: 100,
+    backgroundColor: 'rgba(0,0,0,0.58)',
     justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    gap: 4,
   },
   title: {
     fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
-    lineHeight: 20,
+    lineHeight: 21,
+  },
+  source: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '500',
   },
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 8,
-    gap: 6,
+    paddingTop: 10,
+    paddingBottom: 4,
+    gap: 5,
   },
   dot: {
-    height: 6,
+    height: 5,
     borderRadius: 3,
   },
   dotActive: {
-    width: 20,
+    width: 18,
     backgroundColor: '#3558F0',
   },
   dotInactive: {
-    width: 6,
+    width: 5,
     backgroundColor: '#C8CFEA',
   },
   empty: {

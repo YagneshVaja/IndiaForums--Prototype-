@@ -37,6 +37,8 @@ export interface Banner {
   imageUrl: string;
   articleId: string;
   articleSlug: string;
+  category?: string;
+  source?: string;
 }
 
 export interface Celebrity {
