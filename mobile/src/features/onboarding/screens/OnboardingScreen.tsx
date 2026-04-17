@@ -7,8 +7,8 @@ import {
   StyleSheet,
   Dimensions,
   ViewToken,
-  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingSlide } from '../components/OnboardingSlide';
 import { PaginationDots } from '../components/PaginationDots';
@@ -18,9 +18,10 @@ import { OnboardingSlide as SlideType } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-type Props = NativeStackScreenProps<OnboardingStackParamList, 'Onboarding'>;
+type Props = NativeStackScreenProps<OnboardingStackParamList, 'OnboardingSlides'>;
 
 export default function OnboardingScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList<SlideType>>(null);
   const isLastSlide = currentIndex === ONBOARDING_SLIDES.length - 1;
@@ -59,17 +60,18 @@ export default function OnboardingScreen({ navigation }: Props) {
   }, [navigation]);
 
   return (
-    <View style={styles.container}>
-      {/* Skip — hidden on the last slide */}
-      {!isLastSlide && (
-        <Pressable
-          style={styles.skipButton}
-          onPress={handleSkip}
-          hitSlop={12}
-        >
-          <Text style={styles.skipText}>Skip</Text>
-        </Pressable>
-      )}
+    <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
+      {/* Top row: brand mark + skip */}
+      <View style={styles.topRow}>
+        <View style={styles.brandMark}>
+          <Text style={styles.brandMarkText}>IF</Text>
+        </View>
+        {!isLastSlide && (
+          <Pressable style={styles.skipButton} onPress={handleSkip} hitSlop={12}>
+            <Text style={styles.skipText}>Skip</Text>
+          </Pressable>
+        )}
+      </View>
 
       {/* Slide carousel */}
       <FlatList
@@ -92,22 +94,20 @@ export default function OnboardingScreen({ navigation }: Props) {
         })}
       />
 
-      {/* Bottom bar: dots + next/get-started */}
-      <View style={styles.bottomBar}>
-        <PaginationDots
-          count={ONBOARDING_SLIDES.length}
-          activeIndex={currentIndex}
-        />
+      {/* Bottom bar: dots + next */}
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
+        <PaginationDots count={ONBOARDING_SLIDES.length} activeIndex={currentIndex} />
 
         <Pressable
           style={({ pressed }) => [
             styles.nextButton,
+            isLastSlide && styles.nextButtonWide,
             pressed && styles.nextButtonPressed,
           ]}
           onPress={handleNext}
         >
           <Text style={styles.nextButtonText}>
-            {isLastSlide ? 'Get Started' : 'Next'}
+            {isLastSlide ? 'Get Started' : 'Next →'}
           </Text>
         </Pressable>
       </View>
@@ -119,18 +119,38 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingBottom: 12,
+  },
+  brandMark: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#3558F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandMarkText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
   },
   skipButton: {
-    alignSelf: 'flex-end',
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: '#F5F6F7',
   },
   skipText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#9E9E9E',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#888888',
   },
   flatList: {
     flex: 1,
@@ -142,23 +162,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 32,
-    paddingBottom: Platform.OS === 'ios' ? 44 : 28,
-    paddingTop: 24,
+    paddingHorizontal: 28,
+    paddingTop: 20,
   },
   nextButton: {
     backgroundColor: '#3558F0',
     paddingVertical: 14,
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
     borderRadius: 14,
+    shadowColor: '#3558F0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  nextButtonWide: {
+    paddingHorizontal: 36,
   },
   nextButtonPressed: {
     opacity: 0.85,
     transform: [{ scale: 0.97 }],
   },
   nextButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.1,
   },
