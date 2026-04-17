@@ -24,6 +24,9 @@ export interface Article {
   publishedAt: string;
   timeAgo: string;
   authorName: string;
+  emoji?: string;
+  tag?: string;
+  breaking?: boolean;
 }
 
 export interface ArticleDetail extends Article {
@@ -39,6 +42,7 @@ export interface Banner {
   articleSlug: string;
   category?: string;
   source?: string;
+  timeAgo?: string;
 }
 
 export interface Celebrity {
