@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HomeStackParamList } from './types';
+import HomeScreen from '../features/home/screens/HomeScreen';
 
 function PlaceholderScreen({ route }: { route: { name: string } }) {
   return (
@@ -16,7 +17,7 @@ const Stack = createNativeStackNavigator<HomeStackParamList>();
 export default function HomeStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="HomeMain" component={PlaceholderScreen} />
+      <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="ArticleDetail" component={PlaceholderScreen} />
       <Stack.Screen name="CategoryFeed" component={PlaceholderScreen} />
       <Stack.Screen name="CelebrityProfile" component={PlaceholderScreen} />
