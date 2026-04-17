@@ -8,6 +8,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { NewsStackParamList } from '../../../navigation/types';
 import { useNewsArticles } from '../hooks/useNewsData';
@@ -21,6 +23,7 @@ type Props = NativeStackScreenProps<NewsStackParamList, 'NewsMain'>;
 const CATEGORIES = ['All', 'Bollywood', 'Cricket', 'Politics', 'Tech', 'Sports'];
 
 export default function NewsScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(
     undefined,
   );
@@ -75,7 +78,7 @@ export default function NewsScreen({ navigation }: Props) {
   return (
     <View style={styles.screen}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         {navigation.canGoBack() ? (
           <Pressable
             style={styles.backButton}
@@ -83,7 +86,7 @@ export default function NewsScreen({ navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Text style={styles.backIcon}>{'←'}</Text>
+            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
           </Pressable>
         ) : null}
         <Text style={styles.title}>News</Text>
@@ -143,13 +146,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 52,
     paddingBottom: 12,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
-    gap: 8,
+    gap: 10,
   },
   backButton: {
     width: 36,
@@ -158,10 +160,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 18,
     backgroundColor: '#F5F6F7',
-  },
-  backIcon: {
-    fontSize: 18,
-    color: '#1A1A1A',
   },
   title: {
     fontSize: 20,

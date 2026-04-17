@@ -9,6 +9,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, NewsStackParamList } from '../../../navigation/types';
 import { fetchArticleDetails } from '../../../services/api';
@@ -28,6 +30,7 @@ function stripHtml(html: string): string {
 export default function ArticleDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const {
     data: article,
@@ -60,15 +63,22 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
 
   return (
     <View style={styles.screen}>
-      {/* Back button (absolute, top left) */}
-      <View style={styles.backRow}>
+      {/* Floating header bar: back + share */}
+      <View style={[styles.headerBar, { top: insets.top + 8 }]}>
         <Pressable
-          style={styles.backButton}
+          style={styles.headerButton}
           onPress={() => navigation.goBack()}
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Text style={styles.backIcon}>{'←'}</Text>
+          <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
+        </Pressable>
+        <Pressable
+          style={styles.headerButton}
+          accessibilityRole="button"
+          accessibilityLabel="Share article"
+        >
+          <Ionicons name="share-outline" size={20} color="#1A1A1A" />
         </Pressable>
       </View>
 
@@ -148,28 +158,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  backRow: {
+  headerBar: {
     position: 'absolute',
-    top: 52,
     left: 16,
+    right: 16,
     zIndex: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  backButton: {
-    width: 36,
-    height: 36,
+  headerButton: {
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.92)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
     elevation: 3,
-  },
-  backIcon: {
-    fontSize: 18,
-    color: '#1A1A1A',
   },
   scroll: {
     flex: 1,

@@ -25,20 +25,25 @@ export default function ArticleCard({ article, onPress }: Props) {
         accessibilityRole="button"
         accessibilityLabel={article.title}
       >
-        {/* Left: title + meta */}
+        {/* Left: content */}
         <View style={styles.content}>
-          <Text style={styles.title} numberOfLines={2}>
+          {article.category ? (
+            <View style={styles.categoryChip}>
+              <Text style={styles.categoryText} numberOfLines={1}>
+                {article.category}
+              </Text>
+            </View>
+          ) : null}
+          <Text style={styles.title} numberOfLines={3}>
             {article.title}
           </Text>
           <View style={styles.metaRow}>
-            {article.category ? (
-              <View style={styles.categoryChip}>
-                <Text style={styles.categoryText} numberOfLines={1}>
-                  {article.category}
-                </Text>
-              </View>
+            {article.authorName ? (
+              <Text style={styles.author} numberOfLines={1}>
+                {article.authorName}
+              </Text>
             ) : null}
-            {article.category && article.timeAgo ? (
+            {article.authorName && article.timeAgo ? (
               <Text style={styles.bullet}>{' \u2022 '}</Text>
             ) : null}
             {article.timeAgo ? (
@@ -46,6 +51,7 @@ export default function ArticleCard({ article, onPress }: Props) {
             ) : null}
           </View>
         </View>
+
         {/* Right: thumbnail */}
         {article.thumbnailUrl ? (
           <Image
@@ -65,64 +71,72 @@ export default function ArticleCard({ article, onPress }: Props) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     backgroundColor: '#FFFFFF',
-    gap: 12,
+    gap: 14,
   },
   containerPressed: {
-    opacity: 0.75,
+    backgroundColor: '#F8F9FF',
   },
   content: {
     flex: 1,
-    gap: 8,
+    gap: 6,
+  },
+  categoryChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EEF1FE',
+    borderRadius: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  categoryText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#3558F0',
+    letterSpacing: 0.3,
   },
   title: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1A1A1A',
-    lineHeight: 21,
+    lineHeight: 20,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
   },
-  categoryChip: {
-    backgroundColor: '#3558F0',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  categoryText: {
+  author: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#777777',
+    fontWeight: '500',
+    maxWidth: 100,
   },
   bullet: {
     fontSize: 11,
-    color: '#999999',
+    color: '#BBBBBB',
   },
   timeAgo: {
     fontSize: 11,
-    color: '#999999',
+    color: '#AAAAAA',
   },
   thumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
+    width: 90,
+    height: 78,
+    borderRadius: 10,
     backgroundColor: '#E8E8E8',
   },
   thumbnailPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: '#E8E8E8',
+    width: 90,
+    height: 78,
+    borderRadius: 10,
+    backgroundColor: '#EBEBEB',
   },
   separator: {
     height: 1,
-    backgroundColor: '#F0F0F0',
-    marginHorizontal: 16,
+    backgroundColor: '#F2F2F2',
+    marginLeft: 16,
   },
 });
