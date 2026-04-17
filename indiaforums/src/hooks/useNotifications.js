@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import * as notificationsApi from '../services/notificationsApi';
 import * as messagesApi from '../services/messagesApi';
 
-export function useUnreadCount(pollInterval = null) {
+export function useUnreadCount(pollInterval = null, enabled = true) {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -19,12 +19,13 @@ export function useUnreadCount(pollInterval = null) {
   }, []);
 
   useEffect(() => {
+    if (!enabled) { setLoading(false); return; }
     refresh();
     if (pollInterval) {
       const id = setInterval(refresh, pollInterval);
       return () => clearInterval(id);
     }
-  }, [refresh, pollInterval]);
+  }, [refresh, pollInterval, enabled]);
 
   return { count, loading, refresh };
 }
@@ -36,7 +37,7 @@ export function useUnreadCount(pollInterval = null) {
  * `mode=Unread, ps=1` and read `totalCount` from the response envelope. This
  * is cheap (1 row) and doesn't burn pages.
  */
-export function useUnreadMessageCount(pollInterval = null) {
+export function useUnreadMessageCount(pollInterval = null, enabled = true) {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -54,12 +55,13 @@ export function useUnreadMessageCount(pollInterval = null) {
   }, []);
 
   useEffect(() => {
+    if (!enabled) { setLoading(false); return; }
     refresh();
     if (pollInterval) {
       const id = setInterval(refresh, pollInterval);
       return () => clearInterval(id);
     }
-  }, [refresh, pollInterval]);
+  }, [refresh, pollInterval, enabled]);
 
   return { count, loading, refresh };
 }

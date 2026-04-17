@@ -15,94 +15,7 @@
 }
 .screen::-webkit-scrollbar { display: none; }
 
-/* ── 1. Header ────────────────────────────────────────────────────────────── */
-/* Fixed height: 56px | Side padding: 16px | 8pt grid throughout             */
-.header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 16px;
-  height: 56px;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  flex-shrink: 0;
-}
-
-/* 40×40 tap target — meets Apple HIG (44px recommended, 40px acceptable) */
-.backBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background var(--duration-fast) var(--ease-out);
-  margin-left: -8px; /* optical alignment with edge */
-}
-.backBtn:hover  { background: var(--bg); }
-.backBtn:active { background: var(--border); }
-
-.headerTitle {
-  flex: 1;
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--dark);
-  line-height: 1;
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* 40×40 icon button (search) */
-.iconBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: var(--text2);
-  cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-out);
-}
-.iconBtn:hover  { background: var(--bg); }
-.iconBtn:active { background: var(--border); }
-
-/* Write CTA — 36px height minimum, clear affordance */
-.writeBtn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 18px;
-  border: none;
-  background: var(--brand);
-  color: var(--text-on-brand);
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
-}
-.writeBtn:hover  { opacity: 0.9; }
-.writeBtn:active { opacity: 0.8; transform: scale(0.97); }
-
-/* ── 2. Show / Fandom Filter ──────────────────────────────────────────────── */
+/* ── 1. Show / Fandom Filter ──────────────────────────────────────────────── */
 /* Sits below header with bg: var(--bg) to visually separate from the header  */
 .showWrap {
   position: relative;
@@ -139,6 +52,12 @@
 .showChipActive {
   border-color: var(--brand);
   background: var(--brand-light);
+  color: var(--brand);
+}
+
+/* Top Authors chip — always uses brand color (not just when active) */
+.showChipAuthors {
+  border-color: var(--brand-border);
   color: var(--brand);
 }
 

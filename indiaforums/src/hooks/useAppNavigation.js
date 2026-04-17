@@ -22,6 +22,8 @@ const initialState = {
   // Web story player — owns its own top-level screen so the immersive
   // viewer doesn't get clipped inside whatever screen launched it.
   selectedWebStory:         null,  // { stories: WebStory[], idx: number }
+  composeReply:             null,  // { topic, forumId, quotedPost }
+  showNotifications:        false,
 };
 
 function navReducer(state, action) {
@@ -130,6 +132,16 @@ function navReducer(state, action) {
       return { ...state, selectedWebStory: { ...cur, idx: newIdx } };
     }
 
+    case 'SELECT_COMPOSE_REPLY':
+      return { ...state, composeReply: action.payload };
+    case 'CLEAR_COMPOSE_REPLY':
+      return { ...state, composeReply: null };
+
+    case 'OPEN_NOTIFICATIONS':
+      return { ...state, showNotifications: true };
+    case 'CLOSE_NOTIFICATIONS':
+      return { ...state, showNotifications: false };
+
     case 'RESET':
       return { ...initialState };
 
@@ -180,6 +192,12 @@ export default function useAppNavigation() {
     openWebStory:    useCallback((p)   => dispatch({ type: 'OPEN_WEB_STORY', payload: p }), []),
     closeWebStory:   useCallback(()    => dispatch({ type: 'CLOSE_WEB_STORY' }), []),
     setWebStoryIdx:  useCallback((i)   => dispatch({ type: 'SET_WEB_STORY_IDX', payload: i }), []),
+
+    selectComposeReply: useCallback((r) => dispatch({ type: 'SELECT_COMPOSE_REPLY', payload: r }), []),
+    clearComposeReply:  useCallback(()  => dispatch({ type: 'CLEAR_COMPOSE_REPLY' }), []),
+
+    openNotifications:  useCallback(() => dispatch({ type: 'OPEN_NOTIFICATIONS' }), []),
+    closeNotifications: useCallback(() => dispatch({ type: 'CLOSE_NOTIFICATIONS' }), []),
 
     reset:            useCallback(()    => dispatch({ type: 'RESET' }), []),
   };

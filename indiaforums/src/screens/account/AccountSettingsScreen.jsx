@@ -179,18 +179,6 @@ function ProfileSection() {
       />
 
       <div className={styles.field}>
-        <label className={styles.label} htmlFor="acc-username">Username</label>
-        <input
-          id="acc-username"
-          className={`${styles.input} ${styles.inputDisabled}`}
-          type="text"
-          value={form.userName}
-          disabled
-        />
-        <span className={styles.hint}>Username cannot be changed here</span>
-      </div>
-
-      <div className={styles.field}>
         <label className={styles.label} htmlFor="acc-email">Email</label>
         <input
           id="acc-email"
@@ -265,7 +253,8 @@ function PreferencesSection() {
   }, []);
 
   function togglePref(key) {
-    setPrefs((p) => ({ ...p, [key]: !p[key] }));
+    // API stores as uint8 (0/1). Treat any truthy value as "on".
+    setPrefs((p) => ({ ...p, [key]: p[key] ? 0 : 1 }));
     if (error) setError(null);
     if (success) setSuccess('');
   }
@@ -290,13 +279,65 @@ function PreferencesSection() {
     return <ErrorState message={fetchError} onRetry={() => window.location.reload()} />;
   }
 
-  const prefItems = [
-    { key: 'emailNotifications',   label: 'Email Notifications',   desc: 'Receive email updates for activity' },
-    { key: 'pushNotifications',    label: 'Push Notifications',    desc: 'Receive push notifications' },
-    { key: 'showOnlineStatus',     label: 'Show Online Status',    desc: 'Let others see when you\'re online' },
-    { key: 'allowBuddyRequests',   label: 'Allow Buddy Requests',  desc: 'Let others send you buddy requests' },
-    { key: 'showActivityInFeed',   label: 'Show Activity in Feed', desc: 'Display your activity in public feed' },
+  // Groups match UserPreferencesDto from the API spec
+  const EMAIL_PREFS = [
+    { key: 'emailPm',                              label: 'New private message' },
+    { key: 'emailPmReply',                         label: 'Reply to your PM' },
+    { key: 'emailPmRead',                          label: 'PM read receipt' },
+    { key: 'emailQuote',                           label: 'Quoted in a post' },
+    { key: 'emailCommentReply',                    label: 'Reply to your comment' },
+    { key: 'emailScrapbook',                       label: 'New scrapbook entry' },
+    { key: 'emailSlambook',                        label: 'New slambook entry' },
+    { key: 'emailSlambookReply',                   label: 'Slambook reply' },
+    { key: 'emailTestimonial',                     label: 'New testimonial' },
+    { key: 'emailFFNotify',                        label: 'Fan fiction you follow' },
+    { key: 'emailFFChapterNotify',                 label: 'New fan fiction chapter' },
+    { key: 'emailBadgeAchievement',                label: 'Badge earned' },
+    { key: 'emailNewsLetter',                      label: 'Newsletter' },
+    { key: 'emailRecommendation',                  label: 'Content recommendations' },
+    { key: 'emailPostTag',                         label: 'Tagged in a post' },
+    { key: 'emailDailyWeeklyMonthlyNotifications', label: 'Digest emails' },
+    { key: 'emailNewTopicAlert',                   label: 'New topic in watched forum' },
+    { key: 'emailTopicDailyDigest',                label: 'Topic daily digest' },
   ];
+
+  const VISIBILITY_PREFS = [
+    { key: 'showSignature',  label: 'Show signature in posts' },
+    { key: 'showScrapbook',  label: 'Show scrapbook on profile' },
+    { key: 'showSlambook',   label: 'Show slambook on profile' },
+    { key: 'showTestimonial',label: 'Show testimonials on profile' },
+    { key: 'showFeeds',      label: 'Show activity feed on profile' },
+    { key: 'showCountry',    label: 'Show country on profile' },
+    { key: 'showMyPosts',    label: 'Show my posts on profile' },
+  ];
+
+  const PERMISSION_PREFS = [
+    { key: 'allowPM',       label: 'Allow private messages from others' },
+    { key: 'allowUserTags', label: 'Allow others to tag me in posts' },
+  ];
+
+  function PrefGroup({ title, items }) {
+    return (
+      <div className={styles.prefGroup}>
+        <div className={styles.prefGroupTitle}>{title}</div>
+        {items.map((item) => (
+          <div key={item.key} className={styles.prefRow}>
+            <div className={styles.prefInfo}>
+              <div className={styles.prefLabel}>{item.label}</div>
+            </div>
+            <button
+              className={`${styles.toggle} ${prefs?.[item.key] ? styles.toggleOn : ''}`}
+              onClick={() => togglePref(item.key)}
+              type="button"
+              aria-label={`Toggle ${item.label}`}
+            >
+              <span className={styles.toggleThumb} />
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className={styles.prefSection}>
@@ -304,24 +345,11 @@ function PreferencesSection() {
       {error && <div className={styles.error}>{error}</div>}
       {success && <div className={styles.success}>{success}</div>}
 
-      {prefItems.map((item) => (
-        <div key={item.key} className={styles.prefRow}>
-          <div className={styles.prefInfo}>
-            <div className={styles.prefLabel}>{item.label}</div>
-            <div className={styles.prefDesc}>{item.desc}</div>
-          </div>
-          <button
-            className={`${styles.toggle} ${prefs[item.key] ? styles.toggleOn : ''}`}
-            onClick={() => togglePref(item.key)}
-            type="button"
-            aria-label={`Toggle ${item.label}`}
-          >
-            <span className={styles.toggleThumb} />
-          </button>
-        </div>
-      ))}
+      <PrefGroup title="Email Notifications" items={EMAIL_PREFS} />
+      <PrefGroup title="Profile Visibility"  items={VISIBILITY_PREFS} />
+      <PrefGroup title="Permissions"         items={PERMISSION_PREFS} />
 
-      <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+      <button className={`${styles.saveBtn} ${styles.prefSaveBtn}`} onClick={handleSave} disabled={saving}>
         {saving ? 'Saving...' : 'Save Preferences'}
       </button>
     </div>

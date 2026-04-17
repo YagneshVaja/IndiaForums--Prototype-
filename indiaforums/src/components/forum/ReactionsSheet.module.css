@@ -1,0 +1,324 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   REACTIONS SHEET — who reacted to a post
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes sheetIn {
+  from { transform: translateY(100%); opacity: 0.7; }
+  to   { transform: translateY(0);    opacity: 1;   }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Overlay ──────────────────────────────────────────────────────────────── */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 210;
+  background: rgba(0, 0, 0, 0.48);
+  animation: fadeIn 0.2s ease both;
+}
+
+/* ── Sheet ────────────────────────────────────────────────────────────────── */
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 211;
+  background: var(--card);
+  border-radius: 20px 20px 0 0;
+  max-height: 80%;
+  display: flex;
+  flex-direction: column;
+  animation: sheetIn 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+  box-shadow: 0 -6px 40px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+}
+
+/* Drag handle */
+.handle {
+  width: 34px;
+  height: 4px;
+  background: var(--border-strong);
+  border-radius: 2px;
+  margin: 10px auto 0;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 8px;
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--dark);
+  letter-spacing: -0.2px;
+}
+
+.closeBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
+  color: var(--text3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.closeBtn:hover { background: var(--border); color: var(--text); }
+
+/* ── Reaction type tabs ───────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 6px;
+  padding: 4px 14px 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.tab:hover { border-color: var(--brand-border); color: var(--brand); background: var(--brand-light); }
+
+.tabActive {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  box-shadow: var(--shadow-brand);
+}
+.tabActive:hover { background: var(--brand-hover); }
+
+.tabEmoji { font-size: 14px; line-height: 1; }
+.tabLabel { font-weight: 700; }
+.tabCount {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* ── Scrollable user list ─────────────────────────────────────────────────── */
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.list::-webkit-scrollbar { display: none; }
+
+/* ── State messages ───────────────────────────────────────────────────────── */
+.stateWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+}
+
+.stateText {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text3);
+  text-align: center;
+}
+
+.stateError {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--red);
+  text-align: center;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid var(--border-strong);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+/* ── User row ─────────────────────────────────────────────────────────────── */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.row:last-child { border-bottom: none; }
+.row:hover { background: var(--surface); }
+
+/* Avatar with reaction corner badge */
+.avatarWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarLetter {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Reaction emoji in bottom-right corner of avatar */
+.reactionCorner {
+  position: absolute;
+  bottom: -2px;
+  right: -4px;
+  font-size: 14px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+}
+
+/* User info column */
+.info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.displayName {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.username {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text3);
+}
+
+.rankPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 1px 7px 1px 6px;
+}
+
+.rankNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--brand-light);
+  color: var(--brand);
+  border-radius: var(--radius-full);
+  font-size: 9.5px;
+  font-weight: 800;
+}
+
+/* Badge images column */
+.badges {
+  display: flex;
+  align-items: center;
+  gap: -4px;
+  flex-shrink: 0;
+}
+
+.badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--card);
+  margin-left: -5px;
+}
+.badge:first-child { margin-left: 0; }
+
+.badgeExtra {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 800;
+  border: 1.5px solid var(--card);
+  margin-left: -5px;
+}

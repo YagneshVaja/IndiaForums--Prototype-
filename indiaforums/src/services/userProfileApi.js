@@ -35,6 +35,24 @@ export function getMyStatus()                        { return api.get('/me/statu
 export function updateMyStatus(data)                 { return api.put('/me/status', data); }
 
 // ── Other user's profile ─────────────────────────────────────────────────────
+
+/**
+ * Lightweight hover-card for a user — avatar, banner, online status, country
+ * flag, permission flags, relationship flags, and navigation URLs.
+ * Anonymous access supported; permission/relationship flags require auth.
+ *
+ * Response shape (UserHoverCardDto):
+ *   { userId, userName, displayName, groupId, statusCode, badgeJson,
+ *     thumbnailUrl, bannerUrl, userOnlineClass, countryFlagUnicode,
+ *     isBlockAllowed, isWarningAllowed, isBanAllowed, isUserPostLinkVisible,
+ *     isFriend, isFollowing, isBlocked,
+ *     profileUrl, scrapbookUrl, slambookUrl, testimonialUrl, messageUrl, userPostUrl }
+ *
+ * Use this instead of getProfile() when you only need the avatar/name/status —
+ * it is significantly lighter than the full profile call.
+ */
+export function getHoverCard(userId) { return api.get(`${userPath(userId)}/hover-card`); }
+
 export function getProfile(userId)                          { return api.get(`${userPath(userId)}/profile`); }
 export function getActivities(userId, params = {})          { return api.get(`${userPath(userId)}/activities/load-more`, { params }); }
 export function getPosts(userId, params = {})               { return api.get(`${userPath(userId)}/posts`, { params }); }

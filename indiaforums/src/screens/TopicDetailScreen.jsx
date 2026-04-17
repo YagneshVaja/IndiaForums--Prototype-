@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import styles from './TopicDetailScreen.module.css';
 import useTopicPosts from '../hooks/useTopicPosts';
-import { extractApiError } from '../services/api';
+import { extractApiError, timeAgo } from '../services/api';
 import {
-  replyToTopic,
   editPost,
   reactToThread,
+  getThreadLikes,
   castPollVote,
   getPostEditHistory,
   trashPost,
@@ -15,11 +15,31 @@ import { getProfile } from '../services/userProfileApi';
 import { useAuth } from '../contexts/AuthContext';
 import SocialEmbed, { detectPlatform } from '../components/ui/SocialEmbed';
 import AdminPanel from '../components/forum/AdminPanel';
+import ReactionsSheet from '../components/forum/ReactionsSheet';
 
 function formatNum(n) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
   if (n >= 1000)    return (n / 1000).toFixed(1) + 'k';
   return String(n);
+}
+
+// Parse reactionJson → top reaction types for the summary pill
+function parseTopReactionTypes(reactionJson) {
+  if (!reactionJson) return [];
+  try {
+    const entries = JSON.parse(reactionJson)?.json ?? [];
+    const byType = {};
+    for (const e of entries) {
+      if (!e.lt) continue;
+      byType[Number(e.lt)] = (byType[Number(e.lt)] || 0) + 1;
+    }
+    return Object.keys(byType)
+      .map(Number)
+      .sort((a, b) => byType[b] - byType[a])
+      .slice(0, 3);
+  } catch {
+    return [];
+  }
 }
 
 // Forum thread reactions (mirrors THREAD_REACTION_TYPES from forumsApi)
@@ -409,13 +429,10 @@ function UserMiniCard({ post, onVisitProfile, onMessageUser, onClose }) {
   );
 }
 
-export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser }) {
+export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser, onComposeReply }) {
   const { posts, topicDetail, loading, loadingMore, error, hasMore, loadMore, refresh } = useTopicPosts(topic?.id);
   const { user, isAuthenticated, isModerator } = useAuth();
 
-  const [replyText, setReplyText] = useState('');
-  const [sending, setSending]     = useState(false);
-  const [replyError, setReplyError] = useState(null);
   const [sortBy, setSortBy] = useState('date');
 
   // Mini user card (avatar tap)
@@ -426,8 +443,88 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
   const [editText, setEditText]     = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError]   = useState(null);
-  const [postReactions, setPostReactions] = useState({}); // { [postId]: reactionTypeCode }
+  // { [postId]: reactionCode | null }
+  const [postReactions, setPostReactions] = useState({});
   const [reactionPickerFor, setReactionPickerFor] = useState(null);
+  // server-authoritative like counts received from reactToThread response
+  const [postLikeCounts, setPostLikeCounts] = useState({});
+  // { [postId]: threadLikeId } — returned by the API, must be sent back on update/remove
+  const [postThreadLikeIds, setPostThreadLikeIds] = useState({});
+  // Toast for action errors (react/trash/undo failures)
+  const [actionError, setActionError] = useState(null);
+  // "You already posted same reaction" alert — stores postId of active alert
+  const [sameReactionAlert, setSameReactionAlert] = useState(null);
+  const sameReactionTimer = useRef(null);
+  // Tracks what each post's reaction was BEFORE the most recent change,
+  // so UNDO can revert to it instead of removing entirely.
+  const prevReactionRef = useRef({});
+
+  // ── Reaction persistence via localStorage ────────────────────────────────
+  // The posts-list API (TopicPostDto) has no per-user reaction field, so we
+  // can't know the current user's saved reaction from the posts response alone.
+  // We persist reactions in localStorage (keyed by userId) so they survive
+  // navigation and page reloads within the same browser session.
+
+  function getStoredReactions(userId) {
+    try { return JSON.parse(localStorage.getItem(`if_reactions_${userId}`) || '{}'); }
+    catch (_) { return {}; }
+  }
+
+  function saveStoredReaction(userId, postId, reactionCode) {
+    try {
+      const stored = getStoredReactions(userId);
+      if (reactionCode == null) { delete stored[postId]; }
+      else { stored[String(postId)] = reactionCode; }
+      localStorage.setItem(`if_reactions_${userId}`, JSON.stringify(stored));
+    } catch (_) {}
+  }
+
+  // Restore saved reactions when posts load.
+  // Primary: parse post.reactionJson (from TopicPostDto.jsonData) — the backend already
+  // includes the full reaction breakdown per post, so we find the current user's entry
+  // by matching uid. Format: {"json":[{"lt":<reactionType>,"lc":<count>,"uid":<userId>},...]}
+  // Fallback: localStorage for any posts where reactionJson is absent or doesn't include us.
+  useEffect(() => {
+    if (!posts.length || !user?.userId) return;
+    const stored = getStoredReactions(user.userId);
+    let storedLikeIds = {};
+    try { storedLikeIds = JSON.parse(localStorage.getItem(`if_likeids_${user.userId}`) || '{}'); }
+    catch (_) {}
+
+    const seededReactions = {};
+    const seededLikeIds   = {};
+
+    for (const post of posts) {
+      // 1. Try server data first
+      if (post.reactionJson) {
+        try {
+          const entries = JSON.parse(post.reactionJson)?.json ?? [];
+          const mine = entries.find(r => Number(r.uid) === Number(user.userId));
+          if (mine?.lt) {
+            seededReactions[post.id] = Number(mine.lt);
+          }
+        } catch (_) { /* malformed */ }
+      }
+      // 2. Fall back to localStorage if server data didn't include this user's reaction
+      if (seededReactions[post.id] == null) {
+        const saved = stored[String(post.id)];
+        if (saved != null) seededReactions[post.id] = saved;
+      }
+      // Restore threadLikeId from localStorage (not in posts response)
+      const likeId = storedLikeIds[String(post.id)];
+      if (likeId != null) seededLikeIds[post.id] = likeId;
+    }
+
+    if (Object.keys(seededReactions).length > 0) {
+      setPostReactions(prev => ({ ...seededReactions, ...prev }));
+    }
+    if (Object.keys(seededLikeIds).length > 0) {
+      setPostThreadLikeIds(prev => ({ ...seededLikeIds, ...prev }));
+    }
+  }, [posts, user?.userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // likes bottom sheet — null = closed
+  const [likesSheet, setLikesSheet] = useState(null);
 
   // Poll vote state
   const [pollVoting, setPollVoting]   = useState(false);
@@ -436,6 +533,10 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
 
   // Post edit-history modal
   const [historyForPostId, setHistoryForPostId] = useState(null);
+
+
+  // Reactions list sheet
+  const [reactionsSheetPost, setReactionsSheetPost] = useState(null);
 
   // Sticky header
   const [stickyVisible, setStickyVisible] = useState(false);
@@ -452,28 +553,6 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
   const sortedPosts = sortBy === 'likes'
     ? [...posts].sort((a, b) => (b.likes || 0) - (a.likes || 0))
     : posts;
-
-  async function handleReply() {
-    if (!replyText.trim() || sending) return;
-    if (!isAuthenticated) {
-      setReplyError('Please sign in to reply.');
-      return;
-    }
-    setSending(true);
-    setReplyError(null);
-    try {
-      await replyToTopic(liveTopic.id, {
-        forumId,
-        message: replyText.trim(),
-      });
-      setReplyText('');
-      refresh();
-    } catch (err) {
-      setReplyError(extractApiError(err, 'Failed to send reply'));
-    } finally {
-      setSending(false);
-    }
-  }
 
   function startEdit(post) {
     setEditingId(post.id);
@@ -532,29 +611,91 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
       await trashPost({ threadId: post.id, topicId: liveTopic.id });
       refresh();
     } catch (err) {
-      setReplyError(extractApiError(err, 'Failed to trash post'));
+      setActionError(extractApiError(err, 'Failed to trash post'));
+    }
+  }
+
+  function showSameReactionAlert(postId) {
+    setSameReactionAlert(postId);
+    clearTimeout(sameReactionTimer.current);
+    sameReactionTimer.current = setTimeout(() => setSameReactionAlert(null), 4000);
+  }
+
+  // Core API call shared by both handleReact and handleUnreact
+  async function sendReaction(post, reactionCode) {
+    const res = await reactToThread({
+      threadId: post.id,
+      forumId,
+      reactionType: reactionCode, // 0 = 'None' (remove), 1-7 = specific reaction
+      threadLikeId: postThreadLikeIds[post.id] ?? undefined,
+    });
+    saveStoredReaction(user.userId, post.id, reactionCode === 0 ? null : reactionCode);
+    const likeId = res?.data?.threadLikeId;
+    if (likeId != null) {
+      setPostThreadLikeIds((m) => ({ ...m, [post.id]: likeId }));
+      try {
+        const likeIds = JSON.parse(localStorage.getItem(`if_likeids_${user.userId}`) || '{}');
+        if (reactionCode === 0) { delete likeIds[String(post.id)]; }
+        else { likeIds[String(post.id)] = likeId; }
+        localStorage.setItem(`if_likeids_${user.userId}`, JSON.stringify(likeIds));
+      } catch (_) {}
+    }
+    if (reactionCode === 0) {
+      setPostThreadLikeIds((m) => { const n = { ...m }; delete n[post.id]; return n; });
+    }
+    const likeCount = res?.data?.likeCount;
+    if (likeCount != null) {
+      setPostLikeCounts((m) => ({ ...m, [post.id]: likeCount }));
     }
   }
 
   async function handleReact(post, reactionCode) {
     if (!isAuthenticated) {
-      setReplyError('Please sign in to react.');
+      setActionError('Please sign in to react.');
       return;
     }
-    const prev = postReactions[post.id] ?? null;
-    // Optimistic toggle
-    setPostReactions((m) => ({ ...m, [post.id]: reactionCode }));
+
+    const current = postReactions[post.id] ?? null;
+
+    // Same reaction tapped again → show "already reacted" alert with UNDO
+    if (current === reactionCode) {
+      setReactionPickerFor(null);
+      showSameReactionAlert(post.id);
+      return;
+    }
+
+    // Save what we had before this change so UNDO can revert to it
+    prevReactionRef.current[post.id] = current;
+
+    setPostReactions((m) => ({ ...m, [post.id]: reactionCode })); // optimistic
     setReactionPickerFor(null);
+    setSameReactionAlert(null);
+
     try {
-      await reactToThread({
-        threadId: post.id,
-        forumId,
-        reactionType: reactionCode,
-      });
+      await sendReaction(post, reactionCode);
     } catch (err) {
-      // Rollback
-      setPostReactions((m) => ({ ...m, [post.id]: prev }));
-      setReplyError(extractApiError(err, 'Failed to record reaction'));
+      setPostReactions((m) => ({ ...m, [post.id]: current })); // rollback
+      setActionError(extractApiError(err, 'Failed to record reaction'));
+    }
+  }
+
+  async function handleUnreact(post) {
+    setSameReactionAlert(null);
+    clearTimeout(sameReactionTimer.current);
+
+    // If the user changed reactions before clicking the same one, UNDO reverts
+    // to the previous reaction. If they added the reaction fresh, UNDO removes it.
+    const revertTo = prevReactionRef.current[post.id] ?? null;
+    const current  = postReactions[post.id] ?? null;
+
+    delete prevReactionRef.current[post.id];
+    setPostReactions((m) => ({ ...m, [post.id]: revertTo })); // optimistic
+
+    try {
+      await sendReaction(post, revertTo ?? 0); // 0 = remove
+    } catch (err) {
+      setPostReactions((m) => ({ ...m, [post.id]: current })); // rollback
+      setActionError(extractApiError(err, 'Failed to undo reaction'));
     }
   }
 
@@ -764,16 +905,6 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
                         className={styles.postTime}
                         title={post.rawTime ? new Date(post.rawTime).toLocaleString() : undefined}
                       >{post.time}</span>
-                      {post.isEdited && (
-                        <button
-                          type="button"
-                          className={styles.editedChip}
-                          onClick={() => setHistoryForPostId(post.id)}
-                          title="View edit history"
-                        >
-                          edited
-                        </button>
-                      )}
                     </div>
                     {/* Achievement badges inline under meta */}
                     {post.badges?.length > 0 && (
@@ -827,22 +958,47 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
                   <PostBodyWithEmbeds html={post.message} />
                 )}
 
+                {/* Edited-by line — matches IndiaForums live style */}
+                {!isEditing && post.isEdited && post.editedWhen && (
+                  <button
+                    type="button"
+                    className={styles.editedLine}
+                    onClick={() => setHistoryForPostId(post.id)}
+                    title="View edit history"
+                  >
+                    Edited by {post.editedBy || post.author} – {timeAgo(post.editedWhen)}
+                  </button>
+                )}
+
                 {/* Post footer with actions */}
-                {!isEditing && (
+                {!isEditing && (() => {
+                  const totalLikes = postLikeCounts[post.id] ?? post.likes ?? 0;
+                  const topTypes   = parseTopReactionTypes(post.reactionJson);
+                  return (
                   <div className={styles.postFooter}>
-                    {/* Reaction pill */}
+                    {/* Left: aggregate reaction summary → taps to open likers sheet */}
                     <div className={styles.reactWrap}>
-                      <button
-                        className={`${styles.reactBtn} ${myReact != null ? styles.reactBtnActive : ''}`}
-                        onClick={() => setReactionPickerFor(pickerOpen ? null : post.id)}
-                      >
-                        <span className={styles.reactBtnEmoji}>
-                          {myReact ? REACTION_OPTIONS.find(o => o.code === myReact)?.emoji : '👍'}
-                        </span>
-                        {post.likes > 0 && (
-                          <span className={styles.reactBtnCount}>{formatNum(post.likes)}</span>
-                        )}
-                      </button>
+                      {totalLikes > 0 && (
+                        <button
+                          className={styles.reactSummary}
+                          onClick={() => setReactionsSheetPost(post)}
+                          title="See who reacted"
+                        >
+                          <span className={styles.reactSummaryEmojis}>
+                            {topTypes.length > 0
+                              ? topTypes.map(lt => (
+                                  <span key={lt} className={styles.reactSummaryEmoji}>
+                                    {REACTION_OPTIONS.find(o => o.code === lt)?.emoji}
+                                  </span>
+                                ))
+                              : <span className={styles.reactSummaryEmoji}>👍</span>
+                            }
+                          </span>
+                          <span className={styles.reactSummaryCount}>{formatNum(totalLikes)}</span>
+                        </button>
+                      )}
+
+                      {/* Emoji picker popup */}
                       {pickerOpen && (
                         <>
                           <div className={styles.reactBackdrop} onClick={() => setReactionPickerFor(null)} />
@@ -862,8 +1018,32 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
                       )}
                     </div>
 
+                    {/* LIKE action button → opens emoji picker */}
+                    <button
+                      className={`${styles.postAction} ${myReact != null ? styles.postActionReacted : ''}`}
+                      onClick={() => setReactionPickerFor(pickerOpen ? null : post.id)}
+                    >
+                      {myReact ? (
+                        <>
+                          <span>{REACTION_OPTIONS.find(o => o.code === myReact)?.emoji}</span>
+                          {REACTION_OPTIONS.find(o => o.code === myReact)?.label}
+                        </>
+                      ) : (
+                        <>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"/>
+                            <path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/>
+                          </svg>
+                          Like
+                        </>
+                      )}
+                    </button>
+
                     {/* Action buttons */}
-                    <button className={styles.postAction}>
+                    <button
+                      className={styles.postAction}
+                      onClick={() => { if (!forumId) return; onComposeReply?.({ topic: liveTopic, forumId, quotedPost: null }); }}
+                    >
                       <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
                         <path d="M2 2h9a1 1 0 011 1v5a1 1 0 01-1 1H4l-3 2.5V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
                       </svg>
@@ -878,7 +1058,28 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
                         Edit
                       </button>
                     ) : (
-                      <button className={styles.postAction}>
+                      <button
+                        className={styles.postAction}
+                        onClick={() => {
+                          // Pass full quote context so the API can link back to this post
+                          const plainText = (post.message || '')
+                            .replace(/<br\s*\/?>/gi, ' ')
+                            .replace(/<[^>]+>/g, '')
+                            .trim()
+                            .slice(0, 300);
+                          if (!forumId) return;
+                          onComposeReply?.({
+                            topic:      liveTopic,
+                            forumId,
+                            quotedPost: {
+                              author:   post.author,
+                              message:  plainText,
+                              threadId: post.id,
+                              userId:   post.authorId,
+                            },
+                          });
+                        }}
+                      >
                         <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
                           <path d="M2 3h6v7H2z" stroke="currentColor" strokeWidth="1.2"/>
                           <path d="M5 1h6v7" stroke="currentColor" strokeWidth="1.2"/>
@@ -906,6 +1107,22 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
                         <path d="M12 5H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
                       </svg>
                       Share
+                    </button>
+                  </div>
+                  );
+                })()}
+
+                {/* "Already reacted" inline alert */}
+                {sameReactionAlert === post.id && (
+                  <div className={styles.sameReactionAlert}>
+                    <span className={styles.sameReactionText}>
+                      You already posted same reaction on this post.
+                    </span>
+                    <button
+                      className={styles.sameReactionUndo}
+                      onClick={() => handleUnreact(post)}
+                    >
+                      UNDO
                     </button>
                   </div>
                 )}
@@ -974,32 +1191,25 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
         <div className={styles.spacer} />
       </div>
 
-      {/* ── Reply input (fixed at bottom) ── */}
+      {/* ── Action error toast ── */}
+      {actionError && (
+        <div className={styles.actionErrorBar} onClick={() => setActionError(null)}>
+          {actionError}
+        </div>
+      )}
+
+      {/* ── Reply bar (tap to open full composer) ── */}
       {!liveTopic.locked && (
-        <div className={styles.replyBar}>
+        <div className={styles.replyBar} onClick={() => { if (!forumId) return; onComposeReply?.({ topic: liveTopic, forumId, quotedPost: null }); }} style={{ cursor: 'pointer' }}>
           <div className={styles.replyAvatar}>{user?.userName?.charAt(0)?.toUpperCase() || '?'}</div>
-          <input
-            className={styles.replyInput}
-            placeholder={isAuthenticated ? `Reply as ${user?.userName || 'you'}…` : 'Sign in to reply…'}
-            value={replyText}
-            onChange={e => setReplyText(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleReply(); }}
-            disabled={sending}
-          />
-          <button
-            className={`${styles.sendBtn} ${replyText.trim() ? styles.sendActive : ''}`}
-            onClick={handleReply}
-            disabled={!replyText.trim() || sending}
-          >
-            {sending ? (
-              <span className={styles.sendSpinner} />
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M2 8l5-6v4h5a2 2 0 012 2v0a2 2 0 01-2 2H7v4L2 8z" fill="currentColor"/>
-              </svg>
-            )}
-          </button>
-          {replyError && <div className={styles.replyError}>{replyError}</div>}
+          <div className={styles.replyInput} style={{ color: 'var(--text3)', userSelect: 'none' }}>
+            {isAuthenticated ? `Reply as ${user?.userName || 'you'}…` : 'Sign in to reply…'}
+          </div>
+          <div className={`${styles.sendBtn} ${styles.sendActive}`}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 8l5-6v4h5a2 2 0 012 2v0a2 2 0 01-2 2H7v4L2 8z" fill="currentColor"/>
+            </svg>
+          </div>
         </div>
       )}
       {liveTopic.locked && (
@@ -1015,6 +1225,14 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
         <PostEditHistoryModal
           postId={historyForPostId}
           onClose={() => setHistoryForPostId(null)}
+        />
+      )}
+
+      {/* ── Reactions likers sheet ── */}
+      {reactionsSheetPost && (
+        <ReactionsSheet
+          post={reactionsSheetPost}
+          onClose={() => setReactionsSheetPost(null)}
         />
       )}
 

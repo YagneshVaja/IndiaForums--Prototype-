@@ -157,7 +157,15 @@ export function extractApiError(err, fallback = 'Something went wrong. Please tr
   if (err?.response?.status === 429) {
     return formatRateLimitMessage(err);
   }
+  const status = err?.response?.status;
   const d = err?.response?.data;
+  // If the server returned HTML (e.g. a maintenance/under-construction page),
+  // don't dump raw markup into the UI — show a clean status-based message.
+  if (typeof d === 'string' && d.trimStart().startsWith('<')) {
+    if (status === 503 || status === 502) return 'The server is temporarily unavailable. Please try again later.';
+    if (status === 404) return 'This feature is not yet available on the server.';
+    return 'The server returned an unexpected response. Please try again later.';
+  }
   if (typeof d === 'string') return d;
   // ASP.NET Core ValidationProblemDetails puts per-field errors in d.errors:
   // { "Message": ["must be ≥ 10 chars"], "ForumId": ["must be > 0"] }
@@ -229,7 +237,10 @@ export function timeAgo(dateStr) {
 }
 
 // ── Transform API article → UI article ───────────────────────────────────────
-function transformArticle(raw) {
+// Handles both /articles/list and /home/* response shapes:
+//   time:      publishedWhen (/articles) | publishDate (/home)
+//   thumbnail: thumbnail (/articles)     | thumbnailUrl (/home)
+export function transformArticle(raw) {
   const cat = CATEGORY_MAP[raw.defaultCategoryId] || 'MOVIES';
   return {
     id:        raw.articleId,
@@ -239,11 +250,109 @@ function transformArticle(raw) {
     tag:       raw.articleAttributeName || '',
     breaking:  raw.priority > 0,
     title:     raw.headline,
-    time:      timeAgo(raw.publishedWhen),
+    time:      timeAgo(raw.publishedWhen || raw.publishDate),
     bg:        CATEGORY_GRADIENTS[cat] || CATEGORY_GRADIENTS.MOVIES,
     emoji:     CATEGORY_EMOJIS[cat] || '📰',
-    thumbnail: raw.thumbnail || null,
+    thumbnail: raw.thumbnail || raw.thumbnailUrl || null,
     commentCount: raw.commentCount || 0,
+  };
+}
+
+// ── Transform HomeArticleDto → UI article ────────────────────────────────────
+// HomeArticleDto (used by /home/initial, /home/articles, /home/latest, etc.)
+// has a lighter schema than ArticleDto used by /articles/list:
+//   articleId, headline, pageUrl, mediaUrl, publishDate,
+//   commentCount, sectionName, thumbnailUrl, updateChecksum
+// No defaultCategoryId — category comes from sectionName string instead.
+export function transformHomeArticle(raw) {
+  // sectionName is the human-readable category (e.g. "Television", "Movies")
+  const sectionRaw = (raw.sectionName || '').toUpperCase();
+  // Map sectionName → internal cat key used by CATEGORY_GRADIENTS
+  const SECTION_TO_CAT = {
+    TELEVISION: 'TELEVISION', TV: 'TELEVISION', HINDI: 'TELEVISION',
+    MOVIES:     'MOVIES',     BOLLYWOOD: 'MOVIES', BOX_OFFICE: 'MOVIES',
+    DIGITAL:    'DIGITAL',    OTT: 'DIGITAL',
+    LIFESTYLE:  'LIFESTYLE',  FASHION: 'LIFESTYLE', HEALTH: 'LIFESTYLE',
+    SPORTS:     'SPORTS',     CRICKET: 'SPORTS',
+    CELEBRITY:  'TELEVISION', // fallback for celeb content
+  };
+  const cat = SECTION_TO_CAT[sectionRaw] || 'MOVIES';
+  return {
+    id:          raw.articleId,
+    catId:       null,
+    cat,
+    parentCat:   cat.toLowerCase(),
+    tag:         raw.sectionName || '',
+    breaking:    false,
+    title:       raw.headline,
+    time:        timeAgo(raw.publishDate || raw.publishedWhen),
+    bg:          CATEGORY_GRADIENTS[cat] || CATEGORY_GRADIENTS.MOVIES,
+    emoji:       CATEGORY_EMOJIS[cat]    || '📰',
+    thumbnail:   raw.thumbnailUrl || raw.thumbnail || null,
+    commentCount: raw.commentCount || 0,
+  };
+}
+
+// ── Transform RelatedArticleDto → UI article ─────────────────────────────────
+// RelatedArticleDto has a lighter schema than ArticleDto:
+//   articleId, headline, mediaUrl (thumbnail), articleSectionName, publishDate
+function transformRelatedArticle(raw) {
+  console.log('[API] relatedArticle raw fields:', JSON.stringify(raw));
+  const sectionRaw = (raw.articleSectionName || '').toUpperCase();
+  const SECTION_TO_CAT = {
+    TELEVISION: 'TELEVISION', TV: 'TELEVISION', HINDI: 'TELEVISION',
+    MOVIES:     'MOVIES',     BOLLYWOOD: 'MOVIES',
+    DIGITAL:    'DIGITAL',    OTT: 'DIGITAL',
+    LIFESTYLE:  'LIFESTYLE',  FASHION: 'LIFESTYLE',
+    SPORTS:     'SPORTS',     CRICKET: 'SPORTS',
+  };
+  const cat = SECTION_TO_CAT[sectionRaw] || 'MOVIES';
+  return {
+    id:        raw.articleId,
+    title:     raw.headline || '',
+    cat:       raw.articleSectionName || cat,
+    time:      timeAgo(raw.publishDate),
+    thumbnail: raw.mediaUrl || null,
+    bg:        CATEGORY_GRADIENTS[cat] || CATEGORY_GRADIENTS.MOVIES,
+    emoji:     CATEGORY_EMOJIS[cat] || '📰',
+    breaking:  false,
+  };
+}
+
+// ── Transform BannerItemDto → UI banner ──────────────────────────────────────
+// bannerUrl is the full hero image; thumbnailUrl is a smaller fallback.
+// Derives visual fields (bg, emoji, tagColor) from sectionName so FeaturedCard
+// renders correctly whether it shows an image or a gradient placeholder.
+export function transformBanner(raw) {
+  const sectionRaw = (raw.sectionName || '').toUpperCase();
+  const BANNER_SECTION_MAP = {
+    TELEVISION: 'TELEVISION', TV: 'TELEVISION', HINDI: 'TELEVISION',
+    MOVIES:     'MOVIES',     BOLLYWOOD: 'MOVIES',
+    DIGITAL:    'DIGITAL',    OTT: 'DIGITAL',
+    LIFESTYLE:  'LIFESTYLE',  FASHION: 'LIFESTYLE',
+    SPORTS:     'SPORTS',     CRICKET: 'SPORTS', IPL: 'SPORTS',
+    CELEBRITY:  'TELEVISION',
+  };
+  const TAG_COLORS = {
+    TELEVISION: 'rgba(124,58,237,0.9)',
+    MOVIES:     'rgba(185,28,28,0.9)',
+    DIGITAL:    'rgba(30,41,59,0.9)',
+    LIFESTYLE:  'rgba(190,24,93,0.9)',
+    SPORTS:     'rgba(22,101,52,0.9)',
+  };
+  const cat = BANNER_SECTION_MAP[sectionRaw] || 'MOVIES';
+  return {
+    id:          raw.id ?? raw.bannerId,
+    title:       raw.headline,
+    thumbnail:   raw.thumbnailUrl || null,
+    pageUrl:     raw.pageUrl || '',
+    time:        timeAgo(raw.publishDate),
+    contentType: raw.contentType,
+    tag:         raw.sectionName || '',
+    tagColor:    TAG_COLORS[cat] || TAG_COLORS.MOVIES,
+    bg:          CATEGORY_GRADIENTS[cat] || CATEGORY_GRADIENTS.MOVIES,
+    emoji:       CATEGORY_EMOJIS[cat]    || '📰',
+    source:      'IndiaForums',
   };
 }
 
@@ -254,6 +363,9 @@ function transformArticleDetail(data) {
   const article = data?.article;
   const metadata = data?.metadata;
   const relatedArticles = data?.relatedArticles || [];
+
+  console.log('[API] transformArticleDetail top-level keys:', Object.keys(data || {}));
+  console.log('[API] relatedArticles raw:', JSON.stringify(relatedArticles));
 
   if (!article) {
     console.warn('[API] transformArticleDetail: no article field in response', { keys: Object.keys(data || {}) });
@@ -320,7 +432,7 @@ function transformArticleDetail(data) {
     authorId:     article.authorId,
     publishDate:  article.publishDate || metadata?.publishDate || '',
     modifiedDate: metadata?.modifiedDate || '',
-    relatedArticles: relatedArticles.map(a => transformArticle(a)),
+    relatedArticles: relatedArticles.map(transformRelatedArticle),
   };
 
   // Only include these if the detail endpoint actually provides them,
@@ -377,14 +489,7 @@ export async function fetchArticleBasic(articleId) {
 export async function fetchBanners() {
   const { data } = await api.get('/home/banners');
   const banners = data?.banners || [];
-  return banners.map(b => ({
-    id:        b.id,
-    title:     b.headline,
-    thumbnail: b.thumbnailUrl || null,
-    pageUrl:   b.pageUrl || '',
-    time:      timeAgo(b.publishDate),
-    contentType: b.contentType,  // 1=article, 4=video
-  }));
+  return banners.map(transformBanner);
 }
 
 // ── Video category mapping  (uses same hierarchy as articles) ─────────────────
@@ -846,6 +951,107 @@ function transformTopic(raw) {
   };
 }
 
+// ── Strip edit-metadata appended by the IndiaForums backend ─────────────────
+// The backend appends edit info at the end of the message HTML in various forms:
+//   • "Username2025-07-01 06:09:13"   (same text node, no space)
+//   • "<a>Username</a>2025-07-01 ..."  (username in anchor, datetime as text)
+//   • "2024-11-03 18:58:28"            (datetime only, no username)
+// Uses DOMParser to walk text nodes directly so whitespace/tag layout never
+// fools the match. Regex fallback for non-browser environments.
+function stripEditMeta(html) {
+  if (!html) return { cleanHtml: html, metaBy: null, metaWhen: null };
+  if (!/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(html)) {
+    return { cleanHtml: html, metaBy: null, metaWhen: null };
+  }
+
+  // ── DOMParser path (browser) ────────────────────────────────────────────
+  if (typeof DOMParser !== 'undefined') {
+    try {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const body = doc.body;
+
+      // Collect all text nodes in document order
+      const walker = doc.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      let nd;
+      while ((nd = walker.nextNode())) nodes.push(nd);
+
+      // Find the last text node that has non-whitespace content
+      let last = nodes.length - 1;
+      while (last >= 0 && !nodes[last].textContent.trim()) last--;
+      if (last < 0) return { cleanHtml: html, metaBy: null, metaWhen: null };
+
+      const lastNode  = nodes[last];
+      const lastTrim  = lastNode.textContent.trim();
+
+      // The entire trimmed content of the last text node must be
+      // ONLY an optional username followed by a datetime — nothing else.
+      // Regex allows optional whitespace between username and datetime so
+      // both "Aleyamma472025-07-01 06:09:13" and "Aleyamma47 2025-07-01 06:09:13" match.
+      const NODE_RE = /^([A-Za-z0-9]\w{0,60})?\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s*$/;
+      const m = lastTrim.match(NODE_RE);
+      if (!m) return { cleanHtml: html, metaBy: null, metaWhen: null };
+
+      const metaWhen = m[2];
+      let   metaBy   = m[1] || null;
+
+      // Clear this text node (removes datetime + any concatenated username)
+      lastNode.textContent = '';
+      // Remove empty wrapper element if this node's parent only held the edit info
+      const par = lastNode.parentElement;
+      if (par && par !== body && !par.textContent.trim()) par.remove();
+
+      // If username wasn't in this node, check the immediately preceding text node
+      // (e.g. <a href="...">Username</a>DATE — username is in the <a> text node)
+      if (!metaBy && last > 0) {
+        let prev = last - 1;
+        while (prev >= 0 && !nodes[prev].textContent.trim()) prev--;
+        if (prev >= 0) {
+          const prevTrim = nodes[prev].textContent.trim();
+          if (/^[A-Za-z0-9]\w{1,60}$/.test(prevTrim)) {
+            metaBy = prevTrim;
+            const prevPar = nodes[prev].parentElement;
+            if (prevPar && prevPar !== body && prevPar.textContent.trim() === prevTrim) {
+              prevPar.remove();
+            } else {
+              nodes[prev].textContent = '';
+            }
+          }
+        }
+      }
+
+      return { cleanHtml: body.innerHTML.trim(), metaBy, metaWhen };
+    } catch (_) { /* fall through to regex */ }
+  }
+
+  // ── Regex fallback ──────────────────────────────────────────────────────
+  // Works on the raw HTML string; less precise but handles environments
+  // where DOMParser is unavailable.
+  const plain = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const SUFFIX = /(?:([A-Za-z0-9]\w{0,60})\s*)?(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s*$/;
+  const m2 = plain.match(SUFFIX);
+  if (!m2) return { cleanHtml: html, metaBy: null, metaWhen: null };
+
+  const metaBy   = m2[1] || null;
+  const metaWhen = m2[2];
+  const dtIdx    = html.lastIndexOf(metaWhen);
+  if (dtIdx === -1) return { cleanHtml: html, metaBy: null, metaWhen: null };
+
+  let cut = html.slice(0, dtIdx);
+  if (metaBy) {
+    const ui = cut.lastIndexOf(metaBy);
+    if (ui !== -1 && /^[\s<>/a-zA-Z0-9"'=;:.#?&/_-]*$/.test(cut.slice(ui + metaBy.length))) {
+      cut = cut.slice(0, ui);
+    }
+  }
+
+  return {
+    cleanHtml: cut.replace(/<[^>]*$/, '').trimEnd(),
+    metaBy,
+    metaWhen,
+  };
+}
+
 // ── Transform post from API ──────────────────────────────────────────────────
 function transformPost(raw) {
   // Parse user badges
@@ -861,12 +1067,18 @@ function transformPost(raw) {
     } catch (_) { /* malformed */ }
   }
 
+  // Strip backend-injected edit suffix from the message HTML, then fall back
+  // to dedicated API fields if available.
+  const rawMessage = raw.message ?? raw.body ?? raw.content ?? '';
+  const { cleanHtml, metaBy, metaWhen } = stripEditMeta(rawMessage);
+
   // Edit-history indicators — backend field names vary across endpoints, so
   // probe the common ones defensively. Used to render a "(edited)" affordance
   // that opens the history viewer.
-  const editedWhen = raw.editedWhen ?? raw.updatedWhen ?? raw.lastEditedWhen ?? raw.modifiedWhen ?? null;
+  const editedWhen = raw.editedWhen ?? raw.updatedWhen ?? raw.lastEditedWhen ?? raw.modifiedWhen ?? metaWhen ?? null;
   const editCount  = Number(raw.editCount ?? raw.editHistoryCount ?? 0);
   const isEdited   = Boolean(raw.isEdited ?? editedWhen ?? editCount > 0);
+  const editedBy   = raw.editedByUserName ?? raw.editedBy ?? raw.lastEditedByUserName ?? metaBy ?? null;
 
   const rawJoinDate = raw.registerDate ?? raw.joinDate ?? raw.memberSince ?? null;
   const joinYear    = rawJoinDate ? new Date(rawJoinDate).getFullYear() : null;
@@ -878,7 +1090,7 @@ function transformPost(raw) {
     author:       raw.userName ?? raw.authorName ?? 'Anonymous',
     realName:     raw.realName || '',
     rank:         raw.name || '',
-    message:      raw.message ?? raw.body ?? raw.content ?? '',
+    message:      cleanHtml,
     time:         timeAgo(raw.messageDate ?? raw.postedWhen ?? raw.createdAt ?? new Date().toISOString()),
     rawTime:      raw.messageDate ?? raw.postedWhen ?? raw.createdAt ?? '',
     likes:        raw.likeCount ?? 0,
@@ -890,10 +1102,14 @@ function transformPost(raw) {
     wordCount:    raw.wordCount ?? 0,
     isEdited,
     editedWhen,
+    editedBy,
     editCount,
     postCount:    raw.postCount ?? raw.postsCount ?? raw.totalMessages ?? null,
     joinYear,
     totalLikes:   raw.totalLikes ?? raw.totalLikesReceived ?? raw.likesReceived ?? null,
+    // Reaction breakdown from backend: {"json":[{"lt":<reactionType>,"lc":<count>,"uid":<userId>,"un":"..."},...]}
+    // Used to restore the current user's saved reaction without an extra API call.
+    reactionJson: raw.jsonData ?? null,
   };
 }
 

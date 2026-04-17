@@ -33,6 +33,18 @@ export const THREAD_REACTION_TYPES = {
   ANGRY: 7,
 };
 
+// Maps integer reaction code → API string enum value
+export const REACTION_TYPE_STRINGS = {
+  0: 'None',
+  1: 'Like',
+  2: 'Love',
+  3: 'Wow',
+  4: 'Lol',
+  5: 'Shock',
+  6: 'Sad',
+  7: 'Angry',
+};
+
 // Default postTypeId for a normal text reply.
 export const POST_TYPE_DEFAULT = 1;
 
@@ -55,7 +67,7 @@ const POLLS_BASE   = '/forums/polls';
  * @param {boolean} [args.showSignature=true]
  * @param {boolean} [args.addToWatchList=true]   subscribe to email notifications
  * @param {boolean} [args.hasMaturedContent=false]
- * @param {object}  [args.pollData]              optional poll attached to topic
+ * @param {object}  [args.pollData]              optional poll — { question, multipleVotes, allowReplies, choices:[{choice}] }
  * @param {string}  [args.userTags]              comma-separated user ids tagged
  * @param {string}  [args.titleTags]
  * @param {boolean} [args.addToMyWall=false]
@@ -200,7 +212,10 @@ export function getPostEditHistory(postId, { pageNumber = 1, pageSize = 20 } = {
  *                                        switching reaction types or removing
  */
 export function reactToThread({ threadId, forumId, reactionType, threadLikeId }) {
-  const body = { threadId, forumId, reactionType };
+  // Reactions 1–7 are sent as integers. 0 means "remove" — backend requires the
+  // string "None" for removal (confirmed from live API testing).
+  const reactionValue = reactionType === 0 ? 'None' : reactionType;
+  const body = { threadId, forumId, reactionType: reactionValue };
   if (threadLikeId !== undefined && threadLikeId !== null) {
     body.threadLikeId = threadLikeId;
   }

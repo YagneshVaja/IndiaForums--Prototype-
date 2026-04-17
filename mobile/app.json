@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "IndiaForums",
+    "slug": "indiaforums",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#FFFFFF",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.indiaforums.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#3558F0"
+      },
+      "package": "com.indiaforums.app",
+      "targetSdkVersion": 35
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-splash-screen",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#3558F0"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    }
+  }
+}

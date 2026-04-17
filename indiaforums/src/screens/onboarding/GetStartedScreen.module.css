@@ -1,0 +1,114 @@
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #3558F0;
+  padding: 64px 32px 48px;
+  animation: fadeUp 0.45s var(--ease-out) both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.logoMark {
+  width: 80px;
+  height: 80px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.logoInitial {
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -1px;
+  font-family: var(--font-display);
+}
+
+.brandName {
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+  font-family: var(--font-display);
+  margin: 0;
+}
+
+.tagline {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.72);
+  text-align: center;
+  line-height: 1.6;
+  white-space: pre-line;
+  margin: 4px 0 0;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.primaryBtn {
+  width: 100%;
+  background: #fff;
+  color: #3558F0;
+  border: none;
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.primaryBtn:active {
+  opacity: 0.9;
+}
+
+.outlineBtn {
+  width: 100%;
+  background: transparent;
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  border-radius: 14px;
+  padding: 15px 16px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.outlineBtn:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ghostBtn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 10px 16px;
+  font-family: var(--font-body);
+}

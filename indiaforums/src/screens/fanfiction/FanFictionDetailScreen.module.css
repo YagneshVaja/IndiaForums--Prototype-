@@ -1,6 +1,8 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   FanFictionDetailScreen — story header + chapter list
-   Uses tokens.css throughout. Same visual language as FanFictionScreen.
+   FanFictionDetailScreen — chapter-first layout with progressive disclosure
+   Design strategy:
+   · Hero + stats → Start Reading CTA → chapter list → accordion → details panel
+   · Details panel uses CSS grid 0fr→1fr for smooth height animation
    ───────────────────────────────────────────────────────────────────────────── */
 
 .screen {
@@ -35,7 +37,6 @@
     rgba(0, 0, 0, 0.10) 100%
   );
 }
-
 .heroBody {
   position: relative;
   z-index: 1;
@@ -46,16 +47,14 @@
   padding: var(--sp-4) var(--content-px) var(--sp-5);
   gap: var(--sp-2);
 }
-
 .fandom {
   font-family: var(--font-body);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.78);
   text-transform: uppercase;
   letter-spacing: 1.2px;
 }
-
 .title {
   font-family: var(--font-display);
   font-size: 26px;
@@ -66,7 +65,7 @@
   letter-spacing: -0.2px;
 }
 
-/* ── Author row ──────────────────────────────────────────────────────────── */
+/* ── Author row ───────────────────────────────────────────────────────────── */
 .authorRow {
   display: flex;
   align-items: center;
@@ -78,7 +77,6 @@
   margin-top: var(--sp-1);
 }
 .authorRow:disabled { cursor: default; }
-
 .authorAvatar {
   width: 28px;
   height: 28px;
@@ -94,7 +92,6 @@
   font-size: 13px;
   flex-shrink: 0;
 }
-
 .authorMeta {
   display: flex;
   align-items: baseline;
@@ -114,18 +111,17 @@
   text-underline-offset: 3px;
 }
 
-/* ── Badge row ───────────────────────────────────────────────────────────── */
+/* ── Badge row ────────────────────────────────────────────────────────────── */
 .badgeRow {
   display: flex;
   gap: 6px;
   margin-top: var(--sp-2);
   flex-wrap: wrap;
 }
-
 .statusBadge,
 .ratingBadge,
 .typeBadge {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 20px;
@@ -135,7 +131,6 @@
 }
 .statusComplete { background: rgba(0, 186, 124, 0.28);  color: #6df0c2; }
 .statusOngoing  { background: rgba(247, 169, 40, 0.28); color: #fcd878; }
-
 .ratingBadge {
   background: rgba(220, 38, 38, 0.28);
   color: #fca5a5;
@@ -145,7 +140,7 @@
   color: rgba(255, 255, 255, 0.95);
 }
 
-/* ── Stats strip ─────────────────────────────────────────────────────────── */
+/* ── Stats strip ──────────────────────────────────────────────────────────── */
 .statsStrip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -154,7 +149,6 @@
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-
 .stat {
   display: flex;
   flex-direction: column;
@@ -165,10 +159,7 @@
   background: var(--card);
   text-align: center;
 }
-.statIcon {
-  font-size: 16px;
-  line-height: 1;
-}
+.statIcon  { font-size: 16px; line-height: 1; }
 .statValue {
   font-family: var(--font-display);
   font-size: 14px;
@@ -177,162 +168,106 @@
   line-height: 1.1;
 }
 .statLabel {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
 
-/* ── Discuss CTA — links to the forum topicId returned by the detail API ─ */
-.discussBtn {
+/* ── Start Reading CTA ────────────────────────────────────────────────────── */
+/* Primary conversion action — sits between stats strip and chapter list.      */
+.startSection {
+  padding: var(--sp-4) var(--content-px) 0;
+  background: var(--bg);
+}
+.startBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  height: 48px;
+  padding: 0 var(--sp-5);
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--brand);
+  color: var(--text-on-brand);
+  cursor: pointer;
+  box-shadow: var(--shadow-brand);
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
+}
+.startBtn:hover  { opacity: 0.92; }
+.startBtn:active { opacity: 0.85; transform: scale(0.985); }
+.startPlay {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.startText {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  flex: 1;
+}
+.startMeta {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+.startArrow {
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ── PRIMARY: Chapters section ────────────────────────────────────────────── */
+.chaptersSection {
+  padding: var(--sp-4) var(--content-px) var(--sp-3);
+  background: var(--bg);
+}
+.chapterHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: var(--sp-3);
+}
+.chapterHeading {
+  display: flex;
+  align-items: center;
   gap: var(--sp-2);
-  margin: var(--sp-4) var(--content-px) 0;
-  padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--radius-md);
-  border: 1.5px solid var(--brand);
-  background: var(--brand-light);
-  color: var(--brand);
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
 }
-.discussBtn:hover {
-  background: var(--brand);
-  color: var(--text-on-brand);
-}
-.discussArrow {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-/* ── Sections ────────────────────────────────────────────────────────────── */
-.section {
-  padding: var(--sp-4) var(--content-px) 0;
-}
-
-.sectionTitle {
+.chapterHeadingText {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--dark);
   text-transform: uppercase;
-  letter-spacing: 0.6px;
-  margin: 0 0 var(--sp-3);
+  letter-spacing: 0.5px;
 }
-.sectionCount {
-  color: var(--text3);
-  font-weight: 600;
-}
-
-.synopsis {
-  font-family: var(--font-body);
-  font-size: 13.5px;
-  line-height: 1.6;
-  color: var(--text);
-  margin: 0;
-  background: var(--card);
-  padding: var(--sp-4);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
-}
-
-/* Warning callout — yellow/amber surface */
-.warning {
-  font-family: var(--font-body);
-  font-size: 13px;
-  line-height: 1.55;
-  color: #92400e;
-  margin: 0;
-  background: var(--amber-surface);
-  border: 1px solid rgba(247, 169, 40, 0.3);
-  padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--radius-md);
-}
-
-/* Author's note — softer than the synopsis */
-.authorNote {
-  font-family: var(--font-body);
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--text2);
-  font-style: italic;
-  margin: 0;
-  background: var(--card);
-  padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--radius-md);
-  border-left: 3px solid var(--brand);
-  box-shadow: var(--shadow-xs);
-}
-
-/* ── Tags ────────────────────────────────────────────────────────────────── */
-.tagList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.tag {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 5px 10px;
-  border-radius: var(--radius-full);
-  background: var(--brand-light);
-  color: var(--brand);
-}
-/* Secondary chip style — subtler so it pairs with .tag without competing */
-.tagAlt {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 5px 10px;
-  border-radius: var(--radius-full);
-  background: var(--bg);
-  color: var(--text2);
-  border: 1px solid var(--border);
-}
-.entityTag {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 5px 10px;
-  border-radius: var(--radius-full);
-  background: var(--surface);
-  color: var(--dark);
-  border: 1px solid var(--border);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-/* ── Detail grid ─────────────────────────────────────────────────────────── */
-.detailGrid {
-  background: var(--card);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
-  overflow: hidden;
-}
-.detailRow {
-  display: flex;
-  justify-content: space-between;
+.chapterCount {
+  display: inline-flex;
   align-items: center;
-  padding: var(--sp-3) var(--sp-4);
-  border-bottom: 1px solid var(--border);
-  font-size: 12.5px;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--brand);
+  color: var(--text-on-brand);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
 }
-.detailRow:last-child { border-bottom: none; }
-.detailRow span { color: var(--text2); font-weight: 500; }
-.detailRow strong { color: var(--dark); font-weight: 700; }
 
-/* ── Chapter list ────────────────────────────────────────────────────────── */
+/* ── Chapter list ─────────────────────────────────────────────────────────── */
 .chapterList {
   background: var(--card);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
-
 .chapterRow {
   display: flex;
   align-items: center;
@@ -364,7 +299,6 @@
   align-items: center;
   justify-content: center;
 }
-
 .chapterMeta {
   flex: 1;
   min-width: 0;
@@ -391,7 +325,6 @@
 }
 .chapterDot { color: var(--text3); }
 
-/* Chapter flags — members-only / mature content badges */
 .chapterFlags {
   display: flex;
   gap: 6px;
@@ -399,7 +332,7 @@
 }
 .flagMembers,
 .flagMature {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 6px;
@@ -407,11 +340,216 @@
 .flagMembers { background: var(--brand-light); color: var(--brand); }
 .flagMature  { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
 
+/* SVG arrow — sized to match the icon's viewBox */
 .chapterArrow {
-  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text3);
   flex-shrink: 0;
-  line-height: 1;
 }
+
+/* ── Progressive disclosure toggle button ────────────────────────────────── */
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--sp-4) var(--content-px);
+  background: var(--card);
+  border: none;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+  margin-top: var(--sp-3);
+}
+.toggleBtn:hover  { background: var(--brand-lighter); }
+.toggleBtn:active { background: var(--brand-light); }
+.toggleBtnOpen {
+  background: var(--brand-light);
+  border-color: var(--brand-border);
+}
+.toggleLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--brand);
+}
+.toggleLabel {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand);
+}
+.toggleBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--brand);
+  color: var(--text-on-brand);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* Chevron rotates 180° when panel is open */
+.chevron {
+  color: var(--brand);
+  flex-shrink: 0;
+  transition: transform var(--duration-slow) var(--ease-out);
+}
+.chevronOpen { transform: rotate(180deg); }
+
+/* ── Collapsible details panel — CSS grid 0fr→1fr technique ─────────────── */
+/* Animates to natural content height without JS measurement.                  */
+.detailsPanel {
+  display: grid;
+  grid-template-rows: 0fr;
+  /* Single combined transition — no duplicate declarations */
+  transition:
+    grid-template-rows var(--duration-slow) var(--ease-out),
+    opacity            var(--duration-med)  var(--ease-out);
+  opacity: 0;
+}
+.detailsPanelOpen {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+/* overflow:hidden child required by the grid trick */
+.detailsPanelInner {
+  overflow: hidden;
+}
+/* Panel uses card background to match the toggle button above it */
+.detailsPanelContent {
+  background: var(--card);
+  padding-bottom: var(--sp-5);
+}
+
+/* ── Panel sections ───────────────────────────────────────────────────────── */
+.panelSection {
+  padding: var(--sp-4) var(--content-px) 0;
+}
+/* Uppercase eyebrow label — minimum 11px to meet WCAG contrast at this weight */
+.panelLabel {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: var(--sp-2);
+}
+
+/* ── Discuss CTA ──────────────────────────────────────────────────────────── */
+.discussBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--brand-border);
+  background: var(--brand-light);
+  color: var(--brand);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.discussBtn:hover { background: var(--brand); color: var(--text-on-brand); }
+.discussArrow     { font-size: 16px; font-weight: 700; }
+
+/* ── Text content blocks ──────────────────────────────────────────────────── */
+.synopsis {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text);
+  margin: 0;
+  background: var(--surface-raised);
+  padding: var(--sp-4);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+}
+.warningText {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.55;
+  color: #92400e;
+  margin: 0;
+  background: var(--amber-surface);
+  border: 1px solid var(--amber-border);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-md);
+}
+.authorNote {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text2);
+  font-style: italic;
+  margin: 0;
+  background: var(--surface-raised);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--brand);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ── Tags + chips ─────────────────────────────────────────────────────────── */
+.tagList    { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  background: var(--brand-light);
+  color: var(--brand);
+}
+.tagAlt {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  background: var(--bg);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+.entityTag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--dark);
+  border: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ── Detail grid ──────────────────────────────────────────────────────────── */
+.detailGrid {
+  background: var(--surface-raised);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+.detailRow:last-child { border-bottom: none; }
+.detailRow span   { color: var(--text2); font-weight: 500; }
+.detailRow strong { color: var(--dark);  font-weight: 700; }
 
 .spacer { height: var(--sp-6); flex-shrink: 0; }

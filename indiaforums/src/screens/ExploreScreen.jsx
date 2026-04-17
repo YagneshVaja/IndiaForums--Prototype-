@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import styles from './ExploreScreen.module.css';
 
 import ErrorState from '../components/ui/ErrorState';
@@ -14,8 +14,7 @@ import PhotoGallerySection from '../components/sections/PhotoGallerySection';
 import { EXPLORE_CHIPS } from '../data/articles';
 import { FORUMS, FORUM_TABS } from '../data/forums';
 import { GALLERIES } from '../data/galleryData';
-import { fetchBanners } from '../services/api';
-import useArticles from '../hooks/useArticles';
+import useHomeData from '../hooks/useHomeData';
 
 const PREVIEW_GALLERIES = GALLERIES.slice(0, 4);
 
@@ -23,21 +22,9 @@ export default function ExploreScreen({ onArticlePress, onGalleryPress, onGaller
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeForumTab, setActiveForumTab] = useState('announcements');
 
-  const [banners, setBanners] = useState([]);
-
-  useEffect(() => {
-    fetchBanners().then(setBanners).catch(() => {});
-  }, []);
-
-  const { articles, loading, error, refresh } = useArticles();
-
-  // Filter articles by category chip
-  const filteredArticles = useMemo(() => {
-    if (activeCategory === 'all') return articles;
-    return articles.filter(
-      a => a.cat.toLowerCase() === activeCategory.toLowerCase()
-    );
-  }, [articles, activeCategory]);
+  // Single aggregated call: /home/initial (banners + articles) on mount,
+  // /home/articles?articleType=... when category chip changes.
+  const { banners, articles, loading, articlesLoading, error, refresh } = useHomeData(activeCategory);
 
   const threads = useMemo(
     () => FORUMS[activeForumTab] || FORUMS.announcements,
@@ -71,15 +58,15 @@ export default function ExploreScreen({ onArticlePress, onGalleryPress, onGaller
           </div>
         )}
 
-        {/* Error state */}
-        {error && <ErrorState message={error} onRetry={refresh} />}
+        {/* Error state — only when no articles to show */}
+        {error && articles.length === 0 && <ErrorState message={error} onRetry={refresh} />}
 
         {/* Articles list */}
-        {!loading && !error && filteredArticles.length === 0 && (
+        {!articlesLoading && !error && articles.length === 0 && (
           <div className={styles.emptyText}>No articles found in this category</div>
         )}
 
-        {filteredArticles.map((a, i) => (
+        {articles.map((a, i) => (
           <ArticleCard key={a.id} {...a} delay={i * 0.06} onClick={() => onArticlePress && onArticlePress(a)} />
         ))}
       </div>

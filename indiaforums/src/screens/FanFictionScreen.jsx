@@ -401,9 +401,8 @@ export default function FanFictionScreen({ onStoryPress, onAuthorsPress }) {
           ))}
           {/* "Top Authors" entry point — taps into /fan-fictions/authors */}
           <button
-            className={styles.showChip}
+            className={`${styles.showChip} ${styles.showChipAuthors}`}
             onClick={() => onAuthorsPress?.()}
-            style={{ borderColor: 'var(--brand-border)', color: 'var(--brand)' }}
           >
             🏆 Top Authors
           </button>

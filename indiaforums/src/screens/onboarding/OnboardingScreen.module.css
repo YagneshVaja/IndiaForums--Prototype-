@@ -1,0 +1,134 @@
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.skipBtn {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 10;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-family: var(--font-body);
+}
+
+.track {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+}
+
+.slides {
+  display: flex;
+  width: 100%;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide {
+  min-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  gap: 24px;
+  text-align: center;
+}
+
+.emojiBox {
+  width: 120px;
+  height: 120px;
+  border-radius: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.emoji {
+  font-size: 56px;
+  line-height: 1;
+}
+
+.slideTitle {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  white-space: pre-line;
+  font-family: var(--font-display);
+  margin: 0;
+}
+
+.slideDesc {
+  font-size: 15px;
+  color: var(--text2);
+  line-height: 1.6;
+  max-width: 280px;
+  margin: 0;
+}
+
+.bottom {
+  padding: 20px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--border-strong);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    width var(--duration-med) var(--ease-out),
+    background var(--duration-med) var(--ease-out);
+}
+
+.dot[data-active] {
+  width: 24px;
+  background: var(--brand);
+}
+
+.nextBtn {
+  width: 100%;
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.nextBtn:active {
+  background: var(--brand-hover);
+  transform: scale(0.98);
+}
