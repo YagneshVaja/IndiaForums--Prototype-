@@ -3,16 +3,13 @@ import {
   View,
   Text,
   Image,
-  Pressable,
   ScrollView,
   StyleSheet,
-  useWindowDimensions,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, NewsStackParamList } from '../../../navigation/types';
+import { TopNavBack } from '../../../components/layout/TopNavBar';
 import { fetchArticleDetails } from '../../../services/api';
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
@@ -29,8 +26,6 @@ function stripHtml(html: string): string {
 
 export default function ArticleDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
-  const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
 
   const {
     data: article,
@@ -59,28 +54,10 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
     );
   }
 
-  const contentWidth = width - 32;
-
+  const title = article?.category ?? '';
   return (
     <View style={styles.screen}>
-      {/* Floating header bar: back + share */}
-      <View style={[styles.headerBar, { top: insets.top + 8 }]}>
-        <Pressable
-          style={styles.headerButton}
-          onPress={() => navigation.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
-        </Pressable>
-        <Pressable
-          style={styles.headerButton}
-          accessibilityRole="button"
-          accessibilityLabel="Share article"
-        >
-          <Ionicons name="share-outline" size={20} color="#1A1A1A" />
-        </Pressable>
-      </View>
+      <TopNavBack title={title} onBack={() => navigation.goBack()} />
 
       <ScrollView
         style={styles.scroll}
@@ -144,7 +121,7 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
           <View style={styles.divider} />
 
           {/* Article body — react-native-render-html not installed, fallback to plain text */}
-          <View style={{ width: contentWidth }}>
+          <View style={styles.bodyContent}>
             <Text style={styles.bodyText}>{stripHtml(article.body ?? '')}</Text>
           </View>
         </View>
@@ -157,28 +134,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-  },
-  headerBar: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    zIndex: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerButton: {
-    width: 38,
-    height: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 3,
   },
   scroll: {
     flex: 1,
@@ -265,5 +220,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 24,
     color: '#333333',
+  },
+  bodyContent: {
+    flex: 1,
   },
 });

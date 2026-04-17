@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MainTabParamList } from './types';
+import type { MainTabParamList } from './types';
 import { useNotificationsStore } from '../store/notificationsStore';
 import HomeStack from './HomeStack';
 import NewsStack from './NewsStack';
@@ -15,6 +15,73 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
+// ── Tab icon with active pill wrap + top indicator ─────────────────────────────
+function TabIcon({
+  iconFocused,
+  iconUnfocused,
+  focused,
+  hasNotif,
+}: {
+  iconFocused: IoniconName;
+  iconUnfocused: IoniconName;
+  focused: boolean;
+  hasNotif?: boolean;
+}) {
+  return (
+    <View style={tabIconStyles.wrapper}>
+      {/* Top indicator line */}
+      {focused && <View style={tabIconStyles.indicator} />}
+      {/* Icon pill */}
+      <View style={[tabIconStyles.pill, focused && tabIconStyles.pillActive]}>
+        <Ionicons
+          name={focused ? iconFocused : iconUnfocused}
+          size={22}
+          color={focused ? '#3558F0' : '#9E9E9E'}
+        />
+        {hasNotif && <View style={tabIconStyles.notifDot} />}
+      </View>
+    </View>
+  );
+}
+
+const tabIconStyles = StyleSheet.create({
+  wrapper: {
+    alignItems: 'center',
+    position: 'relative',
+    marginTop: -2,
+  },
+  indicator: {
+    position: 'absolute',
+    top: -8,
+    width: 20,
+    height: 2.5,
+    borderRadius: 3,
+    backgroundColor: '#3558F0',
+  },
+  pill: {
+    width: 44,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  pillActive: {
+    backgroundColor: '#EBF0FF',
+  },
+  notifDot: {
+    position: 'absolute',
+    top: 2,
+    right: 6,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#C8001E',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+});
+
 export default function MainTabNavigator() {
   const insets = useSafeAreaInsets();
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
@@ -23,15 +90,21 @@ export default function MainTabNavigator() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
+        tabBarStyle: {
+          backgroundColor: 'rgba(255,255,255,0.96)',
+          borderTopColor: '#E2E2E2',
+          borderTopWidth: 1,
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom,
+          paddingTop: 8,
+          paddingHorizontal: 4,
+        },
         tabBarActiveTintColor: '#3558F0',
         tabBarInactiveTintColor: '#9E9E9E',
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#E8E8E8',
-          borderTopWidth: 1,
-          height: 60 + insets.bottom,
-          paddingBottom: 8 + insets.bottom,
-          paddingTop: 4,
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+          marginTop: 2,
         },
       }}
     >
@@ -39,11 +112,12 @@ export default function MainTabNavigator() {
         name="Home"
         component={HomeStack}
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={(focused ? 'home' : 'home-outline') as IoniconName}
-              size={24}
-              color={color}
+          tabBarLabel: 'Explore',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              iconFocused="home"
+              iconUnfocused="home-outline"
+              focused={focused}
             />
           ),
         }}
@@ -52,11 +126,11 @@ export default function MainTabNavigator() {
         name="News"
         component={NewsStack}
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={(focused ? 'newspaper' : 'newspaper-outline') as IoniconName}
-              size={24}
-              color={color}
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              iconFocused="newspaper"
+              iconUnfocused="newspaper-outline"
+              focused={focused}
             />
           ),
         }}
@@ -65,11 +139,12 @@ export default function MainTabNavigator() {
         name="Forums"
         component={ForumsStack}
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={(focused ? 'chatbubbles' : 'chatbubbles-outline') as IoniconName}
-              size={24}
-              color={color}
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              iconFocused="chatbubbles"
+              iconUnfocused="chatbubbles-outline"
+              focused={focused}
+              hasNotif
             />
           ),
         }}
@@ -78,11 +153,11 @@ export default function MainTabNavigator() {
         name="Search"
         component={SearchStack}
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={(focused ? 'search' : 'search-outline') as IoniconName}
-              size={24}
-              color={color}
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              iconFocused="search"
+              iconUnfocused="search-outline"
+              focused={focused}
             />
           ),
         }}
@@ -92,32 +167,16 @@ export default function MainTabNavigator() {
         component={MySpaceStack}
         options={{
           tabBarLabel: 'My Space',
-          tabBarIcon: ({ color, focused }) => (
-            <View>
-              <Ionicons
-                name={(focused ? 'person' : 'person-outline') as IoniconName}
-                size={24}
-                color={color}
-              />
-              {unreadCount > 0 && (
-                <View style={styles.badge} />
-              )}
-            </View>
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              iconFocused="grid"
+              iconUnfocused="grid-outline"
+              focused={focused}
+              hasNotif={unreadCount > 0}
+            />
           ),
         }}
       />
     </Tab.Navigator>
   );
 }
-
-const styles = StyleSheet.create({
-  badge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E53935',
-  },
-});

@@ -12,53 +12,48 @@ import {
 import type { Banner } from '../../../services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_MARGIN = 16;
-const CARD_WIDTH = SCREEN_WIDTH - CARD_MARGIN * 2;
-const CARD_HEIGHT = 220;
+const CARD_W = 280;
+const CARD_H = 180;
+const CARD_GAP = 12;
+const SIDE_PAD = 14; // matches --content-px
 
 interface Props {
   banners: Banner[];
   onPress: (banner: Banner) => void;
 }
 
-function BannerItem({
-  banner,
-  onPress,
-}: {
-  banner: Banner;
-  onPress: (b: Banner) => void;
-}) {
+function BannerCard({ banner, onPress }: { banner: Banner; onPress: (b: Banner) => void }) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.itemContainer, pressed && styles.itemPressed]}
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={() => onPress(banner)}
       accessibilityRole="button"
       accessibilityLabel={banner.title}
     >
+      {/* Background / image */}
       {banner.imageUrl ? (
-        <Image
-          source={{ uri: banner.imageUrl }}
-          style={styles.image}
-          resizeMode="cover"
-        />
+        <Image source={{ uri: banner.imageUrl }} style={styles.bg} resizeMode="cover" />
       ) : (
-        <View style={styles.imagePlaceholder} />
+        <View style={[styles.bg, styles.bgFallback]} />
       )}
 
-      {/* Category badge — top left */}
-      {banner.category ? (
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryBadgeText}>{banner.category.toUpperCase()}</Text>
-        </View>
-      ) : null}
+      {/* Gradient overlay */}
+      <View style={styles.overlay} />
 
-      {/* Bottom gradient overlay */}
-      <View style={styles.overlay}>
-        <Text style={styles.title} numberOfLines={2}>
-          {banner.title}
-        </Text>
-        {banner.source ? (
-          <Text style={styles.source} numberOfLines={1}>{banner.source}</Text>
+      {/* Content */}
+      <View style={styles.content}>
+        {banner.category ? (
+          <View style={[styles.tag, { backgroundColor: '#3558F0' }]}>
+            <Text style={styles.tagText}>{banner.category.toUpperCase()}</Text>
+          </View>
+        ) : null}
+        <Text style={styles.title} numberOfLines={2}>{banner.title}</Text>
+        {(banner.source || banner.timeAgo) ? (
+          <View style={styles.meta}>
+            {banner.source ? <Text style={styles.source}>{banner.source}</Text> : null}
+            {banner.source && banner.timeAgo ? <View style={styles.dot} /> : null}
+            {banner.timeAgo ? <Text style={styles.time}>{banner.timeAgo}</Text> : null}
+          </View>
         ) : null}
       </View>
     </Pressable>
@@ -71,70 +66,45 @@ export default function FeaturedBannerCarousel({ banners, onPress }: Props) {
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       const first = viewableItems[0];
-      if (
-        first?.isViewable &&
-        first.index !== null &&
-        first.index !== undefined
-      ) {
+      if (first?.isViewable && first.index !== null && first.index !== undefined) {
         setActiveIndex(first.index);
       }
     },
   ).current;
 
-  const viewabilityConfig = useRef({
-    viewAreaCoveragePercentThreshold: 50,
-  }).current;
-
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
   const keyExtractor = useCallback((item: Banner) => item.id, []);
-
   const renderItem = useCallback(
-    ({ item }: { item: Banner }) => (
-      <BannerItem banner={item} onPress={onPress} />
-    ),
+    ({ item }: { item: Banner }) => <BannerCard banner={item} onPress={onPress} />,
     [onPress],
   );
 
-  const getItemLayout = useCallback(
-    (_: ArrayLike<Banner> | null | undefined, index: number) => ({
-      length: SCREEN_WIDTH,
-      offset: SCREEN_WIDTH * index,
-      index,
-    }),
-    [],
-  );
-
-  if (banners.length === 0) {
-    return <View style={styles.empty} />;
-  }
+  if (banners.length === 0) return <View style={styles.empty} />;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.section}>
       <FlatList
         data={banners}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
+        snapToInterval={CARD_W + CARD_GAP}
+        snapToAlignment="start"
+        decelerationRate="fast"
         bounces={false}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
-        getItemLayout={getItemLayout}
-        style={styles.flatList}
-        contentContainerStyle={styles.flatListContent}
-        snapToAlignment="center"
+        contentContainerStyle={styles.track}
+        style={styles.list}
       />
-
-      {/* Pagination dots — inside container, overlapping carousel */}
+      {/* Dots */}
       {banners.length > 1 && (
-        <View style={styles.dotsContainer}>
+        <View style={styles.dotsRow}>
           {banners.map((_, i) => (
             <View
               key={i}
-              style={[
-                styles.dot,
-                i === activeIndex ? styles.dotActive : styles.dotInactive,
-              ]}
+              style={[styles.dot2, i === activeIndex ? styles.dotActive : styles.dotInactive]}
             />
           ))}
         </View>
@@ -144,99 +114,122 @@ export default function FeaturedBannerCarousel({ banners, onPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  section: {
+    paddingHorizontal: SIDE_PAD,
     marginBottom: 4,
   },
-  flatList: {
-    height: CARD_HEIGHT,
+  list: {
+    overflow: 'visible',
   },
-  flatListContent: {
-    paddingHorizontal: CARD_MARGIN,
-    gap: 12,
+  track: {
+    gap: CARD_GAP,
+    paddingRight: SIDE_PAD,
   },
-  itemContainer: {
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
-    borderRadius: 14,
+  card: {
+    width: CARD_W,
+    height: CARD_H,
+    borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: '#E8E8E8',
+    position: 'relative',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  itemPressed: {
-    opacity: 0.92,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: '100%',
+    shadowRadius: 20,
+    elevation: 8,
     backgroundColor: '#D0D5E8',
   },
-  categoryBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    backgroundColor: '#3558F0',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  cardPressed: {
+    transform: [{ scale: 0.97 }],
   },
-  categoryBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
+  bg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  bgFallback: {
+    backgroundColor: '#C8D0EC',
   },
   overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    // Gradient simulation: transparent top → dark bottom
+    backgroundColor: 'transparent',
+    // Use multiple layers to approximate gradient
+  },
+  content: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 100,
-    backgroundColor: 'rgba(0,0,0,0.58)',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-    gap: 4,
+    padding: 16,
+    // Dark gradient from bottom
+    backgroundColor: 'rgba(0,0,0,0)',
+  },
+  tag: {
+    alignSelf: 'flex-start',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginBottom: 6,
+  },
+  tagText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   title: {
     fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
-    lineHeight: 21,
+    lineHeight: 20,
+    letterSpacing: -0.2,
+  },
+  meta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
   },
   source: {
-    fontSize: 11,
+    fontSize: 10,
+    fontWeight: '600',
     color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
   },
-  dotsContainer: {
+  dot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  time: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  dotsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     paddingTop: 10,
-    paddingBottom: 4,
     gap: 5,
   },
-  dot: {
+  dot2: {
     height: 5,
     borderRadius: 3,
   },
   dotActive: {
-    width: 18,
+    width: 16,
     backgroundColor: '#3558F0',
   },
   dotInactive: {
     width: 5,
     backgroundColor: '#C8CFEA',
   },
-  empty: {
-    height: 8,
-  },
+  empty: { height: 8 },
 });

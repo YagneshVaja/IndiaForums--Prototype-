@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  Image,
-  Pressable,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import type { Article } from '../../../services/api';
 
 interface Props {
@@ -15,128 +9,164 @@ interface Props {
 
 export default function ArticleCard({ article, onPress }: Props) {
   return (
-    <>
-      <Pressable
-        style={({ pressed }) => [
-          styles.container,
-          pressed && styles.containerPressed,
-        ]}
-        onPress={() => onPress(article)}
-        accessibilityRole="button"
-        accessibilityLabel={article.title}
-      >
-        {/* Left: content */}
-        <View style={styles.content}>
-          {article.category ? (
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryText} numberOfLines={1}>
-                {article.category}
-              </Text>
-            </View>
-          ) : null}
-          <Text style={styles.title} numberOfLines={3}>
-            {article.title}
-          </Text>
-          <View style={styles.metaRow}>
-            {article.authorName ? (
-              <Text style={styles.author} numberOfLines={1}>
-                {article.authorName}
-              </Text>
-            ) : null}
-            {article.authorName && article.timeAgo ? (
-              <Text style={styles.bullet}>{' \u2022 '}</Text>
-            ) : null}
-            {article.timeAgo ? (
-              <Text style={styles.timeAgo}>{article.timeAgo}</Text>
-            ) : null}
-          </View>
-        </View>
-
-        {/* Right: thumbnail */}
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      onPress={() => onPress(article)}
+      accessibilityRole="button"
+      accessibilityLabel={article.title}
+    >
+      {/* Thumbnail — LEFT side, matches prototype */}
+      <View style={styles.thumb}>
         {article.thumbnailUrl ? (
           <Image
             source={{ uri: article.thumbnailUrl }}
-            style={styles.thumbnail}
+            style={styles.thumbImg}
             resizeMode="cover"
           />
         ) : (
-          <View style={styles.thumbnailPlaceholder} />
+          <View style={[styles.thumbImg, styles.thumbFallback]}>
+            <Text style={styles.thumbEmoji}>{article.emoji ?? '📰'}</Text>
+          </View>
         )}
-      </Pressable>
-      <View style={styles.separator} />
-    </>
+        {article.tag ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{article.tag}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Body — RIGHT side */}
+      <View style={styles.body}>
+        <Text style={styles.cat}>
+          {article.category ?? ''}
+          {article.breaking ? (
+            <Text style={styles.breaking}>{' '}BREAKING</Text>
+          ) : null}
+        </Text>
+        <Text style={styles.title} numberOfLines={2}>{article.title}</Text>
+        <View style={styles.timeRow}>
+          {/* Clock icon (inline SVG via border trick) */}
+          <View style={styles.clockIcon}>
+            <View style={styles.clockOuter} />
+            <View style={styles.clockHand} />
+          </View>
+          <Text style={styles.time}>{article.timeAgo ?? ''}</Text>
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  card: {
     flexDirection: 'row',
+    gap: 12,
     alignItems: 'flex-start',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
-    gap: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 16,
+    marginBottom: 2,
+    backgroundColor: 'transparent',
   },
-  containerPressed: {
-    backgroundColor: '#F8F9FF',
+  cardPressed: {
+    backgroundColor: '#EBF0FF',
   },
-  content: {
-    flex: 1,
-    gap: 6,
-  },
-  categoryChip: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#EEF1FE',
-    borderRadius: 5,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  categoryText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#3558F0',
-    letterSpacing: 0.3,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    lineHeight: 20,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  author: {
-    fontSize: 11,
-    color: '#777777',
-    fontWeight: '500',
-    maxWidth: 100,
-  },
-  bullet: {
-    fontSize: 11,
-    color: '#BBBBBB',
-  },
-  timeAgo: {
-    fontSize: 11,
-    color: '#AAAAAA',
-  },
-  thumbnail: {
-    width: 90,
-    height: 78,
-    borderRadius: 10,
+  // ── Thumbnail ──────────────────────────────────────────────────────────────
+  thumb: {
+    width: 84,
+    height: 76,
+    borderRadius: 12,
+    overflow: 'hidden',
+    flexShrink: 0,
+    position: 'relative',
     backgroundColor: '#E8E8E8',
   },
-  thumbnailPlaceholder: {
-    width: 90,
-    height: 78,
-    borderRadius: 10,
-    backgroundColor: '#EBEBEB',
+  thumbImg: {
+    width: '100%',
+    height: '100%',
   },
-  separator: {
-    height: 1,
-    backgroundColor: '#F2F2F2',
-    marginLeft: 16,
+  thumbFallback: {
+    backgroundColor: '#EBF0FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbEmoji: {
+    fontSize: 28,
+  },
+  badge: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    fontSize: 7.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  // ── Body ──────────────────────────────────────────────────────────────────
+  body: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cat: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#3558F0',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  breaking: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#C8001E',
+  },
+  title: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    lineHeight: 19,
+    letterSpacing: -0.2,
+    marginBottom: 5,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  // ── Inline clock icon via nested Views ────────────────────────────────────
+  clockIcon: {
+    width: 12,
+    height: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clockOuter: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.2,
+    borderColor: '#9E9E9E',
+  },
+  clockHand: {
+    position: 'absolute',
+    width: 1.2,
+    height: 3.5,
+    backgroundColor: '#9E9E9E',
+    top: 2,
+    left: 5,
+    borderRadius: 1,
+  },
+  time: {
+    fontSize: 11,
+    color: '#9E9E9E',
+    fontWeight: '500',
   },
 });
