@@ -1,10 +1,37 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import styles from './ForumThreadView.module.css';
 import ThreadCard from '../../components/cards/ThreadCard';
 import ErrorState from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
 import NewTopicComposer from '../../components/forum/NewTopicComposer';
 import { formatCount } from './forumHelpers';
+import { search, CONTENT_TYPE } from '../../services/searchApi';
+import { timeAgo } from '../../services/api';
+
+// Map a topic result from GET /search?contentType=8 → ThreadCard-compatible shape
+function mapSearchResult(r, forum) {
+  return {
+    id:          r.topicId ?? r.id ?? Math.random(),
+    title:       r.subject ?? r.title ?? '',
+    description: r.topicDesc ?? r.description ?? r.snippet ?? '',
+    poster:      r.startThreadUserName ?? r.poster ?? r.author ?? '',
+    time:        r.startThreadDate ? timeAgo(r.startThreadDate) : (r.time ?? ''),
+    replies:     r.replyCount ?? r.replies ?? 0,
+    views:       r.viewCount  ?? r.views   ?? 0,
+    likes:       r.likeCount  ?? r.likes   ?? 0,
+    locked:      r.locked     ?? false,
+    pinned:      (r.priority ?? 0) > 0,
+    lastBy:      r.lastThreadUserName ?? r.lastBy ?? '',
+    lastTime:    r.lastThreadDate ? timeAgo(r.lastThreadDate) : (r.lastTime ?? ''),
+    tags:        r.tags ?? [],
+    topicImage:  r.topicImage ?? null,
+    forumName:   forum?.name ?? '',
+    forumBg:     forum?.bg   ?? 'linear-gradient(135deg,#1e3a5e,#2563eb)',
+    forumEmoji:  forum?.emoji ?? '💬',
+    ago:         r.startThreadDate ? timeAgo(r.startThreadDate) : (r.time ?? ''),
+    comments:    r.replyCount ?? r.replies ?? 0,
+  };
+}
 
 export default function ForumThreadView({
   selectedForum, forumDetail, flairs,
@@ -16,22 +43,73 @@ export default function ForumThreadView({
   const [activeFlairId, setActiveFlairId] = useState(null);
   const [flairDropdownOpen, setFlairDropdownOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  // null  = not searching | []+ = live API results | 'fallback' = use client-side
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   const scrollRef = useRef(null);
 
   const detail = forumDetail || selectedForum;
+  const forumId = selectedForum?.id ?? forumDetail?.forumId ?? null;
 
+  // ── Live search with 350 ms debounce ──────────────────────────────────────
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) { setSearchResults(null); setSearchLoading(false); return; }
+
+    setSearchLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await search({
+          query:       q,
+          contentType: CONTENT_TYPE.TOPIC,
+          forumId,
+          pageSize:    30,
+        });
+        const raw = res.data?.results ?? res.data?.topics ?? [];
+        setSearchResults(
+          Array.isArray(raw) ? raw.map(r => mapSearchResult(r, selectedForum)) : 'fallback'
+        );
+      } catch {
+        // Backend contentType=8 currently 500s — silently fall back to client-side filter
+        setSearchResults('fallback');
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, forumId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Topic card list ───────────────────────────────────────────────────────
   const topicCards = useMemo(() => {
+    // Live search returned API results — use them directly
+    if (Array.isArray(searchResults)) return searchResults;
+
+    // Map base topics
     const mapped = topics.map(t => ({
       ...t,
-      forumName:  t.forumName || selectedForum?.name || '',
-      forumBg:    selectedForum?.bg || 'linear-gradient(135deg,#1e3a5e,#2563eb)',
+      forumName:  t.forumName  || selectedForum?.name || '',
+      forumBg:    selectedForum?.bg    || 'linear-gradient(135deg,#1e3a5e,#2563eb)',
       forumEmoji: selectedForum?.emoji || '💬',
       ago:        t.time,
       comments:   t.replies,
     }));
-    if (activeFlairId == null) return mapped;
-    return mapped.filter(t => t.flairId === activeFlairId);
-  }, [topics, selectedForum, activeFlairId]);
+
+    let filtered = activeFlairId == null ? mapped : mapped.filter(t => t.flairId === activeFlairId);
+
+    // Client-side filter: used when search fallback triggered OR as default behaviour
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      filtered = filtered.filter(t =>
+        t.title?.toLowerCase().includes(q) ||
+        t.description?.toLowerCase().includes(q) ||
+        t.poster?.toLowerCase().includes(q)
+      );
+    }
+
+    return filtered;
+  }, [searchResults, topics, selectedForum, activeFlairId, searchQuery]);
 
   const activeFlairLabel = useMemo(() => {
     if (activeFlairId == null) return 'All';
@@ -86,6 +164,33 @@ export default function ForumThreadView({
         <div className={styles.forumStatItem}>
           <span className={styles.forumStatNum}>#{detail.rank || '–'}</span>
           <span className={styles.forumStatLabel}>Ranked</span>
+        </div>
+      </div>
+
+      {/* Search section */}
+      <div className={styles.searchSection}>
+        <div className={styles.searchWrap}>
+          {searchLoading ? (
+            <span className={styles.searchSpinner} aria-hidden="true" />
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+              <circle cx="6.5" cy="6.5" r="5" stroke="var(--text3)" strokeWidth="1.4"/>
+              <path d="M10.5 10.5l3 3" stroke="var(--text3)" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+          )}
+          <input
+            className={styles.searchInput}
+            placeholder="Search topics…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button className={styles.clearBtn} onClick={() => { setSearchQuery(''); setSearchResults(null); }} aria-label="Clear search">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                <path d="M1.5 1.5l8 8M9.5 1.5l-8 8" stroke="var(--text3)" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -149,9 +254,12 @@ export default function ForumThreadView({
 
         {/* Right: topic count + new topic */}
         <div className={styles.flairBarRight}>
-          {!topicsLoading && (
+          {!topicsLoading && !searchLoading && (
             <span className={styles.flairTopicCount}>
-              {topicCards.length} topic{topicCards.length !== 1 ? 's' : ''}
+              {searchQuery.trim()
+                ? `${topicCards.length} result${topicCards.length !== 1 ? 's' : ''}`
+                : `${topicCards.length} topic${topicCards.length !== 1 ? 's' : ''}`
+              }
             </span>
           )}
           <button className={styles.newTopicBtn} onClick={() => setComposerOpen(true)}>
@@ -188,7 +296,11 @@ export default function ForumThreadView({
       {!topicsLoading && !topicsError && (
         <div className={styles.threadList}>
           {topicCards.length === 0 ? (
-            <EmptyState icon="📭" title="No topics yet" subtitle="Be the first to start a discussion!" />
+            <EmptyState
+              icon={searchQuery.trim() ? '🔍' : '📭'}
+              title={searchQuery.trim() ? 'No results found' : 'No topics yet'}
+              subtitle={searchQuery.trim() ? `Nothing matched "${searchQuery.trim()}"` : 'Be the first to start a discussion!'}
+            />
           ) : topicCards.map((t, i) => (
             <div key={t.id} onClick={() => onTopicPress?.({ ...t, forumBg: detail.bg, forumEmoji: detail.emoji })}>
               <ThreadCard

@@ -1,0 +1,73 @@
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  position: relative;
+  animation: popIn 0.7s var(--ease-out) both;
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.logoArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoMark {
+  width: 80px;
+  height: 80px;
+  border-radius: 22px;
+  background: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+  box-shadow: var(--shadow-brand);
+}
+
+.logoInitial {
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -1px;
+  font-family: var(--font-display);
+}
+
+.brandName {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  font-family: var(--font-display);
+  margin: 0;
+}
+
+.tagline {
+  font-size: 14px;
+  color: var(--text3);
+  letter-spacing: 0.2px;
+  margin: 0;
+}
+
+.loader {
+  position: absolute;
+  bottom: 60px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--brand-light);
+  border-top-color: var(--brand);
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

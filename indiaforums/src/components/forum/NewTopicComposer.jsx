@@ -141,6 +141,7 @@ export default function NewTopicComposer({ forum, flairs = [], onClose, onCreate
   const { isAuthenticated } = useAuth();
   const editorRef  = useRef(null);
   const savedRange = useRef(null);
+  const bodyRef    = useRef(null);
 
   const [topicTypeId, setTopicTypeId]       = useState(1);
   const [subject, setSubject]               = useState('');
@@ -158,15 +159,21 @@ export default function NewTopicComposer({ forum, flairs = [], onClose, onCreate
   const [activeFormats, setActiveFormats]   = useState({});
   const [showFormat, setShowFormat]         = useState(true);
 
-  // ── Poll-specific state (only used when topicTypeId === 2) ───────────────
+  // ── Poll-specific state (used when topicTypeId is 2 or 3) ───────────────
   const [pollQuestion, setPollQuestion]     = useState('');
   const [pollOptions, setPollOptions]       = useState(['', '']);
   const [pollMultiple, setPollMultiple]     = useState(false);
   const [pollOnly, setPollOnly]             = useState(false);
 
+  // Types that require poll/choices data (backend validation confirms 2 & 3)
+  const isPollType = topicTypeId === 2 || topicTypeId === 3;
+  const filledPollOptions = pollOptions.filter(Boolean);
+  const pollValid = !isPollType || filledPollOptions.length >= 2;
+
   const canSubmit =
     subject.trim().length >= 3 &&
-    charCount >= 10 &&
+    (isPollType || charCount >= 10) &&
+    pollValid &&
     !submitting;
 
   useEffect(() => {
@@ -302,24 +309,29 @@ export default function NewTopicComposer({ forum, flairs = [], onClose, onCreate
     if (!canSubmit) return;
     setSubmitting(true); setError(null);
     try {
-      const htmlContent = editorRef.current?.innerHTML || '';
-      const res = await createTopic({
+      const rawHtml = editorRef.current?.innerHTML || '';
+      // Strip bare <br> that an empty contentEditable inserts — don't send junk HTML
+      const htmlContent = /^(<br\s*\/?>|\s)*$/i.test(rawHtml) ? '' : rawHtml;
+      const payload = {
         forumId: forum.id,
         subject: subject.trim(),
         message: htmlContent,
         topicTypeId,
         flairId: flairId ? Number(flairId) : undefined,
         addToWatchList, showSignature,
-        membersOnly, maturedContent,
+        hasMaturedContent: maturedContent,
         titleTags: tags.trim() || undefined,
-        ...(topicTypeId === 2 && {
-          pollQuestion: pollQuestion.trim() || undefined,
-          pollOptions:  pollOptions.filter(Boolean),
-          pollMultiple,
-          pollOnly,
+        ...(isPollType && {
+          pollData: {
+            question:      pollQuestion.trim() || undefined,
+            multipleVotes: pollMultiple,
+            allowReplies:  !pollOnly,
+            choices:       filledPollOptions.map(c => ({ choice: c })),
+          },
         }),
-      });
-      const newId = res?.data?.topicId ?? res?.data?.id ?? res?.data?.data?.topicId ?? null;
+      };
+      const res = await createTopic(payload);
+      const newId = res?.data?.topicId ?? null;
       onCreated?.(newId, res?.data);
       onClose?.();
     } catch (err) {
@@ -374,8 +386,22 @@ export default function NewTopicComposer({ forum, flairs = [], onClose, onCreate
         </div>
       </div>
 
+      {/* ── Error banner — fixed between topBar and body, always visible ──── */}
+      {error && (
+        <div className={styles.errorBanner}>
+          <div className={styles.errorBannerHeading}>
+            There are following errors in the topic:
+          </div>
+          <ul className={styles.errorBannerList}>
+            {String(error).split('\n').filter(Boolean).map((msg, i) => (
+              <li key={i}>{msg}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* ── Scrollable body ─────────────────────────────────────────────────── */}
-      <div className={styles.body}>
+      <div className={styles.body} ref={bodyRef}>
 
         {!isAuthenticated && (
           <div className={styles.authBanner}>
@@ -425,8 +451,8 @@ export default function NewTopicComposer({ forum, flairs = [], onClose, onCreate
 
           <div className={styles.postCardDivider} />
 
-          {/* ─ Poll fields — visible only when Poll type is selected ──── */}
-          {topicTypeId === 2 && (
+          {/* ─ Poll/Question fields — visible for Poll (2) and Question (3) ── */}
+          {isPollType && (
             <>
               <div className={styles.pollSection}>
 
@@ -445,7 +471,7 @@ export default function NewTopicComposer({ forum, flairs = [], onClose, onCreate
 
                 {/* Poll options */}
                 <div className={styles.pollBlock}>
-                  <div className={styles.pollBlockLabel}>Options</div>
+                  <div className={styles.pollBlockLabel}>{topicTypeId === 3 ? 'Answers' : 'Options'}</div>
                   <div className={styles.pollOptions}>
                     {pollOptions.map((opt, idx) => (
                       <div key={idx} className={styles.pollOption}>
@@ -669,16 +695,6 @@ export default function NewTopicComposer({ forum, flairs = [], onClose, onCreate
               </label>
             </div>
 
-          </div>
-        )}
-
-        {error && (
-          <div className={styles.errorBox}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
-            </svg>
-            {error}
           </div>
         )}
 

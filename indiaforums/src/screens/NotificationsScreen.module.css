@@ -1,0 +1,213 @@
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* ── Filter chips row ─────────────────────────────────── */
+.filtersRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--content-px);
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.filtersRow::-webkit-scrollbar { display: none; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 5px var(--sp-3);
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--text2);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  flex-shrink: 0;
+}
+.chip:hover {
+  border-color: var(--brand-border);
+  color: var(--brand);
+}
+.chipActive {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--text-on-brand);
+}
+.chipActive:hover {
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
+  color: var(--text-on-brand);
+}
+.chipBadge {
+  background: rgba(255,255,255,0.3);
+  border-radius: var(--radius-full);
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  text-align: center;
+}
+.chip:not(.chipActive) .chipBadge {
+  background: var(--brand-light);
+  color: var(--brand);
+}
+
+/* ── Mark all read bar ────────────────────────────────── */
+.markAllBar {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--sp-2) var(--content-px);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.markAllBtn {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.markAllBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Scrollable list ──────────────────────────────────── */
+.list {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Notification item ────────────────────────────────── */
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--content-px);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.item:active { background: var(--surface); }
+
+.itemUnread::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--brand);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+}
+
+/* Avatar */
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.avatarInitials {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-on-brand);
+  flex-shrink: 0;
+}
+
+/* Text content */
+.itemBody {
+  flex: 1;
+  min-width: 0;
+}
+.itemTitle {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+  line-height: 1.35;
+}
+.itemMessage {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.itemTime {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: var(--sp-1);
+}
+
+/* Unread dot */
+.unreadDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+/* ── States ───────────────────────────────────────────── */
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-10) var(--content-px);
+  color: var(--text3);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.loadMoreBtn {
+  display: block;
+  width: 100%;
+  padding: var(--sp-4);
+  background: var(--card);
+  border: none;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand);
+  cursor: pointer;
+  text-align: center;
+}
+.loadMoreBtn:disabled {
+  color: var(--text3);
+  cursor: default;
+}

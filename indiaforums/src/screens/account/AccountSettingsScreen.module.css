@@ -207,21 +207,52 @@
 }
 
 /* ── Preferences ──────────────────────────────────────────────────────────── */
+/* Break out of .content padding so rows go full-bleed */
 .prefSection {
+  margin: calc(-1 * var(--sp-4)) calc(-1 * var(--content-px));
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
+  padding-bottom: var(--sp-5);
 }
 
+/* Feedback banners get content padding restored */
+.prefSection > .error,
+.prefSection > .success,
+.prefSection > .warning {
+  margin: var(--sp-3) var(--content-px) 0;
+}
+
+/* Each group = one card block */
+.prefGroup {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--sp-3);
+}
+
+/* Section label above the card */
+.prefGroupTitle {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: var(--sp-3) var(--content-px) var(--sp-1);
+}
+
+/* Rows inside — divider-only, no individual card borders */
 .prefRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
-  padding: var(--sp-3) var(--sp-4);
+  padding: 12px var(--content-px);
   background: var(--card);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+}
+
+.prefRow:last-child {
+  border-bottom: 1px solid var(--border);
 }
 
 .prefInfo {
@@ -243,6 +274,11 @@
   font-family: var(--font-body);
   font-size: 11px;
   color: var(--text3);
+}
+
+/* Save button inside prefSection */
+.prefSaveBtn {
+  margin: 0 var(--content-px);
 }
 
 /* ── Toggle switch ────────────────────────────────────────────────────────── */

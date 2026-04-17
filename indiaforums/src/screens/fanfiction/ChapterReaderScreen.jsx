@@ -21,18 +21,12 @@ function formatCount(n) {
   return String(num);
 }
 
-// HTML detection — chapterContent is HTML; if a backend ever switches to plain
-// text we still want to render it readably.
 function looksLikeHtml(s) {
   return typeof s === 'string' && /<\w+[^>]*>/.test(s);
 }
 
-// `likeJsonData` arrives as a JSON-string shaped like
-//   '{"1":0,"2":1,"3":1,"4":0,"5":0,"6":0,"7":0,"8":0}'
-// We parse defensively and expose the 8 reaction slots with stable labels.
-// NOTE: We don't have an authoritative key→name map from the API, so the
-// labels here are best-effort common reaction names. They can be corrected
-// once documented without changing the data flow.
+// `likeJsonData` is a JSON string: '{"1":0,"2":1,...,"8":0}'
+// Keys map to 8 reaction slots. Labels are best-effort without API docs.
 const REACTION_LABELS = {
   1: { icon: '👍', label: 'Like'   },
   2: { icon: '❤️', label: 'Love'   },
@@ -59,8 +53,7 @@ function parseReactionMap(raw) {
   return entries;
 }
 
-// statusCode 1 = Published on fan-fiction chapters (others are drafts/unknown)
-const chapterStatusLabel = (code) => {
+const chapterStatusLabel = code => {
   const n = Number(code);
   if (n === 1) return 'Published';
   if (n === 0) return 'Draft';
@@ -73,18 +66,23 @@ const FONT_SIZES = [
   { id: 'lg', px: 18 },
 ];
 
-export default function ChapterReaderScreen({ chapterId, onBack }) {
+export default function ChapterReaderScreen({
+  chapterId,
+  storyTitle = '',
+  chapters   = [],   // ordered array from the detail endpoint — powers prev/next
+  onChapterSelect,   // (chapterId) => void — navigate to a sibling chapter
+  onBack,
+}) {
   const { chapter, loading, error, refetch } = useFanFictionChapter(chapterId);
-  const [fontIdx, setFontIdx] = useState(1); // medium
+  const [fontIdx, setFontIdx] = useState(1);
 
-  // Reset scroll on chapter change.
+  // Reset scroll to top whenever the active chapter changes.
   useEffect(() => {
     const el = document.getElementById('chapter-scroll');
     if (el) el.scrollTop = 0;
   }, [chapterId]);
 
   const [scrollProgress, setScrollProgress] = useState(0);
-
   useEffect(() => {
     const el = document.getElementById('chapter-scroll');
     if (!el) return;
@@ -97,19 +95,23 @@ export default function ChapterReaderScreen({ chapterId, onBack }) {
     return () => el.removeEventListener('scroll', onScroll);
   }, [chapterId]);
 
+  // Derive prev/next chapter from the ordered chapters list.
+  const { prevChapterId, nextChapterId } = useMemo(() => {
+    if (!chapters.length) return { prevChapterId: null, nextChapterId: null };
+    const idx = chapters.findIndex(ch => String(ch.chapterId) === String(chapterId));
+    return {
+      prevChapterId: chapters[idx - 1]?.chapterId ?? null,
+      nextChapterId: chapters[idx + 1]?.chapterId ?? null,
+    };
+  }, [chapters, chapterId]);
+
   const view = useMemo(() => {
     if (!chapter) return null;
     return {
       title:       chapter.chapterTitle || 'Chapter',
       number:      chapter.orderNumber,
-      storyId:     chapter.fanFictionId,
-      // Parent story cover — the chapter payload embeds the story thumbnail
-      // so we can render a breadcrumb that's visually anchored to the story.
-      storyThumb:  chapter.ffThumbnail || chapter.ffBannerThumbnail || null,
-      // Prefer the cleaned `filteredChapterContent` (HTML stripped of unsafe
-      // attributes) when present, fall back to raw `chapterContent`.
+      // Prefer the cleaned filteredChapterContent (stripped of unsafe attrs).
       body:        chapter.filteredChapterContent || chapter.chapterContent || '',
-      authorId:    chapter.userId,
       published:   chapter.chapterPublishedWhen || chapter.createdWhen,
       edited:      chapter.lastEditedWhen,
       views:       chapter.viewCount    || 0,
@@ -118,13 +120,11 @@ export default function ChapterReaderScreen({ chapterId, onBack }) {
       membersOnly: !!chapter.chapterMembersOnly,
       mature:      !!chapter.chapterHasMaturedContent,
       status:      chapterStatusLabel(chapter.statusCode),
-      // 8-slot reaction breakdown (may be null if the backend omits it).
       reactions:   parseReactionMap(chapter.likeJsonData),
       readingTime: (() => {
-        const text = (chapter.filteredChapterContent || chapter.chapterContent || '').replace(/<[^>]+>/g, ' ');
+        const text  = (chapter.filteredChapterContent || chapter.chapterContent || '').replace(/<[^>]+>/g, ' ');
         const words = text.trim().split(/\s+/).filter(Boolean).length;
-        const mins = Math.max(1, Math.round(words / 200));
-        return `${mins} min read`;
+        return `${Math.max(1, Math.round(words / 200))} min read`;
       })(),
     };
   }, [chapter]);
@@ -138,29 +138,24 @@ export default function ChapterReaderScreen({ chapterId, onBack }) {
 
   return (
     <div className={styles.screen} id="chapter-scroll">
-      {/* ── Reader header ─────────────────────────────────────────────────── */}
+
+      {/* ── Sticky reader toolbar ─────────────────────────────────────────── */}
       <div className={styles.readerHeader}>
         <div className={styles.headerTop}>
+
+          {/* Breadcrumb: story thumbnail + story title + chapter number */}
           <div className={styles.readerCrumb}>
-            {view.storyThumb && (
-              <img
-                src={view.storyThumb}
-                alt=""
-                className={styles.crumbThumb}
-                loading="lazy"
-              />
-            )}
             <div className={styles.crumbText}>
+              {storyTitle
+                ? <span className={styles.crumbStory}>{storyTitle}</span>
+                : null}
               {view.number != null && (
                 <span className={styles.crumbChapter}>Chapter {view.number}</span>
-              )}
-              {view.authorId && (
-                <span className={styles.crumbAuthor}>by User #{view.authorId}</span>
               )}
             </div>
           </div>
 
-          {/* Font size toggle */}
+          {/* Font size toggle — A small / medium / large */}
           <div className={styles.fontToggle} role="group" aria-label="Reading size">
             {FONT_SIZES.map((f, i) => (
               <button
@@ -182,7 +177,7 @@ export default function ChapterReaderScreen({ chapterId, onBack }) {
         </div>
       </div>
 
-      {/* ── Chapter hero ────────────────────────────────────────────────────── */}
+      {/* ── Chapter header block ─────────────────────────────────────────── */}
       <div className={styles.chapterHero}>
         {view.number != null && (
           <div className={styles.chapterNumLabel}>Chapter {view.number}</div>
@@ -190,10 +185,10 @@ export default function ChapterReaderScreen({ chapterId, onBack }) {
         <h1 className={styles.chapterTitle}>{view.title}</h1>
 
         <div className={styles.heroMeta}>
-          {view.authorId && (
-            <div className={styles.authorPill}>
-              <div className={styles.authorAvatar}>U</div>
-              <span>User #{view.authorId}</span>
+          {/* Show story context instead of raw user ID */}
+          {storyTitle && (
+            <div className={styles.storyRef}>
+              <span className={styles.storyRefText}>{storyTitle}</span>
             </div>
           )}
           {view.readingTime && (
@@ -217,7 +212,7 @@ export default function ChapterReaderScreen({ chapterId, onBack }) {
         </div>
       </div>
 
-      {/* ── Body ──────────────────────────────────────────────────────────── */}
+      {/* ── Article body ─────────────────────────────────────────────────── */}
       <article className={styles.body} style={{ fontSize: fontPx, lineHeight: 1.7 }}>
         {view.body
           ? (isHtml
@@ -226,12 +221,12 @@ export default function ChapterReaderScreen({ chapterId, onBack }) {
           : <p className={styles.empty}>This chapter has no content.</p>}
       </article>
 
-      {/* ── Reactions strip — 8 reaction slots from likeJsonData ──────────── */}
+      {/* ── Reactions strip ──────────────────────────────────────────────── */}
       {view.reactions && view.reactions.some(r => r.count > 0) && (
         <div className={styles.reactionsBlock}>
           <div className={styles.reactionsLabel}>Reader reactions</div>
           <div className={styles.reactionsGrid}>
-            {view.reactions.map((r) => (
+            {view.reactions.map(r => (
               <div
                 key={r.id}
                 className={`${styles.reactionPill} ${r.count > 0 ? styles.reactionPillActive : ''}`}
@@ -245,9 +240,26 @@ export default function ChapterReaderScreen({ chapterId, onBack }) {
         </div>
       )}
 
-      {/* ── Back to story ─────────────────────────────────────────────────── */}
+      {/* ── Chapter navigation footer ─────────────────────────────────────── */}
+      {/* Three buttons: Back to story (left, wider) + Prev + Next           */}
       <div className={styles.navRow}>
-        <button className={styles.backBtn} onClick={onBack}>← Back to Story</button>
+        <button className={styles.backBtn} onClick={onBack}>← Story</button>
+        <button
+          className={styles.navBtn}
+          onClick={() => prevChapterId && onChapterSelect?.(prevChapterId)}
+          disabled={!prevChapterId}
+          aria-label="Previous chapter"
+        >
+          ← Prev
+        </button>
+        <button
+          className={`${styles.navBtn} ${styles.navBtnNext}`}
+          onClick={() => nextChapterId && onChapterSelect?.(nextChapterId)}
+          disabled={!nextChapterId}
+          aria-label="Next chapter"
+        >
+          Next →
+        </button>
       </div>
 
       <div className={styles.spacer} />

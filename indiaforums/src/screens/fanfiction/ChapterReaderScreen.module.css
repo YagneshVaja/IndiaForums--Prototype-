@@ -18,7 +18,7 @@
   position: sticky;
   top: 0;
   z-index: 5;
-  background: rgba(255,255,255,0.92);
+  background: var(--nav-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
@@ -63,7 +63,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.crumbAuthor {
+.crumbStory {
   font-size: 10px;
   color: var(--text3);
   white-space: nowrap;
@@ -147,27 +147,17 @@
   flex-wrap: wrap;
 }
 
-.authorPill {
+.storyRef {
   display: flex;
   align-items: center;
-  gap: 6px;
+}
+.storyRefText {
   font-size: 12px;
   font-weight: 600;
   color: var(--text2);
-}
-.authorAvatar {
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-full);
-  background: var(--brand-light);
-  color: var(--brand);
-  font-size: 10px;
-  font-weight: 800;
-  font-family: var(--font-display);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .readingTime {
   font-size: 11px;
@@ -345,7 +335,7 @@
 }
 
 .backBtn {
-  flex: 1;
+  flex: 2;
   height: 44px;
   padding: 0 var(--sp-4);
   border-radius: var(--radius-md);
@@ -384,6 +374,17 @@
 .navBtn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Next button — highlighted with brand color when enabled */
+.navBtnNext:not(:disabled) {
+  background: var(--brand-light);
+  border-color: var(--brand-border);
+  color: var(--brand);
+}
+.navBtnNext:hover:not(:disabled) {
+  background: var(--brand);
+  color: var(--text-on-brand);
 }
 
 .spacer { height: var(--sp-6); flex-shrink: 0; }

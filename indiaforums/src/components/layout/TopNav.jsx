@@ -1,6 +1,6 @@
 import styles from './TopNav.module.css';
 
-export default function TopNav({ title, onBack, onMenuOpen }) {
+export default function TopNav({ title, onBack, onMenuOpen, notifCount = 0, onNotificationsPress }) {
 
   // ── Back-navigation mode ───────────────────────────────────────────────────
   if (onBack) {
@@ -51,13 +51,24 @@ export default function TopNav({ title, onBack, onMenuOpen }) {
 
       {/* Right actions */}
       <div className={styles.right}>
-        <button className={styles.iconBtn} aria-label="Notifications" style={{ position: 'relative' }}>
+        <button
+          className={styles.iconBtn}
+          aria-label="Notifications"
+          style={{ position: 'relative' }}
+          onClick={onNotificationsPress}
+        >
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <path d="M9 2a5.5 5.5 0 015.5 5.5c0 1.8.5 3.2 1.1 3.8H2.4c.6-.6 1.1-2 1.1-3.8A5.5 5.5 0 019 2z"
               stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
             <path d="M7 15a2 2 0 004 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
-          <span className={styles.notifDot} />
+          {notifCount > 0 ? (
+            <span className={styles.notifBadge}>
+              {notifCount > 99 ? '99+' : notifCount}
+            </span>
+          ) : (
+            <span className={styles.notifDot} />
+          )}
         </button>
 
         <button className={styles.iconBtn} aria-label="Profile">

@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
 import styles from './ArticleScreen.module.css';
-import { getRelatedArticles } from '../data/newsData';
 import useArticleDetails from '../hooks/useArticleDetails';
 import SocialEmbed from '../components/ui/SocialEmbed';
 import CommentsSection from '../components/comments/CommentsSection';
@@ -165,10 +164,10 @@ export default function ArticleScreen({ article, onArticlePress, onTagPress }) {
   const subtitle     = useMemo(() => enriched.description || getSubtitle(enriched), [enriched]);
   const hasArticleItems = enriched.articleItems?.length > 0;
   const apiTldr      = enriched.tldr || '';
-  const related      = useMemo(() => {
-    if (enriched.relatedArticles?.length) return enriched.relatedArticles.slice(0, 3);
-    return getRelatedArticles(enriched);
-  }, [enriched]);
+  const related      = useMemo(() =>
+    enriched.relatedArticles?.length ? enriched.relatedArticles.slice(0, 3) : [],
+    [enriched.relatedArticles]
+  );
   const topCat       = useMemo(() => getTopCat(enriched), [enriched]);
   const jsonEntities = enriched.jsonEntities || [];
   const entities     = useMemo(() => CATEGORY_ENTITIES[topCat] || CATEGORY_ENTITIES.MOVIES, [topCat]);
@@ -466,7 +465,10 @@ export default function ArticleScreen({ article, onArticlePress, onTagPress }) {
                 {related.map(a => (
                   <div key={a.id} className={styles.relCard} onClick={() => onArticlePress && onArticlePress(a)}>
                     <div className={styles.relThumb} style={{ background: a.bg }}>
-                      <span className={styles.relEmoji}>{a.emoji}</span>
+                      {a.thumbnail
+                        ? <img src={a.thumbnail} alt="" className={styles.relThumbImg} loading="lazy" />
+                        : <span className={styles.relEmoji}>{a.emoji}</span>
+                      }
                       {a.breaking && <span className={styles.relBreaking}>BREAKING</span>}
                     </div>
                     <div className={styles.relBody}>

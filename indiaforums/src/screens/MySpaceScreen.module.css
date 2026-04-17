@@ -4,6 +4,7 @@
   flex-direction: column;
   background: var(--bg);
   overflow-y: auto;
+  padding-bottom: var(--sp-8);
 }
 
 /* ── Verify banner ────────────────────────────────────────────────────────── */
@@ -19,126 +20,282 @@
   width: 100%;
   text-align: left;
 }
+.verifyText   { font-family: var(--font-body); font-size: 13px; color: var(--warning); font-weight: 500; }
+.verifyAction { font-family: var(--font-body); font-size: 13px; color: var(--warning); font-weight: 700; }
 
-.verifyText {
-  font-family: var(--font-body);
-  font-size: 13px;
-  color: var(--warning);
-  font-weight: 500;
-}
-
-.verifyAction {
-  font-family: var(--font-body);
-  font-size: 13px;
-  color: var(--warning);
-  font-weight: 700;
-}
-
-/* ── Profile card ─────────────────────────────────────────────────────────── */
-.profileCard {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  padding: var(--sp-5) var(--content-px);
+/* ── Profile Hero ─────────────────────────────────────────────────────────── */
+.profileHero {
   background: var(--card);
   border-bottom: 1px solid var(--border);
-}
-
-.avatar {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: var(--brand);
-  color: var(--text-on-brand);
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  margin-bottom: var(--sp-3);
   overflow: hidden;
 }
 
-.avatarImg {
+/* Gradient cover + subtle dot pattern */
+.heroCover {
+  position: relative;
+  height: 88px;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-hover) 100%);
+  overflow: hidden;
+}
+.heroCover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.14) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+/* Hero body — pulled up to overlap the cover */
+.heroBody {
+  position: relative;
+  z-index: 1;
+  margin-top: -48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 var(--content-px) var(--sp-5);
+}
+
+/* Avatar ring with white border creating the "floating" effect */
+.heroAvatarRing {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  padding: 3px;
+  background: var(--card);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  flex-shrink: 0;
+  margin-bottom: var(--sp-3);
+}
+
+.heroAvatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--brand);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heroAvatarImg {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.profileInfo {
+.heroAvatarInitial {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-on-brand);
+}
+
+/* Online status dot */
+.onlineDot {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--live);
+  border: 2px solid var(--card);
+}
+
+/* Name */
+.heroName {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  margin-bottom: var(--sp-2);
+}
+
+/* Rank pill */
+.heroRankPill {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--brand);
+  background: var(--brand-light);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  margin-bottom: var(--sp-4);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Stats bar */
+.heroStats {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--sp-4);
+}
+
+.heroStatItem {
+  display: flex;
+  align-items: center;
+}
+
+.heroStatDivider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  margin: 0 var(--sp-4);
+}
+
+.heroStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 44px;
+}
+
+.heroStatValue {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.heroStatLabel {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Action buttons */
+.heroActions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.heroPrimaryBtn {
+  padding: 9px 20px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--brand);
+  color: var(--text-on-brand);
+  border: none;
+  box-shadow: var(--shadow-brand);
+  transition: background var(--duration-fast) var(--ease-out);
+  letter-spacing: 0.2px;
+}
+.heroPrimaryBtn:active { background: var(--brand-hover); }
+
+.heroOutlineBtn {
+  padding: 9px 20px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text2);
+  border: 1.5px solid var(--border-strong);
+  transition: background var(--duration-fast) var(--ease-out);
+  letter-spacing: 0.2px;
+}
+.heroOutlineBtn:active { background: var(--surface); }
+
+/* ── Menu Sections ────────────────────────────────────────────────────────── */
+.menuSection {
+  margin-bottom: var(--sp-1);
+}
+
+.sectionLabel {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: var(--sp-2) var(--content-px) var(--sp-1);
+}
+
+.sectionCard {
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Menu Items ───────────────────────────────────────────────────────────── */
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 11px var(--content-px);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+  background: var(--card);
+}
+.menuItemLast  { border-bottom: none; }
+.menuItem:active { background: var(--surface); }
+
+/* Icon container */
+.menuIconWrap {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.menuSvg { width: 18px; height: 18px; }
+
+/* Icon color variants */
+.icon_blue    { background: var(--brand-light);   color: var(--brand);  }
+.icon_green   { background: var(--green-surface);  color: var(--green);  }
+.icon_amber   { background: var(--amber-surface);  color: var(--amber);  }
+.icon_red     { background: var(--red-surface);    color: var(--red);    }
+.icon_neutral { background: var(--surface);        color: var(--text2);  }
+
+/* Label + subtitle */
+.menuText {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
 }
 
-.username {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.email {
-  font-family: var(--font-body);
-  font-size: 12px;
-  color: var(--text2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ── Menu list ────────���──────────────────────────────���────────────────────── */
-.menuList {
-  display: flex;
-  flex-direction: column;
-  margin-top: var(--sp-3);
-  background: var(--card);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-
-.menuItem {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-4) var(--content-px);
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-out);
-}
-
-.menuItem:last-child {
-  border-bottom: none;
-}
-
-.menuItem:active {
-  background: var(--surface);
-}
-
-.menuIcon {
-  font-size: 18px;
-  width: 24px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
 .menuLabel {
-  flex: 1;
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 500;
   color: var(--text);
+  line-height: 1.2;
+}
+
+.menuSubtitle {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text3);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .menuArrow {
-  font-size: 18px;
   color: var(--text3);
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
 }
 
@@ -148,14 +305,44 @@
   font-weight: 700;
   color: var(--text-on-brand);
   background: var(--brand);
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: var(--radius-full);
   min-width: 20px;
   text-align: center;
   flex-shrink: 0;
 }
 
-/* ── Back button ──────────────────────────────────────────────────────────── */
+/* ── Sub-screen header (used by ProfileScreen wrapper) ───────────────────── */
+.subHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--content-px);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.subHeaderBack {
+  padding: var(--sp-1) var(--sp-2);
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--brand);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.subHeaderTitle {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ── Legacy back button (kept for any remaining usages) ──────────────────── */
 .backBtn {
   padding: var(--sp-3) var(--content-px);
   border: none;
@@ -171,7 +358,7 @@
 
 /* ── Logout ───────────────────────────────────────────────────────────────── */
 .logoutBtn {
-  margin: var(--sp-6) var(--content-px);
+  margin: var(--sp-5) var(--content-px) var(--sp-2);
   height: 44px;
   border: 1px solid var(--error);
   border-radius: var(--radius-sm);
@@ -183,7 +370,6 @@
   cursor: pointer;
   transition: background var(--duration-fast) var(--ease-out);
 }
-
 .logoutBtn:active {
   background: var(--error);
   color: var(--text-on-brand);

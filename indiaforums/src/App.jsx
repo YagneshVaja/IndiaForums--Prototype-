@@ -1,6 +1,15 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { getTokens, clearAll } from './services/tokenStorage';
 import { useDevToolbar } from './contexts/DevToolbarContext';
 import useAppNavigation from './hooks/useAppNavigation';
+import { useUnreadCount } from './hooks/useNotifications';
+import NotificationsScreen from './screens/NotificationsScreen';
+
+import SplashScreen     from './screens/onboarding/SplashScreen';
+import OnboardingScreen from './screens/onboarding/OnboardingScreen';
+import GetStartedScreen from './screens/onboarding/GetStartedScreen';
+import LoginScreen      from './screens/onboarding/LoginScreen';
+import RegisterScreen   from './screens/onboarding/RegisterScreen';
 
 import PhoneShell    from './components/layout/PhoneShell';
 import DynamicIsland from './components/layout/DynamicIsland';
@@ -34,6 +43,7 @@ import WebStoriesScreen    from './screens/WebStoriesScreen';
 import WebStoryPlayer      from './components/stories/WebStoryPlayer';
 import TagDetailScreen     from './screens/TagDetailScreen';
 import ComposeScreen       from './screens/messages/ComposeScreen';
+import ReplyComposerSheet  from './components/forum/ReplyComposerSheet';
 
 const TAB_SCREENS = {
   explore: ExploreScreen,
@@ -44,13 +54,27 @@ const TAB_SCREENS = {
 };
 
 export default function App() {
+  const [onboardingPhase, setOnboardingPhase] = useState(() => {
+    // Already authenticated — skip everything
+    const { accessToken } = getTokens();
+    if (accessToken) return 'done';
+    // Seen the onboarding carousel before — go straight to auth screen
+    if (localStorage.getItem('hasSeenOnboarding') === 'true') return 'getstarted';
+    // First-time visitor — run the full flow
+    return 'splash';
+  });
+
   const nav = useAppNavigation();
   const { darkMode, toggleDarkMode, navResetTrigger } = useDevToolbar();
+  const { count: notifCount, refresh: refreshNotifCount } = useUnreadCount(60_000);
 
   /* ── Reset all navigation when toolbar reset button is pressed ────────── */
   useEffect(() => {
     if (navResetTrigger === 0) return;
     nav.reset();
+    clearAll();                                   // wipe tokens + stored user
+    localStorage.removeItem('hasSeenOnboarding');
+    setOnboardingPhase('splash');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navResetTrigger]);
 
@@ -81,6 +105,51 @@ export default function App() {
     } else if (storyTargets.includes(target)) {
       nav.setStory(target);
     }
+  }
+
+  /* ── Onboarding flow — shown to first-time users, bypasses TopNav/BottomNav ─ */
+  function completeAuth() {
+    localStorage.setItem('hasSeenOnboarding', 'true');
+    setOnboardingPhase('done');
+  }
+
+  if (onboardingPhase !== 'done') {
+    return (
+      <PhoneShell darkMode={darkMode}>
+        <DynamicIsland />
+        <StatusBar />
+        {onboardingPhase === 'splash' && (
+          <SplashScreen onComplete={() => setOnboardingPhase('onboarding')} />
+        )}
+        {onboardingPhase === 'onboarding' && (
+          <OnboardingScreen onComplete={() => {
+            localStorage.setItem('hasSeenOnboarding', 'true');
+            setOnboardingPhase('getstarted');
+          }} />
+        )}
+        {onboardingPhase === 'getstarted' && (
+          <GetStartedScreen
+            onCreateAccount={() => setOnboardingPhase('register')}
+            onSignIn={() => setOnboardingPhase('login')}
+            onGuest={completeAuth}
+          />
+        )}
+        {onboardingPhase === 'login' && (
+          <LoginScreen
+            onBack={() => setOnboardingPhase('getstarted')}
+            onSuccess={completeAuth}
+            onGoRegister={() => setOnboardingPhase('register')}
+          />
+        )}
+        {onboardingPhase === 'register' && (
+          <RegisterScreen
+            onBack={() => setOnboardingPhase('getstarted')}
+            onSuccess={completeAuth}
+            onGoLogin={() => setOnboardingPhase('login')}
+          />
+        )}
+      </PhoneShell>
+    );
   }
 
   /* ── Determine current view ───────────────────────────────────────────────── */
@@ -143,11 +212,18 @@ export default function App() {
     content     = <VideoScreen onBack={nav.clearStory} onVideoPress={nav.selectVideo} />;
 
   } else if (nav.selectedFanficChapter) {
-    topNavTitle = 'Reader';
+    topNavTitle = nav.selectedFanfic?.title || 'Reading';
     topNavBack  = nav.clearFanficChapter;
     content     = (
       <ChapterReaderScreen
         chapterId={nav.selectedFanficChapter.chapterId}
+        storyTitle={nav.selectedFanfic?.title || ''}
+        chapters={nav.selectedFanficChapter.chapters || []}
+        onChapterSelect={(chapterId) => nav.selectFanficChapter({
+          chapterId,
+          storyId:  nav.selectedFanficChapter.storyId,
+          chapters: nav.selectedFanficChapter.chapters,
+        })}
         onBack={nav.clearFanficChapter}
       />
     );
@@ -168,7 +244,7 @@ export default function App() {
     content     = (
       <FanFictionDetailScreen
         storyId={nav.selectedFanfic.id}
-        onChapterPress={(chapterId) => nav.selectFanficChapter({ chapterId, storyId: nav.selectedFanfic.id })}
+        onChapterPress={(chapterId, _ch, chapters) => nav.selectFanficChapter({ chapterId, storyId: nav.selectedFanfic.id, chapters: chapters || [] })}
         onAuthorPress={(id, name) => nav.selectFanficAuthor({ id, name })}
         onDiscussPress={() => nav.setTab('forum')}
       />
@@ -215,6 +291,11 @@ export default function App() {
       />
     );
 
+  } else if (nav.showNotifications) {
+    topNavTitle = 'Notifications';
+    topNavBack  = () => { nav.closeNotifications(); refreshNotifCount(); };
+    content     = <NotificationsScreen />;
+
   } else if (nav.composeToUser) {
     topNavTitle = 'New Message';
     topNavBack  = nav.clearComposeUser;
@@ -235,6 +316,20 @@ export default function App() {
       />
     );
 
+  } else if (nav.composeReply) {
+    topNavTitle = 'Post a Reply';
+    topNavBack  = nav.clearComposeReply;
+    content = (
+      <ReplyComposerSheet
+        standalone
+        topic={nav.composeReply.topic}
+        forumId={nav.composeReply.forumId}
+        quotedPost={nav.composeReply.quotedPost}
+        onClose={nav.clearComposeReply}
+        onSubmitted={nav.clearComposeReply}
+      />
+    );
+
   } else if (nav.selectedTopic) {
     topNavBack  = nav.clearTopic;
     content = (
@@ -242,6 +337,7 @@ export default function App() {
         topic={nav.selectedTopic}
         onVisitProfile={nav.selectProfileUser}
         onMessageUser={nav.selectComposeUser}
+        onComposeReply={nav.selectComposeReply}
       />
     );
 
@@ -305,6 +401,8 @@ export default function App() {
         title={topNavTitle}
         onBack={topNavBack}
         onMenuOpen={nav.openDrawer}
+        notifCount={notifCount}
+        onNotificationsPress={nav.openNotifications}
       />
 
       {content}
