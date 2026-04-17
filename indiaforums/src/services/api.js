@@ -881,6 +881,10 @@ function transformForum(raw, categoriesMap) {
     pageUrl:      raw.pageUrl || '',
     locked:       raw.locked ?? false,
     hot:          (raw.topicsCount ?? 0) > 5000 || (raw.postsCount ?? 0) > 100000,
+    priorityPosts: raw.priorityPosts ?? 0,
+    editPosts:     raw.editPosts     ?? 0,
+    deletePosts:   raw.deletePosts   ?? 0,
+    teamJson:      raw.teamJson      ?? null,
   };
 }
 
@@ -1179,10 +1183,9 @@ export async function fetchAllForumTopics(pageNumber = 1, pageSize = 20) {
 }
 
 // ── Forum Topics ─────────────────────────────────────────────────────────────
-export async function fetchForumTopics(forumId, pageNumber = 1, pageSize = 20, cursor = null, sortBy = 'latest') {
+export async function fetchForumTopics(forumId, pageNumber = 1, pageSize = 20, cursor = null) {
   const params = { pageNumber, pageSize };
   if (cursor) params.cursor = cursor;
-  if (sortBy && sortBy !== 'latest') params.sortBy = sortBy;
 
   const { data } = await api.get(`/forums/${forumId}/topics`, { params });
 
