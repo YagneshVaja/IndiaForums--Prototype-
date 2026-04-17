@@ -26,6 +26,11 @@ export interface Article {
   authorName: string;
 }
 
+export interface ArticleDetail extends Article {
+  body: string;
+  authorAvatarUrl: string;
+}
+
 export interface Banner {
   id: string;
   title: string;
@@ -117,6 +122,24 @@ export async function fetchArticles(params: FetchArticlesParams = {}): Promise<A
   } catch {
     // Return mock data when API is unavailable (prototype)
     return getMockArticles(category);
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function transformArticleDetail(raw: any): ArticleDetail {
+  return {
+    ...transformArticle(raw),
+    body: raw?.body ?? raw?.content ?? raw?.html ?? '',
+    authorAvatarUrl: raw?.author_avatar_url ?? raw?.authorAvatarUrl ?? '',
+  };
+}
+
+export async function fetchArticleDetails(slugOrId: string): Promise<ArticleDetail> {
+  try {
+    const response = await apiClient.get(`/articles/${slugOrId}`);
+    return transformArticleDetail(response.data?.data ?? response.data);
+  } catch {
+    return getMockArticleDetail(slugOrId);
   }
 }
 
@@ -285,4 +308,17 @@ function getMockCelebrities(): Celebrity[] {
       followersCount: 3_100_000,
     },
   ];
+}
+
+function getMockArticleDetail(slugOrId: string): ArticleDetail {
+  const mockArticles = getMockArticles();
+  const found = mockArticles.find(
+    (a) => a.slug === slugOrId || a.id === slugOrId,
+  );
+  const base = found ?? mockArticles[0];
+  return {
+    ...base,
+    body: `<p>${base.summary}</p><p>This is a detailed article about ${base.title}. The story continues with more in-depth coverage and analysis of the events surrounding this topic.</p><p>Sources close to the matter have confirmed the details mentioned above. More updates are expected in the coming days.</p>`,
+    authorAvatarUrl: `https://picsum.photos/seed/${base.authorName}/40/40`,
+  };
 }
