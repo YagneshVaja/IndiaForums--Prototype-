@@ -7,8 +7,14 @@ import NewTopicComposer from '../../components/forum/NewTopicComposer';
 import { formatCount } from './forumHelpers';
 import { search, CONTENT_TYPE } from '../../services/searchApi';
 import { timeAgo } from '../../services/api';
+import useForumTopics from '../../hooks/useForumTopics';
 
-// Map a topic result from GET /search?contentType=8 → ThreadCard-compatible shape
+const SORT_TABS = [
+  { id: 'latest',   label: 'Latest' },
+  { id: 'trending', label: 'Trending' },
+  { id: 'top',      label: 'Top' },
+];
+
 function mapSearchResult(r, forum) {
   return {
     id:          r.topicId ?? r.id ?? Math.random(),
@@ -33,26 +39,32 @@ function mapSearchResult(r, forum) {
   };
 }
 
-export default function ForumThreadView({
-  selectedForum, forumDetail, flairs,
-  topics, topicsLoading, topicsLoadingMore,
-  topicsError, topicsHasMore,
-  loadMoreTopics, refreshTopics,
-  onTopicPress,
-}) {
-  const [activeFlairId, setActiveFlairId] = useState(null);
+export default function ForumThreadView({ selectedForum, onTopicPress }) {
+  const [sortBy, setSortBy]                     = useState('latest');
+  const [activeFlairId, setActiveFlairId]       = useState(null);
   const [flairDropdownOpen, setFlairDropdownOpen] = useState(false);
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  // null  = not searching | []+ = live API results | 'fallback' = use client-side
-  const [searchResults, setSearchResults] = useState(null);
-  const [searchLoading, setSearchLoading] = useState(false);
+  const [composerOpen, setComposerOpen]         = useState(false);
+  const [searchQuery, setSearchQuery]           = useState('');
+  const [searchResults, setSearchResults]       = useState(null);
+  const [searchLoading, setSearchLoading]       = useState(false);
   const scrollRef = useRef(null);
+
+  const {
+    topics, forumDetail, flairs,
+    loading: topicsLoading, loadingMore: topicsLoadingMore,
+    error: topicsError, hasMore: topicsHasMore,
+    loadMore: loadMoreTopics, refresh: refreshTopics,
+  } = useForumTopics(selectedForum?.id ?? null, sortBy);
 
   const detail = forumDetail || selectedForum;
   const forumId = selectedForum?.id ?? forumDetail?.forumId ?? null;
 
-  // ── Live search with 350 ms debounce ──────────────────────────────────────
+  // Reset flair filter when sort changes
+  useEffect(() => {
+    setActiveFlairId(null);
+  }, [sortBy]);
+
+  // Live search with 350 ms debounce
   useEffect(() => {
     const q = searchQuery.trim();
     if (!q) { setSearchResults(null); setSearchLoading(false); return; }
@@ -71,7 +83,6 @@ export default function ForumThreadView({
           Array.isArray(raw) ? raw.map(r => mapSearchResult(r, selectedForum)) : 'fallback'
         );
       } catch {
-        // Backend contentType=8 currently 500s — silently fall back to client-side filter
         setSearchResults('fallback');
       } finally {
         setSearchLoading(false);
@@ -81,12 +92,9 @@ export default function ForumThreadView({
     return () => clearTimeout(timer);
   }, [searchQuery, forumId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Topic card list ───────────────────────────────────────────────────────
   const topicCards = useMemo(() => {
-    // Live search returned API results — use them directly
     if (Array.isArray(searchResults)) return searchResults;
 
-    // Map base topics
     const mapped = topics.map(t => ({
       ...t,
       forumName:  t.forumName  || selectedForum?.name || '',
@@ -98,7 +106,6 @@ export default function ForumThreadView({
 
     let filtered = activeFlairId == null ? mapped : mapped.filter(t => t.flairId === activeFlairId);
 
-    // Client-side filter: used when search fallback triggered OR as default behaviour
     const q = searchQuery.trim().toLowerCase();
     if (q) {
       filtered = filtered.filter(t =>
@@ -108,8 +115,15 @@ export default function ForumThreadView({
       );
     }
 
+    // Client-side sort fallback (API may already sort server-side)
+    if (sortBy === 'top') {
+      filtered = [...filtered].sort((a, b) => (b.replies ?? 0) - (a.replies ?? 0));
+    } else if (sortBy === 'trending') {
+      filtered = [...filtered].sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
+    }
+
     return filtered;
-  }, [searchResults, topics, selectedForum, activeFlairId, searchQuery]);
+  }, [searchResults, topics, selectedForum, activeFlairId, searchQuery, sortBy]);
 
   const activeFlairLabel = useMemo(() => {
     if (activeFlairId == null) return 'All';
@@ -167,6 +181,19 @@ export default function ForumThreadView({
         </div>
       </div>
 
+      {/* Sort tabs */}
+      <div className={styles.sortBar}>
+        {SORT_TABS.map(tab => (
+          <button
+            key={tab.id}
+            className={`${styles.sortTab} ${sortBy === tab.id ? styles.sortTabActive : ''}`}
+            onClick={() => setSortBy(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Search section */}
       <div className={styles.searchSection}>
         <div className={styles.searchWrap}>
@@ -196,7 +223,6 @@ export default function ForumThreadView({
 
       {/* Flair filter bar */}
       <div className={styles.flairBar}>
-        {/* Left: flair dropdown (only if flairs exist) */}
         {flairs.length > 0 && (
           <div className={styles.flairFilterWrap}>
             <button
@@ -252,7 +278,6 @@ export default function ForumThreadView({
           </div>
         )}
 
-        {/* Right: topic count + new topic */}
         <div className={styles.flairBarRight}>
           {!topicsLoading && !searchLoading && (
             <span className={styles.flairTopicCount}>

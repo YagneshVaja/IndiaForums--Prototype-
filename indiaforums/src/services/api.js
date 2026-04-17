@@ -1179,9 +1179,10 @@ export async function fetchAllForumTopics(pageNumber = 1, pageSize = 20) {
 }
 
 // ── Forum Topics ─────────────────────────────────────────────────────────────
-export async function fetchForumTopics(forumId, pageNumber = 1, pageSize = 20, cursor = null) {
+export async function fetchForumTopics(forumId, pageNumber = 1, pageSize = 20, cursor = null, sortBy = 'latest') {
   const params = { pageNumber, pageSize };
   if (cursor) params.cursor = cursor;
+  if (sortBy && sortBy !== 'latest') params.sortBy = sortBy;
 
   const { data } = await api.get(`/forums/${forumId}/topics`, { params });
 
