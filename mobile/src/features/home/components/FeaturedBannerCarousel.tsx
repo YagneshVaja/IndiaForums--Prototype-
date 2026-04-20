@@ -2,13 +2,13 @@ import React, { useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  Image,
   FlatList,
   Pressable,
   StyleSheet,
   Dimensions,
   ViewToken,
 } from 'react-native';
+import { Image } from 'expo-image';
 import type { Banner } from '../../../services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -22,7 +22,7 @@ interface Props {
   onPress: (banner: Banner) => void;
 }
 
-function BannerCard({ banner, onPress }: { banner: Banner; onPress: (b: Banner) => void }) {
+const BannerCard = React.memo(function BannerCard({ banner, onPress }: { banner: Banner; onPress: (b: Banner) => void }) {
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
@@ -32,18 +32,27 @@ function BannerCard({ banner, onPress }: { banner: Banner; onPress: (b: Banner) 
     >
       {/* Background / image */}
       {banner.imageUrl ? (
-        <Image source={{ uri: banner.imageUrl }} style={styles.bg} resizeMode="cover" />
+        <Image
+          source={{ uri: banner.imageUrl }}
+          style={styles.bg}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={150}
+        />
       ) : (
-        <View style={[styles.bg, styles.bgFallback]} />
+        <View style={[styles.bg, styles.bgFallback]}>
+          <Text style={styles.bgEmoji}>{(banner as any).emoji ?? '📰'}</Text>
+        </View>
       )}
 
-      {/* Gradient overlay */}
-      <View style={styles.overlay} />
+      {/* Dark scrim: two-layer gradient approximation */}
+      <View style={styles.scrimTop} />
+      <View style={styles.scrimBottom} />
 
-      {/* Content */}
+      {/* Content pinned above scrim */}
       <View style={styles.content}>
         {banner.category ? (
-          <View style={[styles.tag, { backgroundColor: '#3558F0' }]}>
+          <View style={styles.tag}>
             <Text style={styles.tagText}>{banner.category.toUpperCase()}</Text>
           </View>
         ) : null}
@@ -51,14 +60,14 @@ function BannerCard({ banner, onPress }: { banner: Banner; onPress: (b: Banner) 
         {(banner.source || banner.timeAgo) ? (
           <View style={styles.meta}>
             {banner.source ? <Text style={styles.source}>{banner.source}</Text> : null}
-            {banner.source && banner.timeAgo ? <View style={styles.dot} /> : null}
+            {banner.source && banner.timeAgo ? <View style={styles.dotSep} /> : null}
             {banner.timeAgo ? <Text style={styles.time}>{banner.timeAgo}</Text> : null}
           </View>
         ) : null}
       </View>
     </Pressable>
   );
-}
+});
 
 export default function FeaturedBannerCarousel({ banners, onPress }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -115,7 +124,7 @@ export default function FeaturedBannerCarousel({ banners, onPress }: Props) {
 
 const styles = StyleSheet.create({
   section: {
-    paddingHorizontal: SIDE_PAD,
+    paddingLeft: SIDE_PAD,
     marginBottom: 4,
   },
   list: {
@@ -133,10 +142,10 @@ const styles = StyleSheet.create({
     position: 'relative',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
     elevation: 8,
-    backgroundColor: '#D0D5E8',
+    backgroundColor: '#C8D0EC',
   },
   cardPressed: {
     transform: [{ scale: 0.97 }],
@@ -149,17 +158,31 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   bgFallback: {
-    backgroundColor: '#C8D0EC',
+    backgroundColor: '#3558F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  overlay: {
+  bgEmoji: {
+    fontSize: 56,
+  },
+  // Two-layer dark scrim to approximate CSS gradient
+  scrimTop: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    // Gradient simulation: transparent top → dark bottom
-    backgroundColor: 'transparent',
-    // Use multiple layers to approximate gradient
+    backgroundColor: 'rgba(0,0,0,0.12)',
+  },
+  scrimBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 110,
+    backgroundColor: 'rgba(0,0,0,0.62)',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   content: {
     position: 'absolute',
@@ -167,11 +190,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    // Dark gradient from bottom
-    backgroundColor: 'rgba(0,0,0,0)',
+    zIndex: 2,
   },
   tag: {
     alignSelf: 'flex-start',
+    backgroundColor: '#3558F0',
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -188,7 +211,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
-    lineHeight: 20,
+    lineHeight: 21,
     letterSpacing: -0.2,
   },
   meta: {
@@ -200,9 +223,9 @@ const styles = StyleSheet.create({
   source: {
     fontSize: 10,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.75)',
   },
-  dot: {
+  dotSep: {
     width: 3,
     height: 3,
     borderRadius: 2,
@@ -210,7 +233,7 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.65)',
   },
   dotsRow: {
     flexDirection: 'row',

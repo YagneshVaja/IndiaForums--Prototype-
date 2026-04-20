@@ -1,28 +1,68 @@
 import React, { useMemo } from 'react';
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import {
+  View, Text, Pressable, StyleSheet, TextInput, ActivityIndicator,
+} from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import type { TopicPost } from '../../../services/api';
-import { formatCount } from '../utils/format';
+import {
+  parseTopReactionTypes,
+  REACTION_META,
+  type ReactionCode,
+  type TopicPost,
+} from '../../../services/api';
+import { countryFlag, formatCount } from '../utils/format';
 import { stripPostHtml } from '../utils/stripHtml';
+import { extractSocialUrls, stripSocialUrlsFromText } from '../utils/socialUrls';
+import SocialEmbed from './SocialEmbed';
 
 interface Props {
   post: TopicPost;
   index: number;
-  liked: boolean;
+  reaction: ReactionCode | null;
   likeCount: number;
   pendingReaction: boolean;
-  onToggleLike: (post: TopicPost) => void;
+  isMine: boolean;
+  canModerate: boolean;
+  onQuickReact: (post: TopicPost) => void;
+  onLongPressReact: (post: TopicPost) => void;
+  onPressReactionSummary?: (post: TopicPost) => void;
+  onReply: (post: TopicPost) => void;
+  onQuote: (post: TopicPost) => void;
+  onEdit: (post: TopicPost) => void;
+  onShare: (post: TopicPost) => void;
+  onTrash: (post: TopicPost) => void;
+  onPressEdited?: (post: TopicPost) => void;
+  onPressAvatar?: (post: TopicPost) => void;
+
+  isEditing?: boolean;
+  editText?: string;
+  editSaving?: boolean;
+  editError?: string | null;
+  onChangeEditText?: (t: string) => void;
+  onSaveEdit?: (post: TopicPost) => void;
+  onCancelEdit?: () => void;
 }
 
 const ACCENTS = ['#3558F0', '#7c2d12', '#065f46', '#4c1d95', '#831843', '#4a1942'];
 
-export default function PostCard({
-  post, index, liked, likeCount, pendingReaction, onToggleLike,
+function PostCardImpl({
+  post, index, reaction, likeCount, pendingReaction,
+  isMine, canModerate,
+  onQuickReact, onLongPressReact, onPressReactionSummary,
+  onReply, onQuote, onEdit, onShare, onTrash, onPressEdited, onPressAvatar,
+  isEditing, editText, editSaving, editError,
+  onChangeEditText, onSaveEdit, onCancelEdit,
 }: Props) {
   const bg = post.avatarAccent || ACCENTS[post.authorId % ACCENTS.length];
   const initial = (post.author || 'A').charAt(0).toUpperCase();
+  const flag = countryFlag(post.countryCode);
 
-  const body = useMemo(() => stripPostHtml(post.message), [post.message]);
+  const socialUrls = useMemo(() => extractSocialUrls(post.message), [post.message]);
+  const body = useMemo(
+    () => stripSocialUrlsFromText(stripPostHtml(post.message)),
+    [post.message],
+  );
+  const topTypes = useMemo(() => parseTopReactionTypes(post.reactionJson), [post.reactionJson]);
 
   const rankKind = useMemo(() => {
     const r = post.rank.toLowerCase();
@@ -31,21 +71,38 @@ export default function PostCard({
     return null;
   }, [post.rank]);
 
+  const reacted = reaction != null;
+  const reactionEmoji = reacted ? REACTION_META[reaction].emoji : null;
+  const reactionLabel = reacted ? REACTION_META[reaction].label : 'Like';
+
   return (
     <View style={[styles.card, post.isOp && styles.cardOp]}>
       <View style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: bg }, post.isOp && styles.avatarOp]}>
-          {post.avatarUrl ? (
-            <Image source={{ uri: post.avatarUrl }} style={styles.avatarImg} />
-          ) : (
-            <Text style={styles.avatarLetter}>{initial}</Text>
-          )}
-        </View>
+        <Pressable
+          onPress={onPressAvatar ? () => onPressAvatar(post) : undefined}
+          disabled={!onPressAvatar}
+          hitSlop={4}
+        >
+          <View style={[styles.avatar, { backgroundColor: bg }, post.isOp && styles.avatarOp]}>
+            {post.avatarUrl ? (
+              <Image
+                source={{ uri: post.avatarUrl }}
+                style={styles.avatarImg}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={150}
+              />
+            ) : (
+              <Text style={styles.avatarLetter}>{initial}</Text>
+            )}
+          </View>
+        </Pressable>
 
         <View style={styles.info}>
           <View style={styles.authorRow}>
             <Text style={styles.author} numberOfLines={1}>{post.author}</Text>
             {post.isOp && <View style={styles.opBadge}><Text style={styles.opBadgeText}>OP</Text></View>}
+            {!!flag && <Text style={styles.flag}>{flag}</Text>}
           </View>
           {!!post.realName && (
             <Text style={styles.realName} numberOfLines={1}>{post.realName}</Text>
@@ -63,7 +120,7 @@ export default function PostCard({
                   <Ionicons
                     name={rankKind === 'admin' ? 'trophy' : 'shield-checkmark'}
                     size={9}
-                    color={rankKind ? '#FFFFFF' : '#5A5A5A'}
+                    color="#FFFFFF"
                   />
                 )}
                 <Text
@@ -87,7 +144,13 @@ export default function PostCard({
           {post.badges.length > 0 && (
             <View style={styles.badges}>
               {post.badges.map(b => (
-                <Image key={b.id} source={{ uri: b.imageUrl }} style={styles.badgeImg} />
+                <Image
+                  key={b.id}
+                  source={{ uri: b.imageUrl }}
+                  style={styles.badgeImg}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
               ))}
             </View>
           )}
@@ -96,34 +159,131 @@ export default function PostCard({
         <Text style={styles.postNumber}>#{index + 1}</Text>
       </View>
 
-      {!!body && <Text style={styles.body}>{body}</Text>}
-
-      <View style={styles.footer}>
-        <Pressable
-          style={[styles.footerBtn, liked && styles.footerBtnLiked]}
-          onPress={() => onToggleLike(post)}
-          disabled={pendingReaction}
-          hitSlop={6}
-        >
-          <Ionicons
-            name={liked ? 'heart' : 'heart-outline'}
-            size={14}
-            color={liked ? '#FFFFFF' : '#666'}
+      {isEditing ? (
+        <View style={styles.editWrap}>
+          <TextInput
+            style={styles.editInput}
+            value={editText ?? ''}
+            onChangeText={onChangeEditText}
+            multiline
+            placeholder="Edit your post…"
+            placeholderTextColor="#9A9A9A"
+            editable={!editSaving}
           />
-          <Text style={[styles.footerBtnText, liked && styles.footerBtnTextLiked]}>
-            {likeCount > 0 ? formatCount(likeCount) : 'Like'}
+          {!!editError && <Text style={styles.editError}>{editError}</Text>}
+          <View style={styles.editActions}>
+            <Pressable
+              style={styles.editCancelBtn}
+              onPress={onCancelEdit}
+              disabled={editSaving}
+            >
+              <Text style={styles.editCancelText}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.editSaveBtn, editSaving && styles.editSaveBtnDisabled]}
+              onPress={() => onSaveEdit?.(post)}
+              disabled={editSaving}
+            >
+              {editSaving ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.editSaveText}>Save</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <>
+          {!!body && <Text style={styles.body}>{body}</Text>}
+          {socialUrls.map(u => (
+            <SocialEmbed key={u} url={u} />
+          ))}
+        </>
+      )}
+
+      {post.isEdited && post.editedWhen && (
+        <Pressable onPress={() => onPressEdited?.(post)} hitSlop={4}>
+          <Text style={styles.editedLine}>
+            Edited by {post.editedBy || post.author}
           </Text>
         </Pressable>
-        {post.isEdited && (
-          <View style={styles.editedPill}>
-            <Ionicons name="create-outline" size={10} color="#8A8A8A" />
-            <Text style={styles.editedText}>edited</Text>
-          </View>
+      )}
+
+      <View style={styles.footer}>
+        {likeCount > 0 && (
+          <Pressable
+            style={styles.reactSummary}
+            onPress={() => onPressReactionSummary?.(post)}
+            hitSlop={4}
+          >
+            <View style={styles.reactSummaryEmojis}>
+              {topTypes.length > 0 ? (
+                topTypes.map(lt => (
+                  <Text key={lt} style={styles.reactSummaryEmoji}>
+                    {REACTION_META[lt]?.emoji ?? '👍'}
+                  </Text>
+                ))
+              ) : (
+                <Text style={styles.reactSummaryEmoji}>👍</Text>
+              )}
+            </View>
+            <Text style={styles.reactSummaryCount}>{formatCount(likeCount)}</Text>
+          </Pressable>
         )}
+
+        <View style={styles.spacer} />
+
+        <Pressable
+          style={[styles.action, reacted && styles.actionReacted]}
+          onPress={() => onQuickReact(post)}
+          onLongPress={() => onLongPressReact(post)}
+          disabled={pendingReaction}
+          hitSlop={4}
+        >
+          {reactionEmoji ? (
+            <Text style={styles.actionEmoji}>{reactionEmoji}</Text>
+          ) : (
+            <Ionicons name="heart-outline" size={13} color="#5A5A5A" />
+          )}
+          <Text style={[styles.actionText, reacted && styles.actionTextReacted]}>
+            {reactionLabel}
+          </Text>
+        </Pressable>
+
+        <Pressable style={styles.action} onPress={() => onReply(post)} hitSlop={4}>
+          <Ionicons name="chatbubble-outline" size={12} color="#5A5A5A" />
+          <Text style={styles.actionText}>Reply</Text>
+        </Pressable>
+
+        {isMine ? (
+          <Pressable style={styles.action} onPress={() => onEdit(post)} hitSlop={4}>
+            <Ionicons name="create-outline" size={12} color="#5A5A5A" />
+            <Text style={styles.actionText}>Edit</Text>
+          </Pressable>
+        ) : (
+          <Pressable style={styles.action} onPress={() => onQuote(post)} hitSlop={4}>
+            <Ionicons name="return-up-back-outline" size={12} color="#5A5A5A" />
+            <Text style={styles.actionText}>Quote</Text>
+          </Pressable>
+        )}
+
+        {canModerate && !isMine && (
+          <Pressable style={styles.action} onPress={() => onTrash(post)} hitSlop={4}>
+            <Ionicons name="trash-outline" size={12} color="#dc2626" />
+            <Text style={[styles.actionText, styles.actionTextDanger]}>Trash</Text>
+          </Pressable>
+        )}
+
+        <Pressable style={styles.action} onPress={() => onShare(post)} hitSlop={4}>
+          <Ionicons name="share-outline" size={12} color="#5A5A5A" />
+        </Pressable>
       </View>
     </View>
   );
 }
+
+const PostCard = React.memo(PostCardImpl);
+export default PostCard;
 
 const styles = StyleSheet.create({
   card: {
@@ -191,6 +351,9 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
   },
+  flag: {
+    fontSize: 13,
+  },
   realName: {
     fontSize: 11,
     color: '#7A7A7A',
@@ -255,43 +418,127 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: 10,
   },
+  editedLine: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    color: '#8A8A8A',
+    marginTop: 8,
+  },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
+    flexWrap: 'wrap',
   },
-  footerBtn: {
+  spacer: {
+    flex: 1,
+  },
+  reactSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 14,
+    backgroundColor: '#F5F6F7',
+  },
+  reactSummaryEmojis: {
+    flexDirection: 'row',
+  },
+  reactSummaryEmoji: {
+    fontSize: 12,
+    marginRight: -2,
+  },
+  reactSummaryCount: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#5A5A5A',
+    marginLeft: 4,
+  },
+  action: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    backgroundColor: '#F5F6F7',
+    paddingHorizontal: 8,
+    borderRadius: 12,
   },
-  footerBtnLiked: {
-    backgroundColor: '#ef4444',
+  actionReacted: {
+    backgroundColor: '#EEF2FF',
   },
-  footerBtnText: {
+  actionEmoji: {
+    fontSize: 13,
+  },
+  actionText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#666',
+    color: '#5A5A5A',
   },
-  footerBtnTextLiked: {
-    color: '#FFFFFF',
+  actionTextReacted: {
+    color: '#3558F0',
   },
-  editedPill: {
+  actionTextDanger: {
+    color: '#dc2626',
+  },
+  editWrap: {
+    marginTop: 10,
+    gap: 8,
+  },
+  editInput: {
+    minHeight: 90,
+    maxHeight: 220,
+    borderWidth: 1,
+    borderColor: '#C9D4F6',
+    backgroundColor: '#F7F9FF',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#1A1A1A',
+    textAlignVertical: 'top',
+  },
+  editError: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#dc2626',
+  },
+  editActions: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
+    justifyContent: 'flex-end',
+    gap: 8,
   },
-  editedText: {
-    fontSize: 10,
-    color: '#8A8A8A',
-    fontStyle: 'italic',
+  editCancelBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E2E2',
+    backgroundColor: '#FFFFFF',
+  },
+  editCancelText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#5A5A5A',
+  },
+  editSaveBtn: {
+    minWidth: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#3558F0',
+  },
+  editSaveBtnDisabled: {
+    opacity: 0.6,
+  },
+  editSaveText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 });

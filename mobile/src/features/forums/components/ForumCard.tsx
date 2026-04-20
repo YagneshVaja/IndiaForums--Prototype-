@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import type { Forum } from '../../../services/api';
 import { formatCount } from '../utils/format';
 
@@ -8,12 +9,18 @@ interface Props {
   onPress: (forum: Forum) => void;
 }
 
-export default function ForumCard({ forum, onPress }: Props) {
+function ForumCardImpl({ forum, onPress }: Props) {
   return (
     <Pressable style={styles.card} onPress={() => onPress(forum)}>
       <View style={[styles.avatar, { backgroundColor: forum.bg }]}>
         {forum.thumbnailUrl ? (
-          <Image source={{ uri: forum.thumbnailUrl }} style={styles.avatarImg} />
+          <Image
+            source={{ uri: forum.thumbnailUrl }}
+            style={styles.avatarImg}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+          />
         ) : (
           <Text style={styles.avatarEmoji}>{forum.emoji}</Text>
         )}
@@ -37,6 +44,9 @@ export default function ForumCard({ forum, onPress }: Props) {
     </Pressable>
   );
 }
+
+const ForumCard = React.memo(ForumCardImpl);
+export default ForumCard;
 
 function StatCol({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import type { ForumTopic } from '../../../services/api';
 import { formatCount } from '../utils/format';
@@ -10,14 +11,20 @@ interface Props {
   onPress?: (topic: ForumTopic) => void;
 }
 
-export default function TopicCard({ topic, viewMode, onPress }: Props) {
+function TopicCardImpl({ topic, viewMode, onPress }: Props) {
   const detailed = viewMode === 'detailed';
 
   return (
     <Pressable style={styles.card} onPress={() => onPress?.(topic)}>
       <View style={styles.header}>
         {topic.forumThumbnail ? (
-          <Image source={{ uri: topic.forumThumbnail }} style={styles.forumAvatar} />
+          <Image
+            source={{ uri: topic.forumThumbnail }}
+            style={styles.forumAvatar}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+          />
         ) : (
           <View style={styles.forumAvatarFallback}>
             <Text style={styles.forumAvatarFallbackText}>
@@ -39,7 +46,13 @@ export default function TopicCard({ topic, viewMode, onPress }: Props) {
       )}
 
       {detailed && topic.topicImage && (
-        <Image source={{ uri: topic.topicImage }} style={styles.image} />
+        <Image
+          source={{ uri: topic.topicImage }}
+          style={styles.image}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={150}
+        />
       )}
 
       <View style={styles.bottomRow}>
@@ -61,6 +74,9 @@ export default function TopicCard({ topic, viewMode, onPress }: Props) {
     </Pressable>
   );
 }
+
+const TopicCard = React.memo(TopicCardImpl);
+export default TopicCard;
 
 function Stat({ icon, value }: { icon: React.ComponentProps<typeof Ionicons>['name']; value: string }) {
   return (
