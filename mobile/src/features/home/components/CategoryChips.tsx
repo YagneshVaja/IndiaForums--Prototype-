@@ -13,6 +13,37 @@ interface Props {
   onSelect: (category: string) => void;
 }
 
+interface ChipProps {
+  category: string;
+  isActive: boolean;
+  onSelect: (category: string) => void;
+}
+
+const Chip = React.memo(function Chip({ category, isActive, onSelect }: ChipProps) {
+  const handlePress = React.useCallback(() => onSelect(category), [onSelect, category]);
+  return (
+    <Pressable
+      onPress={handlePress}
+      style={[
+        styles.chip,
+        isActive ? styles.chipActive : styles.chipInactive,
+      ]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isActive }}
+      accessibilityLabel={category}
+    >
+      <Text
+        style={[
+          styles.chipText,
+          isActive ? styles.chipTextActive : styles.chipTextInactive,
+        ]}
+      >
+        {category}
+      </Text>
+    </Pressable>
+  );
+});
+
 export default function CategoryChips({
   categories,
   selected,
@@ -26,31 +57,14 @@ export default function CategoryChips({
         contentContainerStyle={styles.contentContainer}
         style={styles.scrollView}
       >
-        {categories.map((category) => {
-          const isActive = category === selected;
-          return (
-            <Pressable
-              key={category}
-              onPress={() => onSelect(category)}
-              style={[
-                styles.chip,
-                isActive ? styles.chipActive : styles.chipInactive,
-              ]}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isActive }}
-              accessibilityLabel={category}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  isActive ? styles.chipTextActive : styles.chipTextInactive,
-                ]}
-              >
-                {category}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {categories.map((category) => (
+          <Chip
+            key={category}
+            category={category}
+            isActive={category === selected}
+            onSelect={onSelect}
+          />
+        ))}
         <View style={styles.trailingSpacer} />
       </ScrollView>
       <View style={styles.bottomBorder} />
@@ -74,27 +88,27 @@ const styles = StyleSheet.create({
   },
   chip: {
     borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 7,
-    borderWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderWidth: 1.5,
   },
   chipActive: {
-    backgroundColor: '#3558F0',
-    borderColor: '#3558F0',
+    backgroundColor: '#1A1A1A',
+    borderColor: '#1A1A1A',
   },
   chipInactive: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#E0E0E0',
+    borderColor: '#E2E2E2',
   },
   chipText: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12.5,
+    fontWeight: '700',
   },
   chipTextActive: {
     color: '#FFFFFF',
   },
   chipTextInactive: {
-    color: '#555555',
+    color: '#5F5F5F',
   },
   trailingSpacer: {
     width: 8,

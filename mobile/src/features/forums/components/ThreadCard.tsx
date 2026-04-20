@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import type { ForumTopic, Forum } from '../../../services/api';
 import { formatCount } from '../utils/format';
@@ -10,7 +11,7 @@ interface Props {
   onPress?: (topic: ForumTopic) => void;
 }
 
-export default function ThreadCard({ topic, forum, onPress }: Props) {
+function ThreadCardImpl({ topic, forum, onPress }: Props) {
   const bg = forum?.bg || '#1e3a5e';
   const emoji = forum?.emoji || '💬';
 
@@ -19,7 +20,13 @@ export default function ThreadCard({ topic, forum, onPress }: Props) {
       <View style={styles.header}>
         <View style={[styles.avatar, { backgroundColor: bg }]}>
           {topic.forumThumbnail ? (
-            <Image source={{ uri: topic.forumThumbnail }} style={styles.avatarImg} />
+            <Image
+              source={{ uri: topic.forumThumbnail }}
+              style={styles.avatarImg}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
+            />
           ) : (
             <Text style={styles.avatarEmoji}>{emoji}</Text>
           )}
@@ -41,7 +48,13 @@ export default function ThreadCard({ topic, forum, onPress }: Props) {
       )}
 
       {topic.topicImage && (
-        <Image source={{ uri: topic.topicImage }} style={styles.image} />
+        <Image
+          source={{ uri: topic.topicImage }}
+          style={styles.image}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={150}
+        />
       )}
 
       <View style={styles.stats}>
@@ -60,6 +73,9 @@ export default function ThreadCard({ topic, forum, onPress }: Props) {
     </Pressable>
   );
 }
+
+const ThreadCard = React.memo(ThreadCardImpl);
+export default ThreadCard;
 
 function Stat({ icon, value }: { icon: React.ComponentProps<typeof Ionicons>['name']; value: string }) {
   return (

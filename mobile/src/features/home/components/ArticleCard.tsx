@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import type { Article } from '../../../services/api';
 
 interface Props {
@@ -7,7 +8,7 @@ interface Props {
   onPress: (article: Article) => void;
 }
 
-export default function ArticleCard({ article, onPress }: Props) {
+function ArticleCardImpl({ article, onPress }: Props) {
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
@@ -21,7 +22,9 @@ export default function ArticleCard({ article, onPress }: Props) {
           <Image
             source={{ uri: article.thumbnailUrl }}
             style={styles.thumbImg}
-            resizeMode="cover"
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
           />
         ) : (
           <View style={[styles.thumbImg, styles.thumbFallback]}>
@@ -37,12 +40,14 @@ export default function ArticleCard({ article, onPress }: Props) {
 
       {/* Body — RIGHT side */}
       <View style={styles.body}>
-        <Text style={styles.cat}>
-          {article.category ?? ''}
+        <View style={styles.catRow}>
+          <Text style={styles.cat}>{article.category ?? ''}</Text>
           {article.breaking ? (
-            <Text style={styles.breaking}>{' '}BREAKING</Text>
+            <View style={styles.breakingBadge}>
+              <Text style={styles.breaking}>BREAKING</Text>
+            </View>
           ) : null}
-        </Text>
+        </View>
         <Text style={styles.title} numberOfLines={2}>{article.title}</Text>
         <View style={styles.timeRow}>
           {/* Clock icon (inline SVG via border trick) */}
@@ -56,6 +61,9 @@ export default function ArticleCard({ article, onPress }: Props) {
     </Pressable>
   );
 }
+
+const ArticleCard = React.memo(ArticleCardImpl);
+export default ArticleCard;
 
 const styles = StyleSheet.create({
   card: {
@@ -114,13 +122,24 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  catRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
   cat: {
     fontSize: 10,
     fontWeight: '800',
     color: '#3558F0',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-    marginBottom: 4,
+  },
+  breakingBadge: {
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
   },
   breaking: {
     fontSize: 8.5,

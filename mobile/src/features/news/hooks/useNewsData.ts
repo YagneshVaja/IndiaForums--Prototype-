@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { fetchArticles } from '../../../services/api';
 
 export function useNewsArticles(category?: string) {
@@ -12,5 +12,6 @@ export function useNewsArticles(category?: string) {
     },
     initialPageParam: 1,
     staleTime: 2 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 }

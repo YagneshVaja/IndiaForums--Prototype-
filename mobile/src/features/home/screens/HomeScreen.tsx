@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TopNavBrand } from '../../../components/layout/TopNavBar';
@@ -8,13 +9,23 @@ import LoadingState from '../../../components/ui/LoadingState';
 import FeaturedBannerCarousel from '../components/FeaturedBannerCarousel';
 import CategoryChips from '../components/CategoryChips';
 import ArticleCard from '../components/ArticleCard';
+import StoriesStrip from '../components/StoriesStrip';
+import PhotoGallerySection from '../components/PhotoGallerySection';
+import WebStoriesStrip from '../components/WebStoriesStrip';
+import ForumsSection from '../components/ForumsSection';
 import { useFeaturedBanners, useHomeArticles } from '../hooks/useHomeData';
 import type { HomeStackParamList } from '../../../navigation/types';
 import type { Banner, Article } from '../../../services/api';
+import { GALLERIES } from '../data/galleries';
+import { WEB_STORIES } from '../data/webStories';
 
-const CATEGORIES = ['All', 'Bollywood', 'Cricket', 'Politics', 'Tech', 'Sports', 'Entertainment'];
+const CATEGORIES = ['All', 'Television', 'Movies', 'Digital', 'Lifestyle', 'Sports'];
+const PREVIEW_GALLERIES = GALLERIES.slice(0, 4);
+const PREVIEW_WEB_STORIES = WEB_STORIES.slice(0, 8);
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
+
+const keyExtractor = (article: Article) => article.id;
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -24,24 +35,69 @@ export default function HomeScreen() {
   const { data: banners = [], isLoading: bannersLoading } = useFeaturedBanners();
   const { data: articles = [], isLoading: articlesLoading } = useHomeArticles(queryCategory);
 
-  const handleBannerPress = (banner: Banner) => {
-    navigation.navigate('ArticleDetail', { id: banner.articleId });
-  };
+  const handleBannerPress = useCallback(
+    (banner: Banner) => {
+      navigation.navigate('ArticleDetail', {
+        id: banner.articleId,
+        thumbnailUrl: banner.imageUrl,
+        title: banner.title,
+      });
+    },
+    [navigation],
+  );
 
-  const handleArticlePress = (article: Article) => {
-    navigation.navigate('ArticleDetail', { id: article.id });
-  };
+  const handleArticlePress = useCallback(
+    (article: Article) => {
+      navigation.navigate('ArticleDetail', {
+        id: article.id,
+        thumbnailUrl: article.thumbnailUrl,
+        title: article.title,
+      });
+    },
+    [navigation],
+  );
 
-  return (
-    <View style={styles.screen}>
-      <TopNavBrand />
+  const handleGalleriesSeeAll = useCallback(
+    () => navigation.navigate('Galleries'),
+    [navigation],
+  );
 
-      <ScrollView
-        style={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        stickyHeaderIndices={[1]}
-      >
-        {/* Featured carousel */}
+  const handleGalleryPress = useCallback(
+    (g: { id: number; title: string; count: number; emoji: string; bg: string }) =>
+      navigation.navigate('GalleryDetail', {
+        gallery: {
+          id: g.id,
+          title: g.title,
+          pageUrl: null,
+          cat: null,
+          catLabel: null,
+          count: g.count,
+          emoji: g.emoji,
+          bg: g.bg,
+          time: '',
+          featured: false,
+          thumbnail: null,
+          viewCount: 0,
+          views: null,
+        },
+      }),
+    [navigation],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: Article }) => (
+      <ArticleCard article={item} onPress={handleArticlePress} />
+    ),
+    [handleArticlePress],
+  );
+
+  const ListHeader = useMemo(
+    () => (
+      <View>
+        <View style={styles.storiesWrap}>
+          <StoriesStrip />
+        </View>
+
         <View style={styles.carouselWrap}>
           <SectionHeader title="Trending Now" />
           {bannersLoading ? (
@@ -51,7 +107,6 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Sticky category chips */}
         <View style={styles.chipsWrap}>
           <CategoryChips
             categories={CATEGORIES}
@@ -60,20 +115,53 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* Article list */}
-        <View style={styles.articlesWrap}>
+        <View style={styles.articlesTop}>
           <SectionHeader title="Latest News" />
-          {articlesLoading ? (
-            <LoadingState height={300} />
-          ) : (
-            articles.map((article) => (
-              <ArticleCard key={article.id} article={article} onPress={handleArticlePress} />
-            ))
-          )}
+          {articlesLoading ? <LoadingState height={300} /> : null}
+        </View>
+      </View>
+    ),
+    [banners, bannersLoading, selectedCategory, articlesLoading, handleBannerPress],
+  );
+
+  const ListFooter = useMemo(
+    () => (
+      <View>
+        <View style={styles.sectionGap}>
+          <PhotoGallerySection
+            galleries={PREVIEW_GALLERIES}
+            onSeeAll={handleGalleriesSeeAll}
+            onGalleryPress={handleGalleryPress}
+          />
+        </View>
+
+        <View style={styles.sectionGap}>
+          <WebStoriesStrip stories={PREVIEW_WEB_STORIES} onSeeAll={() => {}} />
+        </View>
+
+        <View style={styles.sectionGap}>
+          <ForumsSection />
         </View>
 
         <View style={styles.spacer} />
-      </ScrollView>
+      </View>
+    ),
+    [handleGalleriesSeeAll, handleGalleryPress],
+  );
+
+  return (
+    <View style={styles.screen}>
+      <TopNavBrand />
+
+      <FlashList
+        data={articlesLoading ? [] : articles}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={ListHeader}
+        ListFooterComponent={ListFooter}
+        contentContainerStyle={styles.articlesBg}
+      />
     </View>
   );
 }
@@ -83,8 +171,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F6F7',
   },
-  scroll: {
-    flex: 1,
+  storiesWrap: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
   carouselWrap: {
     backgroundColor: '#FFFFFF',
@@ -92,11 +182,15 @@ const styles = StyleSheet.create({
   },
   chipsWrap: {
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E2E2',
   },
-  articlesWrap: {
+  articlesTop: {
     backgroundColor: '#FFFFFF',
+    marginTop: 8,
+  },
+  articlesBg: {
+    backgroundColor: '#FFFFFF',
+  },
+  sectionGap: {
     marginTop: 8,
   },
   spacer: { height: 32 },

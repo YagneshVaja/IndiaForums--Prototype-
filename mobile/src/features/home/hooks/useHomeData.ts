@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   fetchBanners,
   fetchArticles,
@@ -26,6 +26,7 @@ export function useHomeArticles(category?: string) {
     queryKey: ['articles', 'home', category],
     queryFn: () => fetchArticles({ category, page: 1, limit: 20 }),
     staleTime: 2 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -36,7 +37,7 @@ export function useHomeArticles(category?: string) {
 export function useCelebrities() {
   return useQuery({
     queryKey: ['celebrities'],
-    queryFn: fetchCelebrities,
+    queryFn: () => fetchCelebrities(),
     staleTime: 10 * 60 * 1000,
   });
 }

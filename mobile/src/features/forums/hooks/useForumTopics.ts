@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { fetchForumTopics, type ForumTopicsPage } from '../../../services/api';
 
 const PAGE_SIZE = 20;
@@ -13,5 +13,6 @@ export function useForumTopics(forumId: number | null) {
       last.hasNextPage ? last.pageNumber + 1 : undefined,
     staleTime: 60 * 1000,
     enabled: forumId != null,
+    placeholderData: keepPreviousData,
   });
 }
