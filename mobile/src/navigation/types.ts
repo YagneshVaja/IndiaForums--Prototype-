@@ -1,6 +1,6 @@
 export type OnboardingStackParamList = {
   Splash: undefined;
-  Onboarding: undefined;
+  OnboardingSlides: undefined;
   GetStarted: undefined;
 };
 
@@ -43,14 +43,17 @@ export type MainTabParamList = {
 
 export type HomeStackParamList = {
   HomeMain: undefined;
-  ArticleDetail: { id: string };
+  ArticleDetail: { id: string; thumbnailUrl?: string; title?: string };
   CategoryFeed: { category: string };
-  CelebrityProfile: { id: string };
+  Celebrities: undefined;
+  CelebrityProfile: { celebrity: import('../services/api').Celebrity };
   FanFiction: undefined;
   FanFictionDetail: { id: string };
   ChapterReader: { fanFictionId: string; chapterId: string };
   FanFictionAuthors: undefined;
   AuthorFollowers: { authorId: string };
+  Videos: undefined;
+  VideoDetail: { video: import('../services/api').Video };
   Shorts: undefined;
   WebStories: undefined;
   WebStoryPlayer: { id: string };
@@ -62,20 +65,22 @@ export type HomeStackParamList = {
 
 export type NewsStackParamList = {
   NewsMain: undefined;
-  ArticleDetail: { id: string };
+  ArticleDetail: { id: string; thumbnailUrl?: string; title?: string };
   CategoryFeed: { category: string };
 };
 
 export type ForumsStackParamList = {
   ForumsMain: undefined;
-  ForumList: { category?: string };
-  TopicList: { forumId: string };
-  TopicDetail: { topicId: string };
+  ForumThread: { forum: import('../services/api').Forum };
+  TopicDetail: {
+    topic: import('../services/api').ForumTopic;
+    forum?: import('../services/api').Forum;
+  };
 };
 
 export type SearchStackParamList = {
   SearchMain: undefined;
-  ArticleDetail: { id: string };
+  ArticleDetail: { id: string; thumbnailUrl?: string; title?: string };
   CelebrityProfile: { id: string };
 };
 
