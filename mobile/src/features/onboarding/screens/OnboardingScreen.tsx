@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import { PaginationDots } from '../components/PaginationDots';
 import { ONBOARDING_SLIDES } from '../data/onboardingSlides';
 import { OnboardingStackParamList } from '../../../navigation/types';
 import { OnboardingSlide as SlideType } from '../types';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -22,6 +24,8 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'OnboardingSlides'
 
 export default function OnboardingScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList<SlideType>>(null);
   const isLastSlide = currentIndex === ONBOARDING_SLIDES.length - 1;
@@ -115,78 +119,80 @@ export default function OnboardingScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingBottom: 12,
-  },
-  brandMark: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: '#3558F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandMarkText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.3,
-  },
-  skipButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: '#F5F6F7',
-  },
-  skipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#888888',
-  },
-  flatList: {
-    flex: 1,
-  },
-  flatListContent: {
-    alignItems: 'center',
-  },
-  bottomBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 28,
-    paddingTop: 20,
-  },
-  nextButton: {
-    backgroundColor: '#3558F0',
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 14,
-    shadowColor: '#3558F0',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  nextButtonWide: {
-    paddingHorizontal: 36,
-  },
-  nextButtonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.97 }],
-  },
-  nextButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.1,
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.bg,
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 24,
+      paddingBottom: 12,
+    },
+    brandMark: {
+      width: 38,
+      height: 38,
+      borderRadius: 10,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    brandMarkText: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: -0.3,
+    },
+    skipButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+      backgroundColor: c.surface,
+    },
+    skipText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.textSecondary,
+    },
+    flatList: {
+      flex: 1,
+    },
+    flatListContent: {
+      alignItems: 'center',
+    },
+    bottomBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 28,
+      paddingTop: 20,
+    },
+    nextButton: {
+      backgroundColor: c.primary,
+      paddingVertical: 14,
+      paddingHorizontal: 28,
+      borderRadius: 14,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 10,
+      elevation: 5,
+    },
+    nextButtonWide: {
+      paddingHorizontal: 36,
+    },
+    nextButtonPressed: {
+      opacity: 0.85,
+      transform: [{ scale: 0.97 }],
+    },
+    nextButtonText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      letterSpacing: 0.1,
+    },
+  });
+}

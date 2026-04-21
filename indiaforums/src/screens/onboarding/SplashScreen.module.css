@@ -21,33 +21,11 @@
   gap: 12px;
 }
 
-.logoMark {
-  width: 80px;
-  height: 80px;
-  border-radius: 22px;
-  background: var(--brand);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.logo {
+  height: 72px;
+  width: auto;
+  object-fit: contain;
   margin-bottom: 4px;
-  box-shadow: var(--shadow-brand);
-}
-
-.logoInitial {
-  font-size: 32px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -1px;
-  font-family: var(--font-display);
-}
-
-.brandName {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.5px;
-  font-family: var(--font-display);
-  margin: 0;
 }
 
 .tagline {

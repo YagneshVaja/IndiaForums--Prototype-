@@ -55,6 +55,13 @@
   gap: 6px;
 }
 
+.logo {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
 .heading {
   font-size: 26px;
   font-weight: 800;

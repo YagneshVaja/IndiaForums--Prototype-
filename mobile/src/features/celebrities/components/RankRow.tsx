@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import type { Celebrity } from '../../../services/api';
 import TrendBadge from './TrendBadge';
 import Initials from './Initials';
-import { CELEB_TEXT, CELEB_MUTED, CELEB_BORDER } from '../utils/constants';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
   celeb: Celebrity;
@@ -12,6 +13,8 @@ interface Props {
 }
 
 function RankRowImpl({ celeb, onPress }: Props) {
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <Pressable
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
@@ -54,27 +57,29 @@ function RankRowImpl({ celeb, onPress }: Props) {
 const RankRow = React.memo(RankRowImpl);
 export default RankRow;
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    gap: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: CELEB_BORDER,
-  },
-  rowPressed: {
-    backgroundColor: '#F3F4F6',
-  },
-  rankCol: { width: 36, alignItems: 'center', gap: 2 },
-  rankNum: { fontSize: 18, fontWeight: '800', color: CELEB_TEXT },
-  avatar:  { width: 44, height: 44 },
-  avatarImg: { width: 44, height: 44, borderRadius: 22 },
-  info: { flex: 1, gap: 2 },
-  name: { fontSize: 14, fontWeight: '700', color: CELEB_TEXT },
-  desc: { fontSize: 12, color: CELEB_MUTED },
-  prev: { fontSize: 11, color: CELEB_MUTED },
-  chevron: { fontSize: 24, color: '#9CA3AF', fontWeight: '300' },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      gap: 12,
+      backgroundColor: c.card,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    rowPressed: {
+      backgroundColor: c.surface,
+    },
+    rankCol: { width: 36, alignItems: 'center', gap: 2 },
+    rankNum: { fontSize: 18, fontWeight: '800', color: c.text },
+    avatar:  { width: 44, height: 44 },
+    avatarImg: { width: 44, height: 44, borderRadius: 22 },
+    info: { flex: 1, gap: 2 },
+    name: { fontSize: 14, fontWeight: '700', color: c.text },
+    desc: { fontSize: 12, color: c.textSecondary },
+    prev: { fontSize: 11, color: c.textSecondary },
+    chevron: { fontSize: 24, color: c.textTertiary, fontWeight: '300' },
+  });
+}

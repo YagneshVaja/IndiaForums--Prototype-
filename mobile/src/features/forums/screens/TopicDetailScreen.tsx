@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View, Text, Pressable, FlatList, ActivityIndicator, StyleSheet,
-  Alert, Share, NativeSyntheticEvent, NativeScrollEvent,
+  NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -13,7 +13,7 @@ import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
 import PostCard from '../components/PostCard';
 import ReplyComposerSheet, { type QuotedPost } from '../components/ReplyComposerSheet';
-import ReactionPickerSheet from '../components/ReactionPickerSheet';
+import ReactionPickerSheet, { type AnchorRect } from '../components/ReactionPickerSheet';
 import ReactionsSheet from '../components/ReactionsSheet';
 import UserMiniCard from '../components/UserMiniCard';
 import PostEditHistoryModal from '../components/PostEditHistoryModal';
@@ -24,11 +24,15 @@ import { stripPostHtml } from '../utils/stripHtml';
 import { extractSocialUrls, stripSocialUrlsFromText } from '../utils/socialUrls';
 import { formatCount } from '../utils/format';
 import { useAuthStore } from '../../../store/authStore';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 import type { ForumsStackParamList } from '../../../navigation/types';
 import {
-  reactToThread, trashPost, editPost, castPollVote,
+  reactToThread, editPost, castPollVote,
   type ForumTopic, type ReactionCode, type TopicPost, type TopicPoll,
 } from '../../../services/api';
+
+type Styles = ReturnType<typeof makeStyles>;
 
 type Nav = NativeStackNavigationProp<ForumsStackParamList, 'TopicDetail'>;
 type Rt  = RouteProp<ForumsStackParamList, 'TopicDetail'>;
@@ -39,6 +43,8 @@ export default function TopicDetailScreen() {
   const navigation = useNavigation<Nav>();
   const { topic, forum } = useRoute<Rt>().params;
   const currentUser = useAuthStore(s => s.user);
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [replyOpen, setReplyOpen] = useState(false);
   const [quotedPost, setQuotedPost] = useState<QuotedPost | null>(null);
@@ -49,6 +55,7 @@ export default function TopicDetailScreen() {
   const [pendingSet, setPendingSet]     = useState<Set<number>>(new Set());
 
   const [pickerFor, setPickerFor] = useState<TopicPost | null>(null);
+  const [pickerAnchor, setPickerAnchor] = useState<AnchorRect | null>(null);
   const [reactionsFor, setReactionsFor] = useState<TopicPost | null>(null);
   const [miniCardFor, setMiniCardFor]   = useState<TopicPost | null>(null);
   const [editHistoryFor, setEditHistoryFor] = useState<TopicPost | null>(null);
@@ -122,11 +129,6 @@ export default function TopicDetailScreen() {
 
   const forumBg    = forum?.bg    ?? '#3558F0';
   const forumEmoji = forum?.emoji ?? '💬';
-
-  const canModerate =
-    ((forum?.priorityPosts ?? 0) > 0) ||
-    ((forum?.editPosts     ?? 0) > 0) ||
-    ((forum?.deletePosts   ?? 0) > 0);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -206,22 +208,24 @@ export default function TopicDetailScreen() {
     [pendingSet, reactionMap, likeCountMap, sendReaction],
   );
 
-  const handleQuickReact = useCallback(
-    (post: TopicPost) => {
-      const current = reactionMap[post.id] ?? null;
-      applyReaction(post, current === 1 ? null : 1);
+  const handleOpenReactionPicker = useCallback(
+    (post: TopicPost, anchor: AnchorRect) => {
+      setPickerFor(post);
+      setPickerAnchor(anchor);
     },
-    [reactionMap, applyReaction],
+    [],
   );
 
-  const handleLongPressReact = useCallback((post: TopicPost) => {
-    setPickerFor(post);
+  const handleClosePicker = useCallback(() => {
+    setPickerFor(null);
+    setPickerAnchor(null);
   }, []);
 
   const handlePickReaction = useCallback(
     (code: ReactionCode) => {
       const target = pickerFor;
       setPickerFor(null);
+      setPickerAnchor(null);
       if (!target) return;
       const current = reactionMap[target.id] ?? null;
       if (current === code) {
@@ -315,38 +319,6 @@ export default function TopicDetailScreen() {
     [pollVoting],
   );
 
-  const handleShare = useCallback(async (post: TopicPost) => {
-    try {
-      await Share.share({
-        message: `"${post.author}" on IndiaForums: ${stripPostHtml(post.message).slice(0, 200)}`,
-      });
-    } catch {
-      // User dismissed share sheet.
-    }
-  }, []);
-
-  const handleTrash = useCallback(
-    (post: TopicPost) => {
-      Alert.alert(
-        'Trash this post?',
-        'It will be moved to the trash topic.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Trash',
-            style: 'destructive',
-            onPress: async () => {
-              const res = await trashPost({ threadId: post.id, topicId: liveTopic.id });
-              if (res.ok) refetch();
-              else showToast(res.error || 'Failed to trash post');
-            },
-          },
-        ],
-      );
-    },
-    [liveTopic.id, refetch, showToast],
-  );
-
   const replyDisabled = liveTopic.locked;
 
   return (
@@ -396,15 +368,11 @@ export default function TopicDetailScreen() {
               likeCount={likeCountMap[item.id] ?? item.likes}
               pendingReaction={pendingSet.has(item.id)}
               isMine={!!currentUser && currentUser.userId === item.authorId}
-              canModerate={canModerate}
-              onQuickReact={handleQuickReact}
-              onLongPressReact={handleLongPressReact}
+              onOpenReactionPicker={handleOpenReactionPicker}
               onPressReactionSummary={setReactionsFor}
               onReply={handleReply}
               onQuote={handleQuote}
               onEdit={handleEdit}
-              onShare={handleShare}
-              onTrash={handleTrash}
               onPressEdited={setEditHistoryFor}
               onPressAvatar={setMiniCardFor}
               isEditing={editingId === item.id}
@@ -514,18 +482,24 @@ export default function TopicDetailScreen() {
                   icon="chatbubble-outline"
                   value={formatCount(liveTopic.replies ?? 0)}
                   label="Replies"
+                  styles={styles}
+                  iconColor={colors.textTertiary}
                 />
                 <View style={styles.statDivider} />
                 <StatCell
                   icon="eye-outline"
                   value={formatCount(liveTopic.views ?? 0)}
                   label="Views"
+                  styles={styles}
+                  iconColor={colors.textTertiary}
                 />
                 <View style={styles.statDivider} />
                 <StatCell
                   icon="heart-outline"
                   value={formatCount(liveTopic.likes ?? 0)}
                   label="Likes"
+                  styles={styles}
+                  iconColor={colors.textTertiary}
                 />
               </View>
 
@@ -570,7 +544,7 @@ export default function TopicDetailScreen() {
           ListFooterComponent={
             isFetchingNextPage ? (
               <View style={styles.footerSpinner}>
-                <ActivityIndicator color="#3558F0" />
+                <ActivityIndicator color={colors.primary} />
               </View>
             ) : null
           }
@@ -586,7 +560,7 @@ export default function TopicDetailScreen() {
 
       {replyDisabled ? (
         <View style={styles.lockedBar}>
-          <Ionicons name="lock-closed" size={13} color="#8A8A8A" />
+          <Ionicons name="lock-closed" size={13} color={colors.textTertiary} />
           <Text style={styles.lockedBarText}>This topic is locked</Text>
         </View>
       ) : (
@@ -617,9 +591,10 @@ export default function TopicDetailScreen() {
 
       <ReactionPickerSheet
         visible={pickerFor != null}
+        anchor={pickerAnchor}
         current={pickerFor ? (reactionMap[pickerFor.id] ?? null) : null}
         onPick={handlePickReaction}
-        onClose={() => setPickerFor(null)}
+        onClose={handleClosePicker}
       />
 
       <ReactionsSheet
@@ -643,15 +618,17 @@ export default function TopicDetailScreen() {
   );
 }
 
-function StatCell({ icon, value, label }: {
+function StatCell({ icon, value, label, styles, iconColor }: {
   icon: keyof typeof Ionicons.glyphMap;
   value: string;
   label: string;
+  styles: Styles;
+  iconColor: string;
 }) {
   return (
     <View style={styles.statCell}>
       <View style={styles.statRow}>
-        <Ionicons name={icon} size={13} color="#8A8A8A" />
+        <Ionicons name={icon} size={13} color={iconColor} />
         <Text style={styles.statValue}>{value}</Text>
       </View>
       <Text style={styles.statLabel}>{label}</Text>
@@ -659,374 +636,376 @@ function StatCell({ icon, value, label }: {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#F5F6F7',
-  },
-  content: {
-    paddingBottom: 90,
-  },
-  sticky: {
-    position: 'absolute',
-    top: 44,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(255,255,255,0.96)',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEFF1',
-    zIndex: 10,
-  },
-  stickyThumb: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-  },
-  stickyThumbFallback: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stickyEmoji: {
-    fontSize: 11,
-  },
-  stickyText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  stickyForum: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#3558F0',
-  },
-  stickyTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#1A1A1A',
-  },
-  topicCard: {
-    backgroundColor: '#FFFFFF',
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEFF1',
-  },
-  forumRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
-  },
-  forumThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-  },
-  forumBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  forumEmoji: {
-    fontSize: 13,
-  },
-  forumName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#3558F0',
-    flexShrink: 1,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginLeft: 'auto',
-  },
-  topicFlag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  topicFlagPinned: {
-    backgroundColor: '#f59e0b',
-  },
-  topicFlagLocked: {
-    backgroundColor: '#dc2626',
-  },
-  topicFlagText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1A1A1A',
-    lineHeight: 24,
-  },
-  authorChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 10,
-  },
-  authorAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#3558F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  authorLetter: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  authorInfo: {
-    flex: 1,
-  },
-  authorName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  authorTime: {
-    fontSize: 10,
-    color: '#8A8A8A',
-    marginTop: 1,
-  },
-  description: {
-    fontSize: 14,
-    color: '#2A2A2A',
-    lineHeight: 20,
-    marginTop: 12,
-  },
-  topicImage: {
-    width: '100%',
-    height: 180,
-    borderRadius: 10,
-    marginTop: 12,
-    backgroundColor: '#EEEFF1',
-  },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 12,
-  },
-  tag: {
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-  },
-  tagText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#3558F0',
-  },
-  statsBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEFF1',
-  },
-  statCell: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 2,
-  },
-  statRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statValue: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#1A1A1A',
-  },
-  statLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#8A8A8A',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  statDivider: {
-    width: 1,
-    height: 22,
-    backgroundColor: '#E2E2E2',
-  },
-  sortRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  sectionLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  sectionText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#1A1A1A',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  sectionCount: {
-    backgroundColor: '#EEEFF1',
-    paddingHorizontal: 7,
-    paddingVertical: 1,
-    borderRadius: 10,
-  },
-  sectionCountText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#5A5A5A',
-  },
-  sortSpacer: {
-    flex: 1,
-  },
-  sortBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E2E2',
-  },
-  sortBtnActive: {
-    backgroundColor: '#3558F0',
-    borderColor: '#3558F0',
-  },
-  sortBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#5A5A5A',
-  },
-  sortBtnTextActive: {
-    color: '#FFFFFF',
-  },
-  empty: {
-    alignItems: 'center',
-    padding: 40,
-    gap: 6,
-  },
-  emptyIcon: {
-    fontSize: 36,
-  },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  emptySub: {
-    fontSize: 12,
-    color: '#8A8A8A',
-  },
-  footerSpinner: {
-    paddingVertical: 16,
-  },
-  toast: {
-    position: 'absolute',
-    left: 14,
-    right: 14,
-    bottom: 78,
-    backgroundColor: '#1A1A1A',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  toastText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  replyBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#EEEFF1',
-  },
-  replyAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#3558F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  replyAvatarLetter: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  replyInput: {
-    flex: 1,
-    backgroundColor: '#F5F6F7',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
-  replyInputPlaceholder: {
-    fontSize: 13,
-    color: '#9A9A9A',
-  },
-  sendBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#3558F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lockedBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#EEEFF1',
-  },
-  lockedBarText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#8A8A8A',
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: c.bg,
+    },
+    content: {
+      paddingBottom: 90,
+    },
+    sticky: {
+      position: 'absolute',
+      top: 44,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      backgroundColor: c.card,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+      zIndex: 10,
+    },
+    stickyThumb: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+    },
+    stickyThumbFallback: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    stickyEmoji: {
+      fontSize: 11,
+    },
+    stickyText: {
+      flex: 1,
+      minWidth: 0,
+    },
+    stickyForum: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: c.primary,
+    },
+    stickyTitle: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: c.text,
+    },
+    topicCard: {
+      backgroundColor: c.card,
+      padding: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    forumRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 10,
+    },
+    forumThumb: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+    },
+    forumBadge: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    forumEmoji: {
+      fontSize: 13,
+    },
+    forumName: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.primary,
+      flexShrink: 1,
+    },
+    badgeRow: {
+      flexDirection: 'row',
+      gap: 6,
+      marginLeft: 'auto',
+    },
+    topicFlag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 8,
+    },
+    topicFlagPinned: {
+      backgroundColor: '#f59e0b',
+    },
+    topicFlagLocked: {
+      backgroundColor: '#dc2626',
+    },
+    topicFlagText: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: '#FFFFFF',
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: c.text,
+      lineHeight: 24,
+    },
+    authorChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 10,
+    },
+    authorAvatar: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    authorLetter: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    authorInfo: {
+      flex: 1,
+    },
+    authorName: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.text,
+    },
+    authorTime: {
+      fontSize: 10,
+      color: c.textTertiary,
+      marginTop: 1,
+    },
+    description: {
+      fontSize: 14,
+      color: c.text,
+      lineHeight: 20,
+      marginTop: 12,
+    },
+    topicImage: {
+      width: '100%',
+      height: 180,
+      borderRadius: 10,
+      marginTop: 12,
+      backgroundColor: c.surface,
+    },
+    tagRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 12,
+    },
+    tag: {
+      backgroundColor: c.primarySoft,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 12,
+    },
+    tagText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.primary,
+    },
+    statsBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.card,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    statCell: {
+      flex: 1,
+      alignItems: 'center',
+      gap: 2,
+    },
+    statRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    statValue: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: c.text,
+    },
+    statLabel: {
+      fontSize: 9,
+      fontWeight: '700',
+      color: c.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+    },
+    statDivider: {
+      width: 1,
+      height: 22,
+      backgroundColor: c.border,
+    },
+    sortRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      gap: 8,
+    },
+    sectionLabel: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    sectionText: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: c.text,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+    },
+    sectionCount: {
+      backgroundColor: c.surface,
+      paddingHorizontal: 7,
+      paddingVertical: 1,
+      borderRadius: 10,
+    },
+    sectionCountText: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: c.textSecondary,
+    },
+    sortSpacer: {
+      flex: 1,
+    },
+    sortBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 10,
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    sortBtnActive: {
+      backgroundColor: c.primary,
+      borderColor: c.primary,
+    },
+    sortBtnText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.textSecondary,
+    },
+    sortBtnTextActive: {
+      color: '#FFFFFF',
+    },
+    empty: {
+      alignItems: 'center',
+      padding: 40,
+      gap: 6,
+    },
+    emptyIcon: {
+      fontSize: 36,
+    },
+    emptyTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.text,
+    },
+    emptySub: {
+      fontSize: 12,
+      color: c.textTertiary,
+    },
+    footerSpinner: {
+      paddingVertical: 16,
+    },
+    toast: {
+      position: 'absolute',
+      left: 14,
+      right: 14,
+      bottom: 78,
+      backgroundColor: c.text,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      elevation: 8,
+    },
+    toastText: {
+      color: c.card,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    replyBar: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      backgroundColor: c.card,
+      borderTopWidth: 1,
+      borderTopColor: c.border,
+    },
+    replyAvatar: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    replyAvatarLetter: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    replyInput: {
+      flex: 1,
+      backgroundColor: c.bg,
+      borderRadius: 20,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+    },
+    replyInputPlaceholder: {
+      fontSize: 13,
+      color: c.textTertiary,
+    },
+    sendBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    lockedBar: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 14,
+      backgroundColor: c.card,
+      borderTopWidth: 1,
+      borderTopColor: c.border,
+    },
+    lockedBarText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.textTertiary,
+    },
+  });
+}

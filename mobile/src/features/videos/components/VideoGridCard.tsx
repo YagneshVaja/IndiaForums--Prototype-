@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { VIDEO_CAT_ACCENT, type Video } from '../../../services/api';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
   video: Video;
@@ -10,6 +12,8 @@ interface Props {
 }
 
 function VideoGridCardImpl({ video, onPress }: Props) {
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const accent = VIDEO_CAT_ACCENT[video.cat] || VIDEO_CAT_ACCENT.all;
   return (
     <Pressable
@@ -50,7 +54,7 @@ function VideoGridCardImpl({ video, onPress }: Props) {
         </View>
         <Text style={styles.title} numberOfLines={2}>{video.title}</Text>
         <View style={styles.timeRow}>
-          <Ionicons name="time-outline" size={10} color="#8A8A8A" />
+          <Ionicons name="time-outline" size={10} color={colors.textTertiary} />
           <Text style={styles.time}>{video.timeAgo}</Text>
         </View>
       </View>
@@ -61,56 +65,58 @@ function VideoGridCardImpl({ video, onPress }: Props) {
 const VideoGridCard = React.memo(VideoGridCardImpl);
 export default VideoGridCard;
 
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
-  },
-  pressed: { opacity: 0.75 },
-  thumb: {
-    aspectRatio: 16 / 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  img: { width: '100%', height: '100%' },
-  emoji: { fontSize: 42 },
-  playWrap: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  duration: {
-    position: 'absolute',
-    right: 6,
-    bottom: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-  },
-  durationText: { color: '#FFF', fontSize: 10, fontWeight: '600' },
-  body: { padding: 10, gap: 6 },
-  catChip: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  catChipText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.3 },
-  title: { fontSize: 13, fontWeight: '600', color: '#1A1A1A', lineHeight: 17 },
-  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  time: { fontSize: 10, color: '#8A8A8A' },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    card: {
+      flex: 1,
+      backgroundColor: c.card,
+      borderRadius: 12,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    pressed: { opacity: 0.75 },
+    thumb: {
+      aspectRatio: 16 / 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+    },
+    img: { width: '100%', height: '100%' },
+    emoji: { fontSize: 42 },
+    playWrap: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    playBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    duration: {
+      position: 'absolute',
+      right: 6,
+      bottom: 6,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      backgroundColor: 'rgba(0,0,0,0.75)',
+    },
+    durationText: { color: '#FFF', fontSize: 10, fontWeight: '600' },
+    body: { padding: 10, gap: 6 },
+    catChip: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    catChipText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.3 },
+    title: { fontSize: 13, fontWeight: '600', color: c.text, lineHeight: 17 },
+    timeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    time: { fontSize: 10, color: c.textTertiary },
+  });
+}

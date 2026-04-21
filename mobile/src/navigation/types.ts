@@ -50,8 +50,6 @@ export type HomeStackParamList = {
   FanFiction: undefined;
   FanFictionDetail: { id: string };
   ChapterReader: { fanFictionId: string; chapterId: string };
-  FanFictionAuthors: undefined;
-  AuthorFollowers: { authorId: string };
   Videos: undefined;
   VideoDetail: { video: import('../services/api').Video };
   Shorts: undefined;
@@ -61,6 +59,8 @@ export type HomeStackParamList = {
   QuizPlayer: { id: string };
   QuizResult: { id: string; score: number };
   QuizLeaderboard: { id: string };
+  Galleries: undefined;
+  GalleryDetail: { gallery: import('../services/api').Gallery };
 };
 
 export type NewsStackParamList = {

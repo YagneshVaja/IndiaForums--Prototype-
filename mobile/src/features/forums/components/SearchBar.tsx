@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
   value: string;
@@ -10,13 +12,15 @@ interface Props {
 }
 
 export default function SearchBar({ value, onChangeText, placeholder = 'Searchâ€¦', loading }: Props) {
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.wrap}>
-      <Ionicons name={loading ? 'sync' : 'search'} size={14} color="#8A8A8A" />
+      <Ionicons name={loading ? 'sync' : 'search'} size={14} color={colors.textTertiary} />
       <TextInput
         style={styles.input}
         placeholder={placeholder}
-        placeholderTextColor="#8A8A8A"
+        placeholderTextColor={colors.textTertiary}
         value={value}
         onChangeText={onChangeText}
         autoCorrect={false}
@@ -24,29 +28,31 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Searchâ€
       />
       {value.length > 0 && (
         <Pressable onPress={() => onChangeText('')} hitSlop={8}>
-          <Ionicons name="close-circle" size={16} color="#8A8A8A" />
+          <Ionicons name="close-circle" size={16} color={colors.textTertiary} />
         </Pressable>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#F1F2F5',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginHorizontal: 14,
-    marginTop: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 14,
-    color: '#1A1A1A',
-    padding: 0,
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    wrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginHorizontal: 14,
+      marginTop: 12,
+    },
+    input: {
+      flex: 1,
+      fontSize: 14,
+      color: c.text,
+      padding: 0,
+    },
+  });
+}

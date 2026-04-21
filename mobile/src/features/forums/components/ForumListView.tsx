@@ -8,6 +8,8 @@ import CategoryChips, { type ChipItem } from './CategoryChips';
 import ForumCard from './ForumCard';
 import { useForumHome } from '../hooks/useForumHome';
 import type { Forum } from '../../../services/api';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
   onForumPress: (forum: Forum) => void;
@@ -17,6 +19,8 @@ export default function ForumListView({ onForumPress }: Props) {
   const [activeCat, setActiveCat] = useState('all');
   const [activeSubCat, setActiveSubCat] = useState('all');
   const [search, setSearch] = useState('');
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const apiCategoryId = useMemo(() => {
     if (activeSubCat !== 'all') return Number(activeSubCat);
@@ -121,7 +125,7 @@ export default function ForumListView({ onForumPress }: Props) {
       ListFooterComponent={
         isFetchingNextPage ? (
           <View style={styles.footer}>
-            <ActivityIndicator color="#3558F0" />
+            <ActivityIndicator color={colors.primary} />
           </View>
         ) : null
       }
@@ -130,53 +134,55 @@ export default function ForumListView({ onForumPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  content: {
-    paddingTop: 0,
-    paddingBottom: 24,
-  },
-  countRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 10,
-  },
-  countText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#8A8A8A',
-    letterSpacing: 0.5,
-  },
-  filteredTag: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#3558F0',
-    backgroundColor: '#EBF0FF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  empty: {
-    alignItems: 'center',
-    padding: 40,
-    gap: 8,
-  },
-  emptyIcon: {
-    fontSize: 36,
-  },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  emptySubtitle: {
-    fontSize: 12,
-    color: '#8A8A8A',
-    textAlign: 'center',
-  },
-  footer: {
-    paddingVertical: 16,
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    content: {
+      paddingTop: 0,
+      paddingBottom: 24,
+    },
+    countRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 14,
+      paddingTop: 14,
+      paddingBottom: 10,
+    },
+    countText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.textTertiary,
+      letterSpacing: 0.5,
+    },
+    filteredTag: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: c.primary,
+      backgroundColor: c.primarySoft,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    empty: {
+      alignItems: 'center',
+      padding: 40,
+      gap: 8,
+    },
+    emptyIcon: {
+      fontSize: 36,
+    },
+    emptyTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.text,
+    },
+    emptySubtitle: {
+      fontSize: 12,
+      color: c.textTertiary,
+      textAlign: 'center',
+    },
+    footer: {
+      paddingVertical: 16,
+    },
+  });
+}

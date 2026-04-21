@@ -44,6 +44,7 @@ export default function LoginScreen({ onBack, onSuccess, onGoRegister }) {
 
       <div className={styles.body}>
         <div className={styles.headingBlock}>
+          <img src="/iflogo.png" alt="IndiaForums" className={styles.logo} />
           <p className={styles.heading}>Welcome back</p>
           <p className={styles.subheading}>Sign in to continue to IndiaForums</p>
         </div>

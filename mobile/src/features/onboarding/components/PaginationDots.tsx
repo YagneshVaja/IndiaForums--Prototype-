@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
+import { useThemeStore } from '../../../store/themeStore';
 
 interface Props {
   count: number;
@@ -7,6 +8,7 @@ interface Props {
 }
 
 function Dot({ isActive }: { isActive: boolean }) {
+  const colors = useThemeStore((s) => s.colors);
   const width = useRef(new Animated.Value(isActive ? 24 : 8)).current;
   const opacity = useRef(new Animated.Value(isActive ? 1 : 0.3)).current;
 
@@ -32,7 +34,7 @@ function Dot({ isActive }: { isActive: boolean }) {
         {
           width,
           opacity,
-          backgroundColor: isActive ? '#3558F0' : '#C8CFEA',
+          backgroundColor: isActive ? colors.primary : colors.border,
         },
       ]}
     />

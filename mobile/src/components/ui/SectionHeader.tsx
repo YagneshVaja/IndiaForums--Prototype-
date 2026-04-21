@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useThemeStore } from '../../store/themeStore';
+import type { ThemeColors } from '../../theme/tokens';
 
 interface Props {
   title: string;
@@ -8,11 +10,13 @@ interface Props {
 }
 
 export default function SectionHeader({ title, actionLabel, onAction }: Props) {
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
       {actionLabel && onAction ? (
-        <Pressable onPress={onAction} hitSlop={8}>
+        <Pressable onPress={onAction} hitSlop={8} style={styles.actionPill}>
           <Text style={styles.action}>{actionLabel}</Text>
         </Pressable>
       ) : null}
@@ -20,22 +24,33 @@ export default function SectionHeader({ title, actionLabel, onAction }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  action: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#3558F0',
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 14,
+      paddingTop: 16,
+      paddingBottom: 10,
+    },
+    title: {
+      fontSize: 17,
+      fontWeight: '800',
+      color: c.text,
+      letterSpacing: -0.5,
+    },
+    actionPill: {
+      backgroundColor: c.primarySoft,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+    },
+    action: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.primary,
+      letterSpacing: 0.2,
+    },
+  });
+}

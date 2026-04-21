@@ -7,6 +7,8 @@ import { TopNavBack } from '../../../components/layout/TopNavBar';
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
 import SectionHeader from '../../../components/ui/SectionHeader';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
 import { VIDEO_CAT_TABS, type Video } from '../../../services/api';
 
@@ -19,6 +21,8 @@ type Nav = NativeStackNavigationProp<HomeStackParamList, 'Videos'>;
 
 export default function VideosScreen() {
   const navigation = useNavigation<Nav>();
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [activeCat, setActiveCat] = useState('all');
   const activeTab = VIDEO_CAT_TABS.find((t) => t.id === activeCat) || VIDEO_CAT_TABS[0];
 
@@ -37,7 +41,6 @@ export default function VideosScreen() {
     [data],
   );
 
-  // Client-side filter fallback for categories without server contentId
   const filtered = useMemo(() => {
     if (activeCat === 'all' || activeTab.contentId) return allVideos;
     return allVideos.filter((v) => v.cat === activeCat);
@@ -67,7 +70,7 @@ export default function VideosScreen() {
         <VideoGridCard video={item} onPress={handlePress} />
       </View>
     ),
-    [handlePress],
+    [handlePress, styles.gridCell],
   );
 
   const keyExtractor = useCallback((v: Video) => v.id, []);
@@ -141,20 +144,22 @@ export default function VideosScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F5F6F7' },
-  listContent: { paddingBottom: 32 },
-  gridRow: { gap: 10, paddingHorizontal: 12 },
-  gridCell: { flex: 1, marginBottom: 10 },
-  trendingRow: { paddingLeft: 14, paddingRight: 2, paddingBottom: 4 },
-  empty: { padding: 32, alignItems: 'center' },
-  emptyText: { color: '#8A8A8A', fontSize: 14 },
-  loadMore: {
-    margin: 16,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#EBF0FF',
-    alignItems: 'center',
-  },
-  loadMoreText: { color: '#3558F0', fontWeight: '700', fontSize: 14 },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: c.bg },
+    listContent: { paddingBottom: 32 },
+    gridRow: { gap: 10, paddingHorizontal: 12 },
+    gridCell: { flex: 1, marginBottom: 10 },
+    trendingRow: { paddingLeft: 14, paddingRight: 2, paddingBottom: 4 },
+    empty: { padding: 32, alignItems: 'center' },
+    emptyText: { color: c.textTertiary, fontSize: 14 },
+    loadMore: {
+      margin: 16,
+      paddingVertical: 12,
+      borderRadius: 10,
+      backgroundColor: c.primarySoft,
+      alignItems: 'center',
+    },
+    loadMoreText: { color: c.primary, fontWeight: '700', fontSize: 14 },
+  });
+}

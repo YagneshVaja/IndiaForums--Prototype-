@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   TextInputProps,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -20,16 +22,23 @@ interface Props extends TextInputProps {
 
 export default function AuthInput({ label, icon, error, isPassword, ...rest }: Props) {
   const [showPassword, setShowPassword] = useState(false);
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const hasError = !!error;
 
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label}>{label}</Text>
       <View style={[styles.inputRow, hasError && styles.inputRowError]}>
-        <Ionicons name={icon} size={18} color={hasError ? '#E53935' : '#9E9E9E'} style={styles.leftIcon} />
+        <Ionicons
+          name={icon}
+          size={18}
+          color={hasError ? colors.danger : colors.textTertiary}
+          style={styles.leftIcon}
+        />
         <TextInput
           style={styles.input}
-          placeholderTextColor="#BBBBBB"
+          placeholderTextColor={colors.textTertiary}
           secureTextEntry={isPassword && !showPassword}
           autoCapitalize="none"
           {...rest}
@@ -39,7 +48,7 @@ export default function AuthInput({ label, icon, error, isPassword, ...rest }: P
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
               size={18}
-              color="#9E9E9E"
+              color={colors.textTertiary}
             />
           </Pressable>
         )}
@@ -49,46 +58,48 @@ export default function AuthInput({ label, icon, error, isPassword, ...rest }: P
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#5F5F5F',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E2E2',
-    paddingHorizontal: 12,
-    height: 44,
-  },
-  inputRowError: {
-    borderColor: '#DC2626',
-    backgroundColor: '#FEF2F2',
-  },
-  leftIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: '#1A1A1A',
-    height: '100%',
-  },
-  eyeButton: {
-    paddingLeft: 8,
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#E53935',
-    marginTop: 2,
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    wrapper: {
+      gap: 6,
+    },
+    label: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: c.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+    },
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.card,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: c.border,
+      paddingHorizontal: 12,
+      height: 44,
+    },
+    inputRowError: {
+      borderColor: c.danger,
+      backgroundColor: c.surface,
+    },
+    leftIcon: {
+      marginRight: 10,
+    },
+    input: {
+      flex: 1,
+      fontSize: 15,
+      color: c.text,
+      height: '100%',
+    },
+    eyeButton: {
+      paddingLeft: 8,
+    },
+    errorText: {
+      fontSize: 12,
+      color: c.danger,
+      marginTop: 2,
+    },
+  });
+}

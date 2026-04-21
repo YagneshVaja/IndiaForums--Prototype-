@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import styles from './ForumScreen.module.css';
+import useForumTopics from '../hooks/useForumTopics';
+import useAllForumTopics from '../hooks/useAllForumTopics';
 import { TOP_TABS } from './forum/forumHelpers';
 import ForumListView from './forum/ForumListView';
 import ForumThreadView from './forum/ForumThreadView';
 import AllTopicsView from './forum/AllTopicsView';
-import useAllForumTopics from '../hooks/useAllForumTopics';
 
 export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }) {
   const [topTab, setTopTab] = useState('forums');
@@ -21,6 +22,7 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drilledForum]);
 
+  const forumTopics = useForumTopics(selectedForum?.id || null);
   const allTopics = useAllForumTopics();
 
   function scrollTop() {
@@ -45,6 +47,15 @@ export default function ForumScreen({ onTopicPress, onForumDrill, drilledForum }
     return (
       <ForumThreadView
         selectedForum={selectedForum}
+        forumDetail={forumTopics.forumDetail}
+        flairs={forumTopics.flairs}
+        topics={forumTopics.topics}
+        topicsLoading={forumTopics.loading}
+        topicsLoadingMore={forumTopics.loadingMore}
+        topicsError={forumTopics.error}
+        topicsHasMore={forumTopics.hasMore}
+        loadMoreTopics={forumTopics.loadMore}
+        refreshTopics={forumTopics.refresh}
         onTopicPress={onTopicPress}
       />
     );

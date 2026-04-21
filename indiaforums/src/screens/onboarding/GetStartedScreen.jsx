@@ -4,10 +4,7 @@ export default function GetStartedScreen({ onCreateAccount, onSignIn, onGuest })
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <div className={styles.logoMark}>
-          <span className={styles.logoInitial}>IF</span>
-        </div>
-        <p className={styles.brandName}>IndiaForums</p>
+        <img src="/iflogo.png" alt="IndiaForums" className={styles.logo} />
         <p className={styles.tagline}>{'Join millions of fans.\nYour community awaits.'}</p>
       </div>
 

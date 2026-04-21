@@ -1,3 +1,19 @@
+/* ── Hide scrollbars on all scrollable regions ───────────────────────────── */
+.menu,
+.form,
+.pickerList,
+.historyList,
+.teamList {
+  scrollbar-width: none;
+}
+.menu::-webkit-scrollbar,
+.form::-webkit-scrollbar,
+.pickerList::-webkit-scrollbar,
+.historyList::-webkit-scrollbar,
+.teamList::-webkit-scrollbar {
+  display: none;
+}
+
 /* ── Backdrop ────────────────────────────────────────────────────────────── */
 .backdrop {
   position: absolute;
@@ -64,11 +80,10 @@
   flex: 1;
   text-align: center;
   font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--dark);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.1px;
 }
 .closeBtn {
   background: none;
@@ -133,10 +148,10 @@
 .menuItem {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   background: none;
   border: none;
-  padding: 12px 16px;
+  padding: 10px 16px;
   text-align: left;
   font-family: var(--font-body);
   font-size: 13px;
@@ -147,9 +162,23 @@
 .menuItem:hover { background: var(--surface); }
 .menuItemDanger { color: var(--red); }
 .menuItemDanger:hover { background: var(--red-surface); }
-.menuIcon { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; }
+.menuIcon {
+  font-size: 16px;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 .menuLabel { flex: 1; font-weight: 600; }
 .chevron { color: var(--text3); flex-shrink: 0; }
+.menuDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 16px;
+}
 
 /* ── Form ────────────────────────────────────────────────────────────────── */
 .form {

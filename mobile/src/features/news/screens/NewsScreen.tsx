@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import { FlashList } from '@shopify/flash-list';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { NewsStackParamList } from '../../../navigation/types';
 import { TopNavBrand } from '../../../components/layout/TopNavBar';
+import { useSideMenuStore } from '../../../store/sideMenuStore';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 import { useNewsArticles } from '../hooks/useNewsData';
 import ArticleCard from '../../home/components/ArticleCard';
 import LoadingState from '../../../components/ui/LoadingState';
@@ -25,6 +28,8 @@ export default function NewsScreen({ navigation }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(
     undefined,
   );
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const {
     data,
@@ -36,7 +41,19 @@ export default function NewsScreen({ navigation }: Props) {
     isFetchingNextPage,
   } = useNewsArticles(selectedCategory);
 
-  const articles: Article[] = data?.pages.flatMap((p) => p) ?? [];
+  const articles: Article[] = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Article[] = [];
+    for (const page of data?.pages ?? []) {
+      for (const a of page) {
+        if (!seen.has(a.id)) {
+          seen.add(a.id);
+          out.push(a);
+        }
+      }
+    }
+    return out;
+  }, [data]);
 
   const handleCategorySelect = useCallback((cat: string) => {
     setSelectedCategory(cat === 'All' ? undefined : cat);
@@ -44,7 +61,11 @@ export default function NewsScreen({ navigation }: Props) {
 
   const handleArticlePress = useCallback(
     (article: Article) => {
-      navigation.navigate('ArticleDetail', { id: article.id });
+      navigation.navigate('ArticleDetail', {
+        id: article.id,
+        thumbnailUrl: article.thumbnailUrl,
+        title: article.title,
+      });
     },
     [navigation],
   );
@@ -64,7 +85,7 @@ export default function NewsScreen({ navigation }: Props) {
 
   const ListFooterComponent = isFetchingNextPage ? (
     <View style={styles.footer}>
-      <ActivityIndicator size="small" color="#3558F0" />
+      <ActivityIndicator size="small" color={colors.primary} />
     </View>
   ) : null;
 
@@ -75,7 +96,7 @@ export default function NewsScreen({ navigation }: Props) {
 
   return (
     <View style={styles.screen}>
-      <TopNavBrand />
+      <TopNavBrand onMenuPress={useSideMenuStore.getState().open} />
 
       {/* Category chips */}
       <ScrollView
@@ -123,42 +144,44 @@ export default function NewsScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  chipScrollView: {
-    flexGrow: 0,
-    backgroundColor: '#FFFFFF',
-  },
-  chipRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#F5F6F7',
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
-  },
-  chipActive: {
-    backgroundColor: '#3558F0',
-    borderColor: '#3558F0',
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#666666',
-  },
-  chipTextActive: {
-    color: '#FFFFFF',
-  },
-  footer: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: c.card,
+    },
+    chipScrollView: {
+      flexGrow: 0,
+      backgroundColor: c.card,
+    },
+    chipRow: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      gap: 8,
+    },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    chipActive: {
+      backgroundColor: c.primary,
+      borderColor: c.primary,
+    },
+    chipText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: c.textSecondary,
+    },
+    chipTextActive: {
+      color: '#FFFFFF',
+    },
+    footer: {
+      paddingVertical: 16,
+      alignItems: 'center',
+    },
+  });
+}

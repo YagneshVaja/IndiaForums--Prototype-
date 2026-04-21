@@ -4,6 +4,9 @@ import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TopNavBrand } from '../../../components/layout/TopNavBar';
+import { useSideMenuStore } from '../../../store/sideMenuStore';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 import SectionHeader from '../../../components/ui/SectionHeader';
 import LoadingState from '../../../components/ui/LoadingState';
 import FeaturedBannerCarousel from '../components/FeaturedBannerCarousel';
@@ -30,6 +33,8 @@ const keyExtractor = (article: Article) => article.id;
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const queryCategory = selectedCategory === 'All' ? undefined : selectedCategory;
   const { data: banners = [], isLoading: bannersLoading } = useFeaturedBanners();
@@ -151,7 +156,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.screen}>
-      <TopNavBrand />
+      <TopNavBrand onMenuPress={useSideMenuStore.getState().open} />
 
       <FlashList
         data={articlesLoading ? [] : articles}
@@ -166,32 +171,34 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#F5F6F7',
-  },
-  storiesWrap: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  carouselWrap: {
-    backgroundColor: '#FFFFFF',
-    paddingBottom: 8,
-  },
-  chipsWrap: {
-    backgroundColor: '#FFFFFF',
-  },
-  articlesTop: {
-    backgroundColor: '#FFFFFF',
-    marginTop: 8,
-  },
-  articlesBg: {
-    backgroundColor: '#FFFFFF',
-  },
-  sectionGap: {
-    marginTop: 8,
-  },
-  spacer: { height: 32 },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: c.bg,
+    },
+    storiesWrap: {
+      backgroundColor: c.card,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    carouselWrap: {
+      backgroundColor: c.card,
+      paddingBottom: 8,
+    },
+    chipsWrap: {
+      backgroundColor: c.card,
+    },
+    articlesTop: {
+      backgroundColor: c.card,
+      marginTop: 8,
+    },
+    articlesBg: {
+      backgroundColor: c.card,
+    },
+    sectionGap: {
+      marginTop: 8,
+    },
+    spacer: { height: 32 },
+  });
+}

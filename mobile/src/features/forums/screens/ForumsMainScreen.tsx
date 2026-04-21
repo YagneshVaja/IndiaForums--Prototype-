@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,6 +9,8 @@ import ForumListView from '../components/ForumListView';
 import AllTopicsView from '../components/AllTopicsView';
 import type { ForumsStackParamList } from '../../../navigation/types';
 import type { Forum, ForumTopic } from '../../../services/api';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 type Nav = NativeStackNavigationProp<ForumsStackParamList, 'ForumsMain'>;
 
@@ -18,6 +20,8 @@ export default function ForumsMainScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<TopTab>('forums');
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const handleForumPress = (forum: Forum) => {
     navigation.navigate('ForumThread', { forum });
@@ -37,7 +41,7 @@ export default function ForumsMainScreen() {
             onPress={() => navigation.canGoBack() && navigation.goBack()}
             hitSlop={8}
           >
-            <Ionicons name="chevron-back" size={18} color="#0D0D0D" />
+            <Ionicons name="chevron-back" size={18} color={colors.text} />
           </Pressable>
           <View style={styles.spacer} />
         </View>
@@ -73,59 +77,61 @@ export default function ForumsMainScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#F5F6F7',
-  },
-  topWrap: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E2E2',
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 44,
-    paddingHorizontal: 14,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#EEEFF1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  spacer: { flex: 1 },
-  tabRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 36,
-    paddingBottom: 4,
-  },
-  tab: {
-    paddingVertical: 10,
-    alignItems: 'center',
-    position: 'relative',
-  },
-  tabActive: {},
-  tabLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#8A8A8A',
-  },
-  tabLabelActive: {
-    color: '#1A1A1A',
-    fontWeight: '700',
-  },
-  tabUnderline: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 2.5,
-    backgroundColor: '#3558F0',
-    borderRadius: 2,
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: c.bg,
+    },
+    topWrap: {
+      backgroundColor: c.card,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      height: 44,
+      paddingHorizontal: 14,
+    },
+    backBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: c.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    spacer: { flex: 1 },
+    tabRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 36,
+      paddingBottom: 4,
+    },
+    tab: {
+      paddingVertical: 10,
+      alignItems: 'center',
+      position: 'relative',
+    },
+    tabActive: {},
+    tabLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: c.textTertiary,
+    },
+    tabLabelActive: {
+      color: c.text,
+      fontWeight: '700',
+    },
+    tabUnderline: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: 2.5,
+      backgroundColor: c.primary,
+      borderRadius: 2,
+    },
+  });
+}

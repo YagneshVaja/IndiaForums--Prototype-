@@ -92,6 +92,7 @@ export default function RegisterScreen({ onBack, onSuccess, onGoLogin }) {
 
       <div className={styles.body}>
         <div className={styles.headingBlock}>
+          <img src="/iflogo.png" alt="IndiaForums" className={styles.logo} />
           <p className={styles.heading}>Join IndiaForums</p>
           <p className={styles.subheading}>Create your free account to get started</p>
         </div>

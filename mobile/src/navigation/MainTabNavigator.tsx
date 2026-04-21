@@ -5,11 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { MainTabParamList } from './types';
 import { useNotificationsStore } from '../store/notificationsStore';
+import { useThemeStore } from '../store/themeStore';
 import HomeStack from './HomeStack';
 import NewsStack from './NewsStack';
 import ForumsStack from './ForumsStack';
 import SearchStack from './SearchStack';
 import MySpaceStack from './MySpaceStack';
+import SideMenu from '../components/layout/SideMenu';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -27,18 +29,20 @@ function TabIcon({
   focused: boolean;
   hasNotif?: boolean;
 }) {
+  const colors = useThemeStore((s) => s.colors);
   return (
     <View style={tabIconStyles.wrapper}>
-      {/* Top indicator line */}
-      {focused && <View style={tabIconStyles.indicator} />}
-      {/* Icon pill */}
-      <View style={[tabIconStyles.pill, focused && tabIconStyles.pillActive]}>
+      {focused && <View style={[tabIconStyles.indicator, { backgroundColor: colors.primary }]} />}
+      <View style={[
+        tabIconStyles.pill,
+        focused && { backgroundColor: colors.primarySoft },
+      ]}>
         <Ionicons
           name={focused ? iconFocused : iconUnfocused}
           size={22}
-          color={focused ? '#3558F0' : '#9E9E9E'}
+          color={focused ? colors.primary : colors.textTertiary}
         />
-        {hasNotif && <View style={tabIconStyles.notifDot} />}
+        {hasNotif && <View style={[tabIconStyles.notifDot, { backgroundColor: colors.danger, borderColor: colors.card }]} />}
       </View>
     </View>
   );
@@ -56,7 +60,6 @@ const tabIconStyles = StyleSheet.create({
     width: 20,
     height: 2.5,
     borderRadius: 3,
-    backgroundColor: '#3558F0',
   },
   pill: {
     width: 44,
@@ -66,9 +69,6 @@ const tabIconStyles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
   },
-  pillActive: {
-    backgroundColor: '#EBF0FF',
-  },
   notifDot: {
     position: 'absolute',
     top: 2,
@@ -76,31 +76,31 @@ const tabIconStyles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: '#C8001E',
     borderWidth: 1.5,
-    borderColor: '#FFFFFF',
   },
 });
 
 export default function MainTabNavigator() {
   const insets = useSafeAreaInsets();
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
+  const colors = useThemeStore((s) => s.colors);
 
   return (
+    <>
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: 'rgba(255,255,255,0.96)',
-          borderTopColor: '#E2E2E2',
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           height: 56 + insets.bottom,
           paddingBottom: insets.bottom,
           paddingTop: 8,
           paddingHorizontal: 4,
         },
-        tabBarActiveTintColor: '#3558F0',
-        tabBarInactiveTintColor: '#9E9E9E',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '600',
@@ -178,5 +178,7 @@ export default function MainTabNavigator() {
         }}
       />
     </Tab.Navigator>
+    <SideMenu />
+    </>
   );
 }

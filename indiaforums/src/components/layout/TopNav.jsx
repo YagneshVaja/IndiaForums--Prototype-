@@ -38,15 +38,7 @@ export default function TopNav({ title, onBack, onMenuOpen, notifCount = 0, onNo
 
       {/* Logo */}
       <div className={styles.logo}>
-        <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
-          <polygon points="13,0 23,6 13,13" fill="#16A34A"/>
-          <polygon points="13,0 13,13 3,6"  fill="#22C55E"/>
-          <polygon points="23,6 23,20 13,13" fill="#CA8A04"/>
-          <polygon points="3,6  3,20 13,13"  fill="#7C3AED"/>
-          <polygon points="23,20 13,26 13,13" fill="#EA580C"/>
-          <polygon points="13,26  3,20 13,13" fill="#DB2777"/>
-        </svg>
-        <span className={styles.wordmark}>indiaforums</span>
+        <img src="/iflogo.png" alt="IndiaForums" className={styles.logoImg} />
       </div>
 
       {/* Right actions */}

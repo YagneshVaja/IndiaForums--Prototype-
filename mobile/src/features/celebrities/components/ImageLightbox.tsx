@@ -30,7 +30,6 @@ export default function ImageLightbox({ images, startIndex, onClose }: Props) {
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.content} onPress={(e) => e.stopPropagation?.()}>
-          {/* Image */}
           <Image
             source={{ uri: img.src }}
             style={{ width: width * 0.92, height: height * 0.7, borderRadius: 8 }}
@@ -39,26 +38,22 @@ export default function ImageLightbox({ images, startIndex, onClose }: Props) {
             transition={150}
           />
 
-          {/* Close button */}
           <Pressable style={styles.close} onPress={onClose} hitSlop={12}>
             <Text style={styles.closeText}>✕</Text>
           </Pressable>
 
-          {/* Counter */}
           {hasMultiple && (
             <View style={styles.counter}>
               <Text style={styles.counterText}>{index + 1} / {images.length}</Text>
             </View>
           )}
 
-          {/* Caption */}
           {!!img.alt && (
             <View style={styles.captionWrap}>
               <Text style={styles.caption}>{img.alt}</Text>
             </View>
           )}
 
-          {/* Left/Right tap zones */}
           {hasMultiple && (
             <>
               <Pressable style={[styles.zone, styles.zoneLeft]} onPress={goPrev}>
