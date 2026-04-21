@@ -20,33 +20,11 @@
   gap: 16px;
 }
 
-.logoMark {
-  width: 80px;
+.logo {
   height: 80px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: auto;
+  object-fit: contain;
   margin-bottom: 4px;
-}
-
-.logoInitial {
-  font-size: 32px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -1px;
-  font-family: var(--font-display);
-}
-
-.brandName {
-  font-size: 32px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.5px;
-  font-family: var(--font-display);
-  margin: 0;
 }
 
 .tagline {

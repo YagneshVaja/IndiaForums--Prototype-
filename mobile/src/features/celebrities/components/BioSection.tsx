@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import type { BioSection as BioSectionData, BioImage } from '../utils/parseBioHtml';
 import { SECTION_ICONS } from '../utils/parseBioHtml';
-import { CELEB_TEXT, CELEB_MUTED, CELEB_SURFACE, CELEB_BORDER } from '../utils/constants';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
   section: BioSectionData;
@@ -11,6 +12,8 @@ interface Props {
 }
 
 export default function BioSection({ section, onImagePress }: Props) {
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const icon = SECTION_ICONS[section.title] || '📌';
   return (
     <View style={styles.card}>
@@ -54,24 +57,26 @@ export default function BioSection({ section, onImagePress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: CELEB_SURFACE,
-    borderWidth: 1,
-    borderColor: CELEB_BORDER,
-    borderRadius: 12,
-    marginHorizontal: 14,
-    marginTop: 10,
-    padding: 14,
-  },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  icon:   { fontSize: 18 },
-  title:  { fontSize: 14, fontWeight: '800', color: CELEB_TEXT, letterSpacing: -0.1 },
-  items:  { gap: 8 },
-  item:   { flexDirection: 'row', gap: 8 },
-  itemLabel: { width: 100, fontSize: 12, color: CELEB_MUTED, fontWeight: '600' },
-  itemValue: { flex: 1, fontSize: 13, color: CELEB_TEXT, lineHeight: 18 },
-  imgStrip:  { marginTop: 12 },
-  imgRow:    { gap: 8, paddingRight: 14 },
-  img: { width: 120, height: 150, borderRadius: 8, backgroundColor: '#F3F4F6' },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 12,
+      marginHorizontal: 14,
+      marginTop: 10,
+      padding: 14,
+    },
+    header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+    icon:   { fontSize: 18 },
+    title:  { fontSize: 14, fontWeight: '800', color: c.text, letterSpacing: -0.1 },
+    items:  { gap: 8 },
+    item:   { flexDirection: 'row', gap: 8 },
+    itemLabel: { width: 100, fontSize: 12, color: c.textSecondary, fontWeight: '600' },
+    itemValue: { flex: 1, fontSize: 13, color: c.text, lineHeight: 18 },
+    imgStrip:  { marginTop: 12 },
+    imgRow:    { gap: 8, paddingRight: 14 },
+    img: { width: 120, height: 150, borderRadius: 8, backgroundColor: c.surface },
+  });
+}

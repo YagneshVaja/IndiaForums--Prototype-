@@ -18,6 +18,10 @@ import { useForumTopics } from '../hooks/useForumTopics';
 import { formatCount } from '../utils/format';
 import type { ForumsStackParamList } from '../../../navigation/types';
 import type { Forum, ForumTopic } from '../../../services/api';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
+
+type Styles = ReturnType<typeof makeStyles>;
 
 type Nav = NativeStackNavigationProp<ForumsStackParamList, 'ForumThread'>;
 type Rt  = RouteProp<ForumsStackParamList, 'ForumThread'>;
@@ -25,6 +29,8 @@ type Rt  = RouteProp<ForumsStackParamList, 'ForumThread'>;
 export default function ForumThreadScreen() {
   const navigation = useNavigation<Nav>();
   const { forum } = useRoute<Rt>().params;
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [activeFlairId, setActiveFlairId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
@@ -119,20 +125,20 @@ export default function ForumThreadScreen() {
                 </Pressable>
                 {hasModerationRights && (
                   <Pressable style={styles.gearBtn} onPress={() => setSettingsOpen(true)}>
-                    <Ionicons name="settings-outline" size={16} color="#1A1A1A" />
+                    <Ionicons name="settings-outline" size={16} color={colors.text} />
                   </Pressable>
                 )}
               </View>
 
               {/* Stats bar */}
               <View style={styles.statBar}>
-                <StatCell label="Topics" value={formatCount(detail.topicCount)} />
+                <StatCell label="Topics" value={formatCount(detail.topicCount)} styles={styles} />
                 <View style={styles.statDivider} />
-                <StatCell label="Posts" value={formatCount(detail.postCount)} />
+                <StatCell label="Posts" value={formatCount(detail.postCount)} styles={styles} />
                 <View style={styles.statDivider} />
-                <StatCell label="Followers" value={formatCount(detail.followCount)} />
+                <StatCell label="Followers" value={formatCount(detail.followCount)} styles={styles} />
                 <View style={styles.statDivider} />
-                <StatCell label="Ranked" value={`#${detail.rank || '–'}`} />
+                <StatCell label="Ranked" value={`#${detail.rank || '–'}`} styles={styles} />
               </View>
 
               {/* Search */}
@@ -177,7 +183,7 @@ export default function ForumThreadScreen() {
           ListFooterComponent={
             isFetchingNextPage ? (
               <View style={styles.footer}>
-                <ActivityIndicator color="#3558F0" />
+                <ActivityIndicator color={colors.primary} />
               </View>
             ) : null
           }
@@ -207,7 +213,7 @@ export default function ForumThreadScreen() {
   );
 }
 
-function StatCell({ label, value }: { label: string; value: string }) {
+function StatCell({ label, value, styles }: { label: string; value: string; styles: Styles }) {
   return (
     <View style={styles.statCell}>
       <Text style={styles.statNum}>{value}</Text>
@@ -216,159 +222,161 @@ function StatCell({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#F5F6F7',
-  },
-  content: {
-    paddingBottom: 24,
-  },
-  banner: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#EEEFF1',
-  },
-  identity: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEFF1',
-  },
-  identityAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  identityAvatarImg: {
-    width: '100%',
-    height: '100%',
-  },
-  identityEmoji: {
-    fontSize: 24,
-  },
-  identityInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-  identityName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#1A1A1A',
-  },
-  identityDesc: {
-    fontSize: 11,
-    color: '#7A7A7A',
-    marginTop: 2,
-    lineHeight: 15,
-  },
-  followBtn: {
-    backgroundColor: '#3558F0',
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-  },
-  followBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  gearBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#EEEFF1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEFF1',
-  },
-  statCell: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statNum: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1A1A1A',
-  },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#8A8A8A',
-    marginTop: 2,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  statDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: '#E2E2E2',
-  },
-  flairBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  flairRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  topicCount: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#8A8A8A',
-  },
-  newBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#3558F0',
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  newBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  empty: {
-    alignItems: 'center',
-    padding: 40,
-    gap: 8,
-  },
-  emptyIcon: {
-    fontSize: 36,
-  },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  emptySubtitle: {
-    fontSize: 12,
-    color: '#8A8A8A',
-    textAlign: 'center',
-  },
-  footer: {
-    paddingVertical: 16,
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: c.bg,
+    },
+    content: {
+      paddingBottom: 24,
+    },
+    banner: {
+      width: '100%',
+      height: 120,
+      backgroundColor: c.surface,
+    },
+    identity: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+      backgroundColor: c.card,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    identityAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    identityAvatarImg: {
+      width: '100%',
+      height: '100%',
+    },
+    identityEmoji: {
+      fontSize: 24,
+    },
+    identityInfo: {
+      flex: 1,
+      minWidth: 0,
+    },
+    identityName: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: c.text,
+    },
+    identityDesc: {
+      fontSize: 11,
+      color: c.textSecondary,
+      marginTop: 2,
+      lineHeight: 15,
+    },
+    followBtn: {
+      backgroundColor: c.primary,
+      paddingVertical: 7,
+      paddingHorizontal: 14,
+      borderRadius: 16,
+    },
+    followBtnText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    gearBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: c.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    statBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.card,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    statCell: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    statNum: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: c.text,
+    },
+    statLabel: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: c.textTertiary,
+      marginTop: 2,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+    },
+    statDivider: {
+      width: 1,
+      height: 24,
+      backgroundColor: c.border,
+    },
+    flairBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 14,
+      paddingTop: 12,
+      paddingBottom: 8,
+    },
+    flairRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    topicCount: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.textTertiary,
+    },
+    newBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: c.primary,
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+    },
+    newBtnText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    empty: {
+      alignItems: 'center',
+      padding: 40,
+      gap: 8,
+    },
+    emptyIcon: {
+      fontSize: 36,
+    },
+    emptyTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.text,
+    },
+    emptySubtitle: {
+      fontSize: 12,
+      color: c.textTertiary,
+      textAlign: 'center',
+    },
+    footer: {
+      paddingVertical: 16,
+    },
+  });
+}

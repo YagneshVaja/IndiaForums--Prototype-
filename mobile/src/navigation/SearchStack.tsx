@@ -2,11 +2,13 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SearchStackParamList } from './types';
+import { useThemeStore } from '../store/themeStore';
 
 function PlaceholderScreen({ route }: { route: { name: string } }) {
+  const colors = useThemeStore((s) => s.colors);
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F6F7' }}>
-      <Text style={{ fontSize: 16, color: '#666' }}>{route.name}</Text>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
+      <Text style={{ fontSize: 16, color: colors.textSecondary }}>{route.name}</Text>
     </View>
   );
 }

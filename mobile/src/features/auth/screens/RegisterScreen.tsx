@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -14,13 +14,32 @@ import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../../../navigation/types';
 import AuthInput from '../components/AuthInput';
+import { useAuthStore } from '../../../store/authStore';
+import { extractApiError } from '../../../services/api';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
+// Server-side field keys are case-insensitive; map to our form field names.
+// Mirrors indiaforums/src/screens/onboarding/RegisterScreen.jsx:60-68.
+const SERVER_FIELD_MAP: Record<string, string> = {
+  username: 'username',
+  email: 'email',
+  password: 'password',
+  displayname: 'fullName',
+};
+
+const SUCCESS_GREEN = '#22C55E';
+
 export default function RegisterScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const register = useAuthStore(s => s.register);
   const [form, setForm] = useState({ fullName: '', username: '', email: '', password: '', confirmPassword: '' });
   const [errors, setErrors] = useState<Partial<typeof form>>({});
+  const [serverError, setServerError] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -46,11 +65,40 @@ export default function RegisterScreen({ navigation }: Props) {
   };
 
   const handleRegister = async () => {
+    setServerError('');
     if (!validate()) return;
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1400));
-    setLoading(false);
-    setSuccess(true);
+    try {
+      await register({
+        userName: form.username.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        displayName: form.fullName.trim() || undefined,
+      });
+      setSuccess(true);
+    } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = (err as any)?.response?.data;
+      if (data?.errors && typeof data.errors === 'object') {
+        const mapped: Partial<typeof form> = {};
+        for (const [key, msgs] of Object.entries(data.errors)) {
+          const field = SERVER_FIELD_MAP[key.toLowerCase()] ?? key;
+          if (field in form) {
+            mapped[field as keyof typeof form] = Array.isArray(msgs)
+              ? String(msgs[0])
+              : String(msgs);
+          }
+        }
+        if (Object.keys(mapped).length > 0) {
+          setErrors(mapped);
+          setLoading(false);
+          return;
+        }
+      }
+      setServerError(extractApiError(err, 'Registration failed. Please try again.'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (success) {
@@ -65,7 +113,7 @@ export default function RegisterScreen({ navigation }: Props) {
         </Text>
         <Pressable
           style={styles.primaryButton}
-          onPress={() => navigation.getParent()?.navigate('Main' as never)}
+          onPress={() => navigation.getParent()?.reset({ index: 0, routes: [{ name: 'Main' }] })}
         >
           <Text style={styles.primaryButtonText}>Start Exploring</Text>
         </Pressable>
@@ -85,7 +133,7 @@ export default function RegisterScreen({ navigation }: Props) {
       >
         {/* Back button */}
         <Pressable style={styles.backButton} onPress={() => navigation.goBack()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={22} color="#1A1A1A" />
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
         </Pressable>
 
         {/* Header */}
@@ -96,6 +144,13 @@ export default function RegisterScreen({ navigation }: Props) {
 
         {/* Form */}
         <View style={styles.form}>
+          {serverError !== '' && (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={16} color={colors.danger} />
+              <Text style={styles.errorBannerText}>{serverError}</Text>
+            </View>
+          )}
+
           <AuthInput
             label="Full Name"
             icon="person-outline"
@@ -182,124 +237,143 @@ export default function RegisterScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 16,
-  },
-  successScreen: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 16,
-  },
-  successIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#22C55E',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-    shadowColor: '#22C55E',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  successTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#1A1A1A',
-    letterSpacing: -0.5,
-  },
-  successSubtitle: {
-    fontSize: 15,
-    color: '#666666',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F5F6F7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 28,
-  },
-  header: {
-    marginBottom: 32,
-    gap: 8,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#1A1A1A',
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#777777',
-    lineHeight: 21,
-  },
-  form: {
-    gap: 16,
-  },
-  termsText: {
-    fontSize: 12,
-    color: '#888888',
-    lineHeight: 18,
-    marginTop: -4,
-  },
-  termsLink: {
-    color: '#3558F0',
-    fontWeight: '600',
-  },
-  primaryButton: {
-    backgroundColor: '#3558F0',
-    height: 54,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-    shadowColor: '#3558F0',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  primaryButtonPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.98 }],
-  },
-  primaryButtonLoading: {
-    opacity: 0.8,
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  footerText: {
-    fontSize: 14,
-    color: '#888888',
-  },
-  footerLink: {
-    fontSize: 14,
-    color: '#3558F0',
-    fontWeight: '700',
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: c.card,
+    },
+    scroll: {
+      flexGrow: 1,
+      paddingHorizontal: 24,
+      paddingBottom: 16,
+    },
+    successScreen: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 32,
+      gap: 16,
+    },
+    successIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: SUCCESS_GREEN,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 8,
+      shadowColor: SUCCESS_GREEN,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.3,
+      shadowRadius: 16,
+      elevation: 8,
+    },
+    successTitle: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: c.text,
+      letterSpacing: -0.5,
+    },
+    successSubtitle: {
+      fontSize: 15,
+      color: c.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: c.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 28,
+    },
+    header: {
+      marginBottom: 32,
+      gap: 8,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: c.text,
+      letterSpacing: -0.5,
+    },
+    subtitle: {
+      fontSize: 15,
+      color: c.textSecondary,
+      lineHeight: 21,
+    },
+    form: {
+      gap: 16,
+    },
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.danger,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    errorBannerText: {
+      flex: 1,
+      color: c.danger,
+      fontSize: 13,
+      lineHeight: 18,
+    },
+    termsText: {
+      fontSize: 12,
+      color: c.textTertiary,
+      lineHeight: 18,
+      marginTop: -4,
+    },
+    termsLink: {
+      color: c.primary,
+      fontWeight: '600',
+    },
+    primaryButton: {
+      backgroundColor: c.primary,
+      height: 54,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 4,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.28,
+      shadowRadius: 10,
+      elevation: 6,
+    },
+    primaryButtonPressed: {
+      opacity: 0.88,
+      transform: [{ scale: 0.98 }],
+    },
+    primaryButtonLoading: {
+      opacity: 0.8,
+    },
+    primaryButtonText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      letterSpacing: 0.2,
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 28,
+    },
+    footerText: {
+      fontSize: 14,
+      color: c.textTertiary,
+    },
+    footerLink: {
+      fontSize: 14,
+      color: c.primary,
+      fontWeight: '700',
+    },
+  });
+}

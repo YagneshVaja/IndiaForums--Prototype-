@@ -4,11 +4,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NewsStackParamList } from './types';
 import NewsScreen from '../features/news/screens/NewsScreen';
 import ArticleDetailScreen from '../features/news/screens/ArticleDetailScreen';
+import { useThemeStore } from '../store/themeStore';
 
 function PlaceholderScreen({ route }: { route: { name: string } }) {
+  const colors = useThemeStore((s) => s.colors);
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F6F7' }}>
-      <Text style={{ fontSize: 16, color: '#666' }}>{route.name}</Text>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
+      <Text style={{ fontSize: 16, color: colors.textSecondary }}>{route.name}</Text>
     </View>
   );
 }

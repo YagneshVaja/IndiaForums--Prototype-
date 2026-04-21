@@ -12,7 +12,7 @@ export default function OnboardingStack() {
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
       <Stack.Screen name="Splash" component={SplashScreen} />
       <Stack.Screen
-        name="Onboarding"
+        name="OnboardingSlides"
         component={OnboardingScreen}
         options={{ animation: 'slide_from_right' }}
       />

@@ -5,6 +5,18 @@
         "matcher": "Edit|Write|Bash",
         "command": "code-review-graph update --quiet",
         "timeout": 5000
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node docs/tracking/update-progress.js 2>/dev/null || true",
+            "timeout": 15,
+            "async": true,
+            "statusMessage": "Updating mobile progress tracker..."
+          }
+        ]
       }
     ],
     "SessionStart": [

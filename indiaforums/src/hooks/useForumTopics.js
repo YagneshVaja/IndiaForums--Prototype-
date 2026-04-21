@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchForumTopics } from '../services/api';
 
-export default function useForumTopics(forumId, sortBy = 'latest') {
+export default function useForumTopics(forumId) {
   const [topics, setTopics]           = useState([]);
   const [forumDetail, setForumDetail] = useState(null);
   const [flairs, setFlairs]           = useState([]);
@@ -12,13 +12,13 @@ export default function useForumTopics(forumId, sortBy = 'latest') {
   const [hasMore, setHasMore]         = useState(false);
   const [page, setPage]               = useState(1);
 
-  const load = useCallback(async (pageNum, replace = false, currentCursor = null) => {
+  const load = useCallback(async (pageNum, replace = false) => {
     if (replace) {
       setLoading(true);
       setError(null);
     }
     try {
-      const result = await fetchForumTopics(forumId, pageNum, 20, replace ? null : currentCursor, sortBy);
+      const result = await fetchForumTopics(forumId, pageNum, 20, replace ? null : cursor);
       setTopics(prev => replace ? result.topics : [...prev, ...result.topics]);
       setCursor(result.nextCursor);
       setHasMore(result.hasMore);
@@ -30,9 +30,9 @@ export default function useForumTopics(forumId, sortBy = 'latest') {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [forumId, sortBy]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [forumId, cursor]);
 
-  // Reset and fetch when forumId or sortBy changes
+  // Reset and fetch when forumId changes
   useEffect(() => {
     if (!forumId) return;
     setPage(1);
@@ -42,16 +42,16 @@ export default function useForumTopics(forumId, sortBy = 'latest') {
     setForumDetail(null);
     setFlairs([]);
     load(1, true);
-  }, [forumId, sortBy]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [forumId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMore = useCallback(() => {
     if (hasMore && !loading && !loadingMore) {
       const next = page + 1;
       setPage(next);
       setLoadingMore(true);
-      load(next, false, cursor);
+      load(next, false);
     }
-  }, [hasMore, loading, loadingMore, page, cursor, load]);
+  }, [hasMore, loading, loadingMore, page, load]);
 
   const refresh = useCallback(() => {
     setPage(1);

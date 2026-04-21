@@ -6,10 +6,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import {
-  closeTopic, openTopic, moveTopic, mergeTopic, trashTopic,
-  updateTopicSubject, getTopicActionHistory,
+  closeTopic, openTopic, moveTopic, mergeTopic, trashTopic, restoreTopic,
+  updateTopicSubject, updateTopicAdminSettings, getTopicActionHistory,
   type Forum, type ForumTopic, type TopicActionLog,
 } from '../../../services/api';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
   visible: boolean;
@@ -20,10 +22,10 @@ interface Props {
 }
 
 type ActionKey =
-  | 'edit' | 'migrateFF' | 'move' | 'merge' | 'lock'
-  | 'trash' | 'history' | 'hideSignature' | 'team';
+  | 'edit' | 'migrateFF' | 'move' | 'merge' | 'lock' | 'pin'
+  | 'trash' | 'restore' | 'history' | 'hideSignature' | 'team';
 
-const NEEDS_TOPIC: ActionKey[] = ['edit', 'migrateFF', 'move', 'merge', 'lock', 'trash', 'history'];
+const NEEDS_TOPIC: ActionKey[] = ['edit', 'migrateFF', 'move', 'merge', 'lock', 'pin', 'trash', 'restore', 'history'];
 
 interface MenuItem {
   key: ActionKey;
@@ -51,6 +53,9 @@ export default function ForumTopicSettingsSheet({
   const [historyLogs, setHistoryLogs]     = useState<TopicActionLog[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const menuItems: MenuItem[] = useMemo(() => {
     const items: MenuItem[] = [];
     if (forum.editPosts > 0) {
@@ -67,9 +72,17 @@ export default function ForumTopicSettingsSheet({
         icon: isLocked ? 'lock-open-outline' : 'lock-closed-outline',
         iconBg: '#FEF3C7', iconColor: '#d97706',
       });
+      const isPinned = selectedTopic?.pinned ?? false;
+      items.push({
+        key: 'pin',
+        label: isPinned ? 'Unpin Topic' : 'Pin Topic',
+        icon: 'bookmark-outline',
+        iconBg: '#FEF3C7', iconColor: '#d97706',
+      });
     }
     if (forum.deletePosts > 0) {
-      items.push({ key: 'trash', label: 'Trash Topic', icon: 'trash-outline', iconBg: '#FEE2E2', iconColor: '#dc2626', danger: true });
+      items.push({ key: 'trash',   label: 'Trash Topic',   icon: 'trash-outline',   iconBg: '#FEE2E2', iconColor: '#dc2626', danger: true });
+      items.push({ key: 'restore', label: 'Restore Topic', icon: 'refresh-outline', iconBg: '#D1FAE5', iconColor: '#059669' });
     }
     if (forum.priorityPosts > 0 || forum.editPosts > 0) {
       items.push({ key: 'history', label: 'Topic History', icon: 'time-outline', iconBg: '#F5F6F7', iconColor: '#5A5A5A' });
@@ -180,8 +193,19 @@ export default function ForumTopicSettingsSheet({
         );
         break;
       }
+      case 'pin': {
+        const isPinned = selectedTopic.pinned;
+        run(
+          () => updateTopicAdminSettings(topicId, { priority: isPinned ? 0 : 1 }),
+          isPinned ? 'Topic unpinned.' : 'Topic pinned.',
+        );
+        break;
+      }
       case 'trash':
         run(() => trashTopic(topicId, forumId), 'Topic trashed.');
+        break;
+      case 'restore':
+        run(() => restoreTopic(topicId), 'Topic restored.');
         break;
     }
   }
@@ -215,12 +239,12 @@ export default function ForumTopicSettingsSheet({
                   style={styles.iconBtn}
                   hitSlop={6}
                 >
-                  <Ionicons name="chevron-back" size={16} color="#1A1A1A" />
+                  <Ionicons name="chevron-back" size={16} color={colors.text} />
                 </Pressable>
               ) : <View style={styles.iconBtn} />}
               <Text style={styles.title}>{displayTitle}</Text>
               <Pressable onPress={handleClose} style={styles.iconBtn} hitSlop={6}>
-                <Ionicons name="close" size={16} color="#1A1A1A" />
+                <Ionicons name="close" size={16} color={colors.text} />
               </Pressable>
             </View>
 
@@ -239,9 +263,9 @@ export default function ForumTopicSettingsSheet({
                         onPress={() => pickTopic(t)}
                         style={styles.pickerItem}
                       >
-                        {t.locked && <Ionicons name="lock-closed" size={11} color="#dc2626" />}
+                        {t.locked && <Ionicons name="lock-closed" size={11} color={colors.danger} />}
                         <Text style={styles.pickerTitle} numberOfLines={1}>{t.title}</Text>
-                        <Ionicons name="chevron-forward" size={13} color="#B0B0B0" />
+                        <Ionicons name="chevron-forward" size={13} color={colors.textTertiary} />
                       </Pressable>
                     ))}
                     {topics.length === 0 && (
@@ -258,7 +282,7 @@ export default function ForumTopicSettingsSheet({
                       <Text style={styles.bannerLabel}>Topic:</Text>
                       <Text style={styles.bannerTitle} numberOfLines={1}>{selectedTopic.title}</Text>
                       <Pressable onPress={() => setSelectedTopic(null)} hitSlop={6}>
-                        <Ionicons name="close-circle" size={14} color="#8A8A8A" />
+                        <Ionicons name="close-circle" size={14} color={colors.textTertiary} />
                       </Pressable>
                     </View>
                   )}
@@ -280,7 +304,7 @@ export default function ForumTopicSettingsSheet({
                           {item.label}
                         </Text>
                         {NEEDS_TOPIC.includes(item.key) && !selectedTopic && (
-                          <Ionicons name="chevron-forward" size={13} color="#B0B0B0" />
+                          <Ionicons name="chevron-forward" size={13} color={colors.textTertiary} />
                         )}
                       </Pressable>
                     ))}
@@ -304,7 +328,7 @@ export default function ForumTopicSettingsSheet({
                         value={editSubject}
                         onChangeText={setEditSubject}
                         placeholder="Topic title"
-                        placeholderTextColor="#B0B0B0"
+                        placeholderTextColor={colors.textTertiary}
                         maxLength={200}
                         editable={!busy}
                         style={styles.input}
@@ -320,7 +344,7 @@ export default function ForumTopicSettingsSheet({
                         onChangeText={setTargetForumId}
                         keyboardType="number-pad"
                         placeholder="e.g. 42"
-                        placeholderTextColor="#B0B0B0"
+                        placeholderTextColor={colors.textTertiary}
                         editable={!busy}
                         style={styles.input}
                       />
@@ -335,7 +359,7 @@ export default function ForumTopicSettingsSheet({
                         onChangeText={setTargetTopicId}
                         keyboardType="number-pad"
                         placeholder="e.g. 12345"
-                        placeholderTextColor="#B0B0B0"
+                        placeholderTextColor={colors.textTertiary}
                         editable={!busy}
                         style={styles.input}
                       />
@@ -356,11 +380,25 @@ export default function ForumTopicSettingsSheet({
                     </Text>
                   )}
 
+                  {activeAction === 'pin' && (
+                    <Text style={styles.confirmText}>
+                      {selectedTopic?.pinned
+                        ? 'Unpin this topic so it no longer sits at the top?'
+                        : 'Pin this topic to the top of the forum?'}
+                    </Text>
+                  )}
+
+                  {activeAction === 'restore' && (
+                    <Text style={styles.confirmText}>
+                      Restore this topic from the trash back to its original forum?
+                    </Text>
+                  )}
+
                   {activeAction === 'history' && (
                     <View style={styles.historyList}>
                       {historyLoading && (
                         <View style={styles.historyState}>
-                          <ActivityIndicator color="#3558F0" size="small" />
+                          <ActivityIndicator color={colors.primary} size="small" />
                           <Text style={styles.historyStateText}>Loading history…</Text>
                         </View>
                       )}
@@ -387,7 +425,7 @@ export default function ForumTopicSettingsSheet({
                         value={hideSig}
                         onValueChange={setHideSig}
                         thumbColor="#FFFFFF"
-                        trackColor={{ false: '#D1D5DB', true: '#3558F0' }}
+                        trackColor={{ false: '#D1D5DB', true: colors.primary }}
                       />
                     </View>
                   )}
@@ -398,7 +436,7 @@ export default function ForumTopicSettingsSheet({
 
                   {error && (
                     <View style={styles.errorBox}>
-                      <Ionicons name="alert-circle" size={14} color="#dc2626" />
+                      <Ionicons name="alert-circle" size={14} color={colors.danger} />
                       <Text style={styles.errorText}>{error}</Text>
                     </View>
                   )}
@@ -458,231 +496,233 @@ export default function ForumTopicSettingsSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
-  sheetWrap: { width: '100%', maxHeight: '90%' },
-  sheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 20,
-    paddingHorizontal: 14,
-    paddingTop: 8,
-    maxHeight: '100%',
-  },
-  dragHandle: {
-    alignSelf: 'center',
-    width: 44,
-    height: 4,
-    borderRadius: 3,
-    backgroundColor: '#E2E2E2',
-    marginTop: 4,
-    marginBottom: 10,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  iconBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1A1A1A',
-    flex: 1,
-    textAlign: 'center',
-  },
-  body: { flexGrow: 0 },
-  bodyContent: { paddingBottom: 8 },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#F5F6F7',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 10,
-  },
-  bannerLabel: { fontSize: 10, fontWeight: '800', color: '#8A8A8A', textTransform: 'uppercase' },
-  bannerTitle: { fontSize: 12, fontWeight: '700', color: '#1A1A1A', flex: 1 },
-  menu: { gap: 4 },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 11,
-    borderRadius: 10,
-  },
-  menuItemPressed: { backgroundColor: '#F5F6F7' },
-  menuItemDanger: {},
-  menuIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuLabel: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  menuLabelDanger: { color: '#dc2626' },
-  form: { paddingTop: 4 },
-  label: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#8A8A8A',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginTop: 6,
-    marginBottom: 6,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E2E2E2',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#1A1A1A',
-    backgroundColor: '#FAFAFA',
-  },
-  confirmText: {
-    fontSize: 13,
-    color: '#2A2A2A',
-    lineHeight: 18,
-    paddingVertical: 8,
-  },
-  pickerHint: {
-    fontSize: 12,
-    color: '#8A8A8A',
-    marginBottom: 8,
-  },
-  pickerList: {
-    gap: 4,
-  },
-  pickerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#EEEFF1',
-    backgroundColor: '#FFFFFF',
-  },
-  pickerTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    flex: 1,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    paddingVertical: 8,
-  },
-  toggleLabel: {
-    fontSize: 13,
-    color: '#1A1A1A',
-    flex: 1,
-  },
-  historyList: {
-    gap: 6,
-    paddingVertical: 4,
-  },
-  historyState: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 10,
-  },
-  historyStateText: {
-    fontSize: 12,
-    color: '#8A8A8A',
-  },
-  historyItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: '#F5F6F7',
-  },
-  historyAction: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  historyMeta: {
-    fontSize: 11,
-    color: '#8A8A8A',
-    marginTop: 2,
-  },
-  emptyText: {
-    fontSize: 12,
-    color: '#8A8A8A',
-    textAlign: 'center',
-    paddingVertical: 12,
-  },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#fef2f2',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginTop: 10,
-  },
-  errorText: { color: '#dc2626', fontSize: 12, fontWeight: '600', flex: 1 },
-  successBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#ecfdf5',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginTop: 10,
-  },
-  successText: { color: '#059669', fontSize: 12, fontWeight: '600', flex: 1 },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 14,
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F5F6F7',
-  },
-  cancelBtnText: { fontSize: 13, fontWeight: '700', color: '#5A5A5A' },
-  confirmBtn: {
-    flex: 2,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3558F0',
-  },
-  confirmBtnDanger: { backgroundColor: '#dc2626' },
-  confirmBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
-  btnDisabled: { opacity: 0.6 },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    overlay: { flex: 1, justifyContent: 'flex-end' },
+    backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+    sheetWrap: { width: '100%', maxHeight: '90%' },
+    sheet: {
+      backgroundColor: c.card,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingBottom: 20,
+      paddingHorizontal: 14,
+      paddingTop: 8,
+      maxHeight: '100%',
+    },
+    dragHandle: {
+      alignSelf: 'center',
+      width: 44,
+      height: 4,
+      borderRadius: 3,
+      backgroundColor: c.border,
+      marginTop: 4,
+      marginBottom: 10,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    iconBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    title: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: c.text,
+      flex: 1,
+      textAlign: 'center',
+    },
+    body: { flexGrow: 0 },
+    bodyContent: { paddingBottom: 8 },
+    banner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: c.surface,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      marginBottom: 10,
+    },
+    bannerLabel: { fontSize: 10, fontWeight: '800', color: c.textTertiary, textTransform: 'uppercase' },
+    bannerTitle: { fontSize: 12, fontWeight: '700', color: c.text, flex: 1 },
+    menu: { gap: 4 },
+    menuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 11,
+      borderRadius: 10,
+    },
+    menuItemPressed: { backgroundColor: c.surface },
+    menuItemDanger: {},
+    menuIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    menuLabel: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '700',
+      color: c.text,
+    },
+    menuLabelDanger: { color: c.danger },
+    form: { paddingTop: 4 },
+    label: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+      marginTop: 6,
+      marginBottom: 6,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+      color: c.text,
+      backgroundColor: c.surface,
+    },
+    confirmText: {
+      fontSize: 13,
+      color: c.textSecondary,
+      lineHeight: 18,
+      paddingVertical: 8,
+    },
+    pickerHint: {
+      fontSize: 12,
+      color: c.textTertiary,
+      marginBottom: 8,
+    },
+    pickerList: {
+      gap: 4,
+    },
+    pickerItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.card,
+    },
+    pickerTitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.text,
+      flex: 1,
+    },
+    toggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      paddingVertical: 8,
+    },
+    toggleLabel: {
+      fontSize: 13,
+      color: c.text,
+      flex: 1,
+    },
+    historyList: {
+      gap: 6,
+      paddingVertical: 4,
+    },
+    historyState: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 10,
+    },
+    historyStateText: {
+      fontSize: 12,
+      color: c.textTertiary,
+    },
+    historyItem: {
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      backgroundColor: c.surface,
+    },
+    historyAction: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.text,
+    },
+    historyMeta: {
+      fontSize: 11,
+      color: c.textTertiary,
+      marginTop: 2,
+    },
+    emptyText: {
+      fontSize: 12,
+      color: c.textTertiary,
+      textAlign: 'center',
+      paddingVertical: 12,
+    },
+    errorBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: '#fef2f2',
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      marginTop: 10,
+    },
+    errorText: { color: c.danger, fontSize: 12, fontWeight: '600', flex: 1 },
+    successBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: '#ecfdf5',
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      marginTop: 10,
+    },
+    successText: { color: '#059669', fontSize: 12, fontWeight: '600', flex: 1 },
+    actions: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 14,
+    },
+    cancelBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.surface,
+    },
+    cancelBtnText: { fontSize: 13, fontWeight: '700', color: c.textSecondary },
+    confirmBtn: {
+      flex: 2,
+      paddingVertical: 12,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.primary,
+    },
+    confirmBtnDanger: { backgroundColor: c.danger },
+    confirmBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+    btnDisabled: { opacity: 0.6 },
+  });
+}

@@ -59,20 +59,21 @@ export default function ForumTopicSettingsSheet({ forumDetail, topics, selectedF
     if (!fd) return [];
     const items = [];
     if (fd.editPosts > 0)
-      items.push({ key: 'edit',        label: 'Edit Topic',     icon: '✏️' });
+      items.push({ key: 'edit',        label: 'Edit Topic',     icon: '✏️', iconBg: 'var(--brand-light)' });
     if (fd.priorityPosts > 0) {
-      items.push({ key: 'migrateFF',   label: 'Migrate FF',     icon: '↗️' });
-      items.push({ key: 'move',        label: 'Move Topic',     icon: '📁' });
-      items.push({ key: 'merge',       label: 'Merge Topic',    icon: '⤵️' });
+      items.push({ key: 'migrateFF',   label: 'Migrate FF',     icon: '↗️', iconBg: 'var(--brand-lighter)' });
+      items.push({ key: 'move',        label: 'Move Topic',     icon: '📁', iconBg: 'var(--amber-surface)' });
+      items.push({ key: 'merge',       label: 'Merge Topic',    icon: '⤵️', iconBg: 'var(--green-surface)' });
       const isLocked = selectedTopic?.locked ?? false;
-      items.push({ key: 'lock', label: isLocked ? 'Unlock Topic' : 'Lock Topic', icon: isLocked ? '🔓' : '🔒' });
+      items.push({ key: 'lock', label: isLocked ? 'Unlock Topic' : 'Lock Topic', icon: isLocked ? '🔓' : '🔒', iconBg: 'var(--amber-surface)' });
     }
     if (fd.deletePosts > 0)
-      items.push({ key: 'trash',       label: 'Trash Topic',    icon: '🗑️', danger: true });
+      items.push({ key: 'trash',       label: 'Trash Topic',    icon: '🗑️', danger: true, iconBg: 'var(--red-surface)' });
     if (fd.priorityPosts > 0 || fd.editPosts > 0)
-      items.push({ key: 'history',     label: 'Topic History',  icon: '🕐' });
-    items.push({ key: 'hideSignature', label: 'Hide Signature', icon: '👁️' });
-    items.push({ key: 'team',          label: 'Team',           icon: '👥' });
+      items.push({ key: 'history',     label: 'Topic History',  icon: '🕐', iconBg: 'var(--surface)' });
+    if (items.length > 0) items.push({ key: '__divider__' });
+    items.push({ key: 'hideSignature', label: 'Hide Signature', icon: '👁️', iconBg: 'var(--surface)' });
+    items.push({ key: 'team',          label: 'Team',           icon: '👥', iconBg: 'var(--green-surface)' });
     return items;
   }, [fd, selectedTopic]);
 
@@ -239,21 +240,25 @@ export default function ForumTopicSettingsSheet({ forumDetail, topics, selectedF
               </div>
             )}
             <div className={styles.menu}>
-              {menuItems.map(item => (
-                <button
-                  key={item.key}
-                  className={`${styles.menuItem} ${item.danger ? styles.menuItemDanger : ''}`}
-                  onClick={() => chooseAction(item.key)}
-                >
-                  <span className={styles.menuIcon}>{item.icon}</span>
-                  <span className={styles.menuLabel}>{item.label}</span>
-                  {NEEDS_TOPIC.includes(item.key) && !selectedTopic && (
-                    <svg className={styles.chevron} width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </button>
-              ))}
+              {menuItems.map(item =>
+                item.key === '__divider__' ? (
+                  <div key="__divider__" className={styles.menuDivider} />
+                ) : (
+                  <button
+                    key={item.key}
+                    className={`${styles.menuItem} ${item.danger ? styles.menuItemDanger : ''}`}
+                    onClick={() => chooseAction(item.key)}
+                  >
+                    <span className={styles.menuIcon} style={{ background: item.iconBg }}>{item.icon}</span>
+                    <span className={styles.menuLabel}>{item.label}</span>
+                    {NEEDS_TOPIC.includes(item.key) && !selectedTopic && (
+                      <svg className={styles.chevron} width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </button>
+                )
+              )}
             </div>
           </>
         )}

@@ -9,6 +9,8 @@ import TopicCard from './TopicCard';
 import { useAllForumTopics } from '../hooks/useAllForumTopics';
 import { formatCount } from '../utils/format';
 import type { ForumTopic } from '../../../services/api';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
   onTopicPress?: (topic: ForumTopic) => void;
@@ -17,6 +19,8 @@ interface Props {
 export default function AllTopicsView({ onTopicPress }: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('latest');
   const [viewMode, setViewMode] = useState<ViewMode>('detailed');
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const {
     data,
@@ -74,7 +78,7 @@ export default function AllTopicsView({ onTopicPress }: Props) {
       ListFooterComponent={
         isFetchingNextPage ? (
           <View style={styles.footer}>
-            <ActivityIndicator color="#3558F0" />
+            <ActivityIndicator color={colors.primary} />
           </View>
         ) : null
       }
@@ -83,42 +87,44 @@ export default function AllTopicsView({ onTopicPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  content: {
-    paddingBottom: 24,
-  },
-  sortBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 10,
-  },
-  sortRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  countText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#8A8A8A',
-  },
-  empty: {
-    alignItems: 'center',
-    padding: 40,
-    gap: 8,
-  },
-  emptyIcon: {
-    fontSize: 36,
-  },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  footer: {
-    paddingVertical: 16,
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    content: {
+      paddingBottom: 24,
+    },
+    sortBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 14,
+      paddingTop: 14,
+      paddingBottom: 10,
+    },
+    sortRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    countText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.textTertiary,
+    },
+    empty: {
+      alignItems: 'center',
+      padding: 40,
+      gap: 8,
+    },
+    emptyIcon: {
+      fontSize: 36,
+    },
+    emptyTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.text,
+    },
+    footer: {
+      paddingVertical: 16,
+    },
+  });
+}

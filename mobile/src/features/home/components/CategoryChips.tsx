@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   Pressable,
   StyleSheet,
 } from 'react-native';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
   categories: string[];
@@ -17,9 +19,10 @@ interface ChipProps {
   category: string;
   isActive: boolean;
   onSelect: (category: string) => void;
+  styles: ReturnType<typeof makeStyles>;
 }
 
-const Chip = React.memo(function Chip({ category, isActive, onSelect }: ChipProps) {
+const Chip = React.memo(function Chip({ category, isActive, onSelect, styles }: ChipProps) {
   const handlePress = React.useCallback(() => onSelect(category), [onSelect, category]);
   return (
     <Pressable
@@ -49,6 +52,8 @@ export default function CategoryChips({
   selected,
   onSelect,
 }: Props) {
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.wrapper}>
       <ScrollView
@@ -63,6 +68,7 @@ export default function CategoryChips({
             category={category}
             isActive={category === selected}
             onSelect={onSelect}
+            styles={styles}
           />
         ))}
         <View style={styles.trailingSpacer} />
@@ -72,50 +78,52 @@ export default function CategoryChips({
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    backgroundColor: '#FFFFFF',
-  },
-  scrollView: {
-    paddingTop: 4,
-  },
-  contentContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  chip: {
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderWidth: 1.5,
-  },
-  chipActive: {
-    backgroundColor: '#1A1A1A',
-    borderColor: '#1A1A1A',
-  },
-  chipInactive: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E2E2',
-  },
-  chipText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-  },
-  chipTextActive: {
-    color: '#FFFFFF',
-  },
-  chipTextInactive: {
-    color: '#5F5F5F',
-  },
-  trailingSpacer: {
-    width: 8,
-  },
-  bottomBorder: {
-    height: 1,
-    backgroundColor: '#F0F0F0',
-    marginHorizontal: 0,
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    wrapper: {
+      backgroundColor: c.card,
+    },
+    scrollView: {
+      paddingTop: 4,
+    },
+    contentContainer: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    chip: {
+      borderRadius: 20,
+      paddingHorizontal: 18,
+      paddingVertical: 8,
+      borderWidth: 1.5,
+    },
+    chipActive: {
+      backgroundColor: c.text,
+      borderColor: c.text,
+    },
+    chipInactive: {
+      backgroundColor: c.card,
+      borderColor: c.border,
+    },
+    chipText: {
+      fontSize: 12.5,
+      fontWeight: '700',
+    },
+    chipTextActive: {
+      color: c.card,
+    },
+    chipTextInactive: {
+      color: c.textSecondary,
+    },
+    trailingSpacer: {
+      width: 8,
+    },
+    bottomBorder: {
+      height: 1,
+      backgroundColor: c.border,
+      marginHorizontal: 0,
+    },
+  });
+}

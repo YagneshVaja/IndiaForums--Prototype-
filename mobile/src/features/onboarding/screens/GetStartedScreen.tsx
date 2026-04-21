@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,14 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '../../../navigation/types';
 import { markOnboardingComplete } from '../../../store/onboardingStore';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'GetStarted'>;
 
 export default function GetStartedScreen({ navigation }: Props) {
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const headerY = useRef(new Animated.Value(20)).current;
   const buttonsOpacity = useRef(new Animated.Value(0)).current;
@@ -89,94 +93,96 @@ export default function GetStartedScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#3558F0',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 100 : 80,
-    paddingBottom: Platform.OS === 'ios' ? 52 : 36,
-    paddingHorizontal: 32,
-  },
-  header: {
-    alignItems: 'center',
-    gap: 16,
-  },
-  logoMark: {
-    width: 80,
-    height: 80,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  logoInitial: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -1,
-  },
-  brandName: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
-  tagline: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.72)',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginTop: 4,
-  },
-  actions: {
-    width: '100%',
-    gap: 12,
-    alignItems: 'center',
-  },
-  primaryButton: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  primaryButtonPressed: {
-    opacity: 0.9,
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#3558F0',
-  },
-  outlineButton: {
-    width: '100%',
-    paddingVertical: 15,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.5)',
-    alignItems: 'center',
-  },
-  outlineButtonPressed: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  outlineButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  ghostButton: {
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  ghostButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.6)',
-    textDecorationLine: 'underline',
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: Platform.OS === 'ios' ? 100 : 80,
+      paddingBottom: Platform.OS === 'ios' ? 52 : 36,
+      paddingHorizontal: 32,
+    },
+    header: {
+      alignItems: 'center',
+      gap: 16,
+    },
+    logoMark: {
+      width: 80,
+      height: 80,
+      borderRadius: 22,
+      backgroundColor: 'rgba(255,255,255,0.18)',
+      borderWidth: 1.5,
+      borderColor: 'rgba(255,255,255,0.3)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+    },
+    logoInitial: {
+      fontSize: 32,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: -1,
+    },
+    brandName: {
+      fontSize: 32,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: -0.5,
+    },
+    tagline: {
+      fontSize: 16,
+      color: 'rgba(255,255,255,0.72)',
+      textAlign: 'center',
+      lineHeight: 24,
+      marginTop: 4,
+    },
+    actions: {
+      width: '100%',
+      gap: 12,
+      alignItems: 'center',
+    },
+    primaryButton: {
+      width: '100%',
+      backgroundColor: '#FFFFFF',
+      paddingVertical: 16,
+      borderRadius: 14,
+      alignItems: 'center',
+    },
+    primaryButtonPressed: {
+      opacity: 0.9,
+    },
+    primaryButtonText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: c.primary,
+    },
+    outlineButton: {
+      width: '100%',
+      paddingVertical: 15,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: 'rgba(255,255,255,0.5)',
+      alignItems: 'center',
+    },
+    outlineButtonPressed: {
+      backgroundColor: 'rgba(255,255,255,0.08)',
+    },
+    outlineButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: '#FFFFFF',
+    },
+    ghostButton: {
+      paddingVertical: 10,
+      alignItems: 'center',
+    },
+    ghostButtonText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: 'rgba(255,255,255,0.6)',
+      textDecorationLine: 'underline',
+    },
+  });
+}

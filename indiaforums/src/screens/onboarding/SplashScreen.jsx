@@ -10,10 +10,7 @@ export default function SplashScreen({ onComplete }) {
   return (
     <div className={styles.container}>
       <div className={styles.logoArea}>
-        <div className={styles.logoMark}>
-          <span className={styles.logoInitial}>IF</span>
-        </div>
-        <p className={styles.brandName}>IndiaForums</p>
+        <img src="/iflogo.png" alt="IndiaForums" className={styles.logo} />
         <p className={styles.tagline}>India's Premier Fan Community</p>
       </div>
       <div className={styles.loader} />

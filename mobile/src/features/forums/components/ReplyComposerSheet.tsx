@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal, View, Text, TextInput, Pressable, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator,
@@ -7,20 +7,41 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { replyToTopic } from '../../../services/api';
 import type { ForumTopic } from '../../../services/api';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
+
+export interface QuotedPost {
+  author: string;
+  message: string;
+}
 
 interface Props {
   visible: boolean;
   topic: ForumTopic;
+  quotedPost?: QuotedPost | null;
   onClose: () => void;
   onSubmitted: () => void;
 }
 
 const MIN_CHARS = 1;
 
-export default function ReplyComposerSheet({ visible, topic, onClose, onSubmitted }: Props) {
-  const [text, setText]           = useState('');
+function buildQuotePrefill(qp: QuotedPost): string {
+  const excerpt = qp.message.length > 240 ? qp.message.slice(0, 240) + '…' : qp.message;
+  return `> @${qp.author} said:\n> ${excerpt.replace(/\n/g, '\n> ')}\n\n`;
+}
+
+export default function ReplyComposerSheet({ visible, topic, quotedPost, onClose, onSubmitted }: Props) {
+  const [text, setText]             = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError]         = useState<string | null>(null);
+  const [error, setError]           = useState<string | null>(null);
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  useEffect(() => {
+    if (!visible) return;
+    setText(quotedPost ? buildQuotePrefill(quotedPost) : '');
+    setError(null);
+  }, [visible, quotedPost]);
 
   const charCount = text.trim().length;
   const canSubmit = charCount >= MIN_CHARS && !submitting;
@@ -78,7 +99,7 @@ export default function ReplyComposerSheet({ visible, topic, onClose, onSubmitte
                 </View>
               </View>
               <Pressable onPress={handleClose} hitSlop={8} style={styles.closeBtn}>
-                <Ionicons name="close" size={18} color="#1A1A1A" />
+                <Ionicons name="close" size={18} color={colors.text} />
               </Pressable>
             </View>
 
@@ -90,7 +111,7 @@ export default function ReplyComposerSheet({ visible, topic, onClose, onSubmitte
                 value={text}
                 onChangeText={setText}
                 placeholder="Share your thoughts…"
-                placeholderTextColor="#B0B0B0"
+                placeholderTextColor={colors.textTertiary}
                 multiline
                 editable={!submitting}
                 style={styles.editor}
@@ -102,7 +123,7 @@ export default function ReplyComposerSheet({ visible, topic, onClose, onSubmitte
 
             {error && (
               <View style={styles.errorBox}>
-                <Ionicons name="alert-circle" size={14} color="#dc2626" />
+                <Ionicons name="alert-circle" size={14} color={colors.danger} />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
@@ -137,168 +158,170 @@ export default function ReplyComposerSheet({ visible, topic, onClose, onSubmitte
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  sheetWrap: {
-    width: '100%',
-  },
-  sheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 24,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  dragHandle: {
-    alignSelf: 'center',
-    width: 44,
-    height: 4,
-    borderRadius: 3,
-    backgroundColor: '#E2E2E2',
-    marginTop: 4,
-    marginBottom: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-    minWidth: 0,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#3558F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarLetter: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  headerMeta: {
-    flex: 1,
-    minWidth: 0,
-  },
-  headerTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1A1A1A',
-  },
-  headerSub: {
-    fontSize: 11,
-    color: '#8A8A8A',
-    marginTop: 1,
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#EEEFF1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#8A8A8A',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginBottom: 6,
-  },
-  required: {
-    color: '#dc2626',
-    fontSize: 10,
-  },
-  editorWrap: {
-    marginBottom: 12,
-  },
-  editor: {
-    minHeight: 140,
-    maxHeight: 240,
-    borderWidth: 1,
-    borderColor: '#E2E2E2',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14,
-    color: '#1A1A1A',
-    backgroundColor: '#FAFAFA',
-  },
-  charCount: {
-    alignSelf: 'flex-end',
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#8A8A8A',
-    marginTop: 4,
-  },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#fef2f2',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 10,
-  },
-  errorText: {
-    color: '#dc2626',
-    fontSize: 12,
-    fontWeight: '600',
-    flex: 1,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F5F6F7',
-  },
-  cancelBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#5A5A5A',
-  },
-  submitBtn: {
-    flex: 2,
-    flexDirection: 'row',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#3558F0',
-  },
-  submitBtnDisabled: {
-    backgroundColor: '#A5B5F8',
-  },
-  submitBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  btnDisabled: {
-    opacity: 0.5,
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+    },
+    sheetWrap: {
+      width: '100%',
+    },
+    sheet: {
+      backgroundColor: c.card,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingBottom: 24,
+      paddingHorizontal: 16,
+      paddingTop: 8,
+    },
+    dragHandle: {
+      alignSelf: 'center',
+      width: 44,
+      height: 4,
+      borderRadius: 3,
+      backgroundColor: c.border,
+      marginTop: 4,
+      marginBottom: 12,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 14,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      flex: 1,
+      minWidth: 0,
+    },
+    avatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarLetter: {
+      color: '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    headerMeta: {
+      flex: 1,
+      minWidth: 0,
+    },
+    headerTitle: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: c.text,
+    },
+    headerSub: {
+      fontSize: 11,
+      color: c.textTertiary,
+      marginTop: 1,
+    },
+    closeBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: c.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+      marginBottom: 6,
+    },
+    required: {
+      color: c.danger,
+      fontSize: 10,
+    },
+    editorWrap: {
+      marginBottom: 12,
+    },
+    editor: {
+      minHeight: 140,
+      maxHeight: 240,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 10,
+      padding: 12,
+      fontSize: 14,
+      color: c.text,
+      backgroundColor: c.surface,
+    },
+    charCount: {
+      alignSelf: 'flex-end',
+      fontSize: 10,
+      fontWeight: '700',
+      color: c.textTertiary,
+      marginTop: 4,
+    },
+    errorBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: '#fef2f2',
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      marginBottom: 10,
+    },
+    errorText: {
+      color: c.danger,
+      fontSize: 12,
+      fontWeight: '600',
+      flex: 1,
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    cancelBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.surface,
+    },
+    cancelBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: c.textSecondary,
+    },
+    submitBtn: {
+      flex: 2,
+      flexDirection: 'row',
+      paddingVertical: 12,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: c.primary,
+    },
+    submitBtnDisabled: {
+      backgroundColor: '#A5B5F8',
+    },
+    submitBtnText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    btnDisabled: {
+      opacity: 0.5,
+    },
+  });
+}

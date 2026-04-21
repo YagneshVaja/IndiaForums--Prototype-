@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,14 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '../../../navigation/types';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Splash'>;
 
 export default function SplashScreen({ navigation }: Props) {
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.85)).current;
 
@@ -31,7 +35,7 @@ export default function SplashScreen({ navigation }: Props) {
     ]).start();
 
     const timer = setTimeout(() => {
-      navigation.replace('Onboarding');
+      navigation.replace('OnboardingSlides');
     }, 2200);
 
     return () => clearTimeout(timer);
@@ -47,55 +51,57 @@ export default function SplashScreen({ navigation }: Props) {
         <Text style={styles.tagline}>India's Premier Fan Community</Text>
       </Animated.View>
 
-      <ActivityIndicator style={styles.loader} color="#3558F0" size="small" />
+      <ActivityIndicator style={styles.loader} color={colors.primary} size="small" />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoArea: {
-    alignItems: 'center',
-    gap: 12,
-  },
-  logoMark: {
-    width: 80,
-    height: 80,
-    borderRadius: 22,
-    backgroundColor: '#3558F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-    shadowColor: '#3558F0',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    elevation: 12,
-  },
-  logoInitial: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -1,
-  },
-  brandName: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    letterSpacing: -0.5,
-  },
-  tagline: {
-    fontSize: 14,
-    color: '#9E9E9E',
-    letterSpacing: 0.2,
-  },
-  loader: {
-    position: 'absolute',
-    bottom: 60,
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.bg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    logoArea: {
+      alignItems: 'center',
+      gap: 12,
+    },
+    logoMark: {
+      width: 80,
+      height: 80,
+      borderRadius: 22,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.35,
+      shadowRadius: 20,
+      elevation: 12,
+    },
+    logoInitial: {
+      fontSize: 32,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: -1,
+    },
+    brandName: {
+      fontSize: 28,
+      fontWeight: '700',
+      color: c.text,
+      letterSpacing: -0.5,
+    },
+    tagline: {
+      fontSize: 14,
+      color: c.textTertiary,
+      letterSpacing: 0.2,
+    },
+    loader: {
+      position: 'absolute',
+      bottom: 60,
+    },
+  });
+}

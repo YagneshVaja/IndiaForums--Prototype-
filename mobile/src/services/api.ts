@@ -1,10 +1,11 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import { clearAll, getTokens, setTokens } from './authStorage';
 
 // ---------------------------------------------------------------------------
 // Base client — real IndiaForums API
 // ---------------------------------------------------------------------------
 
-const apiClient = axios.create({
+export const apiClient = axios.create({
   baseURL: 'https://api2.indiaforums.com/api/v1',
   timeout: 15_000,
   headers: {
@@ -14,6 +15,129 @@ const apiClient = axios.create({
     'Referer': 'https://www.indiaforums.com/',
   },
 });
+
+// ---------------------------------------------------------------------------
+// Auth interceptors — mirror indiaforums/src/services/api.js
+// ---------------------------------------------------------------------------
+
+// Endpoints that don't need an Authorization header.
+const PUBLIC_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/check-username',
+  '/auth/check-email',
+  '/auth/external-login',
+];
+
+apiClient.interceptors.request.use((config) => {
+  const url = config.url || '';
+  const isPublic = PUBLIC_PATHS.some((p) => url.includes(p));
+  if (!isPublic) {
+    const { accessToken } = getTokens();
+    if (accessToken) {
+      config.headers = config.headers ?? {};
+      (config.headers as Record<string, string>).Authorization = `Bearer ${accessToken}`;
+    }
+  }
+  return config;
+});
+
+// Single-flight refresh — all concurrent 401s wait on the same promise.
+let refreshPromise: Promise<string> | null = null;
+
+type RetriableConfig = AxiosRequestConfig & { _retry?: boolean };
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const original = error.config as RetriableConfig | undefined;
+    const status = error.response?.status;
+
+    if (
+      status !== 401 ||
+      !original ||
+      original._retry ||
+      (original.url ?? '').includes('/auth/refresh-token')
+    ) {
+      return Promise.reject(error);
+    }
+
+    original._retry = true;
+
+    if (!refreshPromise) {
+      const { refreshToken: rt } = getTokens();
+      if (!rt) {
+        await clearAll();
+        return Promise.reject(error);
+      }
+
+      refreshPromise = apiClient
+        .post<{ accessToken: string; refreshToken: string }>('/auth/refresh-token', {
+          refreshToken: rt,
+        })
+        .then(async (res) => {
+          const { accessToken: newAccess, refreshToken: newRefresh } = res.data;
+          await setTokens(newAccess, newRefresh);
+          return newAccess;
+        })
+        .catch(async (refreshErr) => {
+          await clearAll();
+          throw refreshErr;
+        })
+        .finally(() => {
+          refreshPromise = null;
+        });
+    }
+
+    try {
+      const newAccessToken = await refreshPromise;
+      original.headers = original.headers ?? {};
+      (original.headers as Record<string, string>).Authorization = `Bearer ${newAccessToken}`;
+      return apiClient(original);
+    } catch {
+      return Promise.reject(error);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Error message extraction — same shape as prototype's extractApiError
+// ---------------------------------------------------------------------------
+
+export function extractApiError(
+  err: unknown,
+  fallback = 'Something went wrong. Please try again.',
+): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const anyErr = err as any;
+  const status = anyErr?.response?.status;
+  const d = anyErr?.response?.data;
+
+  if (status === 429) {
+    const retryAfter = parseInt(anyErr?.response?.headers?.['retry-after'] ?? '', 10);
+    if (Number.isFinite(retryAfter) && retryAfter > 0) {
+      return retryAfter < 60
+        ? `Too many requests. Please try again in ${retryAfter} second${retryAfter === 1 ? '' : 's'}.`
+        : 'Too many requests. Please wait a moment and try again.';
+    }
+    return 'Too many requests. Please wait a moment and try again.';
+  }
+
+  if (typeof d === 'string' && d.trimStart().startsWith('<')) {
+    if (status === 503 || status === 502) return 'The server is temporarily unavailable. Please try again later.';
+    if (status === 404) return 'This feature is not yet available on the server.';
+    return 'The server returned an unexpected response. Please try again later.';
+  }
+  if (typeof d === 'string') return d;
+
+  if (d?.errors && typeof d.errors === 'object') {
+    const msgs = Object.values(d.errors).flat().filter(Boolean) as string[];
+    if (msgs.length) return msgs.join(' ');
+  }
+  return d?.message || d?.detail || d?.title || d?.error || fallback;
+}
 
 // ---------------------------------------------------------------------------
 // Category helpers
@@ -444,6 +568,27 @@ export interface ForumFlair {
   fgColor: string;
 }
 
+export interface TopicTag {
+  id: number;
+  name: string;
+  pageUrl: string | null;
+}
+
+export interface PollOption {
+  id: number;
+  text: string;
+  votes: number;
+}
+
+export interface TopicPoll {
+  pollId: number;
+  question: string;
+  multiple: boolean;
+  hasVoted: boolean;
+  totalVotes: number;
+  options: PollOption[];
+}
+
 export interface ForumTopic {
   id: number;
   forumId: number;
@@ -462,6 +607,9 @@ export interface ForumTopic {
   pinned: boolean;
   flairId: number;
   topicImage: string | null;
+  tags: TopicTag[];
+  linkTypeValue: string;
+  poll: TopicPoll | null;
 }
 
 export interface ForumsHomePage {
@@ -517,6 +665,7 @@ export interface TopicPost {
   editCount: number;
   postCount: number | null;
   joinYear: number | null;
+  reactionJson: string | null;
 }
 
 export interface TopicPostsPage {
@@ -1795,6 +1944,51 @@ function transformForum(raw: any, categoriesMap: Record<number, ForumCategory> =
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformPoll(rawPoll: any): TopicPoll | null {
+  if (!rawPoll) return null;
+  let p = rawPoll;
+  if (typeof p === 'string') {
+    try { p = JSON.parse(p); } catch { return null; }
+  }
+  const pollId = p.pollId ?? p.id ?? p.PollId;
+  if (pollId == null) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawOpts: any[] = p.options || p.pollOptions || p.choices || p.pollChoices || [];
+  const options: PollOption[] = rawOpts
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((o: any) => ({
+      id:    Number(o.id ?? o.pollChoiceId ?? o.optionId),
+      text:  String(o.text ?? o.choiceText ?? o.option ?? o.label ?? ''),
+      votes: Number(o.votes ?? o.voteCount ?? o.count ?? 0),
+    }))
+    .filter(o => Number.isFinite(o.id));
+  return {
+    pollId:     Number(pollId),
+    question:   String(p.question ?? p.title ?? p.subject ?? ''),
+    multiple:   Boolean(p.multiple ?? p.allowMultiple ?? false),
+    hasVoted:   Boolean(p.hasVoted ?? p.userVoted ?? false),
+    totalVotes: options.reduce((s, o) => s + (o.votes || 0), 0),
+    options,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseTopicTags(raw: any): TopicTag[] {
+  if (!raw?.jsonData) return [];
+  try {
+    const parsed = JSON.parse(raw.jsonData);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (parsed?.json || []).map((t: any) => ({
+      id:      Number(t.id),
+      name:    String(t.name ?? ''),
+      pageUrl: t.pu ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformTopic(raw: any): ForumTopic {
   return {
     id:             Number(raw.topicId),
@@ -1803,19 +1997,22 @@ function transformTopic(raw: any): ForumTopic {
     forumThumbnail: raw.updateChecksum
       ? `https://img.indiaforums.com/forumavatar/200x200/0/${String(raw.forumId).padStart(3, '0')}.webp?uc=${raw.updateChecksum}`
       : null,
-    title:       raw.subject || '',
-    description: raw.topicDesc || '',
-    poster:      raw.startThreadUserName || 'Anonymous',
-    lastBy:      raw.lastThreadUserName || '',
-    time:        timeAgo(raw.startThreadDate || new Date().toISOString()),
-    lastTime:    timeAgo(raw.lastThreadDate || new Date().toISOString()),
-    replies:     Number(raw.replyCount ?? 0),
-    views:       Number(raw.viewCount ?? 0),
-    likes:       Number(raw.likeCount ?? 0),
-    locked:      Boolean(raw.locked ?? false),
-    pinned:      Number(raw.priority ?? 0) > 0,
-    flairId:     Number(raw.flairId ?? 0),
-    topicImage:  raw.topicImage || null,
+    title:         raw.subject || '',
+    description:   raw.topicDesc || '',
+    poster:        raw.startThreadUserName || 'Anonymous',
+    lastBy:        raw.lastThreadUserName || '',
+    time:          timeAgo(raw.startThreadDate || new Date().toISOString()),
+    lastTime:      timeAgo(raw.lastThreadDate || new Date().toISOString()),
+    replies:       Number(raw.replyCount ?? 0),
+    views:         Number(raw.viewCount ?? 0),
+    likes:         Number(raw.likeCount ?? 0),
+    locked:        Boolean(raw.locked ?? false),
+    pinned:        Number(raw.priority ?? 0) > 0,
+    flairId:       Number(raw.flairId ?? 0),
+    topicImage:    raw.topicImage || null,
+    tags:          parseTopicTags(raw),
+    linkTypeValue: raw.linkTypeValue || '',
+    poll:          transformPoll(raw.poll || raw.pollData || raw.pollJson),
   };
 }
 
@@ -2015,6 +2212,9 @@ function getMockAllTopicsPage(pageNumber: number, pageSize: number): AllTopicsPa
       pinned:         false,
       flairId:        0,
       topicImage:     null,
+      tags:           [],
+      linkTypeValue:  '',
+      poll:           null,
     };
   });
   return {
@@ -2047,6 +2247,9 @@ function getMockForumTopicsPage(forumId: number, pageNumber: number, pageSize: n
       pinned:         i < 2,
       flairId:        0,
       topicImage:     null,
+      tags:           [],
+      linkTypeValue:  '',
+      poll:           null,
     };
   });
   return {
@@ -2127,6 +2330,7 @@ function transformPost(raw: any): TopicPost {
     editCount,
     postCount:    raw.postCount ?? raw.postsCount ?? raw.totalMessages ?? null,
     joinYear,
+    reactionJson: raw.reactionJson ?? raw.jsonData ?? null,
   };
 }
 
@@ -2175,6 +2379,42 @@ export type ReactionCode = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 const REACTION_STRING: Record<number, string> = {
   0: 'None', 1: 'Like', 2: 'Love', 3: 'Wow', 4: 'Lol', 5: 'Shock', 6: 'Sad', 7: 'Angry',
 };
+
+export const REACTION_META: Record<number, { emoji: string; label: string }> = {
+  1: { emoji: '👍', label: 'Like'  },
+  2: { emoji: '❤️', label: 'Love'  },
+  3: { emoji: '😮', label: 'Wow'   },
+  4: { emoji: '😂', label: 'Lol'   },
+  5: { emoji: '😱', label: 'Shock' },
+  6: { emoji: '😢', label: 'Sad'   },
+  7: { emoji: '😠', label: 'Angry' },
+};
+
+export const REACTION_CODES: ReactionCode[] = [1, 2, 3, 4, 5, 6, 7];
+
+/**
+ * Parse a post's reactionJson payload and return up to 3 most-used reaction
+ * type codes, most-common first. Used for the reaction summary pill.
+ */
+export function parseTopReactionTypes(reactionJson?: string | null): number[] {
+  if (!reactionJson) return [];
+  try {
+    const parsed = JSON.parse(reactionJson);
+    const entries: Array<{ lt?: number | string }> = parsed?.json ?? [];
+    const byType: Record<number, number> = {};
+    for (const e of entries) {
+      if (e?.lt == null) continue;
+      const lt = Number(e.lt);
+      byType[lt] = (byType[lt] || 0) + 1;
+    }
+    return Object.keys(byType)
+      .map(Number)
+      .sort((a, b) => byType[b] - byType[a])
+      .slice(0, 3);
+  } catch {
+    return [];
+  }
+}
 
 export interface ReactionResult {
   ok: boolean;
@@ -2388,6 +2628,220 @@ export async function trashTopic(topicId: number, forumId?: number): Promise<Mod
   }
 }
 
+export async function trashPost(args: { threadId: number; topicId: number }): Promise<ModResult> {
+  try {
+    await apiClient.post('/forums/threads/trash', { threadIds: [args.threadId], topicId: args.topicId });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: wrapModError(err, 'Failed to trash post.') };
+  }
+}
+
+export interface EditPostResult {
+  ok: boolean;
+  error?: string;
+}
+
+export async function editPost(args: {
+  postId: number;
+  topicId: number;
+  message: string;
+}): Promise<EditPostResult> {
+  const trimmed = args.message.trim();
+  if (!trimmed) return { ok: false, error: 'Please enter a message.' };
+  const body = {
+    threadId:          args.postId,
+    topicId:           args.topicId,
+    message:           `<p>${escapeHtml(trimmed).replace(/\n/g, '<br>')}</p>`,
+    showSignature:     true,
+    hasMaturedContent: false,
+  };
+  try {
+    await apiClient.put(`/forums/posts/${args.postId}`, body);
+    return { ok: true };
+  } catch (err: unknown) {
+    const e = err as {
+      response?: { status?: number; data?: { message?: string; error?: string } };
+      message?: string;
+    };
+    const status = e?.response?.status;
+    const msg = status === 401
+      ? 'Please sign in to edit.'
+      : (e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Failed to save edit.');
+    return { ok: false, error: msg };
+  }
+}
+
+export interface PostEditHistoryEntry {
+  id: number;
+  editedWhen: string;
+  editor: string;
+  message: string;
+}
+
+export async function getPostEditHistory(postId: number): Promise<PostEditHistoryEntry[]> {
+  try {
+    const { data } = await apiClient.get(`/forums/posts/${postId}/history`, {
+      params: { pageNumber: 1, pageSize: 20 },
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any[] =
+      (Array.isArray(data) && data) ||
+      data?.history ||
+      data?.data?.history ||
+      data?.editHistory ||
+      data?.items ||
+      [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return raw.map((entry: any, i: number) => ({
+      id:         Number(entry.id ?? entry.historyId ?? i),
+      editedWhen: entry.editedWhen ?? entry.updatedWhen ?? entry.modifiedWhen ?? entry.createdWhen ?? '',
+      editor:     entry.editedByUserName ?? entry.editorName ?? entry.userName ?? '',
+      message:    entry.message ?? entry.oldMessage ?? entry.content ?? entry.text ?? '',
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export interface ThreadLiker {
+  userId: number;
+  userName: string;
+  displayName: string;
+  likeType: number;
+  avatarUrl: string | null;
+  avatarAccent: string | null;
+  groupName: string;
+  userLevel: number | null;
+  badges: PostBadge[];
+}
+
+export interface ThreadLikesResult {
+  ok: boolean;
+  likers: ThreadLiker[];
+  error?: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildLikerAvatar(userId: number, avatarType: any, updateChecksum: any): string | null {
+  const t = Number(avatarType ?? 0);
+  if (!t || !userId) return null;
+  const bucket = Math.floor(userId / 10000);
+  const qs = updateChecksum ? `?uc=${updateChecksum}` : '';
+  return `https://img.indiaforums.com/member/100x100/${bucket}/${userId}.webp${qs}`;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseLikerBadges(liker: any): PostBadge[] {
+  try {
+    if (!liker.badgeJson) return [];
+    const parsed = JSON.parse(liker.badgeJson);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (parsed?.json || []).map((b: any) => ({
+      id:       Number(b.id ?? b.lid),
+      name:     String(b.nm ?? ''),
+      imageUrl: `https://img.indiaforums.com/badge/200x200/0/${b.lid}.webp${b.uc ? '?uc=' + b.uc : ''}`,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getThreadLikes(threadId: number): Promise<ThreadLikesResult> {
+  try {
+    const { data } = await apiClient.get(`/forums/threads/${threadId}/likes`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any[] =
+      (Array.isArray(data?.likes)       && data.likes) ||
+      (Array.isArray(data)              && data) ||
+      (Array.isArray(data?.data?.likes) && data.data.likes) ||
+      (Array.isArray(data?.data)        && data.data) ||
+      (Array.isArray(data?.items)       && data.items) ||
+      [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const likers: ThreadLiker[] = raw.map((l: any) => ({
+      userId:       Number(l.userId ?? 0),
+      userName:     String(l.userName ?? ''),
+      displayName:  String(l.realName ?? l.userName ?? 'User'),
+      likeType:     Number(l.likeType ?? l.reactionType ?? l.lt ?? 1),
+      avatarUrl:    buildLikerAvatar(Number(l.userId ?? 0), l.avatarType, l.updateChecksum),
+      avatarAccent: l.avatarAccent ?? null,
+      groupName:    String(l.groupName ?? l.rank ?? ''),
+      userLevel:    l.userLevel ?? l.rankId ?? null,
+      badges:       parseLikerBadges(l),
+    }));
+    return { ok: true, likers };
+  } catch (err: unknown) {
+    const e = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
+    return { ok: false, likers: [], error: e?.response?.data?.message || e?.message || 'Could not load reactions.' };
+  }
+}
+
+export interface PollVoteResult {
+  ok: boolean;
+  error?: string;
+}
+
+export async function castPollVote(pollId: number, optionIds: number[]): Promise<PollVoteResult> {
+  try {
+    await apiClient.post(`/forums/polls/${pollId}/vote`, {
+      pollId,
+      pollChoiceIds: optionIds.join(','),
+    });
+    return { ok: true };
+  } catch (err: unknown) {
+    const e = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
+    const status = e?.response?.status;
+    const msg = status === 401
+      ? 'Please sign in to vote.'
+      : (e?.response?.data?.message || e?.message || 'Failed to record vote.');
+    return { ok: false, error: msg };
+  }
+}
+
+export interface UserMiniProfile {
+  userId: number | null;
+  displayName: string;
+  userName: string;
+  thumbnailUrl: string | null;
+  bannerUrl: string | null;
+  avatarAccent: string | null;
+  lastVisitedDate: string | null;
+  badges: PostBadge[];
+}
+
+export async function getUserMiniProfile(userId: number): Promise<UserMiniProfile | null> {
+  try {
+    const { data } = await apiClient.get(`/users/${userId}/profile`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const u: any = data?.user || data || {};
+    let badges: PostBadge[] = [];
+    if (u.badgeJson) {
+      try {
+        const parsed = JSON.parse(u.badgeJson);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        badges = (parsed?.json || []).map((b: any) => ({
+          id:       Number(b.id ?? b.lid),
+          name:     String(b.nm ?? ''),
+          imageUrl: `https://img.indiaforums.com/badge/200x200/0/${b.lid}.webp${b.uc ? '?uc=' + b.uc : ''}`,
+        }));
+      } catch { /* ignore */ }
+    }
+    return {
+      userId:          u.userId != null ? Number(u.userId) : null,
+      displayName:     String(u.displayName ?? u.userName ?? ''),
+      userName:        String(u.userName ?? ''),
+      thumbnailUrl:    u.thumbnailUrl ?? null,
+      bannerUrl:       u.bannerUrl ?? null,
+      avatarAccent:    u.avatarAccent ?? null,
+      lastVisitedDate: u.lastVisitedDate ?? null,
+      badges,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function updateTopicSubject(topicId: number, subject: string): Promise<ModResult> {
   try {
     await apiClient.put(`/forums/topics/${topicId}/admin`, { topicId, subject });
@@ -2412,6 +2866,140 @@ export async function getTopicActionHistory(topicId: number): Promise<TopicActio
     })) : [];
   } catch {
     return [];
+  }
+}
+
+export interface TopicAdminSettings {
+  priority?: number;
+  titleTags?: string;
+  locked?: boolean;
+  hasMaturedContent?: boolean;
+  flairId?: number;
+}
+
+export async function updateTopicAdminSettings(
+  topicId: number,
+  settings: TopicAdminSettings,
+): Promise<ModResult> {
+  try {
+    await apiClient.put(`/forums/topics/${topicId}/admin`, { topicId, ...settings });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: wrapModError(err, 'Failed to update topic.') };
+  }
+}
+
+export async function restoreTopic(topicId: number): Promise<ModResult> {
+  try {
+    await apiClient.post(`/forums/topics/${topicId}/untrash`, {});
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: wrapModError(err, 'Failed to restore topic.') };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Reports inbox (mod-only)
+// ---------------------------------------------------------------------------
+
+export interface ReportedTopic {
+  topicId:     number;
+  subject:     string;
+  reportedBy:  string;
+  reason:      string;
+  reportCount: number;
+}
+
+export interface ReportedPost {
+  reportId: number;
+  threadId: number;
+  author:   string;
+  reason:   string;
+  message:  string;
+}
+
+export async function getReportedTopics(
+  forumId: number,
+  opts: { pageNumber?: number; pageSize?: number } = {},
+): Promise<ReportedTopic[]> {
+  const { pageNumber = 1, pageSize = 20 } = opts;
+  try {
+    const { data } = await apiClient.get(`/forums/${forumId}/reportedtopics`, {
+      params: { pageNumber, pageSize },
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any[] = data?.topics ?? data?.items ?? data?.data ?? data ?? [];
+    return Array.isArray(raw) ? raw.map(r => ({
+      topicId:     Number(r.topicId ?? r.id ?? 0),
+      subject:     r.subject ?? r.title ?? `Topic #${r.topicId ?? r.id ?? ''}`,
+      reportedBy:  r.reportedBy ?? r.userName ?? r.poster ?? 'Unknown',
+      reason:      r.reason ?? r.reportReason ?? r.message ?? '',
+      reportCount: Number(r.reportCount ?? r.totalReports ?? (Array.isArray(r.reports) ? r.reports.length : 1)),
+    })) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getReportedPosts(
+  topicId: number,
+  opts: { threadId?: number; pageNumber?: number; pageSize?: number } = {},
+): Promise<ReportedPost[]> {
+  const { threadId, pageNumber = 1, pageSize = 20 } = opts;
+  const params: Record<string, unknown> = { pageNumber, pageSize };
+  if (threadId) params.threadId = threadId;
+  try {
+    const { data } = await apiClient.get(`/forums/topics/${topicId}/reportedposts`, { params });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any[] = data?.posts ?? data?.items ?? data?.data ?? data ?? [];
+    return Array.isArray(raw) ? raw.map(r => ({
+      reportId: Number(r.reportId ?? r.id ?? 0),
+      threadId: Number(r.threadId ?? r.postId ?? 0),
+      author:   r.author ?? r.userName ?? 'Unknown',
+      reason:   r.reason ?? r.reportReason ?? r.message ?? '',
+      message:  r.postMessage ?? r.body ?? r.content ?? '',
+    })) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function closeReports(args: {
+  reportIds: number | number[];
+  forumId:   number;
+}): Promise<ModResult> {
+  try {
+    await apiClient.post('/forums/reports/close', {
+      reportIds: Array.isArray(args.reportIds) ? args.reportIds : [args.reportIds],
+      forumId:   args.forumId,
+    });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: wrapModError(err, 'Failed to close report.') };
+  }
+}
+
+export async function closeReportedTopic(args: {
+  topicId:           number;
+  forumId:           number;
+  threadId?:         number;
+  closePost?:        string;
+  isCloseWithPost?:  boolean;
+  isAnonymous?:      boolean;
+}): Promise<ModResult> {
+  const body: Record<string, unknown> = {
+    topicId:         args.topicId,
+    forumId:         args.forumId,
+    isCloseWithPost: args.isCloseWithPost ?? false,
+    isAnonymous:     args.isAnonymous ?? false,
+  };
+  if (args.threadId)  body.threadId  = args.threadId;
+  if (args.closePost) body.closePost = args.closePost;
+  try {
+    await apiClient.post(`/forums/topics/${args.topicId}/close-reported`, body);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: wrapModError(err, 'Failed to close reported topic.') };
   }
 }
 
@@ -2449,6 +3037,7 @@ function getMockTopicPostsPage(topicId: number, pageNumber: number, pageSize: nu
       editCount:    n % 5 === 0 ? 1 : 0,
       postCount:    120 + n * 3,
       joinYear:     2015 + (n % 10),
+      reactionJson: null,
     };
   });
   return {
@@ -2456,5 +3045,585 @@ function getMockTopicPostsPage(topicId: number, pageNumber: number, pageSize: nu
     topicDetail: null,
     pageNumber,
     hasNextPage: pageNumber < 3,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Fan Fictions — types
+// ---------------------------------------------------------------------------
+
+export interface FanFictionShowTab { id: string; label: string; pattern: RegExp | null }
+export interface FanFictionGenreTab { id: string; label: string }
+export interface FanFictionSortTab { id: 'trending' | 'latest' | 'popular'; label: string }
+
+export interface FanFictionReaction {
+  id: number;
+  icon: string;
+  label: string;
+  count: number;
+}
+
+export interface FanFiction {
+  id: string;
+  title: string;
+  author: string;
+  authorId: string | null;
+  synopsis: string;
+  thumbnail: string | null;
+  banner: string | null;
+  status: 'Ongoing' | 'Completed';
+  statusRaw: number;
+  rating: string | null;
+  type: string | null;
+  featured: boolean;
+  genres: string[];
+  tags: string[];
+  entities: string[];
+  chapterCount: number;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  followerCount: number;
+  views: string;
+  likes: string;
+  comments: string;
+  followers: string;
+  lastUpdatedRaw: string | null;
+  lastUpdated: string;
+  bg: string;
+}
+
+export interface FanFictionChapterSummary {
+  chapterId: string;
+  fanFictionId: string;
+  orderNumber: number;
+  chapterTitle: string;
+  publishedAt: string | null;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  membersOnly: boolean;
+  mature: boolean;
+}
+
+export interface FanFictionDetail extends FanFiction {
+  summary: string;
+  authorNote: string;
+  warning: string;
+  graphicsBy: string | null;
+  beta: string[];
+  topicId: string | null;
+  pageUrl: string | null;
+  createdAt: string | null;
+  publishedAt: string | null;
+  updatedAt: string | null;
+  chapters: FanFictionChapterSummary[];
+}
+
+export interface FanFictionChapter {
+  chapterId: string;
+  fanFictionId: string;
+  orderNumber: number | null;
+  title: string;
+  body: string;           // HTML string (already sanitized by backend when available)
+  isHtml: boolean;
+  published: string | null;
+  edited: string | null;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  readingTime: string;
+  membersOnly: boolean;
+  mature: boolean;
+  status: string | null;
+  reactions: FanFictionReaction[] | null;
+}
+
+export interface FanFictionsPage {
+  stories: FanFiction[];
+  pagination: {
+    currentPage: number;
+    pageSize: number;
+    totalPages: number;
+    totalItems: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Fan Fictions — constants
+// ---------------------------------------------------------------------------
+
+export const FF_SHOW_TABS: FanFictionShowTab[] = [
+  { id: 'all',       label: 'All Shows',     pattern: null },
+  { id: 'yrkkh',     label: 'YRKKH',         pattern: /yrkkh|yeh\s*rishta/i },
+  { id: 'anupamaa',  label: 'Anupamaa',      pattern: /anupamaa|anupama/i },
+  { id: 'ghum-hai',  label: 'Ghum Hai',      pattern: /ghum\s*hai|ghkpm/i },
+  { id: 'kundali',   label: 'Kundali Bhagya', pattern: /kundali\s*bhagya/i },
+  { id: 'imlie',     label: 'Imlie',         pattern: /imlie/i },
+  { id: 'bollywood', label: 'Bollywood',     pattern: /bollywood/i },
+];
+
+export const FF_GENRE_TABS: FanFictionGenreTab[] = [
+  { id: 'all',      label: 'All' },
+  { id: 'romance',  label: 'Romance' },
+  { id: 'drama',    label: 'Drama' },
+  { id: 'comedy',   label: 'Comedy' },
+  { id: 'fantasy',  label: 'Fantasy' },
+  { id: 'thriller', label: 'Thriller' },
+  { id: 'action',   label: 'Action' },
+  { id: 'oneshot',  label: 'One-shots' },
+];
+
+export const FF_SORT_TABS: FanFictionSortTab[] = [
+  { id: 'trending', label: 'Trending' },
+  { id: 'latest',   label: 'Latest' },
+  { id: 'popular',  label: 'Popular' },
+];
+
+// Rating ladder: 1=G, 2=PG, 3=T, 4=M, 5=MA (confirmed against live API).
+const FF_RATING_LABELS: Record<number, string> = { 1: 'G', 2: 'PG', 3: 'T', 4: 'M', 5: 'MA' };
+
+// Type map: 0=Fan Fiction, 1=One-shot, 2=Short Story.
+const FF_TYPE_LABELS: Record<number, string> = { 0: 'Fan Fiction', 1: 'One-shot', 2: 'Short Story' };
+
+// 8 reaction slots from likeJsonData (keys "1".."8"). Labels best-effort.
+const FF_REACTION_LABELS: Record<number, { icon: string; label: string }> = {
+  1: { icon: '👍', label: 'Like'   },
+  2: { icon: '❤️', label: 'Love'   },
+  3: { icon: '😂', label: 'Haha'   },
+  4: { icon: '😮', label: 'Wow'    },
+  5: { icon: '😢', label: 'Sad'    },
+  6: { icon: '😡', label: 'Angry'  },
+  7: { icon: '🙏', label: 'Thanks' },
+  8: { icon: '🔥', label: 'Fire'   },
+};
+
+// Fallback cover colors seeded by story title — matches prototype's gradient set,
+// collapsed to the first hex since RN can't render CSS gradients.
+const FF_FALLBACK_COLORS = ['#4c1d95', '#991b1b', '#1e40af', '#a16207', '#047857', '#be185d', '#1e1b4b', '#3730a3'];
+function ffFallbackColor(seed: string): string {
+  const sum = String(seed || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return FF_FALLBACK_COLORS[sum % FF_FALLBACK_COLORS.length];
+}
+
+// ---------------------------------------------------------------------------
+// Fan Fictions — helpers
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ffParseJsonList(raw: any): any[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== 'string') return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+    if (Array.isArray(parsed?.json)) return parsed.json;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+function ffNames(raw: unknown): string[] {
+  return ffParseJsonList(raw)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((t: any) => (typeof t === 'string' ? t : (t?.name || t?.title || t?.tag || t?.label)))
+    .filter((s: string | undefined): s is string => Boolean(s));
+}
+
+function ffStatusLabel(code: unknown): 'Ongoing' | 'Completed' {
+  return Number(code) === 1 ? 'Completed' : 'Ongoing';
+}
+
+function ffRatingLabel(r: unknown): string | null {
+  const n = Number(r);
+  return FF_RATING_LABELS[n] || (n ? `R${n}` : null);
+}
+
+function ffTypeLabel(t: unknown): string | null {
+  return FF_TYPE_LABELS[Number(t)] || null;
+}
+
+function ffFormatCount(n: unknown): string {
+  const num = Number(n);
+  if (!num || Number.isNaN(num)) return '0';
+  if (num >= 10_000_000) return (num / 10_000_000).toFixed(1).replace(/\.0$/, '') + 'Cr';
+  if (num >= 100_000)    return (num / 100_000).toFixed(1).replace(/\.0$/, '') + 'L';
+  if (num >= 1_000)      return (num / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(num);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ffAuthorDisplay(raw: any): string {
+  return raw?.realName || raw?.userName || (raw?.userId ? `User #${raw.userId}` : 'Anonymous');
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ffParseReactions(raw: any): FanFictionReaction[] | null {
+  if (!raw) return null;
+  let obj = raw;
+  if (typeof raw === 'string') {
+    try { obj = JSON.parse(raw); } catch { return null; }
+  }
+  if (!obj || typeof obj !== 'object') return null;
+  const out: FanFictionReaction[] = [];
+  for (let i = 1; i <= 8; i += 1) {
+    const count = Number(obj[i] ?? obj[String(i)] ?? 0);
+    out.push({
+      id: i,
+      icon: FF_REACTION_LABELS[i].icon,
+      label: FF_REACTION_LABELS[i].label,
+      count,
+    });
+  }
+  return out;
+}
+
+// Strip HTML and estimate words/min → reading time label.
+function ffReadingTime(body: string): string {
+  const text = (body || '').replace(/<[^>]+>/g, ' ');
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return `${Math.max(1, Math.round(words / 200))} min read`;
+}
+
+function ffIsHtml(s: string): boolean {
+  return typeof s === 'string' && /<\w+[^>]*>/.test(s);
+}
+
+// ---------------------------------------------------------------------------
+// Fan Fictions — transforms
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformFanFiction(raw: any): FanFiction {
+  const tags     = ffNames(raw?.tagsJsonData);
+  const genres   = ffNames(raw?.genreJsonData);
+  const entities = ffNames(raw?.entityJsonData);
+
+  const title        = raw?.title || 'Untitled';
+  const viewCount    = Number(raw?.totalViewCount)   || 0;
+  const likeCount    = Number(raw?.totalLikeCount)   || 0;
+  const commentCount = Number(raw?.totalCommentCount) || 0;
+  const followerCount = Number(raw?.totalFollowers ?? raw?.followCount ?? 0);
+
+  return {
+    id:        String(raw?.fanFictionId ?? raw?.id ?? ''),
+    title,
+    author:    ffAuthorDisplay(raw),
+    authorId:  raw?.authorId ? String(raw.authorId) : (raw?.userId ? String(raw.userId) : null),
+    synopsis:  raw?.summary || '',
+    thumbnail: raw?.ffThumbnail || null,
+    banner:    raw?.ffBannerThumbnail || null,
+    status:    ffStatusLabel(raw?.statusCode),
+    statusRaw: Number(raw?.statusCode) || 0,
+    rating:    ffRatingLabel(raw?.rating),
+    type:      ffTypeLabel(raw?.fanFictionType),
+    featured:  !!raw?.featured,
+    genres,
+    tags,
+    entities,
+    chapterCount: Number(raw?.chapterCount) || 0,
+    viewCount,
+    likeCount,
+    commentCount,
+    followerCount,
+    views:     ffFormatCount(viewCount),
+    likes:     ffFormatCount(likeCount),
+    comments:  ffFormatCount(commentCount),
+    followers: ffFormatCount(followerCount),
+    lastUpdatedRaw: raw?.lastUpdatedWhen || null,
+    lastUpdated:    raw?.lastUpdatedWhen ? timeAgo(raw.lastUpdatedWhen) : '',
+    bg: ffFallbackColor(title),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformFanFictionDetail(data: any): FanFictionDetail | null {
+  const payload = data?.data ?? data;
+  const raw = payload?.fanFiction ?? payload?.story ?? payload;
+  if (!raw?.fanFictionId && !raw?.id) return null;
+
+  const base = transformFanFiction(raw);
+  const summary    = raw?.summary || '';
+  const authorNote = raw?.authorNote || '';
+  const warning    = raw?.warning && raw.warning !== 'TBU' ? raw.warning : '';
+  const beta       = ffNames(raw?.betaReaderJson);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawChapters: any[] = payload?.chapters ?? raw?.chapters ?? [];
+  const chapters: FanFictionChapterSummary[] = rawChapters.map((c, i) => ({
+    chapterId:    String(c?.chapterId ?? c?.id ?? i),
+    fanFictionId: String(c?.fanFictionId ?? base.id),
+    orderNumber:  Number(c?.orderNumber ?? i + 1),
+    chapterTitle: c?.chapterTitle || `Chapter ${c?.orderNumber ?? i + 1}`,
+    publishedAt:  c?.chapterPublishedWhen || c?.createdWhen || null,
+    viewCount:    Number(c?.viewCount)    || 0,
+    likeCount:    Number(c?.likeCount)    || 0,
+    commentCount: Number(c?.commentCount) || 0,
+    membersOnly:  !!c?.chapterMembersOnly,
+    mature:       !!c?.chapterHasMaturedContent,
+  })).sort((a, b) => a.orderNumber - b.orderNumber);
+
+  return {
+    ...base,
+    summary,
+    authorNote,
+    warning,
+    graphicsBy: raw?.graphicsBy ? `User #${raw.graphicsBy}` : null,
+    beta,
+    topicId:    raw?.topicId ? String(raw.topicId) : null,
+    pageUrl:    raw?.pageUrl || null,
+    createdAt:   raw?.createdWhen || null,
+    publishedAt: raw?.publishedWhen || null,
+    updatedAt:   raw?.lastUpdatedWhen || null,
+    chapters,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformFanFictionChapter(data: any): FanFictionChapter | null {
+  const raw = data?.data ?? data;
+  if (!raw?.chapterId) return null;
+  const body = raw?.filteredChapterContent || raw?.chapterContent || '';
+  const statusCode = Number(raw?.statusCode);
+  const status = statusCode === 1 ? 'Published' : statusCode === 0 ? 'Draft' : null;
+
+  return {
+    chapterId:    String(raw.chapterId),
+    fanFictionId: String(raw?.fanFictionId ?? ''),
+    orderNumber:  raw?.orderNumber != null ? Number(raw.orderNumber) : null,
+    title:        raw?.chapterTitle || 'Chapter',
+    body,
+    isHtml:       ffIsHtml(body),
+    published:    raw?.chapterPublishedWhen || raw?.createdWhen || null,
+    edited:       raw?.lastEditedWhen || null,
+    viewCount:    Number(raw?.viewCount)    || 0,
+    likeCount:    Number(raw?.likeCount)    || 0,
+    commentCount: Number(raw?.commentCount) || 0,
+    readingTime:  ffReadingTime(body),
+    membersOnly:  !!raw?.chapterMembersOnly,
+    mature:       !!raw?.chapterHasMaturedContent,
+    status,
+    reactions:    ffParseReactions(raw?.likeJsonData),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Fan Fictions — fetchers (with mock fallback on network error)
+// ---------------------------------------------------------------------------
+
+export async function fetchFanFictions(
+  page = 1,
+  pageSize = 20,
+): Promise<FanFictionsPage> {
+  try {
+    const { data } = await apiClient.get('/fan-fictions', {
+      params: { page, pageSize },
+    });
+    const payload = data?.data ?? data;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawList: any[] = payload?.fanFictions ?? payload?.items ?? [];
+    const rawPagination = data?.pagination ?? payload?.pagination;
+
+    const pagination = rawPagination || {
+      currentPage:     page,
+      pageSize,
+      totalPages:      1,
+      totalItems:      rawList.length,
+      hasNextPage:     false,
+      hasPreviousPage: false,
+    };
+
+    return {
+      stories: rawList.map(transformFanFiction),
+      pagination,
+    };
+  } catch (err: unknown) {
+    const e = err as { response?: { status: number; data: unknown }; message?: string };
+    console.error('[API] fetchFanFictions failed:', e?.response?.status, e?.response?.data ?? e?.message);
+    return getMockFanFictionsPage(page, pageSize);
+  }
+}
+
+export async function fetchFanFictionDetail(id: string | number): Promise<FanFictionDetail | null> {
+  try {
+    const { data } = await apiClient.get(`/fan-fictions/${id}`);
+    return transformFanFictionDetail(data);
+  } catch (err: unknown) {
+    const e = err as { response?: { status: number; data: unknown }; message?: string };
+    console.error('[API] fetchFanFictionDetail failed:', e?.response?.status, e?.response?.data ?? e?.message);
+    return getMockFanFictionDetail(id);
+  }
+}
+
+export async function fetchFanFictionChapter(chapterId: string | number): Promise<FanFictionChapter | null> {
+  try {
+    const { data } = await apiClient.get(`/fan-fictions/chapter/${chapterId}`);
+    return transformFanFictionChapter(data);
+  } catch (err: unknown) {
+    const e = err as { response?: { status: number; data: unknown }; message?: string };
+    console.error('[API] fetchFanFictionChapter failed:', e?.response?.status, e?.response?.data ?? e?.message);
+    return getMockFanFictionChapter(chapterId);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Fan Fictions — mock fallback
+// ---------------------------------------------------------------------------
+
+interface MockSeed {
+  id: number;
+  title: string;
+  author: string;
+  authorId: number;
+  synopsis: string;
+  genres: string[];
+  tags: string[];
+  entities: string[];
+  chapterCount: number;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  followerCount: number;
+  statusRaw: number;
+  rating: number;
+  fanFictionType: number;
+  featured: boolean;
+  lastUpdatedWhen: string;
+  thumbnail: string;
+}
+
+function hoursAgo(h: number): string {
+  return new Date(Date.now() - h * 3_600_000).toISOString();
+}
+
+const FF_MOCK_SEEDS: MockSeed[] = [
+  { id: 101, title: 'Tum Hi Ho — An ArShi Slow Burn',        author: 'ArShi_Writer', authorId: 11001, synopsis: 'ArShi find each other across the chaos of their lives — a slow burn spanning continents and misunderstandings.', genres: ['Romance', 'Drama'],     tags: ['YRKKH', 'Slow Burn'],         entities: ['YRKKH'],          chapterCount: 42, viewCount: 128_000, likeCount: 8_900, commentCount: 2_300, followerCount: 5_400, statusRaw: 0, rating: 2, fanFictionType: 0, featured: true,  lastUpdatedWhen: hoursAgo(2),   thumbnail: 'https://picsum.photos/seed/ff-101/600/800' },
+  { id: 102, title: 'The Second Chance — An Abhira One-shot', author: 'OneShotQueen', authorId: 11002, synopsis: 'What if Abhira got one more chance to say what was left unsaid? A heartfelt one-shot.',                   genres: ['Romance', 'One-shot'],  tags: ['YRKKH'],                      entities: ['YRKKH'],          chapterCount: 1,  viewCount: 4_200,   likeCount: 567,   commentCount: 89,    followerCount: 120,   statusRaw: 1, rating: 2, fanFictionType: 1, featured: false, lastUpdatedWhen: hoursAgo(4),   thumbnail: 'https://picsum.photos/seed/ff-102/600/800' },
+  { id: 103, title: 'Ishq Mein Marjawan — A VR Tale',        author: 'VR_Shipper',   authorId: 11003, synopsis: 'Riddhima enters the VR Mansion with a mission. Danger, secrets, and undeniable chemistry.',                  genres: ['Romance', 'Thriller'],  tags: ['Ghum Hai'],                   entities: ['Ghum Hai'],       chapterCount: 31, viewCount: 72_000,  likeCount: 5_400, commentCount: 1_600, followerCount: 2_100, statusRaw: 0, rating: 3, fanFictionType: 0, featured: false, lastUpdatedWhen: hoursAgo(6),   thumbnail: 'https://picsum.photos/seed/ff-103/600/800' },
+  { id: 104, title: 'Mohabbat Ke Rang — An Anupamaa Epic',   author: 'AnuFanatic',   authorId: 11004, synopsis: "Anupama's journey from forgotten wife to unstoppable woman — reimagined with the love she always deserved.", genres: ['Drama', 'Romance'],     tags: ['Anupamaa', 'Milestone'],      entities: ['Anupamaa'],       chapterCount: 100, viewCount: 420_000, likeCount: 31_000, commentCount: 12_400, followerCount: 9_800, statusRaw: 1, rating: 3, fanFictionType: 0, featured: true,  lastUpdatedWhen: hoursAgo(24 * 30), thumbnail: 'https://picsum.photos/seed/ff-104/600/800' },
+  { id: 105, title: 'Kundali Se Aage — Preeta aur Karan',    author: 'KundaliFan',   authorId: 11005, synopsis: 'Preeta and Karan must navigate betrayal, new beginnings, and a love that refuses to stay buried.',           genres: ['Romance', 'Drama'],     tags: ['Kundali Bhagya'],             entities: ['Kundali Bhagya'], chapterCount: 19, viewCount: 38_000,  likeCount: 2_900, commentCount: 734,   followerCount: 1_400, statusRaw: 0, rating: 2, fanFictionType: 0, featured: false, lastUpdatedWhen: hoursAgo(12),  thumbnail: 'https://picsum.photos/seed/ff-105/600/800' },
+  { id: 106, title: 'Hum Tum aur Woh Office',                author: 'ChillWriter99', authorId: 11006, synopsis: 'Two colleagues who absolutely hate each other are forced to work on the same project. Glorious chaos ensues.', genres: ['Comedy', 'Romance'],    tags: ['Bollywood'],                  entities: ['Bollywood'],      chapterCount: 8,  viewCount: 11_000,  likeCount: 1_800, commentCount: 312,   followerCount: 640,   statusRaw: 0, rating: 2, fanFictionType: 0, featured: false, lastUpdatedWhen: hoursAgo(24),  thumbnail: 'https://picsum.photos/seed/ff-106/600/800' },
+  { id: 107, title: 'Phir Se Milenge — An Imlie Reunion',    author: 'ImlieFan2025', authorId: 11007, synopsis: 'Years after their painful separation, Imlie and Atharva cross paths again in a city where neither expected.',   genres: ['Romance', 'Drama'],     tags: ['Imlie'],                      entities: ['Imlie'],          chapterCount: 3,  viewCount: 2_400,   likeCount: 198,   commentCount: 44,    followerCount: 88,    statusRaw: 0, rating: 2, fanFictionType: 0, featured: false, lastUpdatedWhen: hoursAgo(48),  thumbnail: 'https://picsum.photos/seed/ff-107/600/800' },
+  { id: 108, title: 'The Desi Avengers — Open Collab',       author: 'IFCommunity',  authorId: 11008, synopsis: 'Your favourite TV characters as superheroes. An open round-robin where every IF member contributes a chapter.',  genres: ['Action', 'Fantasy'],    tags: ['Bollywood', 'Round Robin'],   entities: ['Bollywood'],      chapterCount: 6,  viewCount: 5_700,   likeCount: 876,   commentCount: 203,   followerCount: 410,   statusRaw: 0, rating: 3, fanFictionType: 0, featured: false, lastUpdatedWhen: hoursAgo(3),   thumbnail: 'https://picsum.photos/seed/ff-108/600/800' },
+];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function seedToRaw(s: MockSeed): any {
+  return {
+    fanFictionId:        s.id,
+    title:               s.title,
+    summary:             s.synopsis,
+    realName:            s.author,
+    userName:            s.author,
+    userId:              s.authorId,
+    authorId:            s.authorId,
+    tagsJsonData:        JSON.stringify({ json: s.tags.map((name, i) => ({ id: i + 1, name })) }),
+    genreJsonData:       JSON.stringify({ json: s.genres.map((name, i) => ({ id: i + 1, name })) }),
+    entityJsonData:      JSON.stringify({ json: s.entities.map((name, i) => ({ id: i + 1, name })) }),
+    chapterCount:        s.chapterCount,
+    totalViewCount:      s.viewCount,
+    totalLikeCount:      s.likeCount,
+    totalCommentCount:   s.commentCount,
+    totalFollowers:      s.followerCount,
+    followCount:         s.followerCount,
+    statusCode:          s.statusRaw,
+    rating:              s.rating,
+    fanFictionType:      s.fanFictionType,
+    featured:            s.featured,
+    lastUpdatedWhen:     s.lastUpdatedWhen,
+    publishedWhen:       s.lastUpdatedWhen,
+    createdWhen:         s.lastUpdatedWhen,
+    ffThumbnail:         s.thumbnail,
+    ffBannerThumbnail:   s.thumbnail,
+  };
+}
+
+function getMockFanFictionsPage(page: number, pageSize: number): FanFictionsPage {
+  const stories = FF_MOCK_SEEDS.map(seedToRaw).map(transformFanFiction);
+  return {
+    stories,
+    pagination: {
+      currentPage:     page,
+      pageSize,
+      totalPages:      1,
+      totalItems:      stories.length,
+      hasNextPage:     false,
+      hasPreviousPage: false,
+    },
+  };
+}
+
+function getMockFanFictionDetail(id: string | number): FanFictionDetail | null {
+  const seed = FF_MOCK_SEEDS.find(s => String(s.id) === String(id)) ?? FF_MOCK_SEEDS[0];
+  const detailRaw = {
+    ...seedToRaw(seed),
+    authorNote:     `A note from ${seed.author}: thank you for reading. Comments keep me writing!`,
+    warning:        seed.rating >= 3 ? 'Contains mature themes. Reader discretion advised.' : '',
+    betaReaderJson: JSON.stringify({ json: [{ id: 1, name: 'BetaReader01' }, { id: 2, name: 'BetaReader02' }] }),
+    topicId:        1000 + seed.id,
+    pageUrl:        null,
+    chapters: Array.from({ length: Math.min(seed.chapterCount, 8) }).map((_, i) => ({
+      chapterId:                 `${seed.id}-c${i + 1}`,
+      fanFictionId:              seed.id,
+      orderNumber:               i + 1,
+      chapterTitle:              i === 0 ? 'Prologue' : `Chapter ${i + 1}`,
+      chapterPublishedWhen:      hoursAgo(24 * (seed.chapterCount - i)),
+      createdWhen:               hoursAgo(24 * (seed.chapterCount - i)),
+      viewCount:                 Math.round(seed.viewCount / Math.max(1, seed.chapterCount) * (1 - i * 0.05)),
+      likeCount:                 Math.round(seed.likeCount / Math.max(1, seed.chapterCount) * (1 - i * 0.05)),
+      commentCount:              Math.round(seed.commentCount / Math.max(1, seed.chapterCount) * (1 - i * 0.05)),
+      chapterMembersOnly:        false,
+      chapterHasMaturedContent:  seed.rating >= 4 && i === seed.chapterCount - 1,
+    })),
+  };
+  return transformFanFictionDetail({ fanFiction: detailRaw, chapters: detailRaw.chapters });
+}
+
+function getMockFanFictionChapter(chapterId: string | number): FanFictionChapter | null {
+  const [seedId] = String(chapterId).split('-c');
+  const seed = FF_MOCK_SEEDS.find(s => String(s.id) === seedId) ?? FF_MOCK_SEEDS[0];
+  const orderStr = String(chapterId).split('-c')[1] || '1';
+  const order = Number(orderStr) || 1;
+
+  const body = `
+    <p>The rain had been falling for three days straight when <i>${seed.author}'s</i> story continued. ${seed.synopsis}</p>
+    <p>She stood at the edge of the balcony, looking out at the city lights blurred by the downpour, and wondered — not for the first time — whether the distance between them would ever close.</p>
+    <p><b>"You came."</b> His voice was softer than she remembered, but still carried that same warmth that had once meant everything.</p>
+    <p>She turned slowly, the breath catching in her throat. There were a thousand things she wanted to say, and none of them felt like enough.</p>
+    <p>"I told you I would."</p>
+    <p>For a long moment, neither of them moved. The rain kept falling, steady and relentless, a rhythm as familiar as a heartbeat. And in the silence between them, every word they had never said stretched out like a bridge — one that neither of them had the courage, yet, to cross.</p>
+    <p><i>To be continued in the next chapter…</i></p>
+  `.trim();
+
+  return {
+    chapterId:    String(chapterId),
+    fanFictionId: String(seed.id),
+    orderNumber:  order,
+    title:        order === 1 ? 'Prologue' : `Chapter ${order}`,
+    body,
+    isHtml:       true,
+    published:    hoursAgo(24 * (seed.chapterCount - order + 1)),
+    edited:       null,
+    viewCount:    Math.round(seed.viewCount / Math.max(1, seed.chapterCount)),
+    likeCount:    Math.round(seed.likeCount / Math.max(1, seed.chapterCount)),
+    commentCount: Math.round(seed.commentCount / Math.max(1, seed.chapterCount)),
+    readingTime:  ffReadingTime(body),
+    membersOnly:  false,
+    mature:       seed.rating >= 4,
+    status:       'Published',
+    reactions: [
+      { id: 1, icon: '👍', label: 'Like',   count: 128 },
+      { id: 2, icon: '❤️', label: 'Love',   count: 412 },
+      { id: 3, icon: '😂', label: 'Haha',   count: 34 },
+      { id: 4, icon: '😮', label: 'Wow',    count: 61 },
+      { id: 5, icon: '😢', label: 'Sad',    count: 22 },
+      { id: 6, icon: '😡', label: 'Angry',  count: 5 },
+      { id: 7, icon: '🙏', label: 'Thanks', count: 88 },
+      { id: 8, icon: '🔥', label: 'Fire',   count: 209 },
+    ],
   };
 }
