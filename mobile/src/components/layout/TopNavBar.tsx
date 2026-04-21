@@ -79,9 +79,14 @@ export function TopNavBrand({
 interface BackProps {
   title?: string;
   onBack: () => void;
+  rightIcon?: keyof typeof Ionicons.glyphMap;
+  onRightPress?: () => void;
+  rightAccessibilityLabel?: string;
 }
 
-export function TopNavBack({ title, onBack }: BackProps) {
+export function TopNavBack({
+  title, onBack, rightIcon, onRightPress, rightAccessibilityLabel,
+}: BackProps) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -96,7 +101,18 @@ export function TopNavBack({ title, onBack }: BackProps) {
         ) : (
           <View style={styles.flex1} />
         )}
-        <View style={styles.backSpacer} />
+        {rightIcon && onRightPress ? (
+          <Pressable
+            style={styles.backBtn}
+            onPress={onRightPress}
+            hitSlop={8}
+            accessibilityLabel={rightAccessibilityLabel || 'Action'}
+          >
+            <Ionicons name={rightIcon} size={18} color={colors.text} />
+          </Pressable>
+        ) : (
+          <View style={styles.backSpacer} />
+        )}
       </View>
     </View>
   );

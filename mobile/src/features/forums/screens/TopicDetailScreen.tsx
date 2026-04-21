@@ -19,6 +19,7 @@ import UserMiniCard from '../components/UserMiniCard';
 import PostEditHistoryModal from '../components/PostEditHistoryModal';
 import PollWidget from '../components/PollWidget';
 import SocialEmbed from '../components/SocialEmbed';
+import TopicModActionsSheet from '../components/TopicModActionsSheet';
 import { useTopicPosts } from '../hooks/useTopicPosts';
 import { stripPostHtml } from '../utils/stripHtml';
 import { extractSocialUrls, stripSocialUrlsFromText } from '../utils/socialUrls';
@@ -74,6 +75,7 @@ export default function TopicDetailScreen() {
   const [stickyVisible, setStickyVisible] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [modSheetOpen, setModSheetOpen] = useState(false);
 
   const {
     data,
@@ -129,6 +131,11 @@ export default function TopicDetailScreen() {
 
   const forumBg    = forum?.bg    ?? '#3558F0';
   const forumEmoji = forum?.emoji ?? '💬';
+
+  const canEditTopic     = (forum?.editPosts     ?? 0) > 0;
+  const canModerateTopic = (forum?.priorityPosts ?? 0) > 0;
+  const canDeleteTopic   = (forum?.deletePosts   ?? 0) > 0;
+  const hasMod = canEditTopic || canModerateTopic || canDeleteTopic;
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -323,7 +330,13 @@ export default function TopicDetailScreen() {
 
   return (
     <View style={styles.screen}>
-      <TopNavBack title={liveTopic.forumName || 'Topic'} onBack={() => navigation.goBack()} />
+      <TopNavBack
+        title={liveTopic.forumName || 'Topic'}
+        onBack={() => navigation.goBack()}
+        rightIcon={hasMod ? 'ellipsis-horizontal' : undefined}
+        onRightPress={hasMod ? () => setModSheetOpen(true) : undefined}
+        rightAccessibilityLabel="Moderator actions"
+      />
 
       {stickyVisible && (
         <View style={styles.sticky}>
