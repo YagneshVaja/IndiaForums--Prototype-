@@ -311,7 +311,20 @@ export default function NewTopicComposer({ forum, flairs = [], onClose, onCreate
     try {
       const rawHtml = editorRef.current?.innerHTML || '';
       // Strip bare <br> that an empty contentEditable inserts — don't send junk HTML
-      const htmlContent = /^(<br\s*\/?>|\s)*$/i.test(rawHtml) ? '' : rawHtml;
+      let htmlContent = /^(<br\s*\/?>|\s)*$/i.test(rawHtml) ? '' : rawHtml;
+
+      // Backend requires message ≥ 10 chars. Polls often get posted with an
+      // empty body (the user filled the poll question + options instead), so
+      // fall back to the poll question / subject to keep the submission valid.
+      if (isPollType && !htmlContent.replace(/<[^>]+>/g, '').trim()) {
+        const fallback = pollQuestion.trim() || subject.trim();
+        const safe = fallback
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        htmlContent = `<p>${safe}</p>`;
+      }
+
       const payload = {
         forumId: forum.id,
         subject: subject.trim(),

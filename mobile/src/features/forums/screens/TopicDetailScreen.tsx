@@ -1,17 +1,20 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, Pressable, FlatList, ActivityIndicator, StyleSheet,
+  View, Text, Pressable, ActivityIndicator, StyleSheet,
   NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
 import PostCard from '../components/PostCard';
+import PostHtml from '../components/PostHtml';
 import ReplyComposerSheet, { type QuotedPost } from '../components/ReplyComposerSheet';
 import ReactionPickerSheet, { type AnchorRect } from '../components/ReactionPickerSheet';
 import ReactionsSheet from '../components/ReactionsSheet';
@@ -19,17 +22,18 @@ import UserMiniCard from '../components/UserMiniCard';
 import PostEditHistoryModal from '../components/PostEditHistoryModal';
 import PollWidget from '../components/PollWidget';
 import SocialEmbed from '../components/SocialEmbed';
-import TopicModActionsSheet from '../components/TopicModActionsSheet';
+import TopicModActionsSheet, { type ActionKey as ModActionKey } from '../components/TopicModActionsSheet';
+import PostModActionsSheet, { type PostActionKey } from '../components/PostModActionsSheet';
 import { useTopicPosts } from '../hooks/useTopicPosts';
 import { stripPostHtml } from '../utils/stripHtml';
-import { extractSocialUrls, stripSocialUrlsFromText } from '../utils/socialUrls';
+import { extractSocialUrls, stripSocialUrlsFromHtml } from '../utils/socialUrls';
 import { formatCount } from '../utils/format';
 import { useAuthStore } from '../../../store/authStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { ForumsStackParamList } from '../../../navigation/types';
 import {
-  reactToThread, editPost, castPollVote,
+  reactToThread, editPost, castPollVote, closeTopic, openTopic,
   type ForumTopic, type ReactionCode, type TopicPost, type TopicPoll,
 } from '../../../services/api';
 
@@ -44,6 +48,7 @@ export default function TopicDetailScreen() {
   const navigation = useNavigation<Nav>();
   const { topic, forum } = useRoute<Rt>().params;
   const currentUser = useAuthStore(s => s.user);
+  const queryClient = useQueryClient();
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -69,6 +74,7 @@ export default function TopicDetailScreen() {
   const [pollVotedIds, setPollVotedIds] = useState<number[] | null>(null);
   const [pollVoting, setPollVoting]     = useState(false);
   const [pollError, setPollError]       = useState<string | null>(null);
+  const [pollLockBusy, setPollLockBusy] = useState(false);
   const [pollOverrides, setPollOverrides] = useState<Record<number, number>>({});
 
   const [sortBy, setSortBy] = useState<'date' | 'likes'>('date');
@@ -76,6 +82,22 @@ export default function TopicDetailScreen() {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [modSheetOpen, setModSheetOpen] = useState(false);
+  const [postSheetFor, setPostSheetFor] = useState<TopicPost | null>(null);
+
+  // Same-reaction UNDO: when user taps same reaction twice, show inline alert
+  const [sameReactionPostId, setSameReactionPostId] = useState<number | null>(null);
+  const sameReactionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevReactionRef   = useRef<Record<number, ReactionCode | null>>({});
+
+  function showSameReactionAlert(postId: number) {
+    setSameReactionPostId(postId);
+    if (sameReactionTimer.current) clearTimeout(sameReactionTimer.current);
+    sameReactionTimer.current = setTimeout(() => setSameReactionPostId(null), 4000);
+  }
+
+  useEffect(() => () => {
+    if (sameReactionTimer.current) clearTimeout(sameReactionTimer.current);
+  }, []);
 
   const {
     data,
@@ -104,15 +126,19 @@ export default function TopicDetailScreen() {
     );
   }, [allPosts, sortBy, likeCountMap]);
 
-  const description = useMemo(
-    () => stripSocialUrlsFromText(stripPostHtml(liveTopic.description)),
+  const descriptionHtml = useMemo(
+    () => stripSocialUrlsFromHtml(liveTopic.description),
     [liveTopic.description],
   );
 
-  const topicSocialUrls = useMemo(
-    () => extractSocialUrls(liveTopic.description),
-    [liveTopic.description],
-  );
+  const topicSocialUrls = useMemo(() => {
+    const fromDescription = extractSocialUrls(liveTopic.description);
+    const linkValue = liveTopic.linkTypeValue?.trim();
+    if (!linkValue) return fromDescription;
+    const extra = extractSocialUrls(linkValue);
+    const combined = [...fromDescription, ...extra];
+    return Array.from(new Set(combined));
+  }, [liveTopic.description, liveTopic.linkTypeValue]);
 
   const displayPoll = useMemo<TopicPoll | null>(() => {
     if (!liveTopic.poll) return null;
@@ -236,13 +262,28 @@ export default function TopicDetailScreen() {
       if (!target) return;
       const current = reactionMap[target.id] ?? null;
       if (current === code) {
-        showToast('Reaction removed');
-        applyReaction(target, null);
+        // Show UNDO alert instead of immediately removing
+        showSameReactionAlert(target.id);
         return;
       }
+      prevReactionRef.current[target.id] = current;
       applyReaction(target, code);
     },
-    [pickerFor, reactionMap, showToast, applyReaction],
+    [pickerFor, reactionMap, applyReaction],
+  );
+
+  const handleUnreact = useCallback(
+    async (postId: number) => {
+      setSameReactionPostId(null);
+      if (sameReactionTimer.current) clearTimeout(sameReactionTimer.current);
+
+      const revertTo = prevReactionRef.current[postId] ?? null;
+      const post = sortedPosts.find(p => p.id === postId);
+      if (!post) return;
+      delete prevReactionRef.current[postId];
+      applyReaction(post, revertTo);
+    },
+    [sortedPosts, applyReaction],
   );
 
   const openReply = useCallback((qp: QuotedPost | null) => {
@@ -309,22 +350,111 @@ export default function TopicDetailScreen() {
     [editText, liveTopic.id, refetch, showToast],
   );
 
+  const handleModAction = useCallback(
+    (action: ModActionKey) => {
+      queryClient.invalidateQueries({ queryKey: ['forum-topics', liveTopic.forumId] });
+      queryClient.invalidateQueries({ queryKey: ['forums-all-topics'] });
+      if (action === 'trash') {
+        navigation.goBack();
+        return;
+      }
+      refetch();
+    },
+    [queryClient, liveTopic.forumId, navigation, refetch],
+  );
+
+  const handlePostAction = useCallback(
+    (action: PostActionKey) => {
+      const toast: Partial<Record<PostActionKey, string>> = {
+        report:  'Report submitted.',
+        trash:   'Post trashed.',
+        matured: 'Matured flag updated.',
+        modNote: 'Moderator note saved.',
+      };
+      const msg = toast[action];
+      if (msg) showToast(msg);
+      if (action === 'trash' || action === 'matured' || action === 'modNote') {
+        refetch();
+      }
+    },
+    [refetch, showToast],
+  );
+
   const handlePollVote = useCallback(
-    async (poll: TopicPoll, optionId: number) => {
+    async (poll: TopicPoll, optionIds: number[]) => {
       if (pollVoting) return;
+      const ids = Array.isArray(optionIds) ? optionIds : [optionIds];
+      if (ids.length === 0) return;
       setPollVoting(true);
       setPollError(null);
-      const res = await castPollVote(poll.pollId, [optionId]);
+      const res = await castPollVote(poll.pollId, ids);
       setPollVoting(false);
       if (res.ok) {
-        setPollVotedIds([optionId]);
-        setPollOverrides(m => ({ ...m, [optionId]: (m[optionId] || 0) + 1 }));
+        setPollVotedIds(ids);
+        setPollOverrides(m => {
+          const next = { ...m };
+          for (const id of ids) next[id] = (next[id] || 0) + 1;
+          return next;
+        });
       } else {
         setPollError(res.error || 'Failed to record vote.');
       }
     },
     [pollVoting],
   );
+
+  const renderPost = useCallback(
+    ({ item, index }: { item: TopicPost; index: number }) => {
+      const isEditingThis = editingId === item.id;
+      return (
+        <PostCard
+          post={item}
+          index={index}
+          reaction={reactionMap[item.id] ?? null}
+          likeCount={likeCountMap[item.id] ?? item.likes}
+          pendingReaction={pendingSet.has(item.id)}
+          isMine={!!currentUser && currentUser.userId === item.authorId}
+          onOpenReactionPicker={handleOpenReactionPicker}
+          onPressReactionSummary={setReactionsFor}
+          onReply={handleReply}
+          onQuote={handleQuote}
+          onEdit={handleEdit}
+          onPressEdited={setEditHistoryFor}
+          onPressAvatar={setMiniCardFor}
+          onPressSettings={setPostSheetFor}
+          isEditing={isEditingThis}
+          editText={isEditingThis ? editText : ''}
+          editSaving={isEditingThis && editSaving}
+          editError={isEditingThis ? editError : null}
+          onChangeEditText={setEditText}
+          onSaveEdit={handleSaveEdit}
+          onCancelEdit={handleCancelEdit}
+        />
+      );
+    },
+    [
+      reactionMap, likeCountMap, pendingSet, currentUser,
+      handleOpenReactionPicker, handleReply, handleQuote, handleEdit,
+      editingId, editText, editSaving, editError,
+      handleSaveEdit, handleCancelEdit,
+    ],
+  );
+
+  const handleToggleLock = useCallback(async () => {
+    if (pollLockBusy) return;
+    if (!liveTopic?.id || !liveTopic?.forumId) return;
+    setPollLockBusy(true);
+    setPollError(null);
+    const res = liveTopic.locked
+      ? await openTopic(liveTopic.id, liveTopic.forumId)
+      : await closeTopic(liveTopic.id, liveTopic.forumId);
+    setPollLockBusy(false);
+    if (res.ok) {
+      refetch();
+    } else {
+      setPollError(res.error || 'Failed to update topic lock state.');
+    }
+  }, [liveTopic?.id, liveTopic?.forumId, liveTopic?.locked, pollLockBusy, refetch]);
 
   const replyDisabled = liveTopic.locked;
 
@@ -368,35 +498,12 @@ export default function TopicDetailScreen() {
       ) : isError && !data ? (
         <ErrorState message="Couldn't load posts" onRetry={() => refetch()} />
       ) : (
-        <FlatList
+        <FlashList
           data={sortedPosts}
           keyExtractor={p => String(p.id)}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          renderItem={({ item, index }) => (
-            <PostCard
-              post={item}
-              index={index}
-              reaction={reactionMap[item.id] ?? null}
-              likeCount={likeCountMap[item.id] ?? item.likes}
-              pendingReaction={pendingSet.has(item.id)}
-              isMine={!!currentUser && currentUser.userId === item.authorId}
-              onOpenReactionPicker={handleOpenReactionPicker}
-              onPressReactionSummary={setReactionsFor}
-              onReply={handleReply}
-              onQuote={handleQuote}
-              onEdit={handleEdit}
-              onPressEdited={setEditHistoryFor}
-              onPressAvatar={setMiniCardFor}
-              isEditing={editingId === item.id}
-              editText={editingId === item.id ? editText : ''}
-              editSaving={editingId === item.id && editSaving}
-              editError={editingId === item.id ? editError : null}
-              onChangeEditText={setEditText}
-              onSaveEdit={handleSaveEdit}
-              onCancelEdit={handleCancelEdit}
-            />
-          )}
+          renderItem={renderPost}
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) fetchNextPage();
           }}
@@ -423,7 +530,7 @@ export default function TopicDetailScreen() {
                   <View style={styles.badgeRow}>
                     {liveTopic.pinned && (
                       <View style={[styles.topicFlag, styles.topicFlagPinned]}>
-                        <Ionicons name="bookmark" size={10} color="#FFFFFF" />
+                        <Ionicons name="pin" size={10} color="#FFFFFF" />
                         <Text style={styles.topicFlagText}>Pinned</Text>
                       </View>
                     )}
@@ -450,8 +557,8 @@ export default function TopicDetailScreen() {
                   </View>
                 </View>
 
-                {!!description && (
-                  <Text style={styles.description}>{description}</Text>
+                {!!descriptionHtml && (
+                  <PostHtml html={descriptionHtml} horizontalPadding={28} />
                 )}
 
                 {liveTopic.topicImage && (
@@ -472,10 +579,13 @@ export default function TopicDetailScreen() {
                   <PollWidget
                     poll={displayPoll}
                     voted={pollVoted}
-                    votedIds={pollVotedIds || []}
+                    votedIds={pollVotedIds || displayPoll.myVotedIds || []}
                     voting={pollVoting}
                     error={pollError}
-                    onVote={(optId) => displayPoll && handlePollVote(displayPoll, optId)}
+                    onVote={(optIds) => displayPoll && handlePollVote(displayPoll, optIds)}
+                    locked={!!liveTopic.locked}
+                    lockBusy={pollLockBusy}
+                    onToggleLock={handleToggleLock}
                   />
                 )}
 
@@ -571,6 +681,18 @@ export default function TopicDetailScreen() {
         </Pressable>
       )}
 
+      {sameReactionPostId != null && (
+        <View style={styles.undoBar}>
+          <Text style={styles.undoBarText}>You already reacted with this.</Text>
+          <Pressable style={styles.undoBtn} onPress={() => handleUnreact(sameReactionPostId)}>
+            <Text style={styles.undoBtnText}>UNDO</Text>
+          </Pressable>
+          <Pressable hitSlop={8} onPress={() => setSameReactionPostId(null)}>
+            <Ionicons name="close" size={14} color={colors.textSecondary} />
+          </Pressable>
+        </View>
+      )}
+
       {replyDisabled ? (
         <View style={styles.lockedBar}>
           <Ionicons name="lock-closed" size={13} color={colors.textTertiary} />
@@ -626,6 +748,29 @@ export default function TopicDetailScreen() {
         visible={editHistoryFor != null}
         postId={editHistoryFor?.id ?? null}
         onClose={() => setEditHistoryFor(null)}
+      />
+
+      <TopicModActionsSheet
+        visible={modSheetOpen}
+        topic={liveTopic}
+        canEdit={canEditTopic}
+        canModerate={canModerateTopic}
+        canDelete={canDeleteTopic}
+        onClose={() => setModSheetOpen(false)}
+        onActionComplete={handleModAction}
+      />
+
+      <PostModActionsSheet
+        visible={postSheetFor != null}
+        post={postSheetFor}
+        topicId={liveTopic.id}
+        forumId={liveTopic.forumId}
+        isOwner={!!currentUser && !!postSheetFor && currentUser.userId === postSheetFor.authorId}
+        isModerator={hasMod}
+        onClose={() => setPostSheetFor(null)}
+        onEdit={(p) => { setPostSheetFor(null); handleEdit(p); }}
+        onShowHistory={(p) => { setPostSheetFor(null); setEditHistoryFor(p); }}
+        onActionComplete={handlePostAction}
       />
     </View>
   );
@@ -954,6 +1099,43 @@ function makeStyles(c: ThemeColors) {
       color: c.card,
       fontSize: 12,
       fontWeight: '600',
+    },
+    undoBar: {
+      position: 'absolute',
+      left: 14,
+      right: 14,
+      bottom: 78,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: c.card,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 8,
+    },
+    undoBarText: {
+      flex: 1,
+      fontSize: 12,
+      fontWeight: '600',
+      color: c.text,
+    },
+    undoBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 6,
+      backgroundColor: c.primary,
+    },
+    undoBtnText: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: '#FFFFFF',
     },
     replyBar: {
       position: 'absolute',

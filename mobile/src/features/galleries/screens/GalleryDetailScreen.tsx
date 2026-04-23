@@ -10,10 +10,12 @@ import {
   Linking,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
+import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
@@ -34,6 +36,7 @@ export default function GalleryDetailScreen() {
   const route = useRoute<Rt>();
   const gallery = route.params.gallery;
   const colors = useThemeStore((s) => s.colors);
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const { data: details, isLoading } = useGalleryDetails(gallery.id);
@@ -64,7 +67,7 @@ export default function GalleryDetailScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Pressable style={styles.headerBtn} onPress={() => navigation.goBack()} hitSlop={8}>
           <Ionicons name="chevron-back" size={18} color={colors.text} />
         </Pressable>
@@ -93,7 +96,12 @@ export default function GalleryDetailScreen() {
           ) : (
             <Text style={styles.heroEmoji}>{display.emoji}</Text>
           )}
-          <View style={styles.heroScrim} />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.02)', 'rgba(0,0,0,0.75)']}
+            style={[StyleSheet.absoluteFill, styles.heroScrim]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+          />
           <View style={styles.heroMeta}>
             <Text style={styles.heroTitle} numberOfLines={2}>{display.title}</Text>
             <View style={styles.heroMetaRow}>
@@ -210,7 +218,6 @@ function makeStyles(c: ThemeColors) {
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingTop: 44,
       paddingHorizontal: 14,
       paddingBottom: 8,
       backgroundColor: c.card,
@@ -252,8 +259,7 @@ function makeStyles(c: ThemeColors) {
     heroImg: { position: 'absolute', width: '100%', height: '100%' },
     heroEmoji: { fontSize: 56 },
     heroScrim: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0,0,0,0.4)',
+      // gradient applied via LinearGradient component
     },
     heroMeta: {
       position: 'absolute',

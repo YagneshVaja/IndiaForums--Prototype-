@@ -46,6 +46,26 @@ export function stripSocialUrlsFromText(text?: string | null): string {
     .trim();
 }
 
+/**
+ * Remove social-media URLs from HTML while preserving other markup. Strips
+ * both `<a href="social-url">…</a>` link wrappers and any bare social URLs
+ * that appear in text nodes, so the same link isn't rendered as both a link
+ * and an embed.
+ */
+export function stripSocialUrlsFromHtml(html?: string | null): string {
+  if (!html) return '';
+  // 1. Drop <a> tags whose href is a social URL.
+  const withoutAnchors = html.replace(
+    /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,
+    (full, href) => (detectPlatform(href) ? '' : full),
+  );
+  // 2. Drop bare social URLs in remaining text.
+  return withoutAnchors.replace(SOCIAL_URL_RE, (m) => {
+    const cleaned = m.replace(/[.,;:!?]+$/, '');
+    return detectPlatform(cleaned) ? '' : m;
+  });
+}
+
 export function extractYouTubeId(url: string): string | null {
   const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
   return m ? m[1] : null;

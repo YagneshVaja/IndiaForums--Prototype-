@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, NewsStackParamList } from '../../../navigation/types';
 import {
@@ -73,6 +74,57 @@ const CATEGORY_ENTITIES: Record<string, Entity[]> = {
     { id: 'deepika', name: 'Deepika Padukone', role: 'Actress · Fashion', emoji: '✨', bg: '#831843' },
   ],
 };
+
+// ── Article-type helpers ─────────────────────────────────────────────────
+// articleTypeId values come from the API:
+//   1 Normal · 2 Listicle Num Asc · 6 Listicle · 7 Listicle Num Desc · 8 Live News
+const LISTICLE_TYPES = new Set<number>([2, 6, 7]);
+const LIVE_NEWS_TYPE = 8;
+
+// Listicle entries / live-news updates are flagged with subItem=true.
+// Intro/outro items come before/after them with subItem=false.
+function partitionItems(items: ArticleItem[]) {
+  const header: ArticleItem[] = [];
+  const entries: ArticleItem[] = [];
+  const trailing: ArticleItem[] = [];
+  let seenEntry = false;
+  for (const it of items) {
+    if (it.subItem) {
+      seenEntry = true;
+      entries.push(it);
+    } else if (!seenEntry) {
+      header.push(it);
+    } else {
+      trailing.push(it);
+    }
+  }
+  return { header, entries, trailing, hasEntries: seenEntry };
+}
+
+// "just now", "14m ago", "3h ago", "2d ago", otherwise absolute short date.
+function relativeAgo(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const diffSec = (Date.now() - d.getTime()) / 1000;
+  if (diffSec < 60) return 'just now';
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+  return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+}
+
+// "4:32 PM" same-day, "Oct 6, 4:32 PM" otherwise.
+function formatExactTime(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const time = d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const sameDay = d.toDateString() === new Date().toDateString();
+  if (sameDay) return time;
+  const date = d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+  return `${date}, ${time}`;
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 function decodeEntities(s: string): string {
@@ -450,11 +502,26 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
 
-        {/* Article body — articleItems (API) OR HTML blocks */}
+        {/* Article body — branches on articleTypeId:
+              8          → Live News (timeline feed)
+              2 / 6 / 7  → Listicle (image-hero + numbered badge)
+              default    → flat item/HTML render */}
         <View style={styles.bodyWrap}>
-          {hasItems
-            ? article.articleItems.map((it) => <ItemBlock key={it.id} item={it} styles={styles} />)
-            : bodyBlocks.map((b, i) => <BodyBlockView key={i} block={b} styles={styles} />)}
+          {hasItems ? (
+            article.articleTypeId === LIVE_NEWS_TYPE ? (
+              <LiveNewsBody items={article.articleItems} styles={styles} />
+            ) : article.articleTypeId && LISTICLE_TYPES.has(article.articleTypeId) ? (
+              <ListicleBody
+                items={article.articleItems}
+                type={article.articleTypeId}
+                styles={styles}
+              />
+            ) : (
+              article.articleItems.map((it) => <ItemBlock key={it.id} item={it} styles={styles} />)
+            )
+          ) : (
+            bodyBlocks.map((b, i) => <BodyBlockView key={i} block={b} styles={styles} />)
+          )}
 
           {/* TL;DR */}
           {article.tldr ? (
@@ -741,6 +808,192 @@ function ItemBlock({ item, styles }: { item: ArticleItem; styles: Styles }) {
   }
 
   return null;
+}
+
+// ── Live News body (articleTypeId 8) ─────────────────────────────────────
+// Persistent "LIVE BLOG" banner + vertical timeline with marker dots. Newest
+// update at top gets a NEW pill and red border.
+function LiveNewsBody({
+  items,
+  styles,
+}: {
+  items: ArticleItem[];
+  styles: Styles;
+}) {
+  const { header, entries, trailing, hasEntries } = partitionItems(items);
+
+  // Fall back to flat render if the API ever returns no sub-items on a type-8
+  // article, so nothing gets hidden from the user.
+  if (!hasEntries) {
+    return <>{items.map((it) => <ItemBlock key={it.id} item={it} styles={styles} />)}</>;
+  }
+
+  const latestRel = relativeAgo(entries[0]?.dateAdded);
+
+  return (
+    <>
+      {header.length > 0
+        ? header.map((it) => <ItemBlock key={it.id} item={it} styles={styles} />)
+        : null}
+
+      {/* Live-blog banner — frames the whole feed as ongoing */}
+      <View style={styles.liveBanner}>
+        <View style={styles.liveBannerDot} />
+        <Text style={styles.liveBannerLabel}>LIVE BLOG</Text>
+        <Text style={styles.liveBannerCount}>
+          {entries.length} {entries.length === 1 ? 'update' : 'updates'}
+        </Text>
+        {latestRel ? <Text style={styles.liveBannerLatest}>Updated {latestRel}</Text> : null}
+      </View>
+
+      {/* Timeline feed */}
+      <View style={styles.liveFeed}>
+        {/* Vertical rail — absolute-positioned so cards render over it */}
+        <View style={styles.liveRail} pointerEvents="none" />
+        {entries.map((it, i) => {
+          const rel = relativeAgo(it.dateAdded);
+          const exact = formatExactTime(it.dateAdded);
+          const isLatest = i === 0;
+          return (
+            <View
+              key={it.id}
+              style={[styles.liveCard, isLatest && styles.liveCardLatest]}
+            >
+              <View style={[styles.liveMarker, isLatest && styles.liveMarkerLatest]} />
+              <View style={styles.liveCardHead}>
+                {isLatest ? (
+                  <View style={styles.liveNewPill}>
+                    <Text style={styles.liveNewPillText}>NEW</Text>
+                  </View>
+                ) : null}
+                {rel ? <Text style={styles.liveTimeRel}>{rel}</Text> : null}
+                {exact ? (
+                  <Text style={styles.liveTimeExact} numberOfLines={1}>
+                    {exact}
+                  </Text>
+                ) : null}
+              </View>
+              {it.title ? <Text style={styles.liveTitle}>{it.title}</Text> : null}
+              {it.mediaUrl && it.type === 2 ? (
+                <View style={styles.liveImageWrap}>
+                  <Image
+                    source={{ uri: it.mediaUrl }}
+                    style={styles.liveImage}
+                    resizeMode="cover"
+                  />
+                  {it.source ? <Text style={styles.itemCaption}>{it.source}</Text> : null}
+                </View>
+              ) : null}
+              {it.contents ? (
+                <View style={styles.liveBody}>
+                  {parseHtmlToBlocks(it.contents).map((b, idx) => (
+                    <BodyBlockView key={idx} block={b} styles={styles} />
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
+
+      {trailing.length > 0
+        ? trailing.map((it) => <ItemBlock key={it.id} item={it} styles={styles} />)
+        : null}
+    </>
+  );
+}
+
+// ── Listicle body (articleTypeId 2 / 6 / 7) ──────────────────────────────
+// Image-hero card with a #N badge pinned to the top-left of the image. Matches
+// the card library's image-forward pattern. Countdown (type 7) #1 gets a
+// taller hero + larger red badge to anchor the top of the list.
+function ListicleBody({
+  items,
+  type,
+  styles,
+}: {
+  items: ArticleItem[];
+  type: number;
+  styles: Styles;
+}) {
+  const { header, entries, trailing, hasEntries } = partitionItems(items);
+  if (!hasEntries) {
+    return <>{items.map((it) => <ItemBlock key={it.id} item={it} styles={styles} />)}</>;
+  }
+
+  const total = entries.length;
+  // 2 → 1, 2, 3 …   7 → N, N-1 …   6 → no badge
+  const numberAt = (i: number): number | null => {
+    if (type === 2) return i + 1;
+    if (type === 7) return total - i;
+    return null;
+  };
+
+  return (
+    <>
+      {header.length > 0
+        ? header.map((it) => <ItemBlock key={it.id} item={it} styles={styles} />)
+        : null}
+
+      {entries.map((it, i) => {
+        const n = numberAt(i);
+        const cleanTitle = it.title ? it.title.replace(/:$/, '') : '';
+        const hasImage = !!(it.mediaUrl && it.type === 2);
+        const isTop = type === 7 && i === 0;
+
+        return (
+          <View key={it.id} style={styles.listEntry}>
+            {hasImage ? (
+              <View style={[styles.listHero, isTop && styles.listHeroTop]}>
+                <Image
+                  source={{ uri: it.mediaUrl }}
+                  style={styles.listHeroImg}
+                  resizeMode="cover"
+                />
+                <LinearGradient
+                  colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']}
+                  locations={[0.55, 1]}
+                  style={styles.listHeroShade}
+                  pointerEvents="none"
+                />
+                {n !== null ? (
+                  <View style={[styles.listBadge, isTop && styles.listBadgeTop]}>
+                    <Text style={[styles.listBadgeHash, isTop && styles.listBadgeHashTop]}>#</Text>
+                    <Text style={[styles.listBadgeNum, isTop && styles.listBadgeNumTop]}>{n}</Text>
+                  </View>
+                ) : null}
+                {it.source ? (
+                  <Text style={styles.listHeroCaption} numberOfLines={1}>
+                    {it.source}
+                  </Text>
+                ) : null}
+              </View>
+            ) : n !== null ? (
+              <View style={styles.listBadgeRow}>
+                <View style={[styles.listBadgeInline, isTop && styles.listBadgeTop]}>
+                  <Text style={[styles.listBadgeHash, isTop && styles.listBadgeHashTop]}>#</Text>
+                  <Text style={[styles.listBadgeNum, isTop && styles.listBadgeNumTop]}>{n}</Text>
+                </View>
+              </View>
+            ) : null}
+
+            <View style={styles.listContent}>
+              {cleanTitle ? <Text style={styles.listEntryTitle}>{cleanTitle}</Text> : null}
+              {it.contents
+                ? parseHtmlToBlocks(it.contents).map((b, idx) => (
+                    <BodyBlockView key={idx} block={b} styles={styles} />
+                  ))
+                : null}
+            </View>
+          </View>
+        );
+      })}
+
+      {trailing.length > 0
+        ? trailing.map((it) => <ItemBlock key={it.id} item={it} styles={styles} />)
+        : null}
+    </>
+  );
 }
 
 // ── Breadcrumb helper ───────────────────────────────────────────────────
@@ -1061,5 +1314,254 @@ function makeStyles(c: ThemeColors) {
     },
     relTitle: { fontSize: 13.5, fontWeight: '700', color: c.text, lineHeight: 19, marginBottom: 4 },
     relTime: { fontSize: 10.5, color: c.textTertiary },
+
+    // ── Live News (articleTypeId 8) ─────────────────────────────────────
+    liveBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 9,
+      paddingHorizontal: 12,
+      backgroundColor: c.dangerSoft,
+      borderWidth: 1,
+      borderColor: c.danger,
+      borderRadius: 12,
+      marginTop: 4,
+      marginBottom: 14,
+    },
+    liveBannerDot: {
+      width: 9,
+      height: 9,
+      borderRadius: 4.5,
+      backgroundColor: c.danger,
+    },
+    liveBannerLabel: {
+      fontSize: 10.5,
+      fontWeight: '800',
+      color: c.danger,
+      letterSpacing: 0.7,
+    },
+    liveBannerCount: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.text,
+    },
+    liveBannerLatest: {
+      fontSize: 10.5,
+      fontWeight: '500',
+      color: c.textSecondary,
+      marginLeft: 'auto',
+    },
+
+    // Feed container with a vertical rail behind the marker dots
+    liveFeed: {
+      position: 'relative',
+      marginBottom: 20,
+      paddingLeft: 24,
+      gap: 14,
+    },
+    liveRail: {
+      position: 'absolute',
+      left: 7,
+      top: 8,
+      bottom: 8,
+      width: 2,
+      backgroundColor: c.border,
+      borderRadius: 1,
+    },
+    liveCard: {
+      position: 'relative',
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+    },
+    liveCardLatest: {
+      borderColor: c.danger,
+    },
+    // Marker sits on the rail, aligned with the card's header row
+    liveMarker: {
+      position: 'absolute',
+      left: -24,
+      top: 16,
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      borderWidth: 2,
+      backgroundColor: c.card,
+      borderColor: c.border,
+    },
+    liveMarkerLatest: {
+      backgroundColor: c.danger,
+      borderColor: c.danger,
+    },
+    liveCardHead: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 6,
+    },
+    liveNewPill: {
+      backgroundColor: c.danger,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 10,
+    },
+    liveNewPillText: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: 0.7,
+    },
+    liveTimeRel: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: c.text,
+      letterSpacing: -0.2,
+    },
+    liveTimeExact: {
+      fontSize: 10.5,
+      fontWeight: '500',
+      color: c.textTertiary,
+      marginLeft: 'auto',
+      flexShrink: 1,
+    },
+    liveTitle: {
+      fontSize: 15.5,
+      fontWeight: '800',
+      color: c.text,
+      lineHeight: 21,
+      letterSpacing: -0.2,
+      marginTop: 2,
+      marginBottom: 8,
+    },
+    liveImageWrap: {
+      marginHorizontal: -14,
+      marginVertical: 8,
+      backgroundColor: c.surface,
+    },
+    liveImage: {
+      width: '100%',
+      aspectRatio: 16 / 9,
+    },
+    liveBody: { marginTop: 4 },
+
+    // ── Listicle (articleTypeId 2 / 6 / 7) ──────────────────────────────
+    listEntry: {
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 12,
+      overflow: 'hidden',
+      marginBottom: 18,
+    },
+    listHero: {
+      position: 'relative',
+      width: '100%',
+      aspectRatio: 16 / 9,
+      backgroundColor: c.surface,
+      overflow: 'hidden',
+    },
+    // Countdown top spot — taller hero so #1 anchors the list
+    listHeroTop: {
+      aspectRatio: 4 / 3,
+    },
+    listHeroImg: {
+      width: '100%',
+      height: '100%',
+    },
+    // Bottom-only gradient for caption legibility — top of image stays clean
+    listHeroShade: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+    },
+    // Number badge pinned top-left on the hero image
+    listBadge: {
+      position: 'absolute',
+      top: 10,
+      left: 10,
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 2,
+      backgroundColor: c.primary,
+      paddingVertical: 6,
+      paddingLeft: 9,
+      paddingRight: 11,
+      borderRadius: 8,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.35,
+      shadowRadius: 10,
+      elevation: 4,
+    },
+    listBadgeInline: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      alignSelf: 'flex-start',
+      gap: 2,
+      backgroundColor: c.primary,
+      paddingVertical: 6,
+      paddingLeft: 9,
+      paddingRight: 11,
+      borderRadius: 8,
+    },
+    listBadgeTop: {
+      backgroundColor: c.danger,
+      shadowColor: c.danger,
+      paddingVertical: 7,
+      paddingLeft: 10,
+      paddingRight: 13,
+    },
+    listBadgeRow: {
+      paddingTop: 12,
+      paddingHorizontal: 14,
+    },
+    listBadgeHash: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      opacity: 0.75,
+    },
+    listBadgeHashTop: {
+      fontSize: 13,
+    },
+    listBadgeNum: {
+      fontSize: 19,
+      fontWeight: '900',
+      color: '#FFFFFF',
+      letterSpacing: -0.3,
+    },
+    listBadgeNumTop: {
+      fontSize: 24,
+    },
+    listHeroCaption: {
+      position: 'absolute',
+      left: 10,
+      bottom: 8,
+      right: 10,
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontStyle: 'italic',
+      fontWeight: '500',
+      textShadowColor: 'rgba(0,0,0,0.6)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
+    },
+    listContent: {
+      padding: 14,
+    },
+    listEntryTitle: {
+      fontSize: 17,
+      fontWeight: '800',
+      color: c.text,
+      lineHeight: 22,
+      letterSpacing: -0.3,
+      marginBottom: 8,
+    },
   });
 }

@@ -25,6 +25,12 @@ function extractUser(d: any): StoredUser {
     displayName: d.displayName ?? null,
     groupId: d.groupId ?? null,
     groupName: d.groupName ?? null,
+    emailVerified:
+      typeof d.isEmailConfirmed === 'boolean'
+        ? d.isEmailConfirmed
+        : typeof d.emailVerified === 'boolean'
+          ? d.emailVerified
+          : undefined,
   };
 }
 

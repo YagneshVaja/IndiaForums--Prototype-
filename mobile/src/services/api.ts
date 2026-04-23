@@ -7,7 +7,9 @@ import { clearAll, getTokens, setTokens } from './authStorage';
 
 export const apiClient = axios.create({
   baseURL: 'https://api2.indiaforums.com/api/v1',
-  timeout: 15_000,
+  // Short enough that an offline request surfaces its error fast, long enough
+  // that slow mobile connections still succeed on the happy path.
+  timeout: 8_000,
   headers: {
     'Content-Type': 'application/json',
     'api-key': 'Api2IndiaForums@2026',
@@ -151,6 +153,16 @@ const SECTION_TO_CAT: Record<string, string> = {
   LIFESTYLE: 'Lifestyle', FASHION: 'Lifestyle', HEALTH: 'Lifestyle',
   SPORTS: 'Sports', CRICKET: 'Sports', IPL: 'Sports',
   CELEBRITY: 'Television',
+};
+
+// Article defaultCategoryId → display category label.
+// Matches the hierarchy exposed by /articles/list.
+const ARTICLE_CAT_MAP: Record<number, string> = {
+  5: 'Television',  6: 'Television',
+  7: 'Movies',      8: 'Movies',     16: 'Movies', 17: 'Movies', 18: 'Movies',
+  3: 'Digital',     9: 'Digital',    10: 'Digital', 19: 'Digital',
+  4: 'Lifestyle',  11: 'Lifestyle',  12: 'Lifestyle', 13: 'Lifestyle', 20: 'Lifestyle',
+  14: 'Sports',    15: 'Sports',     21: 'Sports',
 };
 
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -336,6 +348,9 @@ export interface Article {
   emoji?: string;
   tag?: string;
   breaking?: boolean;
+  // Only populated by /articles/list (ArticleDto). Null for /home/articles
+  // responses, which use a lighter HomeArticleDto without defaultCategoryId.
+  catId?: number | null;
 }
 
 export interface ArticleItem {
@@ -346,6 +361,12 @@ export interface ArticleItem {
   mediaUrl?: string;
   mediaTitle?: string;
   source?: string;
+  // Partitions listicle/live-news bodies:
+  //   subItem=false → intro/outro blocks
+  //   subItem=true  → a listicle entry or a live-news update card
+  subItem?: boolean;
+  // ISO timestamp surfaced for live-news (articleTypeId 8) update timestamps
+  dateAdded?: string;
 }
 
 export interface JsonEntity {
@@ -365,6 +386,8 @@ export interface ArticleDetail extends Article {
   relatedArticles: Article[];
   articleItems: ArticleItem[];
   jsonEntities: JsonEntity[];
+  // 1 Normal · 2 Listicle Num Asc · 6 Listicle · 7 Listicle Num Desc · 8 Live News
+  articleTypeId?: number;
 }
 
 export interface Banner {
@@ -585,6 +608,7 @@ export interface TopicPoll {
   question: string;
   multiple: boolean;
   hasVoted: boolean;
+  myVotedIds: number[];
   totalVotes: number;
   options: PollOption[];
 }
@@ -666,6 +690,11 @@ export interface TopicPost {
   postCount: number | null;
   joinYear: number | null;
   reactionJson: string | null;
+  // Moderator-visible fields — surfaced in the per-post settings sheet.
+  // Backend only returns these to callers with moderator rights.
+  ip: string | null;
+  hasMaturedContent: boolean;
+  moderatorNote: string | null;
 }
 
 export interface TopicPostsPage {
@@ -808,6 +837,8 @@ function transformArticleDetail(data: any): ArticleDetail {
       mediaUrl: it.contentCodes || it.mediaUrl || undefined,
       mediaTitle: it.mediaTitle || undefined,
       source: it.source || undefined,
+      subItem: it.subItem === true,
+      dateAdded: it.dateAdded || undefined,
     }));
 
   // Extract first <img> src from the HTML body so we can use it as a hero
@@ -881,6 +912,7 @@ function transformArticleDetail(data: any): ArticleDetail {
     relatedArticles: relatedRaw.map(transformRelatedArticle),
     articleItems,
     jsonEntities,
+    articleTypeId: article.articleTypeId ?? undefined,
   };
 }
 
@@ -1029,6 +1061,53 @@ export async function fetchArticles(params: FetchArticlesParams = {}): Promise<A
     const e = err as { response?: { status: number; data: unknown }; message?: string };
     console.error('[API] fetchArticles failed:', e?.response?.status, e?.response?.data ?? e?.message);
     return getMockArticles(category);
+  }
+}
+
+// /articles/list returns ArticleDto which includes defaultCategoryId.
+// NewsScreen uses this so it can filter client-side by sub-category (HINDI,
+// ENGLISH, TAMIL, CRICKET, …) the way the web prototype does.
+export interface FetchArticleListParams {
+  page?: number;
+  limit?: number;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformListArticle(raw: any): Article {
+  const catId: number | null = raw.defaultCategoryId ?? null;
+  const cat = (catId != null && ARTICLE_CAT_MAP[catId]) || 'Movies';
+  return {
+    id: String(raw.articleId ?? ''),
+    slug: raw.pageUrl ?? '',
+    title: raw.headline ?? '',
+    summary: '',
+    thumbnailUrl: raw.thumbnail || raw.thumbnailUrl || '',
+    category: cat,
+    publishedAt: raw.publishedWhen || raw.publishDate || '',
+    timeAgo: timeAgo(raw.publishedWhen || raw.publishDate),
+    authorName: 'IF News Desk',
+    emoji: CATEGORY_EMOJIS[cat] || '📰',
+    tag: raw.articleAttributeName || '',
+    breaking: (raw.priority ?? 0) > 0,
+    catId,
+  };
+}
+
+export async function fetchArticleList(params: FetchArticleListParams = {}): Promise<Article[]> {
+  const { page = 1, limit = 25 } = params;
+  try {
+    const { data } = await apiClient.get('/articles/list', {
+      params: { page, pageSize: limit },
+    });
+    // Handle both { data: { articles } } and { articles } shapes.
+    const payload = data?.data ?? data;
+    const articles = payload?.articles ?? [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return articles.map((a: any) => transformListArticle(a));
+  } catch (err: unknown) {
+    const e = err as { response?: { status: number; data: unknown }; message?: string };
+    console.error('[API] fetchArticleList failed:', e?.response?.status, e?.response?.data ?? e?.message);
+    return getMockArticles();
   }
 }
 
@@ -1188,6 +1267,7 @@ function getMockArticles(category?: string): Article[] {
       authorName: 'IF News Desk',
       emoji: '🎬',
       breaking: true,
+      catId: 7,
     },
     {
       id: '202',
@@ -1201,6 +1281,7 @@ function getMockArticles(category?: string): Article[] {
       authorName: 'IF News Desk',
       emoji: '🏏',
       tag: 'IPL',
+      catId: 15,
     },
     {
       id: '203',
@@ -1214,6 +1295,7 @@ function getMockArticles(category?: string): Article[] {
       authorName: 'IF News Desk',
       emoji: '📺',
       tag: 'TRENDING',
+      catId: 5,
     },
     {
       id: '204',
@@ -1226,6 +1308,7 @@ function getMockArticles(category?: string): Article[] {
       timeAgo: '5 hrs ago',
       authorName: 'IF News Desk',
       emoji: '⭐',
+      catId: 8,
     },
     {
       id: '205',
@@ -1240,6 +1323,7 @@ function getMockArticles(category?: string): Article[] {
       emoji: '👨‍🍳',
       tag: 'HINDI',
       breaking: true,
+      catId: 9,
     },
     {
       id: '206',
@@ -1252,6 +1336,7 @@ function getMockArticles(category?: string): Article[] {
       timeAgo: '22 hrs ago',
       authorName: 'IF News Desk',
       emoji: '🏏',
+      catId: 21,
     },
     {
       id: '207',
@@ -1264,6 +1349,7 @@ function getMockArticles(category?: string): Article[] {
       timeAgo: '1 day ago',
       authorName: 'IF News Desk',
       emoji: '✨',
+      catId: 11,
     },
     {
       id: '208',
@@ -1276,6 +1362,7 @@ function getMockArticles(category?: string): Article[] {
       timeAgo: '1 day ago',
       authorName: 'IF News Desk',
       emoji: '📱',
+      catId: 10,
     },
   ];
 
@@ -1957,16 +2044,27 @@ function transformPoll(rawPoll: any): TopicPoll | null {
   const options: PollOption[] = rawOpts
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .map((o: any) => ({
-      id:    Number(o.id ?? o.pollChoiceId ?? o.optionId),
-      text:  String(o.text ?? o.choiceText ?? o.option ?? o.label ?? ''),
+      id:    Number(o.id ?? o.choiceId ?? o.pollChoiceId ?? o.optionId),
+      text:  String(o.text ?? o.choice ?? o.choiceText ?? o.option ?? o.label ?? ''),
       votes: Number(o.votes ?? o.voteCount ?? o.count ?? 0),
     }))
     .filter(o => Number.isFinite(o.id));
+  // hasUserVoted is a per-choice integer (0 = no vote) on PollChoiceDto.
+  const myVotedIds: number[] = rawOpts
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((o: any) => Number(o.hasUserVoted ?? 0) > 0)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((o: any) => Number(o.id ?? o.choiceId ?? o.pollChoiceId ?? o.optionId))
+    .filter((n: number) => Number.isFinite(n));
+  const hasVoted = Boolean(
+    p.hasVoted ?? p.userVoted ?? myVotedIds.length > 0,
+  );
   return {
     pollId:     Number(pollId),
     question:   String(p.question ?? p.title ?? p.subject ?? ''),
-    multiple:   Boolean(p.multiple ?? p.allowMultiple ?? false),
-    hasVoted:   Boolean(p.hasVoted ?? p.userVoted ?? false),
+    multiple:   Boolean(p.multiple ?? p.allowMultiple ?? p.multipleVotes ?? false),
+    hasVoted,
+    myVotedIds,
     totalVotes: options.reduce((s, o) => s + (o.votes || 0), 0),
     options,
   };
@@ -1989,14 +2087,25 @@ function parseTopicTags(raw: any): TopicTag[] {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildForumAvatarUrl(raw: any): string | null {
+  if (raw.thumbnailUrl) return String(raw.thumbnailUrl);
+  if (raw.forumThumbnailUrl) return String(raw.forumThumbnailUrl);
+  if (!raw.updateChecksum) return null;
+  const fid = Number(raw.forumId ?? 0);
+  if (!fid) return null;
+  const bucket = Math.floor(fid / 1000);
+  const tail   = String(fid % 1000).padStart(3, '0');
+  return `https://img.indiaforums.com/forumavatar/200x200/${bucket}/${tail}.webp?uc=${raw.updateChecksum}`;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformTopic(raw: any): ForumTopic {
+  const forumThumbnail = buildForumAvatarUrl(raw);
   return {
     id:             Number(raw.topicId),
     forumId:        Number(raw.forumId ?? 0),
     forumName:      raw.forumName || '',
-    forumThumbnail: raw.updateChecksum
-      ? `https://img.indiaforums.com/forumavatar/200x200/0/${String(raw.forumId).padStart(3, '0')}.webp?uc=${raw.updateChecksum}`
-      : null,
+    forumThumbnail,
     title:         raw.subject || '',
     description:   raw.topicDesc || '',
     poster:        raw.startThreadUserName || 'Anonymous',
@@ -2025,42 +2134,36 @@ export async function fetchForumHome(
   const params: Record<string, string | number> = { pageNumber, pageSize };
   if (categoryId) params.categoryId = categoryId;
 
-  try {
-    const { data } = await apiClient.get('/forums/home', { params });
-    const payload = data?.data || data || {};
+  const { data } = await apiClient.get('/forums/home', { params });
+  const payload = data?.data || data || {};
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawCats: any[] = payload.categories || [];
-    const allCats = rawCats.map(transformForumCategory);
-    const categories = allCats.filter(c => c.level === 1);
-    const subCats = allCats.filter(c => c.level === 2);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawCats: any[] = payload.categories || [];
+  const allCats = rawCats.map(transformForumCategory);
+  const categories = allCats.filter(c => c.level === 1);
+  const subCats = allCats.filter(c => c.level === 2);
 
-    const subCatMap: Record<number, ForumCategory[]> = {};
-    subCats.forEach(sc => {
-      if (!subCatMap[sc.parentId]) subCatMap[sc.parentId] = [];
-      subCatMap[sc.parentId].push(sc);
-    });
+  const subCatMap: Record<number, ForumCategory[]> = {};
+  subCats.forEach(sc => {
+    if (!subCatMap[sc.parentId]) subCatMap[sc.parentId] = [];
+    subCatMap[sc.parentId].push(sc);
+  });
 
-    const catsMap: Record<number, ForumCategory> = {};
-    allCats.forEach(c => { catsMap[c.id] = c; });
+  const catsMap: Record<number, ForumCategory> = {};
+  allCats.forEach(c => { catsMap[c.id] = c; });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawForums: any[] = payload.forums || [];
-    const forums = rawForums.map(f => transformForum(f, catsMap));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawForums: any[] = payload.forums || [];
+  const forums = rawForums.map(f => transformForum(f, catsMap));
 
-    return {
-      forums,
-      categories,
-      subCatMap,
-      totalForumCount: Number(payload.totalForumCount ?? 0),
-      totalPages:      Number(payload.totalPages ?? 1),
-      pageNumber:      Number(payload.pageNumber ?? pageNumber),
-    };
-  } catch (err: unknown) {
-    const e = err as { response?: { status: number; data: unknown }; message?: string };
-    console.error('[API] fetchForumHome failed:', e?.response?.status, e?.response?.data ?? e?.message);
-    return getMockForumsHomePage();
-  }
+  return {
+    forums,
+    categories,
+    subCatMap,
+    totalForumCount: Number(payload.totalForumCount ?? 0),
+    totalPages:      Number(payload.totalPages ?? 1),
+    pageNumber:      Number(payload.pageNumber ?? pageNumber),
+  };
 }
 
 /** Cross-forum "All Topics" feed. */
@@ -2068,26 +2171,20 @@ export async function fetchAllForumTopics(
   pageNumber = 1,
   pageSize = 20,
 ): Promise<AllTopicsPage> {
-  try {
-    const { data } = await apiClient.get('/forums/topics', {
-      params: { pageNumber, pageSize },
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawTopics: any[] = data?.topics || [];
-    const totalCount = Number(data?.totalCount ?? 0);
+  const { data } = await apiClient.get('/forums/topics', {
+    params: { pageNumber, pageSize },
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawTopics: any[] = data?.topics || [];
+  const totalCount = Number(data?.totalCount ?? 0);
 
-    return {
-      topics:      rawTopics.map(transformTopic),
-      totalCount,
-      pageNumber,
-      pageSize,
-      hasNextPage: totalCount > pageNumber * pageSize,
-    };
-  } catch (err: unknown) {
-    const e = err as { response?: { status: number; data: unknown }; message?: string };
-    console.error('[API] fetchAllForumTopics failed:', e?.response?.status, e?.response?.data ?? e?.message);
-    return getMockAllTopicsPage(pageNumber, pageSize);
-  }
+  return {
+    topics:      rawTopics.map(transformTopic),
+    totalCount,
+    pageNumber,
+    pageSize,
+    hasNextPage: totalCount > pageNumber * pageSize,
+  };
 }
 
 /** Topics for a single forum (drill-down view). */
@@ -2096,189 +2193,37 @@ export async function fetchForumTopics(
   pageNumber = 1,
   pageSize = 20,
 ): Promise<ForumTopicsPage> {
-  try {
-    const { data } = await apiClient.get(`/forums/${forumId}/topics`, {
-      params: { pageNumber, pageSize },
-    });
+  const { data } = await apiClient.get(`/forums/${forumId}/topics`, {
+    params: { pageNumber, pageSize },
+  });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawTopics: any[] = data?.topics || [];
-    const forumDetail = data?.forumDetail
-      ? transformForum(data.forumDetail, {})
-      : null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawTopics: any[] = data?.topics || [];
+  const forumDetail = data?.forumDetail
+    ? transformForum(data.forumDetail, {})
+    : null;
 
-    // Parse flair definitions from forumDetail.flairJson
-    let flairs: ForumFlair[] = [];
-    if (data?.forumDetail?.flairJson) {
-      try {
-        const parsed = JSON.parse(data.forumDetail.flairJson);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        flairs = (parsed?.json || []).map((f: any) => ({
-          id:      Number(f.id),
-          name:    f.nm || '',
-          bgColor: f.bgcolor || '#E5E7EB',
-          fgColor: f.fgcolor || '#1A1A1A',
-        }));
-      } catch { /* malformed */ }
-    }
-
-    return {
-      topics:      rawTopics.map(transformTopic),
-      forumDetail,
-      flairs,
-      pageNumber,
-      hasNextPage: Boolean(data?.hasMore ?? false),
-    };
-  } catch (err: unknown) {
-    const e = err as { response?: { status: number; data: unknown }; message?: string };
-    console.error('[API] fetchForumTopics failed:', e?.response?.status, e?.response?.data ?? e?.message);
-    return getMockForumTopicsPage(forumId, pageNumber, pageSize);
+  // Parse flair definitions from forumDetail.flairJson
+  let flairs: ForumFlair[] = [];
+  if (data?.forumDetail?.flairJson) {
+    try {
+      const parsed = JSON.parse(data.forumDetail.flairJson);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      flairs = (parsed?.json || []).map((f: any) => ({
+        id:      Number(f.id),
+        name:    f.nm || '',
+        bgColor: f.bgcolor || '#E5E7EB',
+        fgColor: f.fgcolor || '#1A1A1A',
+      }));
+    } catch { /* malformed */ }
   }
-}
-
-// ---------------------------------------------------------------------------
-// Forum mocks — fallback when API is unreachable
-// ---------------------------------------------------------------------------
-
-function getMockForumsHomePage(): ForumsHomePage {
-  const categories: ForumCategory[] = [
-    { id: 1, parentId: 0, name: 'Education',     slug: 'education',     level: 1, forumCount: 42,  color: '#1e40af', bg: FORUM_CAT_GRADIENTS.education,     emoji: '🎓' },
-    { id: 2, parentId: 0, name: 'Entertainment', slug: 'entertainment', level: 1, forumCount: 520, color: '#7c2d12', bg: FORUM_CAT_GRADIENTS.entertainment, emoji: '🎭' },
-    { id: 3, parentId: 0, name: 'Finance',       slug: 'finance',       level: 1, forumCount: 88,  color: '#065f46', bg: FORUM_CAT_GRADIENTS.finance,       emoji: '💰' },
-    { id: 4, parentId: 0, name: 'Sports',        slug: 'sports',        level: 1, forumCount: 210, color: '#14532d', bg: FORUM_CAT_GRADIENTS.sports,        emoji: '🏏' },
-    { id: 5, parentId: 0, name: 'Television',    slug: 'television',    level: 1, forumCount: 640, color: '#4a1942', bg: FORUM_CAT_GRADIENTS.television,    emoji: '📺' },
-  ];
-
-  const mockForum = (id: number, name: string, description: string, slug: string, topicCount: number, rank: number): Forum => ({
-    id,
-    name,
-    description,
-    categoryId:    2,
-    slug,
-    topicCount,
-    postCount:     topicCount * 42,
-    followCount:   Math.max(0, 500 - rank * 20),
-    rank,
-    prevRank:      rank,
-    rankDisplay:   '',
-    bg:            FORUM_CAT_GRADIENTS[slug] || FORUM_CAT_GRADIENTS.general,
-    emoji:         FORUM_CAT_EMOJIS[slug] || '💬',
-    bannerUrl:     null,
-    thumbnailUrl:  null,
-    locked:        false,
-    hot:           topicCount > 5000,
-    priorityPosts: 0,
-    editPosts:     0,
-    deletePosts:   0,
-  });
-
-  const forums: Forum[] = [
-    mockForum(1, 'Itti Si Khushi Sab TV',   'This is the Indian adaptation of Shameless', 'television', 0,      1),
-    mockForum(2, 'Sampoorna',               'A tale of love, betrayal, and false accusations', 'television', 0, 2),
-    mockForum(3, 'Bollywood',               'Join our Bollywood Forum for the latest Hindi movie discussions…', 'movies', 243800, 3),
-    mockForum(4, 'Personified Fun',         'FUN-BANTER Unlimited ??', 'general', 72, 4),
-    mockForum(5, 'Yeh Rishta Kya Kehlata Hai', 'Yeh Rishta Kya Kehlata Hai is into its fourth Generation now and is…', 'television', 45400, 5),
-    mockForum(6, 'Mannat Har Khushi Paane Ki', 'The story revolves around Mannat, an aspiring young chef…', 'television', 103, 6),
-  ];
 
   return {
-    forums,
-    categories,
-    subCatMap: {},
-    totalForumCount: 1658,
-    totalPages:      83,
-    pageNumber:      1,
-  };
-}
-
-function getMockAllTopicsPage(pageNumber: number, pageSize: number): AllTopicsPage {
-  const topics: ForumTopic[] = Array.from({ length: pageSize }, (_, i) => {
-    const n = (pageNumber - 1) * pageSize + i + 1;
-    return {
-      id:             10000 + n,
-      forumId:        3,
-      forumName:      'Bollywood',
-      forumThumbnail: null,
-      title:          `Latest Bollywood discussion thread #${n}`,
-      description:    'Join fans from across the country as they discuss recent releases, box office numbers, and industry gossip.',
-      poster:         `User${n}`,
-      lastBy:         `Fan${n}`,
-      time:           `${n} min ago`,
-      lastTime:       `${Math.max(1, n - 1)} min ago`,
-      replies:        120 + n,
-      views:          1200 + n * 10,
-      likes:          40 + n,
-      locked:         false,
-      pinned:         false,
-      flairId:        0,
-      topicImage:     null,
-      tags:           [],
-      linkTypeValue:  '',
-      poll:           null,
-    };
-  });
-  return {
-    topics,
-    totalCount:  12345,
+    topics:      rawTopics.map(transformTopic),
+    forumDetail,
+    flairs,
     pageNumber,
-    pageSize,
-    hasNextPage: true,
-  };
-}
-
-function getMockForumTopicsPage(forumId: number, pageNumber: number, pageSize: number): ForumTopicsPage {
-  const topics: ForumTopic[] = Array.from({ length: pageSize }, (_, i) => {
-    const n = (pageNumber - 1) * pageSize + i + 1;
-    return {
-      id:             20000 + n,
-      forumId,
-      forumName:      'Bollywood',
-      forumThumbnail: null,
-      title:          `Topic ${n}: What did you think of the latest episode?`,
-      description:    'A lively thread where fans share their takes.',
-      poster:         `User${n}`,
-      lastBy:         `Fan${n}`,
-      time:           `${n} hr ago`,
-      lastTime:       `${Math.max(1, n - 1)} hr ago`,
-      replies:        15 + n,
-      views:          200 + n * 5,
-      likes:          8 + n,
-      locked:         false,
-      pinned:         i < 2,
-      flairId:        0,
-      topicImage:     null,
-      tags:           [],
-      linkTypeValue:  '',
-      poll:           null,
-    };
-  });
-  return {
-    topics,
-    forumDetail: {
-      id:            forumId,
-      name:          'Bollywood',
-      description:   'Join our Bollywood Forum for the latest Hindi movie discussions.',
-      categoryId:    2,
-      slug:          'movies',
-      topicCount:    243800,
-      postCount:     5200000,
-      followCount:   42000,
-      rank:          3,
-      prevRank:      3,
-      rankDisplay:   '',
-      bg:            FORUM_CAT_GRADIENTS.movies,
-      emoji:         '🎬',
-      bannerUrl:     null,
-      thumbnailUrl:  null,
-      locked:        false,
-      hot:           true,
-      priorityPosts: 0,
-      editPosts:     0,
-      deletePosts:   0,
-    },
-    flairs:      [],
-    pageNumber,
-    hasNextPage: true,
+    hasNextPage: Boolean(data?.hasMore ?? false),
   };
 }
 
@@ -2331,6 +2276,9 @@ function transformPost(raw: any): TopicPost {
     postCount:    raw.postCount ?? raw.postsCount ?? raw.totalMessages ?? null,
     joinYear,
     reactionJson: raw.reactionJson ?? raw.jsonData ?? null,
+    ip:                raw.ip ?? raw.ipAddress ?? raw.posterIp ?? null,
+    hasMaturedContent: Boolean(raw.hasMaturedContent ?? raw.isMatured ?? false),
+    moderatorNote:     raw.moderatorNote ?? null,
   };
 }
 
@@ -2339,33 +2287,45 @@ export async function fetchTopicPosts(
   pageNumber = 1,
   pageSize = 20,
 ): Promise<TopicPostsPage> {
-  try {
-    const { data } = await apiClient.get(`/forums/topics/${topicId}/posts`, {
-      params: { pageNumber, pageSize },
-    });
+  const { data } = await apiClient.get(`/forums/topics/${topicId}/posts`, {
+    params: { pageNumber, pageSize },
+  });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawPosts: any[] = data?.posts || [];
-    const rawDetail       = data?.topicDetail || null;
-    const startAuthorId   = rawDetail?.startAuthorId ?? null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawPosts: any[] = data?.posts || [];
+  const rawDetail       = data?.topicDetail || null;
+  const rawPollDetail   = data?.pollDetail || null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawPollChoices: any[] = data?.pollChoices || [];
+  const startAuthorId   = rawDetail?.startAuthorId ?? null;
 
-    const posts = rawPosts.map(r => {
-      const post = transformPost(r);
-      if (startAuthorId && post.authorId === Number(startAuthorId)) post.isOp = true;
-      return post;
-    });
+  const posts = rawPosts.map(r => {
+    const post = transformPost(r);
+    if (startAuthorId && post.authorId === Number(startAuthorId)) post.isOp = true;
+    return post;
+  });
 
-    return {
-      posts,
-      topicDetail: rawDetail ? transformTopic(rawDetail) : null,
-      pageNumber,
-      hasNextPage: Boolean(data?.hasMore ?? false),
-    };
-  } catch (err: unknown) {
-    const e = err as { response?: { status: number; data: unknown }; message?: string };
-    console.error('[API] fetchTopicPosts failed:', e?.response?.status, e?.response?.data ?? e?.message);
-    return getMockTopicPostsPage(topicId, pageNumber, pageSize);
-  }
+  // Poll detail + choices come at the top level of the response, not inside
+  // topicDetail. Merge them into the raw detail so transformTopic can pick
+  // them up. pollDetail does NOT carry its own pollId — the id lives on
+  // topicDetail.pollId and on each pollChoice.pollId, so inject it here.
+  const mergedPollId =
+    rawDetail?.pollId ?? rawPollChoices[0]?.pollId ?? null;
+  const detailWithPoll = rawDetail
+    ? {
+        ...rawDetail,
+        poll: rawPollDetail
+          ? { pollId: mergedPollId, ...rawPollDetail, options: rawPollChoices }
+          : null,
+      }
+    : null;
+
+  return {
+    posts,
+    topicDetail: detailWithPoll ? transformTopic(detailWithPoll) : null,
+    pageNumber,
+    hasNextPage: Boolean(data?.hasMore ?? false),
+  };
 }
 
 export interface ReplyResult {
@@ -2470,6 +2430,12 @@ export async function replyToTopic(
   topicId: number,
   forumId: number,
   message: string,
+  opts?: {
+    membersOnly?:      boolean;
+    hasMaturedContent?: boolean;
+    showSignature?:    boolean;
+    addToWatchList?:   boolean;
+  },
 ): Promise<ReplyResult> {
   const trimmed = message.trim();
   if (!trimmed) return { ok: false, postId: null, error: 'Please enter a message.' };
@@ -2477,10 +2443,11 @@ export async function replyToTopic(
   const body = {
     topicId,
     forumId,
-    message: `<p>${escapeHtml(trimmed).replace(/\n/g, '<br>')}</p>`,
-    showSignature:     true,
-    addToWatchList:    true,
-    hasMaturedContent: false,
+    message:           `<p>${escapeHtml(trimmed).replace(/\n/g, '<br>')}</p>`,
+    showSignature:     opts?.showSignature     ?? true,
+    addToWatchList:    opts?.addToWatchList    ?? true,
+    hasMaturedContent: opts?.hasMaturedContent ?? false,
+    membersOnly:       opts?.membersOnly       ?? false,
     postTypeId:        1,
   };
 
@@ -2509,11 +2476,25 @@ export interface CreateTopicResult {
   error?: string;
 }
 
+export interface PollChoice { choice: string; }
+export interface PollData {
+  question?:      string;
+  multipleVotes?: boolean;
+  allowReplies?:  boolean;
+  choices:        PollChoice[];
+}
+
 export async function createTopic(args: {
-  forumId: number;
-  subject: string;
-  message: string;
-  flairId?: number | null;
+  forumId:           number;
+  subject:           string;
+  message:           string;
+  flairId?:          number | null;
+  topicTypeId?:      number;
+  hasMaturedContent?: boolean;
+  showSignature?:    boolean;
+  addToWatchList?:   boolean;
+  membersOnly?:      boolean;
+  pollData?:         PollData | null;
 }): Promise<CreateTopicResult> {
   const subject = args.subject.trim();
   const message = args.message.trim();
@@ -2524,13 +2505,15 @@ export async function createTopic(args: {
     forumId:           args.forumId,
     subject,
     message:           `<p>${escapeHtml(message).replace(/\n/g, '<br>')}</p>`,
-    topicTypeId:       1,
-    showSignature:     true,
-    addToWatchList:    true,
-    hasMaturedContent: false,
+    topicTypeId:       args.topicTypeId      ?? 1,
+    showSignature:     args.showSignature     ?? true,
+    addToWatchList:    args.addToWatchList    ?? true,
+    hasMaturedContent: args.hasMaturedContent ?? false,
+    membersOnly:       args.membersOnly       ?? false,
     addToMyWall:       false,
   };
-  if (args.flairId != null) body.flairId = args.flairId;
+  if (args.flairId  != null) body.flairId  = args.flairId;
+  if (args.pollData != null) body.pollData = args.pollData;
 
   try {
     const { data } = await apiClient.post('/forums/topics', body);
@@ -2547,6 +2530,50 @@ export async function createTopic(args: {
       : (e?.response?.data?.message || e?.message || 'Failed to create topic.');
     console.error('[API] createTopic failed:', status, e?.response?.data ?? e?.message);
     return { ok: false, topicId: null, error: msg };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Search
+// ---------------------------------------------------------------------------
+
+export interface SearchTopicResult {
+  id:         number;
+  title:      string;
+  description: string;
+  poster:     string;
+  time:       string;
+  replies:    number;
+  flairId?:   number | null;
+}
+
+export async function searchTopics(args: {
+  query:   string;
+  forumId: number;
+  pageSize?: number;
+}): Promise<SearchTopicResult[]> {
+  try {
+    const { data } = await apiClient.get('/search', {
+      params: {
+        query:       args.query,
+        contentType: 8,
+        forumId:     args.forumId,
+        pageSize:    args.pageSize ?? 30,
+      },
+    });
+    const raw: unknown[] = data?.results ?? data?.topics ?? [];
+    if (!Array.isArray(raw) || raw.length === 0) return [];
+    return (raw as Record<string, unknown>[]).map(r => ({
+      id:          Number(r.topicId ?? r.id ?? 0),
+      title:       String(r.subject ?? r.title ?? ''),
+      description: String(r.message ?? r.description ?? r.snippet ?? ''),
+      poster:      String(r.startedByUserName ?? r.poster ?? ''),
+      time:        String(r.startThreadDate   ?? r.time   ?? ''),
+      replies:     Number(r.replyCount        ?? r.replies ?? 0),
+      flairId:     r.flairId != null ? Number(r.flairId) : null,
+    }));
+  } catch {
+    return [];
   }
 }
 
@@ -2646,16 +2673,19 @@ export async function editPost(args: {
   postId: number;
   topicId: number;
   message: string;
+  hasMaturedContent?: boolean;
+  moderatorNote?: string;
 }): Promise<EditPostResult> {
   const trimmed = args.message.trim();
   if (!trimmed) return { ok: false, error: 'Please enter a message.' };
-  const body = {
+  const body: Record<string, unknown> = {
     threadId:          args.postId,
     topicId:           args.topicId,
     message:           `<p>${escapeHtml(trimmed).replace(/\n/g, '<br>')}</p>`,
     showSignature:     true,
-    hasMaturedContent: false,
+    hasMaturedContent: args.hasMaturedContent ?? false,
   };
+  if (args.moderatorNote) body.moderatorNote = args.moderatorNote;
   try {
     await apiClient.put(`/forums/posts/${args.postId}`, body);
     return { ok: true };
@@ -3012,40 +3042,59 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function getMockTopicPostsPage(topicId: number, pageNumber: number, pageSize: number): TopicPostsPage {
-  const posts: TopicPost[] = Array.from({ length: pageSize }, (_, i) => {
-    const n = (pageNumber - 1) * pageSize + i + 1;
-    return {
-      id:           50000 + n,
-      topicId,
-      authorId:     1000 + n,
-      author:       `User${n}`,
-      realName:     n % 3 === 0 ? `Real Name ${n}` : '',
-      rank:         n % 4 === 0 ? 'Moderator' : (n % 2 === 0 ? 'Senior Member' : 'Member'),
-      message:      `<p>This is post <b>#${n}</b>. Just sharing my thoughts on this topic — loved the recent developments. What do you all think?</p>`,
-      time:         `${n} hr ago`,
-      rawTime:      new Date(Date.now() - n * 3600 * 1000).toISOString(),
-      likes:        Math.max(0, 25 - n),
-      avatarUrl:    null,
-      avatarAccent: ['#3558F0', '#7c2d12', '#065f46', '#4c1d95'][n % 4],
-      countryCode:  n % 2 === 0 ? 'IN' : 'US',
-      badges:       [],
-      isOp:         pageNumber === 1 && i === 0,
-      isEdited:     n % 5 === 0,
-      editedWhen:   n % 5 === 0 ? new Date(Date.now() - n * 600 * 1000).toISOString() : null,
-      editedBy:     null,
-      editCount:    n % 5 === 0 ? 1 : 0,
-      postCount:    120 + n * 3,
-      joinYear:     2015 + (n % 10),
-      reactionJson: null,
-    };
-  });
-  return {
-    posts,
-    topicDetail: null,
-    pageNumber,
-    hasNextPage: pageNumber < 3,
+/* ── Reports (content report-abuse) ─────────────────────────────────────── */
+
+// Matches server's `CONTENT_TYPES` numeric enum. Value 1 is the forum channel.
+export const REPORT_CONTENT_TYPE_FORUM = 1;
+
+export interface ReportTypeEntry {
+  reason: string;
+}
+
+export async function getReportTypes(): Promise<ReportTypeEntry[]> {
+  try {
+    const { data } = await apiClient.get('/reports/types');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const list: any[] = data?.data ?? data ?? [];
+    return (Array.isArray(list) ? list : [])
+      .map(r => (typeof r === 'string'
+        ? { reason: r }
+        : { reason: r.reportType || r.name || r.title || r.reason || '' }))
+      .filter(r => !!r.reason);
+  } catch {
+    // Fallback so the UI still works when the endpoint is unavailable.
+    return [
+      { reason: 'Spam' },
+      { reason: 'Harassment' },
+      { reason: 'Hate Speech' },
+      { reason: 'Inappropriate Content' },
+      { reason: 'Other' },
+    ];
+  }
+}
+
+export async function reportContent(args: {
+  contentType: number;
+  contentId:   number;
+  reason:      string;
+  remark?:     string;
+  forumId?:    number;
+  topicId?:    number;
+}): Promise<ModResult> {
+  const body: Record<string, unknown> = {
+    contentType: args.contentType,
+    contentId:   args.contentId,
+    reason:      args.reason,
   };
+  if (args.remark  !== undefined) body.remark  = args.remark;
+  if (args.forumId !== undefined) body.forumId = args.forumId;
+  if (args.topicId !== undefined) body.topicId = args.topicId;
+  try {
+    await apiClient.post('/reports', body);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: wrapModError(err, 'Failed to submit report.') };
+  }
 }
 
 // ---------------------------------------------------------------------------

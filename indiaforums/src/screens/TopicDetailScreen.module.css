@@ -262,6 +262,8 @@
   border-radius: 10px;
   margin: 8px 0;
   display: block;
+}
+.topicBody img.imgLoaded {
   box-shadow: 0 2px 10px rgba(0,0,0,.10);
   border: 1px solid var(--border);
 }
@@ -659,6 +661,14 @@
   opacity: 0.8;
 }
 
+.postNumGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 /* ── Post body ── */
 .postBody {
   font-family: var(--font-body);
@@ -683,9 +693,48 @@
   border-radius: 10px;
   margin: 10px 0;
   display: block;
+  cursor: zoom-in;
+}
+/* Decorative frame only once the image is actually loaded — an in-flight or
+   broken image paired with border+shadow was rendering as a large empty
+   "card" placeholder. The `imgLoaded` class is applied by
+   useHideBrokenImages on the 'load' event. */
+.postBody img.imgLoaded {
   box-shadow: 0 2px 10px rgba(0,0,0,.10);
   border: 1px solid var(--border);
-  cursor: zoom-in;
+}
+/* Inline smileys (small images the backend renders via shortcodes like
+   [smiley2]): no border, shadow, or block layout — they must sit inline
+   with the surrounding text. */
+.postBody img[alt^="smiley"],
+.postBody img[alt^=":"],
+.postBody img[src*="smilie"],
+.postBody img[src*="smiley"],
+.postBody img[src*="emoji"],
+.topicBody img[alt^="smiley"],
+.topicBody img[alt^=":"],
+.topicBody img[src*="smilie"],
+.topicBody img[src*="smiley"],
+.topicBody img[src*="emoji"] {
+  display: inline-block;
+  width: auto;
+  max-height: 20px;
+  margin: 0 2px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  cursor: default;
+  vertical-align: text-bottom;
+}
+/* Blockquote `cite` element rendered by the BBCode parser */
+.postBody blockquote cite {
+  display: block;
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 6px;
 }
 .postBody a { color: var(--brand); text-decoration: none; font-weight: 500; }
 .postBody a:hover { text-decoration: underline; }
@@ -1078,6 +1127,19 @@
   flex-shrink: 0;
 }
 
+.actionSuccessBar {
+  padding: 8px 14px;
+  background: var(--success-surface);
+  border-top: 1px solid var(--success);
+  color: var(--success);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 /* ── Locked bar ── */
 .lockedBar {
   display: flex;
@@ -1213,83 +1275,248 @@
 
 .spacer { height: 24px; }
 
-/* ── Poll widget ── */
+/* ── Poll widget ─────────────────────────────────────────────────────────────
+   Two layouts:
+     • Not voted → checkbox/radio rows + "CAST VOTE!!" button + hint.
+     • Voted    → label + % on top, thin green progress bar underneath.
+───────────────────────────────────────────────────────────────────────────── */
 .pollBox {
   margin: 10px 0;
-  padding: 14px;
-  border: 1px solid var(--brand-border);
-  border-radius: 14px;
-  background: var(--brand-light);
-}
-
-.pollQuestion {
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--dark);
-  margin-bottom: 10px;
-}
-
-.pollOptions {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.pollOptionBtn {
-  display: block;
-  width: 100%;
-  text-align: left;
-  font-family: var(--font-body);
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text);
+  padding: 14px 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   background: var(--card);
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  padding: 9px 14px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.pollOptionBtn:hover:not(:disabled) {
-  border-color: var(--brand);
-  color: var(--brand);
-}
-.pollOptionBtn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-.pollResult {
-  position: relative;
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--card);
-  border: 1.5px solid var(--border);
 }
 
-.pollResultMine { border-color: var(--brand); }
-
-.pollResultBar {
-  position: absolute;
-  top: 0; left: 0; bottom: 0;
-  background: var(--brand-light);
-  transition: width 0.45s ease;
-}
-
-.pollResultRow {
-  position: relative;
+.pollHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 14px;
+  margin-bottom: 10px;
+}
+
+.pollLabel {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--text);
+}
+
+.pollMenuWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.pollSettingsBtn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+.pollSettingsBtn:hover:not(:disabled) { color: var(--text); border-color: var(--text2); }
+.pollSettingsBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Poll gear dropdown ── */
+.pollMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 150px;
+  z-index: 10;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--shadow-md);
+}
+
+.pollMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
   font-family: var(--font-body);
   font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.pollMenuItem:hover:not(:disabled) { background: var(--surface); }
+.pollMenuItem:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.pollQuestion {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+/* ── Not-voted layout ── */
+.pollChoices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pollChoiceRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out);
+}
+.pollChoiceRow:hover { border-color: var(--border-strong); }
+.pollChoiceRowOn {
+  border-color: var(--brand);
+  background: var(--brand-lighter);
+}
+
+.pollChoiceInput {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pollChoiceBox {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-on-brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+.pollChoiceRowOn .pollChoiceBox {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.pollChoiceText {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.pollCastBtn {
+  margin-top: 14px;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: var(--toggle-on);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: opacity var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
+.pollCastBtn:hover:not(:disabled) { opacity: 0.9; }
+.pollCastBtn:active:not(:disabled) { transform: scale(0.97); }
+.pollCastBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pollHint {
+  margin-top: 10px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+}
+
+/* ── Voted layout ── */
+.pollResults {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pollResultRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pollResultTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
   font-weight: 600;
   color: var(--text);
 }
 
-.pollResultPct { font-weight: 800; color: var(--brand); }
+.pollResultText { flex: 1; line-height: 1.3; }
+
+.pollResultPct {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--live);
+  flex-shrink: 0;
+}
+
+.pollResultTrack {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.pollResultFill {
+  height: 100%;
+  background: var(--live);
+  border-radius: 2px;
+  transition: width 0.45s var(--ease-out);
+}
+
+.pollResultMine .pollResultPct { color: var(--brand); }
+.pollResultMine .pollResultFill { background: var(--brand); }
 
 .pollMeta {
-  margin-top: 8px;
+  margin-top: 2px;
   font-family: var(--font-body);
   font-size: 10.5px;
   font-weight: 600;
@@ -1297,7 +1524,7 @@
 }
 
 .pollError {
-  margin-top: 6px;
+  margin-top: 10px;
   background: var(--red-surface);
   color: var(--red);
   font-family: var(--font-body);

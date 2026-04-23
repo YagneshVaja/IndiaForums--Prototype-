@@ -76,6 +76,7 @@ export type ForumsStackParamList = {
     topic: import('../services/api').ForumTopic;
     forum?: import('../services/api').Forum;
   };
+  ReportsInbox: { forum: import('../services/api').Forum };
 };
 
 export type SearchStackParamList = {
@@ -88,13 +89,24 @@ export type MySpaceStackParamList = {
   MySpaceMain: undefined;
   Profile: { userId: string };
   EditProfile: undefined;
+  Username: undefined;
+  Status: undefined;
+  Devices: undefined;
+  VerifyEmail: undefined;
+  EmailLogs: undefined;
   ChangePassword: undefined;
+  BadgeDetail: { badgeId: string; userId?: string };
   MyArticles: undefined;
+  MyActivities: undefined;
   MyFanFiction: undefined;
+  HelpCenter: undefined;
+  About: undefined;
+  Buddies: undefined;
   Followers: { userId: string };
   Following: { userId: string };
   Notifications: undefined;
   Messages: undefined;
   MessageThread: { threadId: string };
+  MessageFolders: undefined;
   Compose: { recipientId?: string };
 };

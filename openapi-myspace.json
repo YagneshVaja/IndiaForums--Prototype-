@@ -1,0 +1,2208 @@
+[
+  {
+    "method": "GET",
+    "path": "/reports/my-report",
+    "summary": "Get user's existing report for content",
+    "parameters": [
+      {
+        "name": "contentType",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "uint8"
+        }
+      },
+      {
+        "name": "contentId",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/devices",
+    "summary": "Get all devices for user",
+    "parameters": []
+  },
+  {
+    "method": "POST",
+    "path": "/devices/register",
+    "summary": "Register device for push notifications",
+    "parameters": []
+  },
+  {
+    "method": "DELETE",
+    "path": "/devices/{deviceId}",
+    "summary": "Unregister device",
+    "parameters": [
+      {
+        "name": "deviceId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "PUT",
+    "path": "/devices/{deviceId}/preferences",
+    "summary": "Update device notification preferences",
+    "parameters": [
+      {
+        "name": "deviceId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/email-verification/confirm",
+    "summary": "Confirm email address",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/email-verification/logs",
+    "summary": "Get email logs",
+    "parameters": []
+  },
+  {
+    "method": "POST",
+    "path": "/email-verification/resend",
+    "summary": "Resend email verification or update email",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/me",
+    "summary": "Get current user's full profile",
+    "parameters": []
+  },
+  {
+    "method": "PUT",
+    "path": "/me",
+    "summary": "Update current user's profile",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/me/preferences",
+    "summary": "Get current user's preferences",
+    "parameters": []
+  },
+  {
+    "method": "PUT",
+    "path": "/me/preferences",
+    "summary": "Update current user's preferences",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/me/status",
+    "summary": "Get current user's account status",
+    "parameters": []
+  },
+  {
+    "method": "PUT",
+    "path": "/me/status",
+    "summary": "Update account status",
+    "parameters": []
+  },
+  {
+    "method": "PUT",
+    "path": "/me/username",
+    "summary": "Change username",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/me/username/history",
+    "summary": "Get username change history",
+    "parameters": [
+      {
+        "name": "pageNumber",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 20
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/media-galleries/list",
+    "summary": "Get paginated media galleries",
+    "parameters": [
+      {
+        "name": "pageNumber",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 25
+        }
+      },
+      {
+        "name": "publishedOnly",
+        "in": "query",
+        "schema": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      {
+        "name": "contentType",
+        "in": "query",
+        "schema": {
+          "$ref": "#/components/schemas/ContentType"
+        }
+      },
+      {
+        "name": "contentId",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/media-galleries/{id}",
+    "summary": "Get complete media gallery by ID with related galleries",
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/media-galleries/{id}/details",
+    "summary": "Get complete media gallery details with related galleries (detailed)",
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/messages",
+    "summary": "Get paginated user messages",
+    "parameters": [
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "pageNumber",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 20
+        }
+      },
+      {
+        "name": "cursor",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "fetchBackward",
+        "in": "query",
+        "schema": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      {
+        "name": "filter",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "uid",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "priority",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "uint8"
+        }
+      },
+      {
+        "name": "folderId",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/messages",
+    "summary": "Send a new private message",
+    "parameters": []
+  },
+  {
+    "method": "POST",
+    "path": "/messages/actions",
+    "summary": "Perform bulk actions on messages",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/messages/drafts",
+    "summary": "Get user's message drafts",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/messages/folders",
+    "summary": "Get user's message folders",
+    "parameters": []
+  },
+  {
+    "method": "POST",
+    "path": "/messages/folders",
+    "summary": "Create or update a message folder",
+    "parameters": []
+  },
+  {
+    "method": "DELETE",
+    "path": "/messages/folders/{id}",
+    "summary": "Delete a message folder",
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/messages/move-to-folder",
+    "summary": "Move messages to a folder",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/messages/new",
+    "summary": "Get new message form initialization data",
+    "parameters": [
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "id",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "did",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "tuid",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "tunm",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "prtid",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/messages/overview",
+    "summary": "Get private message overview",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/messages/thread/{id}",
+    "summary": "Get message thread by root ID",
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/messages/thread/{id}/opt-out",
+    "summary": "Opt out of a message reply chain",
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/messages/{id}",
+    "summary": "Get single message detail",
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/my-badges",
+    "summary": "Get badges for the authenticated user",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/my-badges/{badgeId}",
+    "summary": "Get badge details with earned levels",
+    "parameters": [
+      {
+        "name": "badgeId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "lvl",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/my-buddy-list",
+    "summary": "Get buddy list for the authenticated user",
+    "parameters": [
+      {
+        "name": "mode",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "username",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/my-comments",
+    "summary": "Get comments by the authenticated user",
+    "parameters": [
+      {
+        "name": "pn",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/my-fanfiction-followers",
+    "summary": "Get fanfiction followers for the authenticated user",
+    "parameters": [
+      {
+        "name": "pn",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/my-fanfiction-following",
+    "summary": "Get fanfiction authors the authenticated user is following",
+    "parameters": [
+      {
+        "name": "pn",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/my-favourite-celebrities",
+    "summary": "Get favourite celebrities for the authenticated user",
+    "parameters": [
+      {
+        "name": "pn",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/my-favourite-forums",
+    "summary": "Get favourite forums for the authenticated user",
+    "parameters": [
+      {
+        "name": "pn",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/my-favourite-movies",
+    "summary": "Get favourite movies for the authenticated user",
+    "parameters": [
+      {
+        "name": "pn",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/my-favourite-shows",
+    "summary": "Get favourite shows for the authenticated user",
+    "parameters": [
+      {
+        "name": "pn",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/my-forum-drafts",
+    "summary": "Get forum drafts for the authenticated user",
+    "parameters": [
+      {
+        "name": "pn",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/my-posts",
+    "summary": "Get topics where the authenticated user has posted",
+    "parameters": [
+      {
+        "name": "fid",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "q",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "pc",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 20
+        }
+      },
+      {
+        "name": "pr",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 0
+        }
+      },
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "default": "table"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/my-posts-by-topic",
+    "summary": "Get topics where the authenticated user has posted, ordered by TopicId",
+    "parameters": [
+      {
+        "name": "fid",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "q",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "pc",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 20
+        }
+      },
+      {
+        "name": "pr",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 0
+        }
+      },
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "default": "table"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/my-warnings",
+    "summary": "Get warning details for the authenticated user",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/my-watched-topics",
+    "summary": "Get topics the authenticated user is watching",
+    "parameters": [
+      {
+        "name": "pc",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pr",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/user-activities",
+    "summary": "Get user activities (profile feed, wall, scrapbook, slambook, testimonial)",
+    "parameters": [
+      {
+        "name": "mode",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "cursor",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "yearWeekNum",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/user-activities",
+    "summary": "Create a new activity post on a user's wall",
+    "parameters": []
+  },
+  {
+    "method": "POST",
+    "path": "/user-activities/post-on-wall",
+    "summary": "Post activity on another user's wall (Scrapbook/Slambook/Testimonial)",
+    "parameters": []
+  },
+  {
+    "method": "PUT",
+    "path": "/user-activities/{activityId}",
+    "summary": "Update an existing activity post",
+    "parameters": [
+      {
+        "name": "activityId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "DELETE",
+    "path": "/user-activities/{activityId}",
+    "summary": "Delete an activity post",
+    "parameters": [
+      {
+        "name": "activityId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/user-activities/{userId}",
+    "summary": "Get activities for a specific user",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "mode",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "cursor",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "yearWeekNum",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/user-buddies/accept-friend-request",
+    "summary": "Accept a friend request from another user",
+    "parameters": []
+  },
+  {
+    "method": "POST",
+    "path": "/user-buddies/block-user",
+    "summary": "Block or unblock a user",
+    "parameters": []
+  },
+  {
+    "method": "POST",
+    "path": "/user-buddies/cancel-friend-request",
+    "summary": "Cancel/reject a friend request",
+    "parameters": []
+  },
+  {
+    "method": "POST",
+    "path": "/user-buddies/friend-request",
+    "summary": "Send a friend request to another user",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/user-notifications",
+    "summary": "Get user notifications with optional template filtering",
+    "parameters": [
+      {
+        "name": "t",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pc",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pr",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/user-notifications/inbox-counts",
+    "summary": "Get combined unread notifications and messages count",
+    "parameters": []
+  },
+  {
+    "method": "POST",
+    "path": "/user-notifications/read",
+    "summary": "Mark notifications as read",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/user-notifications/unread-count",
+    "summary": "Get unread notification count for badge display",
+    "parameters": []
+  },
+  {
+    "method": "GET",
+    "path": "/username-change-log",
+    "summary": "Get username change log",
+    "parameters": [
+      {
+        "name": "pn",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "uid",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/activities/load-more",
+    "summary": "Get another user's activities with pagination",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "default": "all"
+        }
+      },
+      {
+        "name": "cursor",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 20
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/badges",
+    "summary": "Get another user's badges",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/badges/{badgeId}",
+    "summary": "Get another user's badge details",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "badgeId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "lvl",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/buddylist",
+    "summary": "Get another user's buddy list",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 24
+        }
+      },
+      {
+        "name": "q",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "default": "bl"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/celebs",
+    "summary": "Get another user's favourite celebrities",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 24
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/comments",
+    "summary": "Get another user's comments",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 20
+        }
+      },
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "default": "newest"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/fanfiction-followers",
+    "summary": "Get another user's fanfiction followers",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 24
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/forums",
+    "summary": "Get another user's favourite forums",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 20
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/hover-card",
+    "summary": "Get another user's profile",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/movies",
+    "summary": "Get another user's favourite movies",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 24
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/posts",
+    "summary": "Get another user's forum posts",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 20
+        }
+      },
+      {
+        "name": "pr",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 0
+        }
+      },
+      {
+        "name": "pc",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "fid",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "q",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "default": "table"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/posts-by-topic",
+    "summary": "Get another user's forum posts grouped by topic",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 20
+        }
+      },
+      {
+        "name": "pr",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 0
+        }
+      },
+      {
+        "name": "pc",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "fid",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "q",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "default": "table"
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/profile",
+    "summary": "Get another user's profile",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "mode",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "default": "all"
+        }
+      },
+      {
+        "name": "cursor",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 20
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/shows",
+    "summary": "Get another user's favourite shows",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 1
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32",
+          "default": 10
+        }
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}/username-change-log",
+    "summary": "Get another user's username change log",
+    "parameters": [
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      {
+        "name": "pn",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      },
+      {
+        "name": "ps",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "pattern": "^-?(?:0|[1-9]\\d*)$",
+          "type": [
+            "integer",
+            "string"
+          ],
+          "format": "int32"
+        }
+      }
+    ]
+  }
+]

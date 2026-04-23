@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { Gallery } from '../../../services/api';
 
@@ -31,19 +32,25 @@ export default function GalleryHeroCard({ gallery, catLabel, onPress }: Props) {
       ) : (
         <Text style={styles.emoji}>{gallery.emoji}</Text>
       )}
-      <View style={styles.overlay} />
-      <View style={styles.meta}>
-        {catLabel ? <Text style={styles.cat}>{catLabel.toUpperCase()}</Text> : null}
-        <Text style={styles.title} numberOfLines={2}>{gallery.title}</Text>
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Ionicons name="images-outline" size={11} color="rgba(255,255,255,0.82)" />
-            <Text style={styles.metaText}>{gallery.count} photos</Text>
+      <LinearGradient
+        colors={['rgba(0,0,0,0.02)', 'rgba(0,0,0,0.78)']}
+        style={styles.overlay}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      >
+        <View style={styles.meta}>
+          {catLabel ? <Text style={styles.cat}>{catLabel.toUpperCase()}</Text> : null}
+          <Text style={styles.title} numberOfLines={2}>{gallery.title}</Text>
+          <View style={styles.metaRow}>
+            <View style={styles.metaItem}>
+              <Ionicons name="images-outline" size={11} color="rgba(255,255,255,0.82)" />
+              <Text style={styles.metaText}>{gallery.count} photos</Text>
+            </View>
+            <Text style={styles.dot}>·</Text>
+            <Text style={styles.time}>{gallery.time}</Text>
           </View>
-          <Text style={styles.dot}>·</Text>
-          <Text style={styles.time}>{gallery.time}</Text>
         </View>
-      </View>
+      </LinearGradient>
       <View style={styles.viewBtn}>
         <Text style={styles.viewBtnText}>View Gallery</Text>
         <Ionicons name="arrow-forward" size={12} color="#FFFFFF" />
@@ -68,13 +75,12 @@ const styles = StyleSheet.create({
   emoji: { fontSize: 64 },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 14,
+    paddingBottom: 44,
   },
   meta: {
-    position: 'absolute',
-    left: 14,
-    right: 14,
-    bottom: 44,
+    // meta sits inside overlay (LinearGradient), no absolute positioning needed
   },
   cat: {
     fontSize: 9,

@@ -384,14 +384,18 @@ function transformArticleDetail(data) {
   const articleItems = (data?.articleItems || [])
     .sort((a, b) => a.orderNum - b.orderNum)
     .map(item => ({
-      id:       item.articleItemId,
-      type:     item.articleItemTypeId,
-      order:    item.orderNum,
-      title:    item.title || '',
-      contents: item.contents || '',
-      source:   item.source || '',
-      mediaUrl: item.contentCodes || '',
+      id:         item.articleItemId,
+      type:       item.articleItemTypeId,
+      order:      item.orderNum,
+      title:      item.title || '',
+      contents:   item.contents || '',
+      source:     item.source || '',
+      mediaUrl:   item.contentCodes || '',
       mediaTitle: item.mediaTitle || '',
+      // subItem=false → intro/outro blocks; subItem=true → listicle entry / live update
+      subItem:    item.subItem === true,
+      // ISO date used to render live-update timestamps (articleTypeId 8)
+      dateAdded:  item.dateAdded || '',
     }));
 
   // Parse jsonData for related entities (shows, celebrities, platforms)
@@ -423,6 +427,8 @@ function transformArticleDetail(data) {
     source:       metadata?.author || 'IF News Desk',
     description,
     bodyContent,
+    // 1 Normal · 2 Listicle Num Asc · 6 Listicle · 7 Listicle Num Desc · 8 Live News
+    articleTypeId: article.articleTypeId ?? null,
     articleItems,
     jsonEntities,
     tldr:         data?.tlDrDescription || '',
@@ -889,9 +895,13 @@ function transformForum(raw, categoriesMap) {
 }
 
 // ── Transform poll attached to a topic ──────────────────────────────────────
-// The backend returns poll data either as a `poll`/`pollData` object or
-// embedded in `pollJson`. Normalise into:
-//   { pollId, question, multiple, totalVotes, hasVoted, options: [{id,text,votes}] }
+// `GET /forums/topics/{id}/posts` returns the poll via `pollDetail` +
+// `pollChoices` at the top level of the response. fetchTopicPosts merges
+// them into the raw topicDetail as `poll: { ...pollDetail, options: pollChoices }`.
+// Each PollChoiceDto carries `choiceId`, `choice`, `votes`, `hasUserVoted`.
+// PollDetailDto carries `jsonData` (JSON string) where `multipleVotes` lives.
+// Normalised shape:
+//   { pollId, question, multiple, totalVotes, hasVoted, myVotedIds[], options: [{id,text,votes}] }
 function transformPoll(rawPoll) {
   if (!rawPoll) return null;
   let p = rawPoll;
@@ -902,16 +912,34 @@ function transformPoll(rawPoll) {
   if (pollId == null) return null;
   const rawOpts  = p.options || p.pollOptions || p.choices || p.pollChoices || [];
   const options  = rawOpts.map((o) => ({
-    id:    o.id ?? o.pollChoiceId ?? o.optionId,
-    text:  o.text ?? o.choiceText ?? o.option ?? o.label ?? '',
-    votes: o.votes ?? o.voteCount ?? o.count ?? 0,
+    id:    o.id ?? o.choiceId ?? o.pollChoiceId ?? o.optionId,
+    text:  o.text ?? o.choice ?? o.choiceText ?? o.option ?? o.label ?? '',
+    votes: Number(o.votes ?? o.voteCount ?? o.count ?? 0),
   })).filter((o) => o.id != null);
-  const totalVotes = options.reduce((s, o) => s + (o.votes || 0), 0);
+
+  // `multipleVotes` / `allowReplies` live in jsonData as a JSON-encoded string.
+  let multiple = p.multiple ?? p.allowMultiple ?? p.multipleVotes ?? false;
+  if (!multiple && typeof p.jsonData === 'string' && p.jsonData) {
+    try {
+      const parsed = JSON.parse(p.jsonData);
+      multiple = Boolean(parsed?.multipleVotes ?? parsed?.multiple ?? false);
+    } catch (_) { /* ignore malformed jsonData */ }
+  }
+
+  // hasUserVoted is a per-choice integer (0 = no vote) on PollChoiceDto.
+  const myVotedIds = rawOpts
+    .filter(o => Number(o.hasUserVoted ?? 0) > 0)
+    .map(o => o.id ?? o.choiceId ?? o.pollChoiceId ?? o.optionId)
+    .filter(id => id != null);
+  const hasVoted = Boolean(p.hasVoted ?? p.userVoted ?? myVotedIds.length > 0);
+
+  const totalVotes = options.reduce((s, o) => s + (Number(o.votes) || 0), 0);
   return {
     pollId,
     question:  p.question ?? p.title ?? p.subject ?? '',
-    multiple:  p.multiple ?? p.allowMultiple ?? false,
-    hasVoted:  p.hasVoted ?? p.userVoted ?? false,
+    multiple:  Boolean(multiple),
+    hasVoted,
+    myVotedIds,
     totalVotes,
     options,
   };
@@ -1114,6 +1142,11 @@ function transformPost(raw) {
     // Reaction breakdown from backend: {"json":[{"lt":<reactionType>,"lc":<count>,"uid":<userId>,"un":"..."},...]}
     // Used to restore the current user's saved reaction without an extra API call.
     reactionJson: raw.jsonData ?? null,
+    // Moderator-visible fields — surfaced in the post settings menu.
+    // Backend may or may not include these depending on the caller's group.
+    ip:                 raw.ip ?? raw.ipAddress ?? raw.posterIp ?? null,
+    hasMaturedContent:  Boolean(raw.hasMaturedContent ?? raw.isMatured ?? false),
+    moderatorNote:      raw.moderatorNote ?? null,
   };
 }
 
@@ -1230,6 +1263,11 @@ export async function fetchTopicPosts(topicId, pageNumber = 1, pageSize = 20) {
 
   const rawPosts    = data?.posts || [];
   const topicDetail = data?.topicDetail || null;
+  // Poll detail + choices come at the top level of the response, not nested
+  // inside topicDetail. Merge them so transformTopic → transformPoll can
+  // build the normalised poll object.
+  const rawPollDetail  = data?.pollDetail || null;
+  const rawPollChoices = data?.pollChoices || [];
 
   console.log('[API] fetchTopicPosts:', {
     topicId,
@@ -1244,9 +1282,23 @@ export async function fetchTopicPosts(topicId, pageNumber = 1, pageSize = 20) {
     return post;
   });
 
+  // pollDetail on the wire does not carry a pollId — the id lives on
+  // topicDetail.pollId and on each pollChoice.pollId. Inject it so
+  // transformPoll can find it via its usual `p.pollId` lookup.
+  const mergedPollId =
+    topicDetail?.pollId ?? rawPollChoices[0]?.pollId ?? null;
+  const detailWithPoll = topicDetail
+    ? {
+        ...topicDetail,
+        poll: rawPollDetail
+          ? { pollId: mergedPollId, ...rawPollDetail, options: rawPollChoices }
+          : null,
+      }
+    : null;
+
   return {
     posts,
-    topicDetail: topicDetail ? transformTopic(topicDetail) : null,
+    topicDetail: detailWithPoll ? transformTopic(detailWithPoll) : null,
     nextCursor:  data?.nextCursor ?? null,
     hasMore:     data?.hasMore ?? false,
   };
