@@ -25,6 +25,7 @@ import SocialEmbed from '../components/SocialEmbed';
 import TopicModActionsSheet, { type ActionKey as ModActionKey } from '../components/TopicModActionsSheet';
 import PostModActionsSheet, { type PostActionKey } from '../components/PostModActionsSheet';
 import { useTopicPosts } from '../hooks/useTopicPosts';
+import { describeFetchError } from '../../../services/fetchError';
 import { stripPostHtml } from '../utils/stripHtml';
 import { extractSocialUrls, stripSocialUrlsFromHtml } from '../utils/socialUrls';
 import { formatCount } from '../utils/format';
@@ -103,6 +104,7 @@ export default function TopicDetailScreen() {
     data,
     isLoading,
     isError,
+    error,
     refetch,
     fetchNextPage,
     hasNextPage,
@@ -496,7 +498,10 @@ export default function TopicDetailScreen() {
       {isLoading && !data ? (
         <LoadingState height={400} />
       ) : isError && !data ? (
-        <ErrorState message="Couldn't load posts" onRetry={() => refetch()} />
+        <ErrorState
+          message={describeFetchError(error, "Couldn't load posts.")}
+          onRetry={() => refetch()}
+        />
       ) : (
         <FlashList
           data={sortedPosts}

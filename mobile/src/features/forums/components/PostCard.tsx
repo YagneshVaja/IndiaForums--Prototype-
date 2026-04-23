@@ -11,8 +11,13 @@ import {
   type TopicPost,
 } from '../../../services/api';
 import { countryFlag, formatCount } from '../utils/format';
-import { extractSocialUrls, stripSocialUrlsFromHtml } from '../utils/socialUrls';
+import {
+  extractPreviewableUrls,
+  extractSocialUrls,
+  stripSocialUrlsFromHtml,
+} from '../utils/socialUrls';
 import SocialEmbed from './SocialEmbed';
+import LinkPreview from './LinkPreview';
 import PostHtml from './PostHtml';
 import type { AnchorRect } from './ReactionPickerSheet';
 import { useThemeStore } from '../../../store/themeStore';
@@ -67,6 +72,13 @@ function PostCardImpl({
   const flag = countryFlag(post.countryCode);
 
   const socialUrls = useMemo(() => extractSocialUrls(post.message), [post.message]);
+  // Article/blog links (anything that isn't a social URL or inline image) —
+  // limit to the first one so a link-heavy post doesn't produce a wall of
+  // preview cards. Matches how Twitter/Slack surface one rich preview.
+  const previewUrl = useMemo(() => {
+    const urls = extractPreviewableUrls(post.message);
+    return urls.length > 0 ? urls[0] : null;
+  }, [post.message]);
   const bodyHtml = useMemo(
     () => stripSocialUrlsFromHtml(post.message),
     [post.message],
@@ -219,6 +231,7 @@ function PostCardImpl({
           {socialUrls.map(u => (
             <SocialEmbed key={u} url={u} />
           ))}
+          {previewUrl && <LinkPreview url={previewUrl} />}
         </>
       )}
 

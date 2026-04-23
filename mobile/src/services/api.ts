@@ -7,9 +7,7 @@ import { clearAll, getTokens, setTokens } from './authStorage';
 
 export const apiClient = axios.create({
   baseURL: 'https://api2.indiaforums.com/api/v1',
-  // Short enough that an offline request surfaces its error fast, long enough
-  // that slow mobile connections still succeed on the happy path.
-  timeout: 8_000,
+  timeout: 15_000,
   headers: {
     'Content-Type': 'application/json',
     'api-key': 'Api2IndiaForums@2026',
@@ -2090,12 +2088,13 @@ function parseTopicTags(raw: any): TopicTag[] {
 function buildForumAvatarUrl(raw: any): string | null {
   if (raw.thumbnailUrl) return String(raw.thumbnailUrl);
   if (raw.forumThumbnailUrl) return String(raw.forumThumbnailUrl);
-  if (!raw.updateChecksum) return null;
   const fid = Number(raw.forumId ?? 0);
   if (!fid) return null;
   const bucket = Math.floor(fid / 1000);
   const tail   = String(fid % 1000).padStart(3, '0');
-  return `https://img.indiaforums.com/forumavatar/200x200/${bucket}/${tail}.webp?uc=${raw.updateChecksum}`;
+  const uc     = raw.updateChecksum ?? raw.forumUpdateChecksum;
+  const qs     = uc ? `?uc=${uc}` : '';
+  return `https://img.indiaforums.com/forumavatar/200x200/${bucket}/${tail}.webp${qs}`;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3675,4 +3674,58 @@ function getMockFanFictionChapter(chapterId: string | number): FanFictionChapter
       { id: 8, icon: '🔥', label: 'Fire',   count: 209 },
     ],
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LINK oEMBED — rich link previews for URLs shared in forum posts
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface LinkOEmbed {
+  linkId: number;
+  url: string;
+  domain: string;
+  title: string | null;
+  description: string | null;
+  image: string | null;
+  htmlContent: string | null;
+  lastUpdatedWhen: string;
+}
+
+/**
+ * Fetch Open Graph / oEmbed metadata for a URL — used to render rich link
+ * preview cards under forum posts. Backend endpoint:
+ *   GET /api/v1/links/oembed?linkId={0|id}&url={url}
+ *
+ * `linkId` is optional; pass 0 when you don't already have one (the API
+ * backfills / inserts a row keyed on the URL and returns its assigned id).
+ *
+ * Returns null when the request fails or the response body has no `link`
+ * payload — callers should fall back to showing a plain link in that case.
+ */
+export async function fetchLinkOEmbed(
+  url: string,
+  linkId = 0,
+): Promise<LinkOEmbed | null> {
+  if (!url) return null;
+  try {
+    const { data } = await apiClient.get('/links/oembed', {
+      params: { linkId, url },
+    });
+    const link = data?.link;
+    if (!link || !link.url) return null;
+    return {
+      linkId:         Number(link.linkId) || 0,
+      url:            String(link.url),
+      domain:         String(link.domain || ''),
+      title:          link.title         ?? null,
+      description:    link.description   ?? null,
+      image:          link.image         ?? null,
+      htmlContent:    link.htmlContent   ?? null,
+      lastUpdatedWhen: String(link.lastUpdatedWhen || ''),
+    };
+  } catch (err: unknown) {
+    const e = err as { response?: { status: number }; message?: string };
+    console.warn('[API] fetchLinkOEmbed failed:', e?.response?.status, e?.message);
+    return null;
+  }
 }

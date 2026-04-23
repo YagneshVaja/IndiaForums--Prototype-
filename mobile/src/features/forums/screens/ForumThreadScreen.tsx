@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
+import { describeFetchError } from '../../../services/fetchError';
 import SearchBar from '../components/SearchBar';
 import FlairDropdown from '../components/FlairDropdown';
 import ThreadCard from '../components/ThreadCard';
@@ -47,6 +48,7 @@ export default function ForumThreadScreen() {
     data,
     isLoading,
     isError,
+    error,
     refetch,
     fetchNextPage,
     hasNextPage,
@@ -130,7 +132,10 @@ export default function ForumThreadScreen() {
       {isLoading && !data ? (
         <LoadingState height={400} />
       ) : isError && !data ? (
-        <ErrorState message="Couldn't load topics" onRetry={() => refetch()} />
+        <ErrorState
+          message={describeFetchError(error, "Couldn't load topics.")}
+          onRetry={() => refetch()}
+        />
       ) : (
         <FlashList
           data={filteredTopics}

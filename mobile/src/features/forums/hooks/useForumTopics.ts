@@ -12,7 +12,7 @@ export function useForumTopics(forumId: number | null) {
     getNextPageParam: (last) =>
       last.hasNextPage ? last.pageNumber + 1 : undefined,
     staleTime: 60 * 1000,
-    enabled: forumId != null,
+    enabled: typeof forumId === 'number' && Number.isFinite(forumId) && forumId > 0,
     placeholderData: keepPreviousData,
   });
 }
