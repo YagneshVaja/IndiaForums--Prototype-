@@ -12,6 +12,6 @@ export function useTopicPosts(topicId: number | null) {
     getNextPageParam: (last) =>
       last.hasNextPage ? last.pageNumber + 1 : undefined,
     staleTime: 60 * 1000,
-    enabled: topicId != null,
+    enabled: typeof topicId === 'number' && Number.isFinite(topicId) && topicId > 0,
   });
 }

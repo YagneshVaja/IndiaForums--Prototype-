@@ -89,3 +89,25 @@ export function extractRedditPath(url: string): string | null {
     return null;
   }
 }
+
+// ─── Non-social link previews (oEmbed) ────────────────────────────────────────
+// Generic URL matcher used to find article/blog/etc. links in post HTML that
+// should render as rich link preview cards. We explicitly exclude:
+//   • social-media URLs (handled by SocialEmbed with platform-specific embeds)
+//   • image/file URLs (already rendered inline by PostHtml)
+//   • in-app anchors and non-http schemes (mailto:, tel:, javascript:)
+const GENERIC_URL_RE = /https?:\/\/[^\s"'<>()]+/gi;
+const IMAGE_URL_EXT_RE = /\.(?:jpe?g|png|gif|webp|bmp|svg|avif)(?:\?.*)?$/i;
+
+export function extractPreviewableUrls(html?: string | null): string[] {
+  if (!html) return [];
+  const raw = html.match(GENERIC_URL_RE) || [];
+  const out = new Set<string>();
+  for (const m of raw) {
+    const cleaned = m.replace(/[.,;:!?)\]}>"']+$/, '');
+    if (detectPlatform(cleaned))     continue; // handled by SocialEmbed
+    if (IMAGE_URL_EXT_RE.test(cleaned)) continue; // inline image, not a link
+    out.add(cleaned);
+  }
+  return [...out];
+}

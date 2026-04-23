@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, Linking, ActivityIndicator,
 } from 'react-native';
@@ -69,19 +69,80 @@ function YouTubeEmbed({ url, width }: { url: string; width?: number }) {
 function TwitterEmbed({ url, width }: { url: string; width?: number }) {
   const tweetId = extractTweetId(url);
   if (!tweetId) return <FallbackLink url={url} platform="X" />;
-  const html = buildTweetHtml(url);
-  return <AutoHeightWebView html={html} width={width} platform="twitter" />;
+  const html = buildTweetHtml(tweetId);
+  return <AutoHeightWebView html={html} url={url} width={width} platform="twitter" />;
 }
 
-function buildTweetHtml(url: string): string {
+// The blockquote+auto-scan approach is flaky: Twitter's widgets.js scans the
+// DOM on load and uses IntersectionObserver to decide when to hydrate each
+// blockquote into an iframe. That's the "sometimes works / sometimes doesn't"
+// pathology — it depends on script load order, DOM readyState, viewport
+// intersection, and cached widgets.js version. Any of those can misfire.
+//
+// The deterministic path is `twttr.widgets.createTweet(id, container, opts)`
+// which skips auto-scan and IntersectionObserver entirely: we explicitly tell
+// widgets.js which tweet id to render into which element, and it returns a
+// Promise that resolves with the iframe when the tweet is actually mounted,
+// or rejects if it can't be rendered (deleted, protected, not found).
+function buildTweetHtml(tweetId: string): string {
   return `<!DOCTYPE html><html><head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<style>html,body{margin:0;padding:0;background:transparent;font-family:-apple-system,system-ui,sans-serif;}blockquote.twitter-tweet{margin:0 !important;}</style>
+<style>
+  html,body{margin:0;padding:0;background:transparent;font-family:-apple-system,system-ui,sans-serif;}
+  #tweet{min-width:0;display:flex;justify-content:center;}
+  #tweet iframe{max-width:100% !important;}
+</style>
 </head><body>
-<blockquote class="twitter-tweet" data-conversation="none" data-dnt="true">
-  <a href="${escapeAttr(url)}"></a>
-</blockquote>
-<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<div id="tweet"></div>
+<script>
+(function(){
+  var tweetId = ${JSON.stringify(tweetId)};
+  var container = document.getElementById('tweet');
+  function fail(){
+    try { window.ReactNativeWebView && window.ReactNativeWebView.postMessage('fail'); } catch(_){}
+  }
+  function measure(){
+    try {
+      var h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      if (window.ReactNativeWebView && h > 0) window.ReactNativeWebView.postMessage(String(h));
+    } catch(_){}
+  }
+  function renderTweet(){
+    if (!window.twttr || !window.twttr.widgets || typeof window.twttr.widgets.createTweet !== 'function') {
+      fail();
+      return;
+    }
+    try {
+      window.twttr.widgets.createTweet(tweetId, container, {
+        theme: 'light',
+        dnt: true,
+        conversation: 'none',
+        align: 'center'
+      }).then(function(el){
+        if (!el) { fail(); return; }
+        // The iframe is mounted; Twitter may still be resizing it for a few
+        // hundred ms. Measure now and again a beat later.
+        measure();
+        setTimeout(measure, 400);
+        setTimeout(measure, 1200);
+        setTimeout(measure, 2500);
+      }).catch(function(){ fail(); });
+    } catch (_) { fail(); }
+  }
+  var s = document.createElement('script');
+  s.src = 'https://platform.twitter.com/widgets.js';
+  s.async = true;
+  s.charset = 'utf-8';
+  s.onload = renderTweet;
+  s.onerror = fail;
+  document.head.appendChild(s);
+  // Safety net: if widgets.js takes too long, give up so RN can show fallback.
+  setTimeout(function(){
+    if (!window.twttr) fail();
+  }, 10000);
+})();
+</script>
 ${HEIGHT_REPORTER}
 </body></html>`;
 }
@@ -89,7 +150,7 @@ ${HEIGHT_REPORTER}
 // ── Instagram ────────────────────────────────────────────────────────────────
 function InstagramEmbed({ url, width }: { url: string; width?: number }) {
   const html = buildInstagramHtml(url);
-  return <AutoHeightWebView html={html} width={width} platform="instagram" />;
+  return <AutoHeightWebView html={html} url={url} width={width} platform="instagram" />;
 }
 
 function buildInstagramHtml(url: string): string {
@@ -108,7 +169,7 @@ ${HEIGHT_REPORTER}
 // ── Facebook ─────────────────────────────────────────────────────────────────
 function FacebookEmbed({ url, width }: { url: string; width?: number }) {
   const html = buildFacebookHtml(url);
-  return <AutoHeightWebView html={html} width={width} platform="facebook" />;
+  return <AutoHeightWebView html={html} url={url} width={width} platform="facebook" />;
 }
 
 function buildFacebookHtml(url: string): string {
@@ -128,7 +189,7 @@ function TikTokEmbed({ url, width }: { url: string; width?: number }) {
   const videoId = extractTikTokId(url);
   if (!videoId) return <FallbackLink url={url} platform="TikTok" />;
   const html = buildTikTokHtml(url, videoId);
-  return <AutoHeightWebView html={html} width={width} platform="tiktok" />;
+  return <AutoHeightWebView html={html} url={url} width={width} platform="tiktok" />;
 }
 
 function buildTikTokHtml(url: string, videoId: string): string {
@@ -149,7 +210,7 @@ function RedditEmbed({ url, width }: { url: string; width?: number }) {
   const path = extractRedditPath(url);
   if (!path) return <FallbackLink url={url} platform="Reddit" />;
   const html = buildRedditHtml(path);
-  return <AutoHeightWebView html={html} width={width} platform="reddit" />;
+  return <AutoHeightWebView html={html} url={url} width={width} platform="reddit" />;
 }
 
 function buildRedditHtml(path: string): string {
@@ -164,48 +225,133 @@ ${HEIGHT_REPORTER}
 }
 
 // ── Generic auto-sizing WebView wrapper ──────────────────────────────────────
+//
+// Two bugs the current design fixes:
+//
+// (1) "Big empty white box" — the previous version reserved
+//     DEFAULT_HEIGHTS[platform] (420–720 px) on mount. If the embed script
+//     failed to run (scripts blocked, no network, ad-blocker, etc.) the
+//     webview never posted a height message, so that reserved box stayed
+//     visible as an empty bordered card.
+//
+// (2) "Instagram/Twitter never load" — even when the embed script could run,
+//     setting the WebView's native height to 1 px (to hide it while pending)
+//     gives the inner web page a 1-px viewport. Twitter's widgets.js and
+//     Instagram's embed.js both use IntersectionObserver to lazy-load their
+//     embeds, so with a 1-px viewport they consider the blockquote off-screen
+//     and never inject the iframe. No DOM change ⇒ no height report ⇒
+//     timeout ⇒ fallback card. Embeds simply could not render.
+//
+// How this fixes both:
+//   • The WebView is given a real viewport height (PENDING_VIEWPORT_HEIGHT)
+//     so embed scripts see the blockquote as visible and actually inject
+//     their iframe.
+//   • The WebView sits inside a clip container (height:0, overflow:hidden)
+//     while pending, so nothing is visible to the user during that time.
+//   • Once a valid height arrives, the clip is removed and the WebView
+//     expands to match the embed's reported height.
+//   • If no height arrives within EMBED_TIMEOUT_MS or the webview errors,
+//     we render the existing FallbackLink card (clickable, opens in native
+//     app/browser).
+const EMBED_TIMEOUT_MS = 12000;
+const HEIGHT_MIN = 40;
+const HEIGHT_MAX = 3000;
+const PENDING_VIEWPORT_HEIGHT = 300;
+
 function AutoHeightWebView({
-  html, width, platform,
+  html, url, width, platform,
 }: {
   html: string;
+  url: string;
   width?: number;
   platform: SocialPlatform;
 }) {
-  const [height, setHeight] = useState(DEFAULT_HEIGHTS[platform]);
-  const [loading, setLoading] = useState(true);
+  const [height, setHeight] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const hasMeasuredRef = useRef(false);
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!hasMeasuredRef.current) setFailed(true);
+    }, EMBED_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [url]);
+
   function handleMessage(e: WebViewMessageEvent) {
-    const n = Number(e.nativeEvent.data);
-    if (Number.isFinite(n) && n > 60 && n < 3000) {
+    const raw = e.nativeEvent.data;
+    // Explicit failure signal from the embed (e.g. Twitter's createTweet
+    // Promise rejected, widgets.js failed to load, tweet is deleted) —
+    // short-circuit the timeout and show the fallback card immediately.
+    if (raw === 'fail') {
+      setFailed(true);
+      return;
+    }
+    const n = Number(raw);
+    if (Number.isFinite(n) && n >= HEIGHT_MIN && n <= HEIGHT_MAX) {
+      hasMeasuredRef.current = true;
       setHeight(n);
     }
   }
 
+  if (failed) {
+    return <FallbackLink url={url} platform={platformLabel(platform)} />;
+  }
+
+  const pending = height === 0;
+  const platformName = platformLabel(platform);
+  const webViewHeight = pending ? PENDING_VIEWPORT_HEIGHT : height;
+
   return (
-    <View style={[styles.wrap, width ? { width } : null]}>
-      <WebView
-        originWhitelist={['*']}
-        source={{ html }}
-        style={[styles.webview, { height }]}
-        javaScriptEnabled
-        domStorageEnabled
-        scrollEnabled={false}
-        setSupportMultipleWindows={false}
-        onMessage={handleMessage}
-        onLoadEnd={() => setLoading(false)}
-        startInLoadingState={false}
-        androidLayerType="hardware"
-      />
-      {loading && (
-        <View style={[styles.loading, { height }]}>
-          <ActivityIndicator color={colors.primary} />
-          <Text style={styles.loadingText}>Loading {platform}…</Text>
+    <View
+      style={[
+        styles.wrap,
+        width ? { width } : null,
+        pending ? styles.wrapPending : null,
+      ]}
+    >
+      <View
+        style={pending ? styles.webviewClip : null}
+        pointerEvents={pending ? 'none' : 'auto'}
+      >
+        <WebView
+          originWhitelist={['*']}
+          source={{ html }}
+          style={[styles.webview, { height: webViewHeight }]}
+          javaScriptEnabled
+          domStorageEnabled
+          scrollEnabled={false}
+          setSupportMultipleWindows={false}
+          onMessage={handleMessage}
+          onError={() => setFailed(true)}
+          onHttpError={() => setFailed(true)}
+          startInLoadingState={false}
+          androidLayerType="hardware"
+          mixedContentMode="always"
+          thirdPartyCookiesEnabled
+          sharedCookiesEnabled
+        />
+      </View>
+      {pending && (
+        <View style={styles.pendingRow}>
+          <ActivityIndicator color={colors.primary} size="small" />
+          <Text style={styles.loadingText}>Loading {platformName}…</Text>
         </View>
       )}
     </View>
   );
+}
+
+function platformLabel(p: SocialPlatform): string {
+  switch (p) {
+    case 'twitter':   return 'X';
+    case 'instagram': return 'Instagram';
+    case 'facebook':  return 'Facebook';
+    case 'tiktok':    return 'TikTok';
+    case 'reddit':    return 'Reddit';
+    case 'youtube':   return 'YouTube';
+  }
 }
 
 // ── Fallback link card (when embed fails or platform unknown) ────────────────
@@ -229,24 +375,60 @@ function FallbackLink({ url, platform }: { url: string; platform: string }) {
 }
 
 // ── Shared JS snippet that reports body height back to RN ────────────────────
+// Twitter/Instagram/Facebook/TikTok embed scripts work by injecting an
+// <iframe> into the DOM, which then loads the embed. We need to re-measure:
+//   • after initial page load (for static content)
+//   • when the embed script inserts its iframe (MutationObserver childList)
+//   • once the inserted iframe itself finishes loading (iframe 'load' event)
+//   • whenever layout changes at any time (ResizeObserver)
+// We also dedupe consecutive identical values so we don't spam RN with the
+// same number every time a child layout shifts by a pixel.
 const HEIGHT_REPORTER = `<script>
 (function(){
+  var last = -1;
   function send(){
     try {
       var h = Math.max(
-        document.body.scrollHeight,
-        document.documentElement.scrollHeight
+        document.body ? document.body.scrollHeight : 0,
+        document.documentElement ? document.documentElement.scrollHeight : 0
       );
-      if (window.ReactNativeWebView && h > 0) {
+      if (window.ReactNativeWebView && h > 0 && h !== last) {
+        last = h;
         window.ReactNativeWebView.postMessage(String(h));
       }
     } catch(_) {}
   }
-  if (document.readyState === 'complete') setTimeout(send, 400);
-  else window.addEventListener('load', function(){ setTimeout(send, 400); });
-  setTimeout(send, 1500);
-  setTimeout(send, 3000);
+  function hookIframe(node) {
+    if (node && node.tagName === 'IFRAME') {
+      try { node.addEventListener('load', function(){ setTimeout(send, 120); }); } catch(_) {}
+    }
+  }
+  function scanForIframes(root) {
+    if (!root) return;
+    if (root.tagName === 'IFRAME') hookIframe(root);
+    if (root.querySelectorAll) {
+      var frames = root.querySelectorAll('iframe');
+      for (var i = 0; i < frames.length; i++) hookIframe(frames[i]);
+    }
+  }
+  // Initial + staggered samples to catch embed progress
+  [100, 400, 1000, 2500, 5000, 8000, 11000].forEach(function(ms){ setTimeout(send, ms); });
+  window.addEventListener('load', function(){ setTimeout(send, 300); });
+  // Observe layout changes
+  try { new ResizeObserver(send).observe(document.documentElement); } catch(_) {}
   try { new ResizeObserver(send).observe(document.body); } catch(_) {}
+  // Observe DOM changes — embed scripts insert iframes here
+  try {
+    new MutationObserver(function(mutations){
+      for (var i = 0; i < mutations.length; i++) {
+        var added = mutations[i].addedNodes;
+        for (var j = 0; j < added.length; j++) scanForIframes(added[j]);
+      }
+      send();
+    }).observe(document.body, { childList: true, subtree: true });
+  } catch(_) {}
+  // Hook any iframes already present at boot (unlikely, but cheap)
+  scanForIframes(document.body);
 })();
 </script>`;
 
@@ -267,6 +449,31 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.card,
       borderWidth: 1,
       borderColor: c.border,
+    },
+    // While waiting for the embed to report its height, collapse the wrapper:
+    // no borders, no background, no margin — nothing visible until content is
+    // ready (or we time out and replace with FallbackLink).
+    wrapPending: {
+      marginTop: 0,
+      borderWidth: 0,
+      backgroundColor: 'transparent',
+    },
+    // Clips the WebView to zero visible height while pending. The WebView
+    // itself is rendered at a non-zero height (PENDING_VIEWPORT_HEIGHT) so
+    // the inner web page has a real viewport — otherwise Twitter/Instagram's
+    // IntersectionObserver-based lazy loaders refuse to inject their embed
+    // iframes. This clip hides it from the user until the embed reports a
+    // real size.
+    webviewClip: {
+      height: 0,
+      overflow: 'hidden',
+    },
+    pendingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 10,
     },
     webview: {
       backgroundColor: 'transparent',

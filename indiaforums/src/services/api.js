@@ -1553,4 +1553,38 @@ export async function fetchTagGalleries(contentType, contentId, page = 1, pageSi
 // Comment read/write APIs and the transformComment helper now live in
 // services/commentsApi.js. Import from there.
 
+// ── Link oEmbed (rich preview cards for forum post URLs) ────────────────────
+// Endpoint: GET /api/v1/links/oembed?linkId={0|id}&url={url}
+// Response shape:
+//   { link: { linkId, url, domain, title, description, image, htmlContent,
+//             lastUpdatedWhen } }
+//
+// linkId is optional — pass 0 when you don't already have one. Backend
+// inserts/backfills a row keyed on the URL and returns its assigned id.
+// Returns null on network failure or when the response has no `link`
+// payload; callers should render a plain link in that case.
+export async function fetchLinkOEmbed(url, linkId = 0) {
+  if (!url) return null;
+  try {
+    const { data } = await api.get('/links/oembed', {
+      params: { linkId, url },
+    });
+    const link = data?.link;
+    if (!link || !link.url) return null;
+    return {
+      linkId:          Number(link.linkId) || 0,
+      url:             String(link.url),
+      domain:          String(link.domain || ''),
+      title:           link.title         ?? null,
+      description:     link.description   ?? null,
+      image:           link.image         ?? null,
+      htmlContent:     link.htmlContent   ?? null,
+      lastUpdatedWhen: String(link.lastUpdatedWhen || ''),
+    };
+  } catch (err) {
+    console.warn('[API] fetchLinkOEmbed failed:', err?.response?.status, err?.message);
+    return null;
+  }
+}
+
 export default api;

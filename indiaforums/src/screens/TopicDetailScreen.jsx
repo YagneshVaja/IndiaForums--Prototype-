@@ -16,6 +16,7 @@ import {
 import { getProfile } from '../services/userProfileApi';
 import { useAuth } from '../contexts/AuthContext';
 import SocialEmbed, { detectPlatform } from '../components/ui/SocialEmbed';
+import LinkPreview from '../components/ui/LinkPreview';
 import AdminPanel from '../components/forum/AdminPanel';
 import ReactionsSheet from '../components/forum/ReactionsSheet';
 import PostSettingsMenu from '../components/forum/PostSettingsMenu';
@@ -170,6 +171,28 @@ function extractSocialUrls(html) {
   return [...new Set(matches)];
 }
 
+// ── Extract non-social article/blog URLs for the oEmbed preview card ────────
+// We look for http(s) URLs, then filter out:
+//   • social-media URLs (handled by SocialEmbed with platform-specific embeds)
+//   • direct image URLs (already rendered inline by the HTML itself)
+//   • duplicates
+// We return only the FIRST match so a link-heavy post doesn't produce a wall
+// of preview cards — matches how Twitter/Slack surface one rich preview.
+const GENERIC_URL_RE  = /https?:\/\/[^\s"'<>()]+/gi;
+const IMAGE_EXT_RE    = /\.(?:jpe?g|png|gif|webp|bmp|svg|avif)(?:\?.*)?$/i;
+
+function extractFirstPreviewUrl(html) {
+  if (!html) return null;
+  const matches = html.match(GENERIC_URL_RE) || [];
+  for (const m of matches) {
+    const cleaned = m.replace(/[.,;:!?)\]}>"']+$/, '');
+    if (detectPlatform(cleaned))  continue;
+    if (IMAGE_EXT_RE.test(cleaned)) continue;
+    return cleaned;
+  }
+  return null;
+}
+
 /** Strip social URLs from plain text so they render as embeds instead */
 function cleanDescription(text) {
   if (!text) return '';
@@ -209,6 +232,15 @@ function TopicBodyWithEmbeds({ topic }) {
     [topic.description]
   );
   const socialUrls = useMemo(() => getTopicSocialUrls(topic), [topic]);
+  // Prefer topic.linkTypeValue as the preview source when it's a non-social
+  // link (the backend exposes the thread's canonical share URL there); fall
+  // back to the first non-social URL in the description.
+  const previewUrl = useMemo(() => {
+    if (topic.linkTypeValue && !detectPlatform(topic.linkTypeValue)) {
+      return topic.linkTypeValue;
+    }
+    return extractFirstPreviewUrl(topic.description);
+  }, [topic.linkTypeValue, topic.description]);
   const bodyRef = useRef(null);
   useHideBrokenImages(bodyRef, [cleanText]);
 
@@ -228,6 +260,7 @@ function TopicBodyWithEmbeds({ topic }) {
           ))}
         </div>
       )}
+      {previewUrl && <LinkPreview url={previewUrl} />}
     </>
   );
 }
@@ -444,6 +477,7 @@ function RankBadge({ rank }) {
 // ── Post body with embedded social content ──────────────────────────────────
 function PostBodyWithEmbeds({ html }) {
   const socialUrls = useMemo(() => extractSocialUrls(html), [html]);
+  const previewUrl = useMemo(() => extractFirstPreviewUrl(html), [html]);
   const safeHtml   = useMemo(() => parseBBCode(html), [html]);
   const bodyRef    = useRef(null);
   useHideBrokenImages(bodyRef, [safeHtml]);
@@ -462,6 +496,7 @@ function PostBodyWithEmbeds({ html }) {
           ))}
         </div>
       )}
+      {previewUrl && <LinkPreview url={previewUrl} />}
     </>
   );
 }
