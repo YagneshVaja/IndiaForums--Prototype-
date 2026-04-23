@@ -4,7 +4,13 @@
   flex-direction: column;
   background: var(--bg);
   overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
   padding-bottom: var(--sp-8);
+}
+
+.screen::-webkit-scrollbar {
+  display: none;
 }
 
 /* ── Verify banner ────────────────────────────────────────────────────────── */

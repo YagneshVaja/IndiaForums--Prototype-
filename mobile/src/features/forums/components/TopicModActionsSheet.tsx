@@ -6,7 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import {
-  closeTopic, openTopic, moveTopic, mergeTopic, trashTopic, restoreTopic,
+  closeTopic, openTopic, trashTopic, restoreTopic,
   updateTopicSubject, updateTopicAdminSettings, getTopicActionHistory,
   type ForumTopic, type TopicActionLog,
 } from '../../../services/api';
@@ -20,11 +20,11 @@ interface Props {
   canModerate:     boolean;
   canDelete:       boolean;
   onClose:         () => void;
-  onActionComplete: () => void;
+  onActionComplete: (action: ActionKey) => void;
 }
 
-type ActionKey =
-  | 'edit' | 'move' | 'merge' | 'lock' | 'pin'
+export type ActionKey =
+  | 'edit' | 'lock' | 'pin'
   | 'trash' | 'restore' | 'history';
 
 interface MenuItem {
@@ -44,8 +44,6 @@ export default function TopicModActionsSheet({
   const [error,        setError]        = useState<string | null>(null);
   const [success,      setSuccess]      = useState<string | null>(null);
 
-  const [targetForumId, setTargetForumId] = useState('');
-  const [targetTopicId, setTargetTopicId] = useState('');
   const [editSubject,   setEditSubject]   = useState('');
   const [historyLogs,   setHistoryLogs]   = useState<TopicActionLog[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -59,8 +57,6 @@ export default function TopicModActionsSheet({
       items.push({ key: 'edit', label: 'Edit Topic', icon: 'create-outline', iconBg: '#E8EEFF', iconColor: '#3558F0' });
     }
     if (canModerate) {
-      items.push({ key: 'move',  label: 'Move Topic',  icon: 'folder-outline',    iconBg: '#FEF3C7', iconColor: '#d97706' });
-      items.push({ key: 'merge', label: 'Merge Topic', icon: 'git-merge-outline', iconBg: '#D1FAE5', iconColor: '#059669' });
       items.push({
         key:   'lock',
         label: topic.locked ? 'Unlock Topic' : 'Lock Topic',
@@ -70,7 +66,7 @@ export default function TopicModActionsSheet({
       items.push({
         key:   'pin',
         label: topic.pinned ? 'Unpin Topic' : 'Pin Topic',
-        icon:  'bookmark-outline',
+        icon:  topic.pinned ? 'pin' : 'pin-outline',
         iconBg: '#FEF3C7', iconColor: '#d97706',
       });
     }
@@ -89,8 +85,6 @@ export default function TopicModActionsSheet({
     setBusy(false);
     setError(null);
     setSuccess(null);
-    setTargetForumId('');
-    setTargetTopicId('');
     setEditSubject('');
     setHistoryLogs([]);
   }
@@ -120,6 +114,7 @@ export default function TopicModActionsSheet({
   async function run<T extends { ok: boolean; error?: string }>(
     fn: () => Promise<T>,
     successMsg: string,
+    action: ActionKey,
   ) {
     setBusy(true);
     setError(null);
@@ -127,7 +122,7 @@ export default function TopicModActionsSheet({
     setBusy(false);
     if (res.ok) {
       setSuccess(successMsg);
-      onActionComplete();
+      onActionComplete(action);
       setTimeout(() => { reset(); onClose(); }, 1100);
     } else {
       setError(res.error || 'Action failed.');
@@ -143,38 +138,28 @@ export default function TopicModActionsSheet({
       case 'edit': {
         const subject = editSubject.trim();
         if (!subject) { setError('Topic title cannot be empty.'); return; }
-        run(() => updateTopicSubject(topicId, subject), 'Topic updated.');
-        break;
-      }
-      case 'move': {
-        const toId = Number(targetForumId);
-        if (!toId) { setError('Enter a valid target forum ID.'); return; }
-        run(() => moveTopic(topicId, toId), 'Topic moved.');
-        break;
-      }
-      case 'merge': {
-        const intoId = Number(targetTopicId);
-        if (!intoId) { setError('Enter a valid target topic ID.'); return; }
-        run(() => mergeTopic(topicId, intoId), 'Topic merged.');
+        run(() => updateTopicSubject(topicId, subject), 'Topic updated.', 'edit');
         break;
       }
       case 'lock':
         run(
           () => topic.locked ? openTopic(topicId, forumId) : closeTopic(topicId, forumId),
           topic.locked ? 'Topic unlocked.' : 'Topic locked.',
+          'lock',
         );
         break;
       case 'pin':
         run(
           () => updateTopicAdminSettings(topicId, { priority: topic.pinned ? 0 : 1 }),
           topic.pinned ? 'Topic unpinned.' : 'Topic pinned.',
+          'pin',
         );
         break;
       case 'trash':
-        run(() => trashTopic(topicId, forumId), 'Topic trashed.');
+        run(() => trashTopic(topicId, forumId), 'Topic trashed.', 'trash');
         break;
       case 'restore':
-        run(() => restoreTopic(topicId), 'Topic restored.');
+        run(() => restoreTopic(topicId), 'Topic restored.', 'restore');
         break;
     }
   }
@@ -261,36 +246,6 @@ export default function TopicModActionsSheet({
                         placeholder="Topic title"
                         placeholderTextColor={colors.textTertiary}
                         maxLength={200}
-                        editable={!busy}
-                        style={styles.input}
-                      />
-                    </>
-                  )}
-
-                  {activeAction === 'move' && (
-                    <>
-                      <Text style={styles.label}>Target Forum ID</Text>
-                      <TextInput
-                        value={targetForumId}
-                        onChangeText={setTargetForumId}
-                        keyboardType="number-pad"
-                        placeholder="e.g. 42"
-                        placeholderTextColor={colors.textTertiary}
-                        editable={!busy}
-                        style={styles.input}
-                      />
-                    </>
-                  )}
-
-                  {activeAction === 'merge' && (
-                    <>
-                      <Text style={styles.label}>Target Topic ID (merge into)</Text>
-                      <TextInput
-                        value={targetTopicId}
-                        onChangeText={setTargetTopicId}
-                        keyboardType="number-pad"
-                        placeholder="e.g. 12345"
-                        placeholderTextColor={colors.textTertiary}
                         editable={!busy}
                         style={styles.input}
                       />

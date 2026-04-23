@@ -1054,3 +1054,328 @@
 
 /* ── End padding ───────────────────────────────────────────────────────────── */
 .endPad { height: 40px; }
+
+/* ── Live News body (articleTypeId = 8) ──────────────────────────────────────
+   UX: frames the whole feed as a live blog with a persistent banner at top
+   (red pulsing dot, label, update count, "Updated Xm ago"). Below that, a
+   vertical timeline rail threads through dotted markers on each update card.
+   Newest update sits at top with a small NEW pill and a pulsing marker. */
+.liveHeader { margin-bottom: 12px; }
+
+.liveBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--red-surface);
+  border: 1px solid var(--red);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  margin: 4px 0 14px;
+}
+
+.liveBannerDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--red);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 0 rgba(200, 0, 30, 0.6);
+  animation: liveDotPulse 1.6s var(--ease-out) infinite;
+}
+
+.liveBannerLabel {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--red);
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+.liveBannerCount {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.liveBannerLatest {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text2);
+  margin-left: auto;
+}
+
+@keyframes liveDotPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(200, 0, 30, 0.55); }
+  70%  { box-shadow: 0 0 0 7px rgba(200, 0, 30, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(200, 0, 30, 0); }
+}
+
+/* Timeline feed — rail runs down the left edge of the column */
+.liveFeed {
+  position: relative;
+  margin: 0 0 20px;
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.liveFeed::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
+}
+
+.liveCard {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-xs);
+}
+
+.liveCardLatest {
+  border-color: var(--red);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Marker on the rail, aligned with the card's header row */
+.liveMarker {
+  position: absolute;
+  left: -24px;
+  top: 16px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 2px solid var(--border-strong);
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+.liveCardLatest .liveMarker {
+  background: var(--red);
+  border-color: var(--red);
+}
+
+.liveCardHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  min-width: 0;
+}
+
+.liveNewPill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--red);
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  transform: translateY(-1px);
+}
+
+/* Relative time — the headline of each update's metadata */
+.liveTimeRel {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--dark);
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Exact clock time — secondary, muted. Truncates before pushing siblings. */
+.liveTimeExact {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text3);
+  margin-left: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.liveTitle {
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1.35;
+  margin: 2px 0 8px;
+  letter-spacing: -0.2px;
+}
+
+.liveImageWrap {
+  margin: 8px -14px 8px;
+  overflow: hidden;
+}
+
+.liveImage {
+  width: 100%;
+  display: block;
+}
+
+.liveOutro { margin-top: 14px; }
+
+/* ── Listicle body (articleTypeId = 2 / 6 / 7) ───────────────────────────────
+   UX: image-hero card matches the system's card library (ArticleCard /
+   NewsVerticalCard / FeaturedCard). The number becomes a dark-overlay badge
+   pinned to the top-left corner of the hero image — the same slot used by
+   BREAKING / tag badges elsewhere. Title and body sit below the image.
+   · Type 2 → ascending  1, 2, 3 …
+   · Type 7 → descending  N, N-1, …   (first entry gets a brighter "TOP" badge)
+   · Type 6 → no badge */
+.listicleHeader { margin-bottom: 12px; }
+
+.listicleList {
+  list-style: none;
+  margin: 8px 0 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  counter-reset: listicle;
+}
+
+.listEntry {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+/* Hero image — full-width, fixed aspect. Overlay badge + caption sit on top. */
+.listHero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* Countdown #1 gets a taller hero and a larger badge — visual payoff at the
+   top of a countdown, so the list doesn't feel like ten identical cards. */
+.listEntry:has(.listBadgeTop) .listHero { aspect-ratio: 4 / 3; }
+.listBadgeTop .listBadgeNum { font-size: 24px; }
+.listBadgeTop { padding: 7px 13px 8px 10px; }
+
+.listHeroImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Bottom-only shade so caption stays legible; top stays clean. */
+.listHeroShade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0) 65%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+  pointer-events: none;
+}
+
+/* Number badge — pinned top-left on the hero. A dark scrim sits behind the
+   filled pill to guarantee legibility on bright images without dimming the
+   whole image top. */
+.listBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  background: var(--brand);
+  color: var(--text-on-brand);
+  padding: 6px 11px 7px 9px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-brand), 0 0 0 2px rgba(0, 0, 0, 0.08);
+  font-family: var(--font-display);
+  letter-spacing: -0.3px;
+  line-height: 1;
+}
+
+/* Countdown top spot — red tint signals the "#1" slot */
+.listBadgeTop {
+  background: var(--red);
+  box-shadow: 0 3px 12px rgba(200, 0, 30, 0.4), 0 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+.listBadgeHash {
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.listBadgeNum {
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* For entries without a hero image, show the badge above the title */
+.listBadgeRow {
+  padding: 12px 14px 0;
+}
+
+.listBadgeInline {
+  position: static;
+  box-shadow: none;
+}
+
+.listHeroCaption {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 10px;
+  font-weight: 500;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  max-width: calc(100% - 20px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listContent {
+  padding: 12px 14px 14px;
+}
+
+.listEntryTitle {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1.3;
+  margin: 0 0 8px;
+  letter-spacing: -0.3px;
+}
+
+.listicleOutro { margin-top: 14px; }

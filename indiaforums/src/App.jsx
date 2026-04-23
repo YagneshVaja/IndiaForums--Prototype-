@@ -78,6 +78,25 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navResetTrigger]);
 
+  /* ── Dev-only: open any article by id from the browser console.
+        Stub fields (cat/title/time) are overwritten once the details
+        endpoint resolves inside ArticleScreen. */
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    window.openArticleById = (id, cat = 'TV') => {
+      nav.selectArticle({ id: String(id), cat, title: 'Loading…', time: '' });
+    };
+    // eslint-disable-next-line no-console
+    console.info(
+      '%c[dev] open article types from console:',
+      'color:#3558F0;font-weight:700',
+      '\n  openArticleById(212479)  // Live News (articleTypeId 8)',
+      '\n  openArticleById(226008)  // Listicle  (articleTypeId 7)',
+    );
+    return () => { delete window.openArticleById; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /* ── Handlers ─────────────────────────────────────────────────────────────── */
   function handleStoryPress(story) { nav.setStory(story.label.toLowerCase()); }
 

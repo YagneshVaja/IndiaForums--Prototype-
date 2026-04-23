@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import type { ForumTopic } from '../../../services/api';
 import { formatCount } from '../utils/format';
+import { stripPostHtml } from '../utils/stripHtml';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 
@@ -19,6 +20,10 @@ function TopicCardImpl({ topic, viewMode, onPress }: Props) {
   const detailed = viewMode === 'detailed';
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const descriptionPreview = useMemo(
+    () => stripPostHtml(topic.description),
+    [topic.description],
+  );
 
   return (
     <Pressable style={styles.card} onPress={() => onPress?.(topic)}>
@@ -47,8 +52,8 @@ function TopicCardImpl({ topic, viewMode, onPress }: Props) {
         Posted by: <Text style={styles.strong}>{topic.poster}</Text> · {topic.time}
       </Text>
 
-      {detailed && !!topic.description && (
-        <Text style={styles.desc} numberOfLines={3}>{topic.description}</Text>
+      {detailed && !!descriptionPreview && (
+        <Text style={styles.desc} numberOfLines={3}>{descriptionPreview}</Text>
       )}
 
       {detailed && topic.topicImage && (

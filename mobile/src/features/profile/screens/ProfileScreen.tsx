@@ -1,0 +1,184 @@
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  RefreshControl,
+  StatusBar,
+  ActivityIndicator,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+
+import type {
+  MySpaceStackParamList,
+  MainTabParamList,
+  RootStackParamList,
+} from '../../../navigation/types';
+import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
+import { TopNavBack } from '../../../components/layout/TopNavBar';
+import ErrorState from '../../../components/ui/ErrorState';
+import { extractApiError } from '../../../services/api';
+
+import { useProfile } from '../hooks/useProfile';
+import type { ProfileTabKey } from '../hooks/useProfileTab';
+import ProfileHero from '../components/ProfileHero';
+import ProfileStatsRow from '../components/ProfileStatsRow';
+import ProfileTabBar, { tabsFor } from '../components/ProfileTabBar';
+
+import ActivityTab from '../components/tabs/ActivityTab';
+import PostsTab from '../components/tabs/PostsTab';
+import CommentsTab from '../components/tabs/CommentsTab';
+import BuddiesTab from '../components/tabs/BuddiesTab';
+import FavoritesTab from '../components/tabs/FavoritesTab';
+import ForumsTab from '../components/tabs/ForumsTab';
+import BadgesTab from '../components/tabs/BadgesTab';
+import DraftsTab from '../components/tabs/DraftsTab';
+import WatchingTab from '../components/tabs/WatchingTab';
+import FFollowingTab from '../components/tabs/FFollowingTab';
+import WarningsTab from '../components/tabs/WarningsTab';
+
+type Props = CompositeScreenProps<
+  NativeStackScreenProps<MySpaceStackParamList, 'Profile'>,
+  CompositeScreenProps<
+    BottomTabScreenProps<MainTabParamList, 'MySpace'>,
+    NativeStackScreenProps<RootStackParamList>
+  >
+>;
+
+export default function ProfileScreen({ route, navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const colors = useThemeStore((s) => s.colors);
+  const mode = useThemeStore((s) => s.mode);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  const viewedUserId = route.params?.userId;
+  const q = useProfile(viewedUserId);
+
+  const isOwn = q.data?.isOwnProfile ?? true;
+  const tabs = useMemo(() => tabsFor(isOwn), [isOwn]);
+  const [activeTab, setActiveTab] = useState<ProfileTabKey>('activity');
+
+  const statusBarStyle = mode === 'dark' ? 'light-content' : 'dark-content';
+
+  return (
+    <View style={[styles.screen, { paddingTop: 0 }]}>
+      <StatusBar barStyle={statusBarStyle} />
+      <TopNavBack
+        title={isOwn ? 'My Profile' : q.data?.displayName || q.data?.userName || 'Profile'}
+        onBack={() => {
+          if (navigation.canGoBack()) navigation.goBack();
+          else navigation.navigate('MySpaceMain');
+        }}
+      />
+
+      {q.isLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} size="large" />
+        </View>
+      ) : q.isError ? (
+        <View style={styles.center}>
+          <ErrorState message={extractApiError(q.error)} onRetry={q.refetch} />
+        </View>
+      ) : q.data ? (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+          showsVerticalScrollIndicator={false}
+          stickyHeaderIndices={[1]}
+          refreshControl={
+            <RefreshControl refreshing={q.isRefetching} onRefresh={q.refetch} tintColor={colors.primary} />
+          }
+        >
+          <View style={styles.padH}>
+            <ProfileHero
+              profile={q.data}
+              onEdit={() => navigation.navigate('EditProfile')}
+              onMessage={() => navigation.navigate('Messages')}
+            />
+            <ProfileStatsRow profile={q.data} />
+          </View>
+
+          <ProfileTabBar tabs={tabs} active={activeTab} onChange={setActiveTab} />
+
+          <View style={styles.tabBody}>
+            <TabContent
+              tab={activeTab}
+              userId={q.data.userId}
+              isOwn={isOwn}
+              viewedUserName={q.data.displayName || q.data.userName}
+            />
+          </View>
+        </ScrollView>
+      ) : null}
+    </View>
+  );
+}
+
+function TabContent({
+  tab,
+  userId,
+  isOwn,
+  viewedUserName,
+}: {
+  tab: ProfileTabKey;
+  userId: number | string;
+  isOwn: boolean;
+  viewedUserName?: string;
+}) {
+  switch (tab) {
+    case 'activity':
+      return <ActivityTab userId={userId} isOwn={isOwn} viewedUserName={viewedUserName} />;
+    case 'posts':
+      return <PostsTab userId={userId} isOwn={isOwn} />;
+    case 'comments':
+      return <CommentsTab userId={userId} isOwn={isOwn} />;
+    case 'buddies':
+      return <BuddiesTab userId={userId} isOwn={isOwn} />;
+    case 'favorites':
+      return <FavoritesTab userId={userId} isOwn={isOwn} />;
+    case 'forums':
+      return <ForumsTab userId={userId} isOwn={isOwn} />;
+    case 'badges':
+      return <BadgesTab userId={userId} isOwn={isOwn} />;
+    case 'drafts':
+      return <DraftsTab userId={userId} />;
+    case 'watching':
+      return <WatchingTab userId={userId} />;
+    case 'ff-following':
+      return <FFollowingTab userId={userId} variant="following" />;
+    case 'ff-followers':
+      return <FFollowingTab userId={userId} variant="followers" />;
+    case 'warnings':
+      return <WarningsTab userId={userId} />;
+  }
+}
+
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: c.bg,
+    },
+    scroll: {
+      flex: 1,
+    },
+    padH: {
+      paddingHorizontal: 14,
+      paddingTop: 12,
+    },
+    tabBody: {
+      paddingHorizontal: 14,
+      paddingTop: 4,
+    },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingBottom: 40,
+    },
+  });
+}

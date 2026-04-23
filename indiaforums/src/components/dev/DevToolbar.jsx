@@ -246,6 +246,23 @@ export default function DevToolbar() {
 
         <div className={styles.spacer} />
 
+        {/* Article type test shortcuts — open sample articles to verify
+            Live News (type 8) and Listicle (type 7) rendering. */}
+        <button
+          className={styles.iconBtn}
+          onClick={() => window.openArticleById?.(212479)}
+          title="Open sample Live News article (articleTypeId 8)"
+        >
+          <span className={styles.btnLabel} style={{ color: 'var(--red)', fontWeight: 800 }}>● LIVE</span>
+        </button>
+        <button
+          className={styles.iconBtn}
+          onClick={() => window.openArticleById?.(226008)}
+          title="Open sample Listicle article (articleTypeId 7)"
+        >
+          <span className={styles.btnLabel} style={{ color: 'var(--brand)', fontWeight: 800 }}>≡ LIST</span>
+        </button>
+
         {/* Reset Navigation */}
         <button
           className={styles.resetBtn}

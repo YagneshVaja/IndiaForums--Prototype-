@@ -3,6 +3,7 @@ import { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-nativ
 
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
+import { describeFetchError } from '../../../services/fetchError';
 import SearchBar from './SearchBar';
 import CategoryChips, { type ChipItem } from './CategoryChips';
 import ForumCard from './ForumCard';
@@ -32,6 +33,7 @@ export default function ForumListView({ onForumPress }: Props) {
     data,
     isLoading,
     isError,
+    error,
     refetch,
     fetchNextPage,
     hasNextPage,
@@ -76,7 +78,12 @@ export default function ForumListView({ onForumPress }: Props) {
   }
 
   if (isLoading && !data) return <LoadingState height={400} />;
-  if (isError && !data) return <ErrorState message="Couldn't load forums" onRetry={() => refetch()} />;
+  if (isError && !data) return (
+    <ErrorState
+      message={describeFetchError(error, "Couldn't load forums.")}
+      onRetry={() => refetch()}
+    />
+  );
 
   return (
     <FlatList

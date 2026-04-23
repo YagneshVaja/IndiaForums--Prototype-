@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { GalleryPhoto } from '../../../services/api';
 
@@ -39,7 +40,12 @@ function PhotoCellImpl({ photo, index, isFeatured, onPress }: Props) {
           {photo.emoji}
         </Text>
       )}
-      <View style={styles.overlay} />
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.35)']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0.4 }}
+        end={{ x: 0, y: 1 }}
+      />
       <Text style={styles.num}>{index + 1}</Text>
       {photo.tags.length > 0 ? (
         <View style={styles.tagBadge}>
@@ -56,26 +62,19 @@ export default PhotoCell;
 
 const styles = StyleSheet.create({
   cell: {
-    position: 'relative',
     flex: 1,
-    aspectRatio: 1,
     overflow: 'hidden',
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   featured: {
-    aspectRatio: 1,
     borderRadius: 8,
   },
   pressed: { opacity: 0.85 },
   img: { position: 'absolute', width: '100%', height: '100%' },
   emoji: { fontSize: 26 },
   emojiFeatured: { fontSize: 44 },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'transparent',
-  },
   num: {
     position: 'absolute',
     bottom: 4,

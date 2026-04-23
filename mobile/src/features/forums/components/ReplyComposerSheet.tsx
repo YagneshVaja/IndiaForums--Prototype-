@@ -34,6 +34,10 @@ export default function ReplyComposerSheet({ visible, topic, quotedPost, onClose
   const [text, setText]             = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
+  const [membersOnly, setMembersOnly] = useState(false);
+  const [matured,     setMatured]     = useState(false);
+  const [showSig,     setShowSig]     = useState(true);
+  const [watchList,   setWatchList]   = useState(true);
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -41,6 +45,10 @@ export default function ReplyComposerSheet({ visible, topic, quotedPost, onClose
     if (!visible) return;
     setText(quotedPost ? buildQuotePrefill(quotedPost) : '');
     setError(null);
+    setMembersOnly(false);
+    setMatured(false);
+    setShowSig(true);
+    setWatchList(true);
   }, [visible, quotedPost]);
 
   const charCount = text.trim().length;
@@ -50,7 +58,12 @@ export default function ReplyComposerSheet({ visible, topic, quotedPost, onClose
     if (!canSubmit) return;
     setError(null);
     setSubmitting(true);
-    const res = await replyToTopic(topic.id, topic.forumId, text);
+    const res = await replyToTopic(topic.id, topic.forumId, text, {
+      membersOnly,
+      hasMaturedContent: matured,
+      showSignature:     showSig,
+      addToWatchList:    watchList,
+    });
     setSubmitting(false);
     if (res.ok) {
       setText('');
@@ -119,6 +132,37 @@ export default function ReplyComposerSheet({ visible, topic, quotedPost, onClose
                 textAlignVertical="top"
               />
               <Text style={styles.charCount}>{charCount} chars</Text>
+            </View>
+
+            <View style={styles.togglesRow}>
+              <ToggleChip
+                label="Members Only"
+                checked={membersOnly}
+                onToggle={() => setMembersOnly(v => !v)}
+                styles={styles}
+                colors={colors}
+              />
+              <ToggleChip
+                label="Matured"
+                checked={matured}
+                onToggle={() => setMatured(v => !v)}
+                styles={styles}
+                colors={colors}
+              />
+              <ToggleChip
+                label="Signature"
+                checked={showSig}
+                onToggle={() => setShowSig(v => !v)}
+                styles={styles}
+                colors={colors}
+              />
+              <ToggleChip
+                label="Watch"
+                checked={watchList}
+                onToggle={() => setWatchList(v => !v)}
+                styles={styles}
+                colors={colors}
+              />
             </View>
 
             {error && (
@@ -323,5 +367,62 @@ function makeStyles(c: ThemeColors) {
     btnDisabled: {
       opacity: 0.5,
     },
+    togglesRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginBottom: 10,
+    },
+    toggleChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+    },
+    toggleChipOn: {
+      backgroundColor: c.primarySoft,
+      borderColor: c.primary,
+    },
+    toggleChipText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.textSecondary,
+    },
+    toggleChipTextOn: {
+      color: c.primary,
+    },
   });
+}
+
+type ToggleStyles = ReturnType<typeof makeStyles>;
+
+function ToggleChip({
+  label, checked, onToggle, styles, colors,
+}: {
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+  styles: ToggleStyles;
+  colors: import('../../../theme/tokens').ThemeColors;
+}) {
+  return (
+    <Pressable
+      style={[styles.toggleChip, checked && styles.toggleChipOn]}
+      onPress={onToggle}
+    >
+      <Ionicons
+        name={checked ? 'checkmark-circle' : 'ellipse-outline'}
+        size={12}
+        color={checked ? colors.primary : colors.textTertiary}
+      />
+      <Text style={[styles.toggleChipText, checked && styles.toggleChipTextOn]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
 }

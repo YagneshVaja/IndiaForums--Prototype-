@@ -11,6 +11,7 @@ export interface ThemeColors {
   primary: string;
   primarySoft: string;
   danger: string;
+  dangerSoft: string;
   scrim: string;
   hamburgerAccent: string;
 }
@@ -26,6 +27,7 @@ export const lightColors: ThemeColors = {
   primary: '#3558F0',
   primarySoft: '#EBF0FF',
   danger: '#C8001E',
+  dangerSoft: '#FFF0F1',
   scrim: 'rgba(0,0,0,0.48)',
   hamburgerAccent: '#3558F0',
 };
@@ -41,6 +43,7 @@ export const darkColors: ThemeColors = {
   primary: '#6A88FF',
   primarySoft: '#242A45',
   danger: '#FF5A6E',
+  dangerSoft: '#3A1F22',
   scrim: 'rgba(0,0,0,0.6)',
   hamburgerAccent: '#6A88FF',
 };

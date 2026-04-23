@@ -11,9 +11,9 @@ import {
   type TopicPost,
 } from '../../../services/api';
 import { countryFlag, formatCount } from '../utils/format';
-import { stripPostHtml } from '../utils/stripHtml';
-import { extractSocialUrls, stripSocialUrlsFromText } from '../utils/socialUrls';
+import { extractSocialUrls, stripSocialUrlsFromHtml } from '../utils/socialUrls';
 import SocialEmbed from './SocialEmbed';
+import PostHtml from './PostHtml';
 import type { AnchorRect } from './ReactionPickerSheet';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
@@ -32,6 +32,7 @@ interface Props {
   onEdit: (post: TopicPost) => void;
   onPressEdited?: (post: TopicPost) => void;
   onPressAvatar?: (post: TopicPost) => void;
+  onPressSettings?: (post: TopicPost) => void;
 
   isEditing?: boolean;
   editText?: string;
@@ -48,7 +49,7 @@ function PostCardImpl({
   post, index, reaction, likeCount, pendingReaction,
   isMine,
   onOpenReactionPicker, onPressReactionSummary,
-  onReply, onQuote, onEdit, onPressEdited, onPressAvatar,
+  onReply, onQuote, onEdit, onPressEdited, onPressAvatar, onPressSettings,
   isEditing, editText, editSaving, editError,
   onChangeEditText, onSaveEdit, onCancelEdit,
 }: Props) {
@@ -66,8 +67,8 @@ function PostCardImpl({
   const flag = countryFlag(post.countryCode);
 
   const socialUrls = useMemo(() => extractSocialUrls(post.message), [post.message]);
-  const body = useMemo(
-    () => stripSocialUrlsFromText(stripPostHtml(post.message)),
+  const bodyHtml = useMemo(
+    () => stripSocialUrlsFromHtml(post.message),
     [post.message],
   );
   const topTypes = useMemo(() => parseTopReactionTypes(post.reactionJson), [post.reactionJson]);
@@ -164,7 +165,19 @@ function PostCardImpl({
           )}
         </View>
 
-        <Text style={styles.postNumber}>#{index + 1}</Text>
+        <View style={styles.postNumGroup}>
+          <Text style={styles.postNumber}>#{index + 1}</Text>
+          {onPressSettings && (
+            <Pressable
+              onPress={() => onPressSettings(post)}
+              hitSlop={8}
+              style={styles.gearBtn}
+              accessibilityLabel="Post options"
+            >
+              <Ionicons name="settings-outline" size={14} color={colors.textTertiary} />
+            </Pressable>
+          )}
+        </View>
       </View>
 
       {isEditing ? (
@@ -202,7 +215,7 @@ function PostCardImpl({
         </View>
       ) : (
         <>
-          {!!body && <Text style={styles.body}>{body}</Text>}
+          {!!bodyHtml && <PostHtml html={bodyHtml} horizontalPadding={48} />}
           {socialUrls.map(u => (
             <SocialEmbed key={u} url={u} />
           ))}
@@ -407,6 +420,19 @@ function makeStyles(c: ThemeColors) {
       fontSize: 10,
       fontWeight: '700',
       color: c.textTertiary,
+    },
+    postNumGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    gearBtn: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.surface,
     },
     body: {
       fontSize: 14,

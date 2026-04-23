@@ -13,6 +13,7 @@ export type StoredUser = {
   displayName: string | null;
   groupId: number | null;
   groupName: string | null;
+  emailVerified?: boolean;
 };
 
 type SecureAdapter = {

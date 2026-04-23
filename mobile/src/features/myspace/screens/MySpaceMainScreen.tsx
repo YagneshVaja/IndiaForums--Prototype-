@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,8 @@ import { useAuthStore } from '../../../store/authStore';
 import { useNotificationsStore } from '../../../store/notificationsStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
+import ReportsForumPickerSheet from '../../forums/components/ReportsForumPickerSheet';
+import { useMessagesOverview } from '../../messages/hooks/useMessages';
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<MySpaceStackParamList, 'MySpaceMain'>,
@@ -99,7 +101,14 @@ export default function MySpaceMainScreen({ navigation }: Props) {
   const isModerator = useAuthStore(s => s.isModerator);
   const logout = useAuthStore(s => s.logout);
   const unreadCount = useNotificationsStore(s => s.unreadCount);
-  const unreadMessages = 0;
+  const [reportsPickerOpen, setReportsPickerOpen] = useState(false);
+  const overview = useMessagesOverview(isAuthenticated);
+  const unreadMessages = (() => {
+    const raw = overview.data?.unreadMessageCount;
+    if (raw == null) return 0;
+    const n = typeof raw === 'string' ? parseInt(raw, 10) : raw;
+    return Number.isFinite(n) ? Number(n) : 0;
+  })();
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -188,7 +197,7 @@ export default function MySpaceMainScreen({ navigation }: Props) {
       >
         {/* Email verification banner */}
         {emailVerified === false && (
-          <Pressable style={styles.verifyBanner} onPress={() => { /* TODO: verify email flow */ }}>
+          <Pressable style={styles.verifyBanner} onPress={() => navigation.navigate('VerifyEmail')}>
             <Ionicons name="mail-unread-outline" size={16} color="#B45309" />
             <Text style={styles.verifyText}>Your email is not verified.</Text>
             <Text style={styles.verifyAction}>Verify now →</Text>
@@ -264,10 +273,8 @@ export default function MySpaceMainScreen({ navigation }: Props) {
               icon="people-outline"
               tint="blue"
               label="Buddies"
-              subtitle="Friends & following"
-              onPress={() =>
-                user?.userId ? navigation.navigate('Following', { userId: String(user.userId) }) : undefined
-              }
+              subtitle="Friends, requests & blocked"
+              onPress={() => navigation.navigate('Buddies')}
               styles={styles}
               chevronColor={colors.textTertiary}
               rippleColor={colors.surface}
@@ -310,7 +317,7 @@ export default function MySpaceMainScreen({ navigation }: Props) {
               tint="green"
               label="Username"
               subtitle={user?.userName ? `@${user.userName}` : 'Change your display name'}
-              onPress={() => navigation.navigate('EditProfile')}
+              onPress={() => navigation.navigate('Username')}
               styles={styles}
               chevronColor={colors.textTertiary}
               rippleColor={colors.surface}
@@ -320,7 +327,7 @@ export default function MySpaceMainScreen({ navigation }: Props) {
               tint="green"
               label="Status"
               subtitle="Set your online visibility"
-              onPress={() => navigation.navigate('EditProfile')}
+              onPress={() => navigation.navigate('Status')}
               styles={styles}
               chevronColor={colors.textTertiary}
               rippleColor={colors.surface}
@@ -330,7 +337,7 @@ export default function MySpaceMainScreen({ navigation }: Props) {
               tint="green"
               label="Devices"
               subtitle="Manage connected devices"
-              onPress={() => navigation.navigate('ChangePassword')}
+              onPress={() => navigation.navigate('Devices')}
               last
               styles={styles}
               chevronColor={colors.textTertiary}
@@ -362,8 +369,8 @@ export default function MySpaceMainScreen({ navigation }: Props) {
               icon="list-outline"
               tint="amber"
               label="Activity"
-              subtitle="Your posts, replies & history"
-              onPress={() => navigation.navigate('MyArticles')}
+              subtitle="Your wall, updates & history"
+              onPress={() => navigation.navigate('MyActivities')}
               last={!isModerator}
               styles={styles}
               chevronColor={colors.textTertiary}
@@ -375,7 +382,7 @@ export default function MySpaceMainScreen({ navigation }: Props) {
                 tint="red"
                 label="Reports Inbox"
                 subtitle="Review flagged content"
-                onPress={() => { /* TODO: reports inbox route */ }}
+                onPress={() => setReportsPickerOpen(true)}
                 last
                 styles={styles}
                 chevronColor={colors.textTertiary}
@@ -394,7 +401,7 @@ export default function MySpaceMainScreen({ navigation }: Props) {
               tint="neutral"
               label="Help Center"
               subtitle="FAQ, guidelines & contact"
-              onPress={() => { /* TODO: help center */ }}
+              onPress={() => navigation.navigate('HelpCenter')}
               styles={styles}
               chevronColor={colors.textTertiary}
               rippleColor={colors.surface}
@@ -403,8 +410,8 @@ export default function MySpaceMainScreen({ navigation }: Props) {
               icon="information-circle-outline"
               tint="neutral"
               label="About IndiaForums"
-              subtitle="Version 1.0 · Community platform"
-              onPress={() => { /* TODO: about */ }}
+              subtitle="Version, policies & links"
+              onPress={() => navigation.navigate('About')}
               last
               styles={styles}
               chevronColor={colors.textTertiary}
@@ -421,6 +428,18 @@ export default function MySpaceMainScreen({ navigation }: Props) {
           <Text style={styles.logoutText}>Sign Out</Text>
         </Pressable>
       </ScrollView>
+
+      <ReportsForumPickerSheet
+        visible={reportsPickerOpen}
+        onClose={() => setReportsPickerOpen(false)}
+        onPick={(forum) => {
+          setReportsPickerOpen(false);
+          navigation.getParent()?.navigate('Forums', {
+            screen: 'ReportsInbox',
+            params: { forum },
+          });
+        }}
+      />
     </View>
   );
 }

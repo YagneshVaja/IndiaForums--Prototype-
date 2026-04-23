@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, FlatList, Pressable, Image, ActivityIndicator, StyleSheet,
+  View, Text, Pressable, Image, ActivityIndicator, StyleSheet,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,7 +18,7 @@ import ForumTopicSettingsSheet from '../components/ForumTopicSettingsSheet';
 import { useForumTopics } from '../hooks/useForumTopics';
 import { formatCount } from '../utils/format';
 import type { ForumsStackParamList } from '../../../navigation/types';
-import type { Forum, ForumTopic } from '../../../services/api';
+import { searchTopics, type Forum, type ForumTopic } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 
@@ -36,6 +37,11 @@ export default function ForumThreadScreen() {
   const [search, setSearch] = useState('');
   const [newTopicOpen, setNewTopicOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // null = not in search mode, [] = api returned nothing, 'fallback' = use client filter
+  const [searchResults, setSearchResults] = useState<ForumTopic[] | 'fallback' | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     data,
@@ -60,11 +66,41 @@ export default function ForumThreadScreen() {
     [data],
   );
 
+  // Live API search with 350 ms debounce; falls back to client-side on error
+  useEffect(() => {
+    const q = search.trim();
+    if (!q) {
+      setSearchResults(null);
+      setSearchLoading(false);
+      if (searchDebounce.current) clearTimeout(searchDebounce.current);
+      return;
+    }
+    setSearchLoading(true);
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    searchDebounce.current = setTimeout(async () => {
+      const results = await searchTopics({ query: q, forumId: detail.id });
+      if (results.length > 0) {
+        setSearchResults(results as unknown as ForumTopic[]);
+      } else {
+        setSearchResults('fallback');
+      }
+      setSearchLoading(false);
+    }, 350);
+    return () => {
+      if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, detail.id]);
+
   const filteredTopics = useMemo(() => {
+    // API returned results — use them
+    if (Array.isArray(searchResults)) return searchResults;
+
     let list = allTopics;
     if (activeFlairId != null) {
       list = list.filter(t => t.flairId === activeFlairId);
     }
+    // Client-side fallback (searchResults === 'fallback' or no search)
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter(t =>
@@ -74,11 +110,18 @@ export default function ForumThreadScreen() {
       );
     }
     return list;
-  }, [allTopics, activeFlairId, search]);
+  }, [allTopics, activeFlairId, search, searchResults]);
 
-  const handleTopicPress = (topic: ForumTopic) => {
+  const handleTopicPress = useCallback((topic: ForumTopic) => {
     navigation.navigate('TopicDetail', { topic, forum: detail });
-  };
+  }, [navigation, detail]);
+
+  const renderTopicItem = useCallback(
+    ({ item }: { item: ForumTopic }) => (
+      <ThreadCard topic={item} forum={detail} flairs={flairs} onPress={handleTopicPress} />
+    ),
+    [detail, flairs, handleTopicPress],
+  );
 
   return (
     <View style={styles.screen}>
@@ -89,12 +132,10 @@ export default function ForumThreadScreen() {
       ) : isError && !data ? (
         <ErrorState message="Couldn't load topics" onRetry={() => refetch()} />
       ) : (
-        <FlatList
+        <FlashList
           data={filteredTopics}
           keyExtractor={t => String(t.id)}
-          renderItem={({ item }) => (
-            <ThreadCard topic={item} forum={detail} onPress={handleTopicPress} />
-          )}
+          renderItem={renderTopicItem}
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) fetchNextPage();
           }}
@@ -124,9 +165,18 @@ export default function ForumThreadScreen() {
                   <Text style={styles.followBtnText}>Follow</Text>
                 </Pressable>
                 {hasModerationRights && (
-                  <Pressable style={styles.gearBtn} onPress={() => setSettingsOpen(true)}>
-                    <Ionicons name="settings-outline" size={16} color={colors.text} />
-                  </Pressable>
+                  <>
+                    <Pressable
+                      style={styles.gearBtn}
+                      onPress={() => navigation.navigate('ReportsInbox', { forum: detail })}
+                      accessibilityLabel="Reports inbox"
+                    >
+                      <Ionicons name="flag-outline" size={16} color={colors.text} />
+                    </Pressable>
+                    <Pressable style={styles.gearBtn} onPress={() => setSettingsOpen(true)}>
+                      <Ionicons name="settings-outline" size={16} color={colors.text} />
+                    </Pressable>
+                  </>
                 )}
               </View>
 
@@ -158,9 +208,13 @@ export default function ForumThreadScreen() {
                   />
                 ) : <View />}
                 <View style={styles.flairRight}>
-                  <Text style={styles.topicCount}>
-                    {filteredTopics.length} topic{filteredTopics.length !== 1 ? 's' : ''}
-                  </Text>
+                  {searchLoading ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Text style={styles.topicCount}>
+                      {filteredTopics.length} topic{filteredTopics.length !== 1 ? 's' : ''}
+                    </Text>
+                  )}
                   <Pressable style={styles.newBtn} onPress={() => setNewTopicOpen(true)}>
                     <Ionicons name="add" size={14} color="#FFFFFF" />
                     <Text style={styles.newBtnText}>New</Text>

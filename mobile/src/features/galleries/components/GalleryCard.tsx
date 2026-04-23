@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { Gallery } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
@@ -35,7 +36,12 @@ function GalleryCardImpl({ gallery, onPress }: Props) {
         ) : (
           <Text style={styles.emoji}>{gallery.emoji}</Text>
         )}
-        <View style={styles.overlay} />
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.38)']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0.35 }}
+          end={{ x: 0, y: 1 }}
+        />
         <View style={styles.countBadge}>
           <Ionicons name="images-outline" size={9} color="#FFFFFF" />
           <Text style={styles.countText}>{gallery.count}</Text>
@@ -79,10 +85,6 @@ function makeStyles(c: ThemeColors) {
     },
     img: { position: 'absolute', width: '100%', height: '100%' },
     emoji: { fontSize: 32 },
-    overlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0,0,0,0.12)',
-    },
     countBadge: {
       position: 'absolute',
       bottom: 6,
@@ -100,7 +102,7 @@ function makeStyles(c: ThemeColors) {
       fontSize: 9,
       fontWeight: '700',
     },
-    body: { padding: 8, gap: 4 },
+    body: { paddingHorizontal: 10, paddingTop: 8, paddingBottom: 10, gap: 4 },
     title: {
       fontSize: 11.5,
       fontWeight: '700',

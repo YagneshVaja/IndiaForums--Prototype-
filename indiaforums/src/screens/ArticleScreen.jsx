@@ -78,6 +78,59 @@ function getSubtitle(article) {
   return map[cat] || `This story is rapidly gaining traction as social media buzzes non-stop about the latest twist in this unfolding narrative.`;
 }
 
+// ── Article-type helpers ─────────────────────────────────────────────────────
+// articleTypeId values come from the API:
+//   1 Normal · 2 Listicle Num Asc · 6 Listicle · 7 Listicle Num Desc · 8 Live News
+const LISTICLE_TYPES = new Set([2, 6, 7]);
+const LIVE_NEWS_TYPE = 8;
+
+// Listicle entries are the items flagged with subItem=true. Intro/outro items
+// come before/after them with subItem=false. Keeps order stable.
+function partitionItems(items) {
+  const header = [];
+  const entries = [];
+  const trailing = [];
+  let seenEntry = false;
+  let doneEntries = false;
+  for (const it of items) {
+    if (it.subItem) {
+      seenEntry = true;
+      entries.push(it);
+    } else if (!seenEntry) {
+      header.push(it);
+    } else {
+      doneEntries = true;
+      trailing.push(it);
+    }
+  }
+  return { header, entries, trailing, hasEntries: seenEntry, _doneEntries: doneEntries };
+}
+
+// "just now", "14m ago", "3h ago", "2d ago", otherwise absolute short date.
+function relativeAgo(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const diffSec = (Date.now() - d.getTime()) / 1000;
+  if (diffSec < 60)      return 'just now';
+  if (diffSec < 3600)    return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400)   return `${Math.floor(diffSec / 3600)}h ago`;
+  if (diffSec < 604800)  return `${Math.floor(diffSec / 86400)}d ago`;
+  return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+}
+
+// "4:32 PM" for same-day, "Oct 6, 4:32 PM" otherwise.
+function formatExactTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const time = d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const sameDay = d.toDateString() === new Date().toDateString();
+  if (sameDay) return time;
+  const date = d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+  return `${date}, ${time}`;
+}
+
 function buildBody(article) {
   const cat = getTopCat(article);
   const t   = article.title;
@@ -262,78 +315,7 @@ export default function ArticleScreen({ article, onArticlePress, onTagPress }) {
           <div className={styles.body}>
             {hasArticleItems ? (
               <>
-                {enriched.articleItems.map((item) => {
-                  // Type 2: Image + text
-                  if (item.type === 2) return (
-                    <div key={item.id} className={styles.itemBlock}>
-                      {item.mediaUrl && (
-                        <div className={styles.itemImageWrap}>
-                          <img src={item.mediaUrl} alt={item.mediaTitle || ''} className={styles.itemImage} loading="lazy" />
-                          {item.source && <div className={styles.itemCaption}>{item.source}</div>}
-                        </div>
-                      )}
-                      {item.contents && (
-                        <div className={styles.apiBody} dangerouslySetInnerHTML={{ __html: item.contents }} />
-                      )}
-                    </div>
-                  );
-
-                  // Type 4: YouTube video + text
-                  if (item.type === 4) {
-                    const ytMatch = item.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
-                    return (
-                      <div key={item.id} className={styles.itemBlock}>
-                        {item.title && <h3 className={styles.itemTitle}>{item.title}</h3>}
-                        {ytMatch && (
-                          <div className={styles.ytWrap}>
-                            <iframe
-                              src={`https://www.youtube.com/embed/${ytMatch[1]}`}
-                              title={item.title || 'Video'}
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                              className={styles.ytFrame}
-                              loading="lazy"
-                            />
-                          </div>
-                        )}
-                        {item.contents && (
-                          <div className={styles.apiBody} dangerouslySetInnerHTML={{ __html: item.contents }} />
-                        )}
-                      </div>
-                    );
-                  }
-
-                  // Type 6: Instagram embed
-                  if (item.type === 6 && item.mediaUrl) return (
-                    <div key={item.id} className={styles.itemBlock}>
-                      <SocialEmbed url={item.mediaUrl} type={item.type} />
-                    </div>
-                  );
-
-                  // Type 7: Twitter/X embed
-                  if (item.type === 7 && item.mediaUrl) return (
-                    <div key={item.id} className={styles.itemBlock}>
-                      <SocialEmbed url={item.mediaUrl} type={item.type} />
-                    </div>
-                  );
-
-                  // Type 9: Text-only paragraph
-                  if (item.type === 9 && item.contents) return (
-                    <div key={item.id} className={styles.itemBlock}>
-                      {item.title && <h3 className={styles.itemTitle}>{item.title}</h3>}
-                      <div className={styles.apiBody} dangerouslySetInnerHTML={{ __html: item.contents }} />
-                    </div>
-                  );
-
-                  // Catch-all: any other type with a social media URL
-                  if (item.mediaUrl && /twitter\.com|x\.com|instagram\.com|facebook\.com|fb\.watch|tiktok\.com|reddit\.com/i.test(item.mediaUrl)) return (
-                    <div key={item.id} className={styles.itemBlock}>
-                      <SocialEmbed url={item.mediaUrl} type={item.type} />
-                    </div>
-                  );
-
-                  return null;
-                })}
+                {renderArticleBody(enriched, styles)}
 
                 {apiTldr && (
                   <div className={styles.tldr}>
@@ -486,5 +468,264 @@ export default function ArticleScreen({ article, onArticlePress, onTagPress }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Body renderers ───────────────────────────────────────────────────────────
+// Renders one articleItem in its standard form (image / youtube / social / text).
+// No listicle or live-news framing — callers wrap this when they need it.
+function renderArticleItem(item, styles) {
+  // Type 2: Image + text
+  if (item.type === 2) {
+    return (
+      <div key={item.id} className={styles.itemBlock}>
+        {item.mediaUrl && (
+          <div className={styles.itemImageWrap}>
+            <img src={item.mediaUrl} alt={item.mediaTitle || ''} className={styles.itemImage} loading="lazy" />
+            {item.source && <div className={styles.itemCaption}>{item.source}</div>}
+          </div>
+        )}
+        {item.contents && (
+          <div className={styles.apiBody} dangerouslySetInnerHTML={{ __html: item.contents }} />
+        )}
+      </div>
+    );
+  }
+
+  // Type 4: YouTube video + text
+  if (item.type === 4) {
+    const ytMatch = item.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+    return (
+      <div key={item.id} className={styles.itemBlock}>
+        {item.title && <h3 className={styles.itemTitle}>{item.title}</h3>}
+        {ytMatch && (
+          <div className={styles.ytWrap}>
+            <iframe
+              src={`https://www.youtube.com/embed/${ytMatch[1]}`}
+              title={item.title || 'Video'}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className={styles.ytFrame}
+              loading="lazy"
+            />
+          </div>
+        )}
+        {item.contents && (
+          <div className={styles.apiBody} dangerouslySetInnerHTML={{ __html: item.contents }} />
+        )}
+      </div>
+    );
+  }
+
+  // Type 6: Instagram embed
+  if (item.type === 6 && item.mediaUrl) {
+    return (
+      <div key={item.id} className={styles.itemBlock}>
+        <SocialEmbed url={item.mediaUrl} type={item.type} />
+      </div>
+    );
+  }
+
+  // Type 7: Twitter/X embed
+  if (item.type === 7 && item.mediaUrl) {
+    return (
+      <div key={item.id} className={styles.itemBlock}>
+        <SocialEmbed url={item.mediaUrl} type={item.type} />
+      </div>
+    );
+  }
+
+  // Type 9: Text-only paragraph
+  if (item.type === 9 && item.contents) {
+    return (
+      <div key={item.id} className={styles.itemBlock}>
+        {item.title && <h3 className={styles.itemTitle}>{item.title}</h3>}
+        <div className={styles.apiBody} dangerouslySetInnerHTML={{ __html: item.contents }} />
+      </div>
+    );
+  }
+
+  // Catch-all: any other type with a social media URL
+  if (item.mediaUrl && /twitter\.com|x\.com|instagram\.com|facebook\.com|fb\.watch|tiktok\.com|reddit\.com/i.test(item.mediaUrl)) {
+    return (
+      <div key={item.id} className={styles.itemBlock}>
+        <SocialEmbed url={item.mediaUrl} type={item.type} />
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// Render body contents using the right template for the article's type.
+// Flat pass for types that don't have a partitioned shape (Normal, or unknown).
+function renderArticleBody(article, styles) {
+  const items = article.articleItems || [];
+  const type = article.articleTypeId;
+
+  if (type === LIVE_NEWS_TYPE) {
+    return renderLiveNewsBody(items, styles);
+  }
+
+  if (LISTICLE_TYPES.has(type)) {
+    return renderListicleBody(items, type, styles);
+  }
+
+  // Default: flat render (Normal article with mixed items, or unknown type)
+  return <>{items.map(it => renderArticleItem(it, styles))}</>;
+}
+
+function renderLiveNewsBody(items, styles) {
+  const { header, entries, trailing, hasEntries } = partitionItems(items);
+
+  // No live-update entries — fall back to flat render so nothing is hidden.
+  if (!hasEntries) return <>{items.map(it => renderArticleItem(it, styles))}</>;
+
+  // Most recent update drives the live-blog header timestamp.
+  const latestRel = relativeAgo(entries[0]?.dateAdded);
+
+  return (
+    <>
+      {/* Intro image + lede */}
+      {header.length > 0 && (
+        <div className={styles.liveHeader}>
+          {header.map(it => renderArticleItem(it, styles))}
+        </div>
+      )}
+
+      {/* Live-blog banner — frames the whole feed as live, shows update count + latest time */}
+      <div className={styles.liveBanner}>
+        <span className={styles.liveBannerDot} aria-hidden="true" />
+        <span className={styles.liveBannerLabel}>LIVE BLOG</span>
+        <span className={styles.liveBannerCount}>
+          {entries.length} {entries.length === 1 ? 'update' : 'updates'}
+        </span>
+        {latestRel && (
+          <span className={styles.liveBannerLatest}>Updated {latestRel}</span>
+        )}
+      </div>
+
+      {/* Timeline feed — marker dots on a rail, latest at the top */}
+      <div className={styles.liveFeed}>
+        {entries.map((it, i) => {
+          const rel = relativeAgo(it.dateAdded);
+          const exact = formatExactTime(it.dateAdded);
+          const isLatest = i === 0;
+          return (
+            <article
+              key={it.id}
+              className={`${styles.liveCard} ${isLatest ? styles.liveCardLatest : ''}`}
+            >
+              <span className={styles.liveMarker} aria-hidden="true" />
+              <div className={styles.liveCardHead}>
+                {isLatest && <span className={styles.liveNewPill}>NEW</span>}
+                {rel && <span className={styles.liveTimeRel}>{rel}</span>}
+                {exact && <span className={styles.liveTimeExact}>{exact}</span>}
+              </div>
+              {it.title && <h3 className={styles.liveTitle}>{it.title}</h3>}
+              {it.mediaUrl && it.type === 2 && (
+                <div className={styles.liveImageWrap}>
+                  <img src={it.mediaUrl} alt={it.mediaTitle || ''} className={styles.liveImage} loading="lazy" />
+                  {it.source && <div className={styles.itemCaption}>{it.source}</div>}
+                </div>
+              )}
+              {it.contents && (
+                <div className={styles.apiBody} dangerouslySetInnerHTML={{ __html: it.contents }} />
+              )}
+            </article>
+          );
+        })}
+      </div>
+
+      {/* Closing note(s) */}
+      {trailing.length > 0 && (
+        <div className={styles.liveOutro}>
+          {trailing.map(it => renderArticleItem(it, styles))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function renderListicleBody(items, type, styles) {
+  const { header, entries, trailing, hasEntries } = partitionItems(items);
+
+  if (!hasEntries) return <>{items.map(it => renderArticleItem(it, styles))}</>;
+
+  // Numbering strategy driven by articleTypeId:
+  //   2 → 1, 2, 3 …         (ascending — "top X" counting up)
+  //   7 → N, N-1, N-2 …     (descending — "countdown" style)
+  //   6 → no numbers        (plain ordered list)
+  const total = entries.length;
+  const numberAt = (i) => {
+    if (type === 2) return i + 1;
+    if (type === 7) return total - i;
+    return null; // type 6: no number badge
+  };
+
+  return (
+    <>
+      {/* Intro image + lede */}
+      {header.length > 0 && (
+        <div className={styles.listicleHeader}>
+          {header.map(it => renderArticleItem(it, styles))}
+        </div>
+      )}
+
+      {/* Entries — image-hero with overlay number badge, title and body below.
+          Matches the system's image-forward card pattern (ArticleCard / NewsVerticalCard). */}
+      <ol className={styles.listicleList}>
+        {entries.map((it, i) => {
+          const n = numberAt(i);
+          const cleanTitle = it.title ? it.title.replace(/:$/, '') : '';
+          const hasImage = it.mediaUrl && it.type === 2;
+          const isTop = type === 7 && i === 0;
+          return (
+            <li key={it.id} className={styles.listEntry}>
+              {hasImage ? (
+                <div className={styles.listHero}>
+                  <img
+                    src={it.mediaUrl}
+                    alt={it.mediaTitle || ''}
+                    className={styles.listHeroImg}
+                    loading="lazy"
+                  />
+                  <div className={styles.listHeroShade} aria-hidden="true" />
+                  {n !== null && (
+                    <div className={`${styles.listBadge} ${isTop ? styles.listBadgeTop : ''}`}>
+                      <span className={styles.listBadgeHash}>#</span>
+                      <span className={styles.listBadgeNum}>{n}</span>
+                    </div>
+                  )}
+                  {it.source && <div className={styles.listHeroCaption}>{it.source}</div>}
+                </div>
+              ) : (
+                n !== null && (
+                  <div className={styles.listBadgeRow}>
+                    <div className={`${styles.listBadge} ${styles.listBadgeInline} ${isTop ? styles.listBadgeTop : ''}`}>
+                      <span className={styles.listBadgeHash}>#</span>
+                      <span className={styles.listBadgeNum}>{n}</span>
+                    </div>
+                  </div>
+                )
+              )}
+              <div className={styles.listContent}>
+                {cleanTitle && <h3 className={styles.listEntryTitle}>{cleanTitle}</h3>}
+                {it.contents && (
+                  <div className={styles.apiBody} dangerouslySetInnerHTML={{ __html: it.contents }} />
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+
+      {/* Closing paragraph */}
+      {trailing.length > 0 && (
+        <div className={styles.listicleOutro}>
+          {trailing.map(it => renderArticleItem(it, styles))}
+        </div>
+      )}
+    </>
   );
 }

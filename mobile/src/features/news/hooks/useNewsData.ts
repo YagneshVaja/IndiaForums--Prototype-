@@ -1,17 +1,39 @@
-import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
-import { fetchArticles } from '../../../services/api';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { fetchArticleList, fetchVideos, fetchMediaGalleries } from '../../../services/api';
 
-export function useNewsArticles(category?: string) {
+const PAGE_SIZE = 25;
+
+// NewsScreen fetches from /articles/list (which returns defaultCategoryId as
+// `catId`) and filters client-side by category/subcategory. The query is cat-
+// agnostic so React Query caches one list regardless of which chip is active.
+export function useNewsArticles() {
   return useInfiniteQuery({
-    queryKey: ['articles', 'news', category ?? 'all'],
+    queryKey: ['articles', 'news', 'list'],
     queryFn: ({ pageParam }) =>
-      fetchArticles({ category, page: pageParam as number, limit: 20 }),
+      fetchArticleList({ page: pageParam as number, limit: PAGE_SIZE }),
     getNextPageParam: (lastPage, _allPages, lastPageParam) => {
-      if (lastPage.length < 20) return undefined;
+      if (lastPage.length < PAGE_SIZE) return undefined;
       return (lastPageParam as number) + 1;
     },
     initialPageParam: 1,
     staleTime: 2 * 60 * 1000,
-    placeholderData: keepPreviousData,
+  });
+}
+
+export function useNewsVideos() {
+  return useQuery({
+    queryKey: ['news', 'inline-videos'],
+    queryFn: () => fetchVideos(1, 12),
+    staleTime: 5 * 60 * 1000,
+    select: (data) => data.videos ?? [],
+  });
+}
+
+export function useNewsGalleries() {
+  return useQuery({
+    queryKey: ['news', 'inline-galleries'],
+    queryFn: () => fetchMediaGalleries(1, 12),
+    staleTime: 5 * 60 * 1000,
+    select: (data) => data.galleries ?? [],
   });
 }

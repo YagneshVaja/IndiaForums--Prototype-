@@ -9,6 +9,8 @@ import {
   castPollVote,
   getPostEditHistory,
   trashPost,
+  closeTopic,
+  openTopic,
   THREAD_REACTION_TYPES,
 } from '../services/forumsApi';
 import { getProfile } from '../services/userProfileApi';
@@ -16,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import SocialEmbed, { detectPlatform } from '../components/ui/SocialEmbed';
 import AdminPanel from '../components/forum/AdminPanel';
 import ReactionsSheet from '../components/forum/ReactionsSheet';
+import PostSettingsMenu from '../components/forum/PostSettingsMenu';
 
 function formatNum(n) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
@@ -52,6 +55,110 @@ const REACTION_OPTIONS = [
   { code: THREAD_REACTION_TYPES.SAD,   emoji: '😢', label: 'Sad'   },
   { code: THREAD_REACTION_TYPES.ANGRY, emoji: '😠', label: 'Angry' },
 ];
+
+// Some backend responses ship raw BBCode that never got server-side-translated
+// to HTML — typically [QUOTE=name]…[/QUOTE] blocks. Rendering them via
+// dangerouslySetInnerHTML shows the tags as literal text, which is what the
+// user is seeing. Convert the common tags to equivalent HTML so the existing
+// blockquote/strong styles pick them up. Runs BEFORE image enhancement.
+function parseBBCode(html) {
+  if (!html) return html;
+  let out = html;
+  // Quote with attribution, possibly nested, run repeatedly from the innermost
+  // pair outward.
+  let prev;
+  do {
+    prev = out;
+    out = out.replace(
+      /\[QUOTE=([^\]]*?)\]([\s\S]*?)\[\/QUOTE\]/gi,
+      (_m, name, body) =>
+        `<blockquote><cite>${String(name).trim()} said:</cite>${body}</blockquote>`
+    );
+    out = out.replace(
+      /\[QUOTE\]([\s\S]*?)\[\/QUOTE\]/gi,
+      '<blockquote>$1</blockquote>'
+    );
+  } while (out !== prev);
+  return out
+    .replace(/\[B\]([\s\S]*?)\[\/B\]/gi,  '<strong>$1</strong>')
+    .replace(/\[I\]([\s\S]*?)\[\/I\]/gi,  '<em>$1</em>')
+    .replace(/\[U\]([\s\S]*?)\[\/U\]/gi,  '<u>$1</u>')
+    .replace(/\[URL=([^\]]+)\]([\s\S]*?)\[\/URL\]/gi,
+      '<a href="$1" target="_blank" rel="noopener noreferrer">$2</a>')
+    .replace(/\[URL\]([\s\S]*?)\[\/URL\]/gi,
+      '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>')
+    .replace(/\[IMG\]([\s\S]*?)\[\/IMG\]/gi, '<img src="$1" alt="" />');
+}
+
+// Sanitize and wire up fault-tolerant behavior for any renderable media
+// inside a backend HTML block. Must run AFTER the browser has parsed the HTML.
+//
+// Cases we have to handle, discovered from real posts:
+//   1. <img> errors outright (404) — hide it.
+//   2. <img> already failed before our effect ran — check complete+naturalSize.
+//   3. <img> is still loading when effect runs, so neither 'load' nor 'error'
+//      has fired. Meanwhile the browser reserves placeholder space using the
+//      HTML-attribute width/height, which paired with our border/shadow CSS
+//      shows as a huge empty bordered card (the "big white box" bug).
+//   4. <img> "loads" successfully but the response was empty / a broken image
+//      with 0×0 natural dimensions — 'load' fires, 'error' does not.
+//   5. <iframe> embeds blocked by CSP / X-Frame-Options — also render as empty
+//      boxes. Hide if the frame can't load or ends up empty.
+//   6. Obviously-broken src patterns (empty, "about:blank", "data:" 1x1
+//      pixel markers) — hide proactively.
+function useHideBrokenImages(ref, deps) {
+  useEffect(() => {
+    const root = ref.current;
+    if (!root) return undefined;
+    const cleanups = [];
+
+    const imgs = Array.from(root.querySelectorAll('img'));
+    for (const img of imgs) {
+      img.decoding = 'async';
+      try { img.referrerPolicy = 'no-referrer'; } catch { /* read-only in old Safari */ }
+
+      const src = img.getAttribute('src') || '';
+      // Proactive: src is empty, about:blank, or a known 1x1 placeholder pixel.
+      if (!src || src === 'about:blank' || /^data:image\/gif;base64,R0lGOD/i.test(src)) {
+        img.style.display = 'none';
+        continue;
+      }
+
+      const hide = () => { img.style.display = 'none'; };
+      const markLoaded = () => { img.classList.add(styles.imgLoaded); };
+      const handleLoad = () => {
+        if (img.naturalWidth === 0 || img.naturalHeight === 0) hide();
+        else markLoaded();
+      };
+      img.addEventListener('error', hide);
+      img.addEventListener('load', handleLoad);
+      cleanups.push(() => {
+        img.removeEventListener('error', hide);
+        img.removeEventListener('load', handleLoad);
+      });
+
+      if (img.complete) {
+        if (img.naturalWidth === 0 || img.naturalHeight === 0) hide();
+        else markLoaded();
+      }
+    }
+
+    const frames = Array.from(root.querySelectorAll('iframe'));
+    for (const frame of frames) {
+      const src = frame.getAttribute('src') || '';
+      if (!src || src === 'about:blank') {
+        frame.style.display = 'none';
+        continue;
+      }
+      const hideFrame = () => { frame.style.display = 'none'; };
+      frame.addEventListener('error', hideFrame);
+      cleanups.push(() => frame.removeEventListener('error', hideFrame));
+    }
+
+    return () => { cleanups.forEach(fn => fn()); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+}
 
 // ── Extract social-media URLs from text/html ────────────────────────────────
 const SOCIAL_URL_RE = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com|instagram\.com|facebook\.com|fb\.watch|tiktok\.com|reddit\.com|youtube\.com|youtu\.be)[^\s"'<)]+/gi;
@@ -97,13 +204,19 @@ function countryFlag(code) {
 
 // ── Topic description with embedded social content ──────────────────────────
 function TopicBodyWithEmbeds({ topic }) {
-  const cleanText = useMemo(() => cleanDescription(topic.description), [topic.description]);
+  const cleanText = useMemo(
+    () => parseBBCode(cleanDescription(topic.description)),
+    [topic.description]
+  );
   const socialUrls = useMemo(() => getTopicSocialUrls(topic), [topic]);
+  const bodyRef = useRef(null);
+  useHideBrokenImages(bodyRef, [cleanText]);
 
   return (
     <>
       {cleanText && (
         <div
+          ref={bodyRef}
           className={styles.topicBody}
           dangerouslySetInnerHTML={{ __html: cleanText }}
         />
@@ -120,43 +233,181 @@ function TopicBodyWithEmbeds({ topic }) {
 }
 
 // ── Poll widget ──────────────────────────────────────────────────────────────
-function PollWidget({ poll, voted, votedIds, voting, error, onVote }) {
+// Two layouts:
+//   • Not voted → rows with checkbox (multi) / radio (single), a CAST VOTE!!
+//     button, and a "*Vote to see the results" hint.
+//   • Voted    → text + % on top, green progress bar underneath. Read-only.
+// The gear icon only renders for moderators and opens a small menu with a
+// Lock/Unlock Topic action (hits `closeTopic` / `openTopic` via onToggleLock).
+function PollWidget({
+  poll, voted, votedIds, voting, error, onVote,
+  locked = false, onToggleLock,
+  lockBusy = false,
+}) {
+  const [selected, setSelected] = useState([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuWrapRef = useRef(null);
+
+  // Close the gear menu when clicking outside of it.
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    function onDocClick(e) {
+      if (menuWrapRef.current && !menuWrapRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [menuOpen]);
+
   if (!poll) return null;
   const total = poll.totalVotes || 0;
+
+  function toggleChoice(id) {
+    if (voting) return;
+    setSelected(cur => {
+      if (poll.multiple) {
+        return cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
+      }
+      return [id];
+    });
+  }
+
+  function handleCast() {
+    if (voting || selected.length === 0) return;
+    onVote(selected);
+  }
+
+  async function handleLockClick() {
+    if (lockBusy || !onToggleLock) return;
+    setMenuOpen(false);
+    await onToggleLock();
+  }
+
   return (
     <div className={styles.pollBox}>
+      <div className={styles.pollHeader}>
+        <span className={styles.pollLabel}>POLL</span>
+        <div className={styles.pollMenuWrap} ref={menuWrapRef}>
+            <button
+              type="button"
+              className={styles.pollSettingsBtn}
+              aria-label="Poll options"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen(v => !v)}
+              disabled={lockBusy}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </button>
+            {menuOpen && (
+              <div className={styles.pollMenu} role="menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={styles.pollMenuItem}
+                  onClick={handleLockClick}
+                  disabled={lockBusy}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {locked ? (
+                      <>
+                        <rect x="3" y="11" width="18" height="11" rx="2"/>
+                        <path d="M7 11V7a5 5 0 019.9-1"/>
+                      </>
+                    ) : (
+                      <>
+                        <rect x="3" y="11" width="18" height="11" rx="2"/>
+                        <path d="M7 11V7a5 5 0 0110 0v4"/>
+                      </>
+                    )}
+                  </svg>
+                  <span>{locked ? 'Unlock Topic' : 'Lock Topic'}</span>
+                </button>
+              </div>
+            )}
+        </div>
+      </div>
+
       {poll.question && <div className={styles.pollQuestion}>{poll.question}</div>}
-      <div className={styles.pollOptions}>
-        {poll.options.map((opt) => {
-          const pct = total > 0 ? Math.round((opt.votes / total) * 100) : 0;
-          const mine = votedIds.includes(opt.id);
-          if (voted) {
+
+      {voted ? (
+        <div className={styles.pollResults}>
+          {poll.options.map((opt) => {
+            const pct = total > 0 ? Math.round((opt.votes / total) * 100) : 0;
+            const mine = votedIds.includes(opt.id);
             return (
-              <div key={opt.id} className={`${styles.pollResult} ${mine ? styles.pollResultMine : ''}`}>
-                <div className={styles.pollResultBar} style={{ width: `${pct}%` }} />
-                <div className={styles.pollResultRow}>
+              <div
+                key={opt.id}
+                className={`${styles.pollResultRow} ${mine ? styles.pollResultMine : ''}`}
+              >
+                <div className={styles.pollResultTop}>
                   <span className={styles.pollResultText}>{opt.text}</span>
                   <span className={styles.pollResultPct}>{pct}%</span>
                 </div>
+                <div className={styles.pollResultTrack}>
+                  <div
+                    className={styles.pollResultFill}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
               </div>
             );
-          }
-          return (
-            <button
-              key={opt.id}
-              className={styles.pollOptionBtn}
-              onClick={() => onVote(opt.id)}
-              disabled={voting}
-            >
-              {opt.text}
-            </button>
-          );
-        })}
-      </div>
-      <div className={styles.pollMeta}>
-        {total} {total === 1 ? 'vote' : 'votes'}
-      </div>
-      {error && <div className={styles.pollError}>{error}</div>}
+          })}
+          <div className={styles.pollMeta}>
+            {total} {total === 1 ? 'vote' : 'votes'}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className={styles.pollChoices}>
+            {poll.options.map((opt) => {
+              const checked = selected.includes(opt.id);
+              return (
+                <label
+                  key={opt.id}
+                  className={`${styles.pollChoiceRow} ${checked ? styles.pollChoiceRowOn : ''}`}
+                >
+                  <input
+                    type={poll.multiple ? 'checkbox' : 'radio'}
+                    name={`poll-${poll.pollId}`}
+                    className={styles.pollChoiceInput}
+                    checked={checked}
+                    onChange={() => toggleChoice(opt.id)}
+                    disabled={voting}
+                  />
+                  <span className={styles.pollChoiceBox} aria-hidden="true">
+                    {checked && (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    )}
+                  </span>
+                  <span className={styles.pollChoiceText}>{opt.text}</span>
+                </label>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            className={styles.pollCastBtn}
+            onClick={handleCast}
+            disabled={voting || selected.length === 0}
+          >
+            {voting ? 'CASTING…' : 'CAST VOTE!!'}
+          </button>
+
+          <div className={styles.pollHint}>*Vote to see the results</div>
+
+          {error && <div className={styles.pollError}>{error}</div>}
+        </>
+      )}
     </div>
   );
 }
@@ -193,10 +444,17 @@ function RankBadge({ rank }) {
 // ── Post body with embedded social content ──────────────────────────────────
 function PostBodyWithEmbeds({ html }) {
   const socialUrls = useMemo(() => extractSocialUrls(html), [html]);
+  const safeHtml   = useMemo(() => parseBBCode(html), [html]);
+  const bodyRef    = useRef(null);
+  useHideBrokenImages(bodyRef, [safeHtml]);
 
   return (
     <>
-      <div className={styles.postBody} dangerouslySetInnerHTML={{ __html: html }} />
+      <div
+        ref={bodyRef}
+        className={styles.postBody}
+        dangerouslySetInnerHTML={{ __html: safeHtml }}
+      />
       {socialUrls.length > 0 && (
         <div className={styles.embedsRow}>
           {socialUrls.map(url => (
@@ -301,6 +559,8 @@ function UserMiniCard({ post, onVisitProfile, onMessageUser, onClose }) {
               alt=""
               className={styles.miniCardBannerImg}
               decoding="async"
+              referrerPolicy="no-referrer"
+              onError={e => { e.currentTarget.style.display = 'none'; }}
               aria-hidden="true"
             />
           ) : avatarUrl ? (
@@ -309,6 +569,8 @@ function UserMiniCard({ post, onVisitProfile, onMessageUser, onClose }) {
               alt=""
               className={styles.miniCardBannerBg}
               decoding="async"
+              referrerPolicy="no-referrer"
+              onError={e => { e.currentTarget.style.display = 'none'; }}
               aria-hidden="true"
             />
           ) : null}
@@ -323,7 +585,12 @@ function UserMiniCard({ post, onVisitProfile, onMessageUser, onClose }) {
           <div className={styles.miniCardAvatar} style={avatarBg ? { background: avatarBg } : undefined}>
             {avatarUrl ? (
               <>
-                <img src={avatarUrl} alt="" className={styles.miniCardAvatarImg}
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className={styles.miniCardAvatarImg}
+                  decoding="async"
+                  referrerPolicy="no-referrer"
                   onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling.style.display = 'flex'; }}
                 />
                 <span className={styles.miniCardAvatarLetter} style={{ display: 'none' }}>
@@ -385,8 +652,8 @@ function UserMiniCard({ post, onVisitProfile, onMessageUser, onClose }) {
                 alt={b.name}
                 title={b.name}
                 className={styles.miniCardBadgeImg}
-                loading="lazy"
                 decoding="async"
+                referrerPolicy="no-referrer"
                 onError={e => { e.currentTarget.style.display = 'none'; }}
               />
             ))}
@@ -452,6 +719,8 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
   const [postThreadLikeIds, setPostThreadLikeIds] = useState({});
   // Toast for action errors (react/trash/undo failures)
   const [actionError, setActionError] = useState(null);
+  // Toast for post-menu success confirmations (report, mod note, matured flag)
+  const [actionSuccess, setActionSuccess] = useState(null);
   // "You already posted same reaction" alert — stores postId of active alert
   const [sameReactionAlert, setSameReactionAlert] = useState(null);
   const sameReactionTimer = useRef(null);
@@ -530,6 +799,7 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
   const [pollVoting, setPollVoting]   = useState(false);
   const [pollError, setPollError]     = useState(null);
   const [pollVotedIds, setPollVotedIds] = useState(null); // null = use server hasVoted
+  const [pollLockBusy, setPollLockBusy] = useState(false);
 
   // Post edit-history modal
   const [historyForPostId, setHistoryForPostId] = useState(null);
@@ -587,21 +857,51 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
     }
   }
 
-  async function handlePollVote(poll, optionId) {
+  async function handlePollVote(poll, optionIds) {
     if (pollVoting) return;
     if (!isAuthenticated) {
       setPollError('Please sign in to vote.');
       return;
     }
+    const ids = Array.isArray(optionIds) ? optionIds : [optionIds];
+    if (ids.length === 0) return;
     setPollVoting(true);
     setPollError(null);
     try {
-      await castPollVote(poll.pollId, [optionId]);
-      setPollVotedIds([optionId]);
+      const res = await castPollVote(poll.pollId, ids);
+      const serverIds = res?.data?.votedChoiceIds?.map(Number).filter(Number.isFinite);
+      setPollVotedIds(serverIds?.length ? serverIds : ids);
     } catch (err) {
       setPollError(extractApiError(err, 'Failed to record vote'));
     } finally {
       setPollVoting(false);
+    }
+  }
+
+  async function handleToggleLock() {
+    if (pollLockBusy) return;
+    if (!liveTopic?.id || !liveTopic?.forumId) return;
+    if (!isAuthenticated) {
+      setPollError('Please sign in to change topic state.');
+      return;
+    }
+    const topicId = Number(liveTopic.id);
+    const forumId = Number(liveTopic.forumId);
+    setPollLockBusy(true);
+    setPollError(null);
+    try {
+      if (liveTopic.locked) {
+        await openTopic({ topicId, forumId });
+      } else {
+        await closeTopic({ topicId, forumId });
+      }
+      refresh();
+    } catch (err) {
+      // Backend returns 400 (not 403) with { isSuccess, message } when the
+      // user lacks moderator rights. extractApiError flattens the message.
+      setPollError(extractApiError(err, 'Failed to update topic lock state'));
+    } finally {
+      setPollLockBusy(false);
     }
   }
 
@@ -767,8 +1067,12 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
                 src={liveTopic.topicImage}
                 alt=""
                 className={styles.topicImage}
-                loading="lazy"
-                onError={e => { e.currentTarget.closest('.' + styles.topicImageWrap).style.display = 'none'; }}
+                decoding="async"
+                referrerPolicy="no-referrer"
+                onError={e => {
+                  const wrap = e.currentTarget.closest('.' + styles.topicImageWrap);
+                  if (wrap) wrap.style.display = 'none';
+                }}
               />
             </div>
           )}
@@ -778,10 +1082,13 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
             <PollWidget
               poll={liveTopic.poll}
               voted={pollVotedIds != null || liveTopic.poll.hasVoted}
-              votedIds={pollVotedIds || []}
+              votedIds={pollVotedIds || liveTopic.poll.myVotedIds || []}
               voting={pollVoting}
               error={pollError}
-              onVote={(optId) => handlePollVote(liveTopic.poll, optId)}
+              onVote={(optIds) => handlePollVote(liveTopic.poll, optIds)}
+              locked={!!liveTopic.locked}
+              lockBusy={pollLockBusy}
+              onToggleLock={handleToggleLock}
             />
           )}
 
@@ -864,7 +1171,8 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
                           src={post.avatarUrl}
                           alt=""
                           className={styles.postAvatarImg}
-                          loading="lazy"
+                          decoding="async"
+                          referrerPolicy="no-referrer"
                           onError={e => {
                             e.currentTarget.style.display = 'none';
                             e.currentTarget.nextElementSibling.style.display = 'flex';
@@ -910,7 +1218,16 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
                     {post.badges?.length > 0 && (
                       <div className={styles.userBadges}>
                         {post.badges.map(b => (
-                          <img key={b.id} src={b.imageUrl} alt={b.name} title={b.name} className={styles.userBadgeImg} loading="lazy" decoding="async" />
+                          <img
+                            key={b.id}
+                            src={b.imageUrl}
+                            alt={b.name}
+                            title={b.name}
+                            className={styles.userBadgeImg}
+                            decoding="async"
+                            referrerPolicy="no-referrer"
+                            onError={e => { e.currentTarget.style.display = 'none'; }}
+                          />
                         ))}
                       </div>
                     )}
@@ -927,7 +1244,25 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
                       </button>
                     )}
                   </div>
-                  <span className={styles.postNumber}>#{i + 1}</span>
+                  <div className={styles.postNumGroup}>
+                    <span className={styles.postNumber}>#{i + 1}</span>
+                    <PostSettingsMenu
+                      post={post}
+                      topicId={liveTopic.id}
+                      forumId={forumId}
+                      isOwner={isMine}
+                      isModerator={isModerator}
+                      onEdit={startEdit}
+                      onTrash={handleTrashPost}
+                      onShowHistory={(p) => setHistoryForPostId(p.id)}
+                      onRefresh={refresh}
+                      onSuccess={(msg) => {
+                        setActionSuccess(msg);
+                        setTimeout(() => setActionSuccess(null), 3500);
+                      }}
+                      onError={(msg) => setActionError(msg)}
+                    />
+                  </div>
                 </div>
 
                 {/* Post content (or edit textarea) */}
@@ -1049,15 +1384,7 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
                       </svg>
                       Reply
                     </button>
-                    {isMine ? (
-                      <button className={styles.postAction} onClick={() => startEdit(post)}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                          <path d="M12 20h9"/>
-                          <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z"/>
-                        </svg>
-                        Edit
-                      </button>
-                    ) : (
+                    {!isMine && (
                       <button
                         className={styles.postAction}
                         onClick={() => {
@@ -1085,20 +1412,6 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
                           <path d="M5 1h6v7" stroke="currentColor" strokeWidth="1.2"/>
                         </svg>
                         Quote
-                      </button>
-                    )}
-                    {isModerator && !isMine && (
-                      <button
-                        className={`${styles.postAction} ${styles.postActionDanger}`}
-                        onClick={() => handleTrashPost(post)}
-                        title="Trash this post (moderator)"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                          <path d="M3 6h18"/>
-                          <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                          <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-                        </svg>
-                        Trash
                       </button>
                     )}
                     <button className={`${styles.postAction} ${styles.postActionRight}`}>
@@ -1195,6 +1508,11 @@ export default function TopicDetailScreen({ topic, onVisitProfile, onMessageUser
       {actionError && (
         <div className={styles.actionErrorBar} onClick={() => setActionError(null)}>
           {actionError}
+        </div>
+      )}
+      {actionSuccess && (
+        <div className={styles.actionSuccessBar} onClick={() => setActionSuccess(null)}>
+          {actionSuccess}
         </div>
       )}
 
