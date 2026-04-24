@@ -97,13 +97,33 @@ export default function ShortsScreen() {
     }
   }, [activeIndex, shorts.length]);
 
-  const handleActivate = useCallback((short: Short) => {
-    if (short.isYouTube) {
-      setPlayingUrl(short.pageUrl);
-    } else {
-      Linking.openURL(short.pageUrl).catch(() => {});
-    }
-  }, []);
+  const handleActivate = useCallback(
+    (short: Short) => {
+      switch (short.target.kind) {
+        case 'youtube':
+          setPlayingUrl(short.target.url);
+          return;
+        case 'article':
+          navigation.navigate('ArticleDetail', {
+            id: short.target.articleId,
+            thumbnailUrl: short.thumbnail ?? undefined,
+            title: short.title,
+          });
+          return;
+        case 'gallery':
+          navigation.navigate('GalleryDetail', {
+            id: short.target.galleryId,
+            title: short.title,
+            thumbnail: short.thumbnail,
+          });
+          return;
+        case 'external':
+          Linking.openURL(short.target.url).catch(() => {});
+          return;
+      }
+    },
+    [navigation],
+  );
 
   const modalOpen = playingUrl != null;
 
@@ -202,11 +222,18 @@ export default function ShortsScreen() {
         />
       )}
 
-      {/* Floating category bar — back button inline, no separate header */}
+      {/* Category bar — anchored at top:0 and sized to cover both the
+          status bar area (paddingTop = insets.top) AND the category row, so
+          the translucent Android-15 status bar doesn't reveal card content
+          underneath. Opaque backgroundColor is what prevents the leak. */}
       <View
         style={[
           styles.categoryBarHost,
-          { top: insets.top, height: CATEGORY_BAR_HEIGHT },
+          {
+            paddingTop: insets.top,
+            height: insets.top + CATEGORY_BAR_HEIGHT,
+            backgroundColor: colors.bg,
+          },
         ]}
       >
         <ShortsCategoryBar
@@ -249,6 +276,7 @@ const styles = StyleSheet.create({
   },
   categoryBarHost: {
     position: 'absolute',
+    top: 0,
     left: 0,
     right: 0,
     zIndex: 25,

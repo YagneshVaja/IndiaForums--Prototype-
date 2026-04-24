@@ -34,10 +34,32 @@ type Rt  = RouteProp<HomeStackParamList, 'GalleryDetail'>;
 export default function GalleryDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
-  const gallery = route.params.gallery;
   const colors = useThemeStore((s) => s.colors);
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  // Route accepts either a full Gallery (from list screens) or an id + hints
+  // (from shorts / deep links). Build a placeholder in the id-only case so the
+  // hero/header has sensible defaults until details load.
+  const params = route.params;
+  const gallery: Gallery = useMemo(() => {
+    if ('gallery' in params) return params.gallery;
+    return {
+      id:        params.id,
+      title:     params.title ?? '',
+      pageUrl:   null,
+      cat:       null,
+      catLabel:  null,
+      count:     0,
+      emoji:     '📸',
+      bg:        '#667eea',
+      time:      '',
+      featured:  false,
+      thumbnail: params.thumbnail ?? null,
+      viewCount: 0,
+      views:     null,
+    };
+  }, [params]);
 
   const { data: details, isLoading } = useGalleryDetails(gallery.id);
 

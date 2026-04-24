@@ -178,9 +178,11 @@ export default function ShortCard({
   }
 
   function handleCTA() {
-    if (!short.pageUrl) return;
+    if (!short.target?.url) return;
     onActivate(short);
   }
+
+  const isYouTube = short.target.kind === 'youtube';
 
   const progressWidth = progress.interpolate({
     inputRange: [0, 1],
@@ -241,20 +243,29 @@ export default function ShortCard({
           ) : null}
         </View>
 
-        <Text style={styles.title}>{short.title}</Text>
+        <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
+          {short.title}
+        </Text>
 
         {short.description ? (
-          <Text style={styles.desc}>{short.description}</Text>
+          <Text style={styles.desc} numberOfLines={3} ellipsizeMode="tail">
+            {short.description}
+          </Text>
         ) : null}
+
+        {/* Absorbs extra vertical space so the CTA pins to the bottom of the
+            card — keeps the tap target in thumb range regardless of how
+            short the title/description copy is. */}
+        <View style={styles.flexSpacer} />
 
         <Pressable
           onPress={handleCTA}
           accessibilityRole="button"
-          accessibilityLabel={short.isYouTube ? 'Watch on YouTube' : 'Read full story'}
+          accessibilityLabel={isYouTube ? 'Watch on YouTube' : 'Read full story'}
           style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
         >
           <Text style={styles.ctaLabel}>
-            {short.isYouTube ? '▶  Watch on YouTube' : 'Read Full Story  →'}
+            {isYouTube ? '▶  Watch on YouTube' : 'Read Full Story  →'}
           </Text>
         </Pressable>
       </View>
@@ -317,12 +328,13 @@ function buildTheme(c: ThemeColors, height: number, topOffset: number) {
     // Media region hugs the image's natural aspect — no whitespace below
     // landscape images, no letterbox bars. `aspectRatio` is applied inline
     // once RNImage.getSize() resolves the thumbnail's true dimensions.
-    // `maxHeight` caps very tall portraits so content stays on-screen.
+    // `maxHeight` caps the media so the title/desc/CTA block is always
+    // guaranteed enough room to render without clipping the CTA.
     mediaArea: {
       width: '100%',
       position: 'relative',
       overflow: 'hidden',
-      maxHeight: Math.round((height - topOffset) * 0.6),
+      maxHeight: Math.round((height - topOffset) * 0.52),
     },
     // Fallback slot used while the image dimensions are being fetched — a
     // reasonable 16:9 landscape so the layout doesn't jump around when the
@@ -380,9 +392,14 @@ function buildTheme(c: ThemeColors, height: number, topOffset: number) {
       justifyContent: 'center',
     },
     overlay: {
+      flex: 1,
       paddingHorizontal: 18,
       paddingTop: 16,
       paddingBottom: 18,
+    },
+    flexSpacer: {
+      flex: 1,
+      minHeight: 12,
     },
     metaRow: {
       flexDirection: 'row',

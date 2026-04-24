@@ -4183,17 +4183,24 @@ export async function fetchLinkOEmbed(
 //   https://img.indiaforums.com/shorts/720x0/0/{shortId}-{pageUrl}.webp?c={checksum}
 //
 // Destination URL when tapping the CTA = raw.linkUrl (YouTube / IndiaForums),
-// fallback to IndiaForums shorts page when absent.
+// fallback to IndiaForums shorts page when absent. Resolved into a typed
+// `target` so the screen can route in-app (article → ArticleDetail, youtube →
+// in-app modal) and only fall back to the system browser for unknown shapes.
+
+export type ShortTarget =
+  | { kind: 'youtube';  url: string }
+  | { kind: 'article';  articleId: string; url: string }
+  | { kind: 'gallery';  galleryId: string; url: string }
+  | { kind: 'external'; url: string };
 
 export interface Short {
   id: number;
   title: string;
   description: string;
-  pageUrl: string;         // resolved destination URL (external)
   thumbnail: string | null;
   publishedAt: string;     // formatted en-IN, empty string if unparseable
   credits: string;
-  isYouTube: boolean;
+  target: ShortTarget;
 }
 
 export interface ShortsPage {
@@ -4234,22 +4241,42 @@ function buildShortThumbnail(raw: RawShort): string | null {
   return `https://img.indiaforums.com/shorts/720x0/0/${raw.shortId}-${raw.pageUrl}.webp${checksum}`;
 }
 
-function buildShortTarget(raw: RawShort): string {
+function buildShortUrl(raw: RawShort): string {
   if (raw.linkUrl) return raw.linkUrl;
   return `https://www.indiaforums.com/shorts/${raw.shortId}/${raw.pageUrl ?? ''}`;
 }
 
+// IndiaForums detail URLs embed the numeric content id after the slug,
+// joined by an underscore: /{article|gallery}/{slug}_{id}[/?#...]. All
+// existing screens key off the numeric id, so we capture just the trailing
+// digits and dispatch on the path prefix.
+const IF_DETAIL_URL =
+  /^https?:\/\/(?:www\.)?indiaforums\.com\/(article|gallery)\/[^/?#]*?_(\d+)(?:[/?#]|$)/i;
+
+export function parseShortTarget(url: string): ShortTarget {
+  if (/youtube\.com|youtu\.be/i.test(url)) {
+    return { kind: 'youtube', url };
+  }
+  const m = url.match(IF_DETAIL_URL);
+  if (m) {
+    const kind = m[1].toLowerCase();
+    const id = m[2];
+    if (kind === 'article') return { kind: 'article', articleId: id, url };
+    if (kind === 'gallery') return { kind: 'gallery', galleryId: id, url };
+  }
+  return { kind: 'external', url };
+}
+
 function transformShort(raw: RawShort): Short {
-  const pageUrl = buildShortTarget(raw);
+  const url = buildShortUrl(raw);
   return {
     id: raw.shortId,
     title: raw.title || 'Untitled',
     description: raw.description || '',
-    pageUrl,
     thumbnail: buildShortThumbnail(raw),
     publishedAt: formatShortDate(raw.publishedWhen),
     credits: raw.credits || '',
-    isYouTube: /youtube\.com|youtu\.be/.test(pageUrl),
+    target: parseShortTarget(url),
   };
 }
 
