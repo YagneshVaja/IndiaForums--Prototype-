@@ -32,49 +32,33 @@ export default function ForumsMainScreen() {
     navigation.navigate('TopicDetail', { topic });
   };
 
+  const canGoBack = navigation.canGoBack();
+
   return (
     <View style={styles.screen}>
-      {/* Back + tab bar */}
-      <View style={[styles.topWrap, { paddingTop: insets.top }]}>
-        <View style={styles.topRow}>
-          <Pressable
-            style={styles.backBtn}
-            onPress={() => navigation.canGoBack() && navigation.goBack()}
-            hitSlop={8}
-          >
-            <Ionicons name="chevron-back" size={18} color={colors.text} />
-          </Pressable>
-          <View style={styles.spacer} />
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        {/* Top bar: back button + screen title, symmetric so title stays centered */}
+        <View style={styles.titleRow}>
+          <View style={styles.sideSlot}>
+            {canGoBack && (
+              <Pressable
+                style={styles.iconBtn}
+                onPress={() => navigation.goBack()}
+                hitSlop={10}
+              >
+                <Ionicons name="chevron-back" size={24} color={colors.text} />
+              </Pressable>
+            )}
+          </View>
+          <Text style={styles.title}>Forums</Text>
+          <View style={styles.sideSlot} />
         </View>
 
-        <View style={styles.tabRow}>
-          <Pressable
-            style={[styles.tab, tab === 'forums' && styles.tabActive]}
-            onPress={() => setTab('forums')}
-          >
-            <Text style={[styles.tabLabel, tab === 'forums' && styles.tabLabelActive]}>
-              Forums
-            </Text>
-            {tab === 'forums' && <View style={styles.tabUnderline} />}
-          </Pressable>
-          <Pressable
-            style={[styles.tab, tab === 'all-topics' && styles.tabActive]}
-            onPress={() => setTab('all-topics')}
-          >
-            <Text style={[styles.tabLabel, tab === 'all-topics' && styles.tabLabelActive]}>
-              All Topics
-            </Text>
-            {tab === 'all-topics' && <View style={styles.tabUnderline} />}
-          </Pressable>
-          <Pressable
-            style={[styles.tab, tab === 'my' && styles.tabActive]}
-            onPress={() => setTab('my')}
-          >
-            <Text style={[styles.tabLabel, tab === 'my' && styles.tabLabelActive]}>
-              My
-            </Text>
-            {tab === 'my' && <View style={styles.tabUnderline} />}
-          </Pressable>
+        {/* Tab strip */}
+        <View style={styles.tabStrip}>
+          <HeaderTab label="Forums"     active={tab === 'forums'}     onPress={() => setTab('forums')}     colors={colors} />
+          <HeaderTab label="All Topics" active={tab === 'all-topics'} onPress={() => setTab('all-topics')} colors={colors} />
+          <HeaderTab label="My"         active={tab === 'my'}         onPress={() => setTab('my')}         colors={colors} />
         </View>
       </View>
 
@@ -89,61 +73,106 @@ export default function ForumsMainScreen() {
   );
 }
 
+function HeaderTab({
+  label,
+  active,
+  onPress,
+  colors,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  colors: ThemeColors;
+}) {
+  return (
+    <Pressable style={tabStyles.tab} onPress={onPress} hitSlop={6}>
+      <View style={tabStyles.labelWrap}>
+        <Text
+          style={[
+            tabStyles.label,
+            { color: active ? colors.primary : colors.textSecondary },
+            active && tabStyles.labelActive,
+          ]}
+        >
+          {label}
+        </Text>
+        <View
+          style={[
+            tabStyles.underline,
+            { backgroundColor: active ? colors.primary : 'transparent' },
+          ]}
+        />
+      </View>
+    </Pressable>
+  );
+}
+
+const tabStyles = StyleSheet.create({
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  labelWrap: {
+    alignItems: 'center',
+  },
+  label: {
+    fontSize: 15,
+    fontWeight: '500',
+    letterSpacing: 0.1,
+  },
+  labelActive: {
+    fontWeight: '700',
+  },
+  underline: {
+    marginTop: 8,
+    height: 3,
+    alignSelf: 'stretch',
+    borderRadius: 2,
+  },
+});
+
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     screen: {
       flex: 1,
       backgroundColor: c.bg,
     },
-    topWrap: {
+    header: {
       backgroundColor: c.card,
-      borderBottomWidth: 1,
+      borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: c.border,
     },
-    topRow: {
+    titleRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      height: 48,
+      paddingHorizontal: 4,
+    },
+    sideSlot: {
+      width: 44,
       height: 44,
-      paddingHorizontal: 14,
-    },
-    backBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: c.surface,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    spacer: { flex: 1 },
-    tabRow: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      gap: 36,
-      paddingBottom: 4,
-    },
-    tab: {
-      paddingVertical: 10,
+    iconBtn: {
+      width: 40,
+      height: 40,
       alignItems: 'center',
-      position: 'relative',
+      justifyContent: 'center',
+      borderRadius: 20,
     },
-    tabActive: {},
-    tabLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: c.textTertiary,
-    },
-    tabLabelActive: {
-      color: c.text,
+    title: {
+      flex: 1,
+      textAlign: 'center',
+      fontSize: 17,
       fontWeight: '700',
+      color: c.text,
+      letterSpacing: 0.2,
     },
-    tabUnderline: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: 2.5,
-      backgroundColor: c.primary,
-      borderRadius: 2,
+    tabStrip: {
+      flexDirection: 'row',
+      alignItems: 'stretch',
     },
   });
 }
