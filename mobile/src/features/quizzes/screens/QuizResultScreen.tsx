@@ -22,6 +22,7 @@ import ErrorState from '../../../components/ui/ErrorState';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
+import { extractApiError } from '../../../services/api';
 import ScoreArc from '../components/ScoreArc';
 import AnswerReview from '../components/AnswerReview';
 import ConfettiBurst from '../components/ConfettiBurst';
@@ -46,7 +47,7 @@ export default function QuizResultScreen() {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const { data: quiz, isLoading, isError, refetch } = useQuizDetails(id);
+  const { data: quiz, isLoading, isError, error, refetch } = useQuizDetails(id);
 
   // Scale-in animation on the hero emoji when the screen mounts
   const emojiScale = useSharedValue(0.3);
@@ -75,7 +76,7 @@ export default function QuizResultScreen() {
     return (
       <View style={styles.screen}>
         <TopNavBack title="Result" onBack={() => navigation.goBack()} />
-        <ErrorState message="Couldn't load result" onRetry={() => refetch()} />
+        <ErrorState message={extractApiError(error, "Couldn't load result.")} onRetry={() => refetch()} />
       </View>
     );
   }

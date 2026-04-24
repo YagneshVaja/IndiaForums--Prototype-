@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Image as RNImage,
   Pressable,
   StyleSheet,
   Text,
@@ -12,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 import type { Short } from '../../../services/api';
 import SwipeHint from './SwipeHint';
 
@@ -49,55 +51,82 @@ export default function ShortCard({
   height,
   topOffset,
 }: Props) {
-  const brand = useThemeStore((s) => s.colors.primary);
-  const styles = useMemo(() => makeStyles(brand, height, topOffset), [brand, height, topOffset]);
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(
+    () => buildTheme(colors, height, topOffset),
+    [colors, height, topOffset],
+  );
 
   const [imageFailed, setImageFailed] = useState(false);
   const [flashIcon, setFlashIcon] = useState<'pause' | 'play' | null>(null);
+  // Natural aspect of the thumbnail, fetched via RN's static getSize so the
+  // media region can be sized to hug the image exactly (no whitespace below,
+  // no crop). `null` until known — we use a sensible default in that case.
+  const [imageAspect, setImageAspect] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!short.thumbnail) return;
+    let cancelled = false;
+    RNImage.getSize(
+      short.thumbnail,
+      (w, h) => {
+        if (!cancelled && w > 0 && h > 0) setImageAspect(w / h);
+      },
+      () => {
+        if (!cancelled) setImageAspect(null);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [short.thumbnail]);
 
   const isPausedRef = useRef(false);
   const progress = useRef(new Animated.Value(0)).current;
   const flash = useRef(new Animated.Value(0)).current;
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const animRef = useRef<Animated.CompositeAnimation | null>(null);
+  // Cached progress value (0..1) — updated on pause so resume knows where
+  // to continue from. Single animation drives the bar smoothly at 60fps.
+  const currentValueRef = useRef(0);
+  const DURATION = 6000;
 
-  // Auto-advance timer — only runs on the active card
+  // Keep currentValueRef in sync while the animation runs so pause captures
+  // the exact moment it was stopped.
   useEffect(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+    const id = progress.addListener(({ value }) => {
+      currentValueRef.current = value;
+    });
+    return () => progress.removeListener(id);
+  }, [progress]);
 
+  // Auto-advance — one smooth Animated.timing across DURATION on active card.
+  useEffect(() => {
+    animRef.current?.stop();
+    animRef.current = null;
     isPausedRef.current = false;
 
     if (!isActive) {
       progress.setValue(0);
+      currentValueRef.current = 0;
       return;
     }
 
     progress.setValue(0);
-    const DURATION = 6000;
-    const TICK = 100;
-    let elapsed = 0;
-
-    intervalRef.current = setInterval(() => {
-      if (isPausedRef.current) return;
-      elapsed += TICK;
-      const pct = Math.min(elapsed / DURATION, 1);
-      progress.setValue(pct);
-      if (pct >= 1) {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-        onAdvance();
-      }
-    }, TICK);
+    currentValueRef.current = 0;
+    const anim = Animated.timing(progress, {
+      toValue: 1,
+      duration: DURATION,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    });
+    animRef.current = anim;
+    anim.start(({ finished }) => {
+      if (finished) onAdvance();
+    });
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      animRef.current?.stop();
+      animRef.current = null;
     };
   }, [isActive, onAdvance, progress]);
 
@@ -121,8 +150,31 @@ export default function ShortCard({
 
   function handleTap() {
     if (!isActive) return;
-    isPausedRef.current = !isPausedRef.current;
-    runFlash(isPausedRef.current ? 'pause' : 'play');
+
+    if (isPausedRef.current) {
+      // Resume — animate from the cached value to 1 over the remaining time.
+      isPausedRef.current = false;
+      const remaining = DURATION * (1 - currentValueRef.current);
+      const anim = Animated.timing(progress, {
+        toValue: 1,
+        duration: Math.max(0, remaining),
+        easing: Easing.linear,
+        useNativeDriver: false,
+      });
+      animRef.current = anim;
+      anim.start(({ finished }) => {
+        if (finished) onAdvance();
+      });
+      runFlash('play');
+    } else {
+      // Pause — stop the running animation and cache the stopped value.
+      isPausedRef.current = true;
+      progress.stopAnimation((value) => {
+        currentValueRef.current = value;
+      });
+      animRef.current = null;
+      runFlash('pause');
+    }
   }
 
   function handleCTA() {
@@ -145,61 +197,75 @@ export default function ShortCard({
       accessibilityRole="button"
       accessibilityLabel={`${short.title}. Tap to pause or resume.`}
     >
-      {/* Media */}
-      {showImage ? (
-        <>
+      {/* Flex column layout: [spacer][progress-strip][media][content] */}
+      <View style={styles.topSpacer} />
+
+      <View style={styles.progressStrip}>
+        <View style={styles.progressTrack} pointerEvents="none">
+          <Animated.View style={[styles.progressFill, { width: progressWidth }]} />
+        </View>
+      </View>
+
+      <View
+        style={[
+          styles.mediaArea,
+          imageAspect ? { aspectRatio: imageAspect } : styles.mediaAreaDefault,
+        ]}
+      >
+        {showImage ? (
           <ExpoImage
             source={{ uri: short.thumbnail! }}
-            style={styles.thumbBg}
+            style={StyleSheet.absoluteFillObject}
             contentFit="cover"
-            blurRadius={24}
-            transition={200}
-          />
-          <View style={styles.thumbBgTint} pointerEvents="none" />
-          <ExpoImage
-            source={{ uri: short.thumbnail! }}
-            style={styles.thumb}
-            contentFit="contain"
             onError={() => setImageFailed(true)}
             transition={200}
           />
-        </>
-      ) : (
-        <LinearGradient
-          colors={fallback}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
-
-      {/* Gradient scrim */}
-      <LinearGradient
-        colors={[
-          'rgba(0,0,0,0)',
-          'rgba(0,0,0,0)',
-          'rgba(0,0,0,0.18)',
-          'rgba(0,0,0,0.60)',
-          'rgba(0,0,0,0.92)',
-        ]}
-        locations={[0, 0.28, 0.45, 0.65, 1]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
-
-      {/* Progress bar */}
-      <View style={styles.progressTrack} pointerEvents="none">
-        <Animated.View style={[styles.progressFill, { width: progressWidth }]} />
+        ) : (
+          <LinearGradient
+            colors={fallback}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
       </View>
 
-      {/* Source credit pill */}
+      {/* Content — stacks directly under the image, order matches the web layout */}
+      <View style={styles.overlay} pointerEvents="box-none">
+        <View style={styles.metaRow}>
+          <Text style={styles.date}>{short.publishedAt}</Text>
+          {totalCount > 0 ? (
+            <Text style={styles.counter}>
+              {index + 1} / {totalCount}
+            </Text>
+          ) : null}
+        </View>
+
+        <Text style={styles.title}>{short.title}</Text>
+
+        {short.description ? (
+          <Text style={styles.desc}>{short.description}</Text>
+        ) : null}
+
+        <Pressable
+          onPress={handleCTA}
+          accessibilityRole="button"
+          accessibilityLabel={short.isYouTube ? 'Watch on YouTube' : 'Read full story'}
+          style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+        >
+          <Text style={styles.ctaLabel}>
+            {short.isYouTube ? '▶  Watch on YouTube' : 'Read Full Story  →'}
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* Absolute chrome — credit pill, flash icon */}
       {short.credits ? (
         <View style={styles.creditPill} pointerEvents="none">
           <Text style={styles.creditText}>{short.credits}</Text>
         </View>
       ) : null}
 
-      {/* Flash icon on tap */}
       {flashIcon ? (
         <Animated.View
           pointerEvents="none"
@@ -228,95 +294,72 @@ export default function ShortCard({
         </Animated.View>
       ) : null}
 
-      {/* Bottom overlay */}
-      <View style={styles.overlay} pointerEvents="box-none">
-        <Text style={styles.title} numberOfLines={3}>
-          {short.title}
-        </Text>
-
-        {short.description ? (
-          <Text style={styles.desc} numberOfLines={2}>
-            {short.description}
-          </Text>
-        ) : null}
-
-        <View style={styles.metaRow}>
-          <Text style={styles.date}>{short.publishedAt}</Text>
-          {totalCount > 0 ? (
-            <Text style={styles.counter}>
-              {index + 1} / {totalCount}
-            </Text>
-          ) : null}
-        </View>
-
-        <Pressable
-          onPress={handleCTA}
-          accessibilityRole="button"
-          accessibilityLabel={short.isYouTube ? 'Watch on YouTube' : 'Read full story'}
-          style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
-        >
-          <Text style={styles.ctaLabel}>
-            {short.isYouTube ? '▶  Watch on YouTube' : 'Read Full Story  →'}
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Swipe hint */}
       {showHint ? <SwipeHint /> : null}
     </Pressable>
   );
 }
 
-function makeStyles(brand: string, height: number, topOffset: number) {
+function buildTheme(c: ThemeColors, height: number, topOffset: number) {
+  const isDark = c.bg === '#0E0F12';
+
   return StyleSheet.create({
     card: {
       height,
       width: '100%',
-      backgroundColor: '#0a0a0a',
+      backgroundColor: c.bg,
       position: 'relative',
       overflow: 'hidden',
+      flexDirection: 'column',
     },
-    thumbBg: {
-      ...StyleSheet.absoluteFillObject,
-      opacity: 0.4,
+    topSpacer: {
+      height: topOffset,
     },
-    thumbBgTint: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0,0,0,0.35)',
+    // Media region hugs the image's natural aspect — no whitespace below
+    // landscape images, no letterbox bars. `aspectRatio` is applied inline
+    // once RNImage.getSize() resolves the thumbnail's true dimensions.
+    // `maxHeight` caps very tall portraits so content stays on-screen.
+    mediaArea: {
+      width: '100%',
+      position: 'relative',
+      overflow: 'hidden',
+      maxHeight: Math.round((height - topOffset) * 0.6),
     },
-    thumb: {
-      ...StyleSheet.absoluteFillObject,
+    // Fallback slot used while the image dimensions are being fetched — a
+    // reasonable 16:9 landscape so the layout doesn't jump around when the
+    // aspect resolves.
+    mediaAreaDefault: {
+      aspectRatio: 16 / 9,
+    },
+    // Edge-to-edge strip hosting the progress track. No horizontal padding
+    // so the bar spans the full card width, sits above the image.
+    progressStrip: {
+      height: 3,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)',
     },
     progressTrack: {
-      position: 'absolute',
-      top: topOffset + 4,
-      left: 14,
-      right: 14,
-      height: 2.5,
-      backgroundColor: 'rgba(255,255,255,0.22)',
-      borderRadius: 2,
+      ...StyleSheet.absoluteFillObject,
       overflow: 'hidden',
     },
     progressFill: {
       height: '100%',
-      backgroundColor: 'rgba(255,255,255,0.92)',
-      borderRadius: 2,
+      backgroundColor: c.primary,
     },
     creditPill: {
       position: 'absolute',
-      top: topOffset + 4 + 10,
+      top: topOffset + 10,
       left: 14,
       paddingHorizontal: 9,
       paddingVertical: 3,
       borderRadius: 9999,
-      backgroundColor: 'rgba(255,255,255,0.14)',
+      backgroundColor: 'rgba(0,0,0,0.55)',
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.18)',
+      zIndex: 5,
     },
     creditText: {
       fontSize: 9,
       fontWeight: '700',
-      color: 'rgba(255,255,255,0.88)',
+      color: 'rgba(255,255,255,0.92)',
       letterSpacing: 0.7,
       textTransform: 'uppercase',
     },
@@ -326,6 +369,7 @@ function makeStyles(brand: string, height: number, topOffset: number) {
       left: '50%',
       marginLeft: -22,
       marginTop: -22,
+      zIndex: 6,
     },
     flashCircle: {
       width: 44,
@@ -336,66 +380,62 @@ function makeStyles(brand: string, height: number, topOffset: number) {
       justifyContent: 'center',
     },
     overlay: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      paddingHorizontal: 16,
-      paddingBottom: 22,
-    },
-    title: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '800',
-      lineHeight: 21,
-      marginBottom: 6,
-      textShadowColor: 'rgba(0,0,0,0.6)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 8,
-      letterSpacing: 0.1,
-    },
-    desc: {
-      color: 'rgba(255,255,255,0.68)',
-      fontSize: 12,
-      lineHeight: 18,
-      marginBottom: 10,
+      paddingHorizontal: 18,
+      paddingTop: 16,
+      paddingBottom: 18,
     },
     metaRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 10,
+      marginBottom: 8,
     },
     date: {
-      color: 'rgba(255,255,255,0.4)',
-      fontSize: 10.5,
+      color: c.textTertiary,
+      fontSize: 11.5,
+      fontWeight: '600',
+      letterSpacing: 0.2,
     },
     counter: {
-      color: 'rgba(255,255,255,0.38)',
-      fontSize: 10,
-      fontWeight: '600',
-      letterSpacing: 0.5,
+      color: c.textTertiary,
+      fontSize: 10.5,
+      fontWeight: '700',
+      letterSpacing: 0.4,
+    },
+    title: {
+      color: c.text,
+      fontSize: 18,
+      fontWeight: '800',
+      lineHeight: 24,
+      marginBottom: 8,
+      letterSpacing: 0.1,
+    },
+    desc: {
+      color: c.textSecondary,
+      fontSize: 13.5,
+      lineHeight: 20,
+      marginBottom: 14,
     },
     cta: {
-      backgroundColor: brand,
+      backgroundColor: c.primary,
       borderRadius: 10,
-      paddingVertical: 11,
+      paddingVertical: 13,
       paddingHorizontal: 18,
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOpacity: 0.4,
-      shadowRadius: 20,
-      shadowOffset: { width: 0, height: 4 },
+      shadowColor: c.primary,
+      shadowOpacity: 0.35,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 6 },
       elevation: 4,
     },
     ctaPressed: {
-      opacity: 0.85,
+      opacity: 0.9,
       transform: [{ scale: 0.98 }],
     },
     ctaLabel: {
       color: '#FFFFFF',
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '700',
       letterSpacing: 0.3,
       textAlign: 'center',

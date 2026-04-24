@@ -28,7 +28,7 @@ import ErrorState from '../../../components/ui/ErrorState';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
-import { submitQuizResponse, type SubmitAnswer } from '../../../services/api';
+import { extractApiError, submitQuizResponse, type SubmitAnswer } from '../../../services/api';
 import { useQuizDetails } from '../hooks/useQuizzes';
 import CircularTimer from '../components/CircularTimer';
 
@@ -72,7 +72,7 @@ export default function QuizPlayerScreen() {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const { data: quiz, isLoading, isError, refetch } = useQuizDetails(id);
+  const { data: quiz, isLoading, isError, error, refetch } = useQuizDetails(id);
 
   const questions = quiz?.quiz_questions ?? [];
   const totalQ = questions.length;
@@ -88,6 +88,7 @@ export default function QuizPlayerScreen() {
   const qIdxRef = useRef(0);
   qIdxRef.current = qIdx;
   const goNextRef = useRef<() => void>(() => {});
+  const finishedRef = useRef(false);
 
   const currentQ = questions[qIdx];
   const currentAnswer = answered[qIdx] ?? null;
@@ -130,6 +131,8 @@ export default function QuizPlayerScreen() {
   }));
 
   const finish = useCallback(async (finalMap: Record<number, AnsweredEntry>) => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
     hapticFinish();
     setSubmitting(true);
     const payload: SubmitAnswer[] = Object.values(finalMap)
@@ -250,9 +253,12 @@ export default function QuizPlayerScreen() {
   }
 
   if ((isError || !quiz || totalQ === 0) && !isLoading) {
+    const msg = isError
+      ? extractApiError(error, "Couldn't load quiz questions.")
+      : "This quiz has no questions yet.";
     return (
       <View style={styles.screen}>
-        <ErrorState message="Couldn't load quiz questions" onRetry={() => refetch()} />
+        <ErrorState message={msg} onRetry={isError ? () => refetch() : undefined} />
       </View>
     );
   }
