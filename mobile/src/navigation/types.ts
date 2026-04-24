@@ -68,7 +68,11 @@ export type HomeStackParamList = {
   };
   QuizLeaderboard: { id: string };
   Galleries: undefined;
-  GalleryDetail: { gallery: import('../services/api').Gallery };
+  // Either pass a full Gallery object (list → detail flow, renders instantly)
+  // or just an id + optional hints (deep-link / shorts flow, fetches on mount).
+  GalleryDetail:
+    | { gallery: import('../services/api').Gallery }
+    | { id: string | number; title?: string; thumbnail?: string | null };
 };
 
 export type NewsStackParamList = {
