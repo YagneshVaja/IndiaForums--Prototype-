@@ -8,7 +8,7 @@ import ErrorState from '../../../components/ui/ErrorState';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
-import type { Quiz } from '../../../services/api';
+import { extractApiError, type Quiz } from '../../../services/api';
 
 import QuizListCard from '../components/QuizListCard';
 import QuizListSkeleton from '../components/QuizListSkeleton';
@@ -31,6 +31,7 @@ export default function QuizzesScreen() {
     data,
     isLoading,
     isError,
+    error,
     refetch,
     fetchNextPage,
     hasNextPage,
@@ -115,7 +116,7 @@ export default function QuizzesScreen() {
     return (
       <View style={styles.screen}>
         <TopNavBack title="Fan Quizzes" onBack={() => navigation.goBack()} />
-        <ErrorState message="Couldn't load quizzes" onRetry={() => refetch()} />
+        <ErrorState message={extractApiError(error, "Couldn't load quizzes.")} onRetry={() => refetch()} />
       </View>
     );
   }

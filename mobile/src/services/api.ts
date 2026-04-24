@@ -115,6 +115,17 @@ export function extractApiError(
   const status = anyErr?.response?.status;
   const d = anyErr?.response?.data;
 
+  // No response means the request never reached the server: offline, DNS
+  // failure, or request cancelled. Axios sets `code === 'ERR_NETWORK'` for
+  // offline; React Native additionally surfaces `message === 'Network Error'`.
+  if (!anyErr?.response && (
+    anyErr?.code === 'ERR_NETWORK' ||
+    anyErr?.code === 'ECONNABORTED' ||
+    anyErr?.message === 'Network Error'
+  )) {
+    return 'No internet connection. Check your network and try again.';
+  }
+
   if (status === 429) {
     const retryAfter = parseInt(anyErr?.response?.headers?.['retry-after'] ?? '', 10);
     if (Number.isFinite(retryAfter) && retryAfter > 0) {
@@ -3677,6 +3688,437 @@ function getMockFanFictionChapter(chapterId: string | number): FanFictionChapter
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// QUIZZES — types, helpers, fetchers
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Visual helpers (categoryId → gradient pair, emoji) ──────────────────────
+export const QUIZ_CAT_GRADIENTS: Record<number, readonly [string, string]> = {
+  1:  ['#7f1d1d', '#ef4444'], // Movies
+  2:  ['#1d4ed8', '#7c3aed'], // TV Shows
+  3:  ['#9d174d', '#db2777'], // Music
+  4:  ['#7c3aed', '#ec4899'], // Celebrities
+  5:  ['#78350f', '#d97706'], // Mythology
+  6:  ['#1e3a5f', '#2563eb'], // Books & Literature
+  7:  ['#831843', '#f9a8d4'], // Fashion & Style
+  8:  ['#14532d', '#16a34a'], // Sports & Fitness
+  9:  ['#f59e0b', '#ef4444'], // Fun & Random
+  10: ['#1e293b', '#334155'], // Business & Finance
+  11: ['#374151', '#6b7280'], // General Knowledge
+};
+
+export const QUIZ_CAT_EMOJIS: Record<number, string> = {
+  1: '🎬', 2: '📺', 3: '🎵', 4: '⭐', 5: '🔱',
+  6: '📚', 7: '👗', 8: '🏏', 9: '🎲', 10: '💼', 11: '🌟',
+};
+
+const QUIZ_FALLBACK_GRADIENTS: readonly (readonly [string, string])[] = [
+  ['#7c3aed', '#ec4899'],
+  ['#0ea5e9', '#6366f1'],
+  ['#10b981', '#0ea5e9'],
+  ['#f59e0b', '#ef4444'],
+];
+
+const QUIZ_AVATAR_GRADIENTS: readonly (readonly [string, string])[] = [
+  ['#7c3aed', '#a78bfa'],
+  ['#0ea5e9', '#38bdf8'],
+  ['#ec4899', '#f9a8d4'],
+  ['#f59e0b', '#fcd34d'],
+  ['#10b981', '#6ee7b7'],
+];
+
+export function pickQuizGradient(
+  categoryId: number | null | undefined,
+  index = 0,
+): readonly [string, string] {
+  if (categoryId && QUIZ_CAT_GRADIENTS[categoryId]) return QUIZ_CAT_GRADIENTS[categoryId];
+  return QUIZ_FALLBACK_GRADIENTS[index % QUIZ_FALLBACK_GRADIENTS.length];
+}
+export function pickQuizEmoji(categoryId: number | null | undefined): string {
+  return (categoryId && QUIZ_CAT_EMOJIS[categoryId]) || '🧠';
+}
+export function pickQuizAvatarGradient(index: number): readonly [string, string] {
+  return QUIZ_AVATAR_GRADIENTS[index % QUIZ_AVATAR_GRADIENTS.length];
+}
+
+function formatQuizCount(n: number): string {
+  if (!n) return '0';
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+function getQuizInitials(realName?: string | null, userName?: string | null): string {
+  const name = (realName || userName || '').trim();
+  if (!name) return '?';
+  const words = name.split(/\s+/);
+  return ((words[0]?.[0] || '') + (words[1]?.[0] || '')).toUpperCase() || '?';
+}
+
+function quizTypeName(quizTypeId: number): 'Trivia' | 'Personality' | 'Range-Based' {
+  if (quizTypeId === 4)                     return 'Range-Based';
+  if (quizTypeId === 2 || quizTypeId === 3) return 'Personality';
+  return 'Trivia';
+}
+
+// ── Types ───────────────────────────────────────────────────────────────────
+export interface QuizCategory {
+  categoryId: number;
+  categoryName: string;
+  quizCount: number;
+}
+
+export interface Quiz {
+  id: number;
+  title: string;
+  description: string;
+  categoryId: number;
+  categoryLabel: string;
+  quizTypeId: number;
+  quizTypeName: 'Trivia' | 'Personality' | 'Range-Based';
+  questions: number;
+  plays: string;
+  plays_raw: number;
+  views: number;
+  thumbnail: string | null;
+  pageUrl: string;
+  publishedWhen: string;
+  publishedFormatted: string | null;
+  author: string;
+  gradient: readonly [string, string];
+  emoji: string;
+}
+
+export interface QuizPagination {
+  currentPage: number;
+  pageSize: number;
+  totalPages?: number;
+  totalItems?: number;
+  hasNextPage: boolean;
+  hasPreviousPage?: boolean;
+}
+
+export interface QuizzesPage {
+  quizzes: Quiz[];
+  categories: QuizCategory[];
+  pagination: QuizPagination;
+}
+
+export interface QuizQuestion {
+  questionId: number;
+  question: string;
+  options: string[];
+  optionIds: number[];
+  points: number[];
+  correct: number;   // -1 for personality (no single correct)
+  isTrivia: boolean;
+  questionImageUrl: string | null;
+  questionImageCredit: string | null;
+  revealTitle: string | null;
+  revealDescription: string | null;
+  revealImageUrl: string | null;
+}
+
+export interface QuizResultRange {
+  resultId: number;
+  title: string;
+  description: string;
+  lowerRange: number;
+  upperRange: number;
+}
+
+export interface QuizDetail extends Quiz {
+  countdownTimer: number;           // per-question time limit (seconds)
+  estimatedTime: number;
+  estimatedTimeLabel: string | null;
+  directCommentCount: number;
+  tags: string[];
+  results: QuizResultRange[];
+  quiz_questions: QuizQuestion[];
+}
+
+export interface QuizPlayer {
+  id: number;
+  name: string;
+  initials: string;
+  score: number;
+  rank: number;
+  avatarGradient: readonly [string, string];
+  isPrivate: boolean;
+}
+
+export interface QuizCreator {
+  id: number;
+  name: string;
+  initials: string;
+  quizCount: number;
+  avatarGradient: readonly [string, string];
+  thumbnail: string | null;
+  isPrivate: boolean;
+}
+
+export interface SubmitAnswer {
+  questionId: number;
+  optionId: number;
+}
+
+// ── Transforms ──────────────────────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformQuiz(raw: any, index: number): Quiz {
+  const categoryId = raw.categoryId || 0;
+  const quizTypeId = raw.quizTypeId || 1;
+  return {
+    id:            Number(raw.quizId),
+    title:         raw.title       || 'Untitled Quiz',
+    description:   raw.description || '',
+    categoryId,
+    categoryLabel: '',   // filled in by caller via category map
+    quizTypeId,
+    quizTypeName:  quizTypeName(quizTypeId),
+    questions:     raw.questionCount || 0,
+    plays:         formatQuizCount(raw.responseCount || 0),
+    plays_raw:     raw.responseCount || 0,
+    views:         raw.viewCount     || 0,
+    thumbnail:     raw.thumbnailUrl  || raw.imageUrl || null,
+    pageUrl:       raw.pageUrl       || '',
+    publishedWhen: raw.publishedWhen || '',
+    publishedFormatted: (() => {
+      if (!raw.publishedWhen) return null;
+      try {
+        const d = new Date(raw.publishedWhen);
+        if (isNaN(d.getTime())) return null;
+        return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      } catch { return null; }
+    })(),
+    author:   raw.realName || raw.userName || raw.uploaderName || 'IndiaForums',
+    gradient: pickQuizGradient(categoryId, index),
+    emoji:    pickQuizEmoji(categoryId),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildQuizQuestions(questions: any[], options: any[]): QuizQuestion[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const byQuestion: Record<number, any[]> = {};
+  for (const opt of options) {
+    (byQuestion[opt.questionId] = byQuestion[opt.questionId] || []).push(opt);
+  }
+  return questions
+    .slice()
+    .sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0))
+    .map((q) => {
+      const opts = byQuestion[q.questionId] || [];
+      const correctIdx = opts.findIndex((o) => o.isCorrect === true);
+      const imgUrl =
+        q.questionImageUrl || q.QuestionImageUrl ||
+        q.imageUrl || q.ImageUrl ||
+        q.gifUrl || q.GifUrl || null;
+      const credits = q.questionImageCredits || q.QuestionImageCredits;
+      const creditSource = credits
+        ? (credits.provider || credits.uploader || credits.uploaderName || credits.source || null)
+        : null;
+      return {
+        questionId:  Number(q.questionId),
+        question:    q.question || '',
+        options:     opts.map((o) => o.text || ''),
+        optionIds:   opts.map((o) => Number(o.optionId)),
+        points:      opts.map((o) => o.points || 0),
+        correct:     correctIdx,
+        isTrivia:    correctIdx >= 0,
+        questionImageUrl:    imgUrl,
+        questionImageCredit: creditSource
+          ? `via ${String(creditSource).charAt(0).toUpperCase()}${String(creditSource).slice(1)}`
+          : null,
+        revealTitle:       q.revealTitle       || null,
+        revealDescription: q.revealDescription || null,
+        revealImageUrl:    q.revealThumbnailUrl || q.revealImageUrl || null,
+      };
+    });
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformQuizDetail(raw: any, index = 0): QuizDetail {
+  const base = transformQuiz(raw, index);
+  const estimatedSec = raw.estimatedTimeInSeconds || 0;
+
+  let tags: string[] = [];
+  if (raw.tagsJsonData) {
+    try {
+      const parsed = JSON.parse(raw.tagsJsonData);
+      const arr = Array.isArray(parsed) ? parsed : parsed?.json;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      tags = Array.isArray(arr) ? arr.map((t: any) => t?.name || t).filter(Boolean) : [];
+    } catch { /* ignore malformed JSON */ }
+  }
+
+  return {
+    ...base,
+    countdownTimer:     raw.estimatedTimeInSeconds || 0,
+    estimatedTime:      estimatedSec,
+    estimatedTimeLabel: estimatedSec > 0 ? `${Math.ceil(estimatedSec / 60)} min` : null,
+    directCommentCount: raw.directCommentCount || 0,
+    tags,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    results: (raw.results || []).map((r: any) => ({
+      resultId:    r.resultId    ?? 0,
+      title:       r.title       || '',
+      description: r.description || '',
+      lowerRange:  r.lowerRange  ?? 0,
+      upperRange:  r.upperRange  ?? 0,
+    })),
+    quiz_questions: buildQuizQuestions(raw.questions || [], raw.options || []),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformQuizPlayer(raw: any, index: number): QuizPlayer {
+  const isPrivate = raw.privacy === 1;
+  const displayName = isPrivate
+    ? 'Anonymous'
+    : ((raw.realName || raw.userName || '').trim() || `Player ${index + 1}`);
+  return {
+    id:       Number(raw.userId) || index,
+    name:     displayName,
+    initials: isPrivate ? '?' : getQuizInitials(raw.realName, raw.userName),
+    score:    raw.totalScore ?? 0,
+    rank:     raw.totalRank  ?? index + 1,
+    avatarGradient: pickQuizAvatarGradient(index),
+    isPrivate,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformQuizCreator(raw: any, index: number): QuizCreator {
+  const isPrivate = raw.privacy === 1;
+  const displayName = isPrivate
+    ? 'Anonymous'
+    : ((raw.realName || raw.userName || '').trim() || `Creator ${index + 1}`);
+  return {
+    id:        Number(raw.userId) || index,
+    name:      displayName,
+    initials:  isPrivate ? '?' : getQuizInitials(raw.realName, raw.userName),
+    quizCount: raw.quizCount || 0,
+    avatarGradient: pickQuizAvatarGradient(index),
+    thumbnail: raw.thumbnailUrl || null,
+    isPrivate,
+  };
+}
+
+// ── Fetchers ────────────────────────────────────────────────────────────────
+export async function fetchQuizzes(page = 1, pageSize = 25): Promise<QuizzesPage> {
+  try {
+    const { data } = await apiClient.get('/quizzes', {
+      params: { pageNumber: page, pageSize },
+    });
+    const payload = data?.data ?? data ?? {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawQuizzes: any[] = payload.quizzes   || [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawCategories: any[] = payload.categories || [];
+    const rawPagination = data?.pagination || payload?.pagination;
+
+    const pagination: QuizPagination = rawPagination
+      ? {
+          currentPage: rawPagination.currentPage ?? rawPagination.pageNumber ?? page,
+          pageSize:    rawPagination.pageSize ?? pageSize,
+          totalPages:  rawPagination.totalPages,
+          totalItems:  rawPagination.totalItems,
+          hasNextPage: rawPagination.hasNextPage ?? false,
+          hasPreviousPage: rawPagination.hasPreviousPage ?? false,
+        }
+      : {
+          currentPage: page,
+          pageSize,
+          totalPages:  1,
+          totalItems:  rawQuizzes.length,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        };
+
+    const catMap: Record<number, string> = {};
+    for (const c of rawCategories) catMap[c.categoryId] = c.categoryName;
+
+    const quizzes = rawQuizzes.map((q, i) => {
+      const quiz = transformQuiz(q, i);
+      quiz.categoryLabel = catMap[quiz.categoryId] || '';
+      return quiz;
+    });
+    const categories: QuizCategory[] = rawCategories.map((c) => ({
+      categoryId:   Number(c.categoryId),
+      categoryName: String(c.categoryName || ''),
+      quizCount:    Number(c.quizCount || 0),
+    }));
+
+    return { quizzes, categories, pagination };
+  } catch (err: unknown) {
+    const e = err as { response?: { status: number; data: unknown }; message?: string };
+    console.warn('[API] fetchQuizzes failed:', e?.response?.status, e?.message);
+    throw err;
+  }
+}
+
+export async function fetchQuizDetails(quizId: number | string): Promise<QuizDetail | null> {
+  try {
+    const { data } = await apiClient.get(`/quizzes/${quizId}/details`);
+    const raw = data?.data ?? data ?? {};
+    if (!raw || !raw.quizId) return null;
+    return transformQuizDetail(raw);
+  } catch (err: unknown) {
+    const e = err as { response?: { status: number; data: unknown }; message?: string };
+    console.warn('[API] fetchQuizDetails failed:', e?.response?.status, e?.message);
+    throw err;
+  }
+}
+
+export async function fetchQuizPlayers(
+  quizId: number | string,
+  page = 1,
+  pageSize = 20,
+): Promise<QuizPlayer[]> {
+  try {
+    const { data } = await apiClient.get(`/quizzes/${quizId}/players`, {
+      params: { page, pageSize },
+    });
+    const raw = Array.isArray(data) ? data : (data?.data || []);
+    return raw.map(transformQuizPlayer);
+  } catch (err: unknown) {
+    const e = err as { response?: { status: number }; message?: string };
+    console.warn('[API] fetchQuizPlayers failed:', e?.response?.status, e?.message);
+    throw err;
+  }
+}
+
+export async function fetchQuizCreators(pageSize = 10): Promise<QuizCreator[]> {
+  try {
+    const { data } = await apiClient.get('/quizzes/creators', {
+      params: { page: 1, pageSize },
+    });
+    const raw = Array.isArray(data) ? data : (data?.data || []);
+    return raw.map(transformQuizCreator);
+  } catch (err: unknown) {
+    const e = err as { response?: { status: number }; message?: string };
+    console.warn('[API] fetchQuizCreators failed:', e?.response?.status, e?.message);
+    throw err;
+  }
+}
+
+export async function submitQuizResponse(
+  quizId: number | string,
+  answers: SubmitAnswer[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any | null> {
+  try {
+    const { data } = await apiClient.post(`/quizzes/${quizId}/response`, { answers });
+    return data?.data ?? data ?? null;
+  } catch (err: unknown) {
+    // Known backend bug: POST /response always 400s (FinalResultForUser FromSql) —
+    // see docs/backend-issues-2026-04-07.md Class D. Caller falls back to local score.
+    const e = err as { response?: { status: number }; message?: string };
+    console.warn('[API] submitQuizResponse failed (fallback to local score):', e?.response?.status, e?.message);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // LINK oEMBED — rich link previews for URLs shared in forum posts
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -3727,5 +4169,604 @@ export async function fetchLinkOEmbed(
     const e = err as { response?: { status: number }; message?: string };
     console.warn('[API] fetchLinkOEmbed failed:', e?.response?.status, e?.message);
     return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shorts API
+// ---------------------------------------------------------------------------
+//
+// GET /api/v1/shorts?pageNumber=N&pageSize=20[&parentCategoryId=X]
+//   → { data: RawShort[], totalCount: number }
+//
+// Thumbnail URL is constructed (no thumbnailUrl in response):
+//   https://img.indiaforums.com/shorts/720x0/0/{shortId}-{pageUrl}.webp?c={checksum}
+//
+// Destination URL when tapping the CTA = raw.linkUrl (YouTube / IndiaForums),
+// fallback to IndiaForums shorts page when absent.
+
+export interface Short {
+  id: number;
+  title: string;
+  description: string;
+  pageUrl: string;         // resolved destination URL (external)
+  thumbnail: string | null;
+  publishedAt: string;     // formatted en-IN, empty string if unparseable
+  credits: string;
+  isYouTube: boolean;
+}
+
+export interface ShortsPage {
+  shorts: Short[];
+  pagination: {
+    currentPage: number;
+    pageSize: number;
+    totalCount: number;
+    hasNextPage: boolean;
+  };
+}
+
+interface RawShort {
+  shortId: number;
+  title?: string;
+  description?: string;
+  pageUrl?: string;
+  shortUpdateChecksum?: string;
+  publishedWhen?: string;
+  credits?: string;
+  linkUrl?: string;
+}
+
+function formatShortDate(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function buildShortThumbnail(raw: RawShort): string | null {
+  if (!raw.shortId || !raw.pageUrl) return null;
+  const checksum = raw.shortUpdateChecksum ? `?c=${raw.shortUpdateChecksum}` : '';
+  return `https://img.indiaforums.com/shorts/720x0/0/${raw.shortId}-${raw.pageUrl}.webp${checksum}`;
+}
+
+function buildShortTarget(raw: RawShort): string {
+  if (raw.linkUrl) return raw.linkUrl;
+  return `https://www.indiaforums.com/shorts/${raw.shortId}/${raw.pageUrl ?? ''}`;
+}
+
+function transformShort(raw: RawShort): Short {
+  const pageUrl = buildShortTarget(raw);
+  return {
+    id: raw.shortId,
+    title: raw.title || 'Untitled',
+    description: raw.description || '',
+    pageUrl,
+    thumbnail: buildShortThumbnail(raw),
+    publishedAt: formatShortDate(raw.publishedWhen),
+    credits: raw.credits || '',
+    isYouTube: /youtube\.com|youtu\.be/.test(pageUrl),
+  };
+}
+
+export async function fetchShorts(
+  page = 1,
+  pageSize = 20,
+  parentCategoryId: number | null = null,
+): Promise<ShortsPage> {
+  const params: Record<string, string | number> = {
+    pageNumber: page,
+    pageSize,
+  };
+  if (parentCategoryId != null) {
+    params.parentCategoryId = parentCategoryId;
+  }
+
+  const { data } = await apiClient.get('/shorts', { params });
+  const rawList: RawShort[] = Array.isArray(data?.data) ? data.data : [];
+  const totalCount: number = Number(data?.totalCount) || 0;
+
+  return {
+    shorts: rawList.map(transformShort),
+    pagination: {
+      currentPage: page,
+      pageSize,
+      totalCount,
+      hasNextPage: page * pageSize < totalCount,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// WebStories API
+// ---------------------------------------------------------------------------
+//
+// Two endpoints — list (sparse) and details (full payload with slides):
+//
+//   GET /api/v1/webstories?page=N&pageSize=24
+//     → { data: RawWebStorySummary[], totalCount: number }
+//
+//   GET /api/v1/webstories/{storyId}/details
+//     → flat object (no envelope), includes top-level author fields and a
+//        `slidesJson` STRING that must be JSON.parse'd to get the slides.
+//
+// Field mapping mirrors indiaforums/src/components/stories/normalize.js.
+
+export type GradientFill = { colors: [string, string]; angle: number };
+
+export interface WebStorySummary {
+  id: number;
+  title: string;
+  slug: string;
+  coverImage: string;            // '' when no thumbnail
+  coverBg: GradientFill | null;  // gradient fallback when coverImage is ''
+  publishedWhen: string | null;
+  timeAgo: string;               // relative ("3mo ago"); '' when unparseable
+  featured: boolean;
+}
+
+export interface WebStoriesPage {
+  stories: WebStorySummary[];
+  pagination: {
+    currentPage: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
+export interface WebStoryAuthor {
+  userId: number | null;
+  userName: string;
+  realName: string;
+  displayName: string;
+  groupName: string;
+  initials: string;
+  avatarColor: string;           // single accent (e.g. "#3558F0")
+  avatarBg: GradientFill;        // gradient version of the accent
+}
+
+export type SlideMediaType = 'image' | 'video' | 'text';
+
+export type SlideExtra =
+  | { kind: 'list'; items: Array<string | { text?: string; title?: string }> }
+  | {
+      kind: 'poll' | 'quiz';
+      options: Array<string | { text?: string; title?: string; label?: string }>;
+    }
+  | null;
+
+export interface WebStorySlide {
+  id: string;                    // `${storyId}-${order}`
+  order: number;
+  slideType: string;
+  isCover: boolean;
+  mediaType: SlideMediaType;
+  imageUrl: string;
+  videoUrl: string;
+  title: string;
+  caption: string;
+  extra: SlideExtra;
+  mediaCredit: string;
+  actionUrl: string;
+  actionLabel: string;
+  slideAuthor: string;
+  authorByLine: boolean;
+  attribute: string;
+  pollId: number | null;
+  quizId: number | null;
+  durationMs: number;            // default 5000
+  bg: GradientFill;              // gradient fallback when no media
+}
+
+export interface WebStoryDetail {
+  id: number;
+  title: string;
+  slug: string;
+  description: string;
+  coverImage: string;
+  coverBg: GradientFill | null;
+  publishedWhen: string | null;
+  timeAgo: string;
+  author: WebStoryAuthor | null;
+  featured: boolean;
+  theme: unknown;
+  authorByLine: unknown;
+}
+
+export interface WebStoryDetails {
+  story: WebStoryDetail;
+  slides: WebStorySlide[];
+}
+
+interface RawWebStorySummary {
+  storyId?: number;
+  id?: number;
+  webStoryId?: number;
+  title?: string;
+  storyTitle?: string;
+  pageUrl?: string;
+  slug?: string;
+  publishedWhen?: string;
+  publishedAt?: string;
+  createdWhen?: string;
+  createdAt?: string;
+  hasThumbnail?: boolean;
+  thumbnailUrl?: string | null;
+  coverImage?: string | null;
+  thumbnail?: string | null;
+  featured?: boolean;
+}
+
+interface RawSlide {
+  slideNumber?: number;
+  orderNumber?: number;
+  slideType?: string;
+  title?: string;
+  description?: string;
+  image?: string;
+  imageUrl?: string;
+  video?: string;
+  videoUrl?: string;
+  imageSource?: string;
+  imageCredits?: string;
+  videoCredits?: string;
+  mediaSource?: string;
+  cite?: string;
+  quote?: string;
+  pollId?: number;
+  quizId?: number;
+  question?: string;
+  options?: unknown;
+  fact?: string;
+  listicle?: string;
+  listItems?: unknown;
+  animation?: unknown;
+  timer?: number | string;
+  author?: string;
+  authorByLine?: boolean;
+  attribute?: string;
+  url?: string;
+  urlAction?: string;
+}
+
+interface RawWebStoryDetails {
+  storyId?: number;
+  title?: string;
+  pageUrl?: string;
+  description?: string;
+  hasThumbnail?: boolean;
+  thumbnailUrl?: string | null;
+  publishedWhen?: string;
+  createdWhen?: string;
+  theme?: unknown;
+  featured?: boolean;
+  authorByLine?: unknown;
+  slidesJson?: string | RawSlide[];
+  slides?: RawSlide[];
+
+  // Author block (top-level)
+  userId?: number;
+  userName?: string;
+  realName?: string;
+  groupId?: number;
+  groupName?: string;
+  avatarType?: string;
+  avatarAccent?: string;
+
+  // Some APIs may nest under .data or .webStory — handled defensively.
+  webStory?: RawWebStoryDetails;
+  story?: RawWebStoryDetails;
+  data?: RawWebStoryDetails;
+}
+
+// Deterministic gradient palette — used when a story or slide has no media
+// so the UI never renders a blank black panel.
+const WS_GRADIENTS: GradientFill[] = [
+  { colors: ['#7c3aed', '#ec4899'], angle: 160 },
+  { colors: ['#1e3a8a', '#3b82f6'], angle: 160 },
+  { colors: ['#7f1d1d', '#ef4444'], angle: 160 },
+  { colors: ['#064e3b', '#10b981'], angle: 160 },
+  { colors: ['#78350f', '#f59e0b'], angle: 160 },
+  { colors: ['#0f172a', '#0ea5e9'], angle: 160 },
+  { colors: ['#831843', '#db2777'], angle: 160 },
+  { colors: ['#134e4a', '#14b8a6'], angle: 160 },
+];
+
+function wsGradientFor(seed: string | number): GradientFill {
+  const s = String(seed);
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return WS_GRADIENTS[h % WS_GRADIENTS.length];
+}
+
+function wsInitialsOf(name: string): string {
+  if (!name) return 'IF';
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+}
+
+// "2026-04-01T10:00:00Z" → "3d ago" / "2mo ago" / "just now"; '' on parse fail.
+export function relativeTimeAgo(iso?: string | null): string {
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '';
+  const sec = Math.max(0, Math.round((Date.now() - t) / 1000));
+  if (sec < 60) return 'just now';
+  const m = Math.floor(sec / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
+  const mo = Math.floor(d / 30);
+  if (mo < 12) return `${mo}mo ago`;
+  const y = Math.floor(d / 365);
+  return `${y}y ago`;
+}
+
+function transformWebStorySummary(raw: RawWebStorySummary): WebStorySummary {
+  const id = (raw.storyId ?? raw.id ?? raw.webStoryId ?? 0) as number;
+  const title = raw.title ?? raw.storyTitle ?? '';
+  const slug = raw.pageUrl ?? raw.slug ?? '';
+  const hasThumb =
+    raw.hasThumbnail === false
+      ? false
+      : Boolean(raw.thumbnailUrl ?? raw.coverImage ?? raw.thumbnail);
+  const coverImage = hasThumb
+    ? (raw.thumbnailUrl ?? raw.coverImage ?? raw.thumbnail ?? '')
+    : '';
+  const publishedWhen =
+    raw.publishedWhen ??
+    raw.publishedAt ??
+    raw.createdWhen ??
+    raw.createdAt ??
+    null;
+
+  return {
+    id,
+    title,
+    slug,
+    coverImage: coverImage || '',
+    coverBg: coverImage ? null : wsGradientFor(id),
+    publishedWhen,
+    timeAgo: relativeTimeAgo(publishedWhen),
+    featured: Boolean(raw.featured),
+  };
+}
+
+function buildAuthor(raw: RawWebStoryDetails): WebStoryAuthor | null {
+  if (!raw) return null;
+  const userName = raw.userName || '';
+  const realName = raw.realName || '';
+  const displayName = realName || userName || 'India Forums';
+  const accent = raw.avatarAccent || '#3558F0';
+  return {
+    userId: raw.userId ?? null,
+    userName,
+    realName,
+    displayName,
+    groupName: raw.groupName || '',
+    initials: wsInitialsOf(displayName),
+    avatarColor: accent,
+    // Render as a flat-ish gradient using the single accent the API gives us.
+    avatarBg: { colors: [accent, `${accent}cc`], angle: 135 },
+  };
+}
+
+function transformSlide(
+  raw: RawSlide,
+  index: number,
+  storyId: number,
+): WebStorySlide {
+  const slideType = (raw.slideType || 'default-slide').toLowerCase();
+  const order = raw.slideNumber ?? raw.orderNumber ?? index;
+  const image = raw.image ?? raw.imageUrl ?? '';
+  const video = raw.video ?? raw.videoUrl ?? '';
+
+  let mediaType: SlideMediaType = 'text';
+  if (video) mediaType = 'video';
+  else if (image) mediaType = 'image';
+
+  let title = raw.title || '';
+  let caption = raw.description || '';
+  let extra: SlideExtra = null;
+
+  if (slideType.includes('quote')) {
+    title = raw.quote || raw.title || '';
+    caption = raw.cite ? `— ${raw.cite}` : raw.description || '';
+  } else if (slideType.includes('fact')) {
+    title = raw.title || 'Did you know?';
+    caption = raw.fact || raw.description || '';
+  } else if (slideType.includes('listicle')) {
+    title = raw.title || '';
+    caption = raw.listicle || raw.description || '';
+    extra = {
+      kind: 'list',
+      items: Array.isArray(raw.listItems)
+        ? (raw.listItems as Array<string | { text?: string; title?: string }>)
+        : [],
+    };
+  } else if (slideType.includes('poll') || slideType.includes('quiz')) {
+    title = raw.question || raw.title || '';
+    caption = raw.description || '';
+    extra = {
+      kind: slideType.includes('quiz') ? 'quiz' : 'poll',
+      options: Array.isArray(raw.options)
+        ? (raw.options as Array<string | { text?: string; title?: string; label?: string }>)
+        : [],
+    };
+  }
+
+  const timer = Number(raw.timer);
+  const durationMs = Number.isFinite(timer) && timer > 0 ? timer * 1000 : 5000;
+
+  return {
+    id: `${storyId}-${order}`,
+    order,
+    slideType,
+    isCover: slideType === 'cover-slide',
+    mediaType,
+    imageUrl: image,
+    videoUrl: video,
+    title,
+    caption,
+    extra,
+    mediaCredit:
+      raw.mediaSource ||
+      raw.imageCredits ||
+      raw.videoCredits ||
+      raw.imageSource ||
+      '',
+    actionUrl: raw.url || '',
+    actionLabel:
+      raw.urlAction === 'readMore' ? 'Read more' : raw.urlAction || '',
+    slideAuthor: raw.author || '',
+    authorByLine: Boolean(raw.authorByLine),
+    attribute: raw.attribute || '',
+    pollId: raw.pollId ?? null,
+    quizId: raw.quizId ?? null,
+    durationMs,
+    bg: wsGradientFor(`${storyId}-${order}`),
+  };
+}
+
+function transformWebStoryDetails(
+  raw: RawWebStoryDetails | null | undefined,
+  fallbackId: number | string,
+): WebStoryDetails {
+  const empty: WebStoryDetails = {
+    story: {
+      id: Number(fallbackId) || 0,
+      title: '',
+      slug: '',
+      description: '',
+      coverImage: '',
+      coverBg: wsGradientFor(fallbackId),
+      publishedWhen: null,
+      timeAgo: '',
+      author: null,
+      featured: false,
+      theme: null,
+      authorByLine: null,
+    },
+    slides: [],
+  };
+  if (!raw) return empty;
+
+  // Defensively unwrap common envelope shapes.
+  const root: RawWebStoryDetails =
+    raw.webStory ?? raw.story ?? raw.data?.webStory ?? raw.data ?? raw;
+
+  const id = (root.storyId ?? Number(fallbackId)) as number;
+  const title = root.title || '';
+  const slug = root.pageUrl || '';
+  const description = root.description || '';
+  const hasThumb =
+    root.hasThumbnail === false ? false : Boolean(root.thumbnailUrl);
+  const coverImage = hasThumb ? (root.thumbnailUrl || '') : '';
+  const publishedWhen = root.publishedWhen || root.createdWhen || null;
+
+  // slidesJson may be a JSON STRING (canonical), a parsed array, or missing.
+  let rawSlides: RawSlide[] = [];
+  if (typeof root.slidesJson === 'string' && root.slidesJson.trim()) {
+    try {
+      const parsed = JSON.parse(root.slidesJson);
+      if (Array.isArray(parsed)) rawSlides = parsed as RawSlide[];
+    } catch (e) {
+      console.error('[webstories] Failed to parse slidesJson', e);
+    }
+  } else if (Array.isArray(root.slidesJson)) {
+    rawSlides = root.slidesJson;
+  } else if (Array.isArray(root.slides)) {
+    rawSlides = root.slides;
+  }
+
+  const slides = rawSlides
+    .map((s, i) => transformSlide(s, i, id))
+    .sort((a, b) => a.order - b.order);
+
+  return {
+    story: {
+      id,
+      title,
+      slug,
+      description,
+      coverImage: coverImage || '',
+      coverBg: coverImage ? null : wsGradientFor(id),
+      publishedWhen,
+      timeAgo: relativeTimeAgo(publishedWhen),
+      author: buildAuthor(root),
+      featured: Boolean(root.featured),
+      theme: root.theme ?? null,
+      authorByLine: root.authorByLine ?? null,
+    },
+    slides,
+  };
+}
+
+export async function fetchWebStories(
+  page = 1,
+  pageSize = 24,
+): Promise<WebStoriesPage> {
+  try {
+    const { data } = await apiClient.get('/webstories', {
+      params: { page, pageSize },
+    });
+    const rawList: RawWebStorySummary[] = Array.isArray(data?.data)
+      ? data.data
+      : [];
+    const totalItems: number = Number(data?.totalCount) || 0;
+    const totalPages = pageSize > 0 ? Math.ceil(totalItems / pageSize) : 0;
+
+    return {
+      stories: rawList.map(transformWebStorySummary),
+      pagination: {
+        currentPage: page,
+        pageSize,
+        totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
+  } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const err = e as any;
+    console.error(
+      '[API] fetchWebStories failed:',
+      err?.response?.status,
+      err?.response?.data ?? err?.message,
+    );
+    throw e;
+  }
+}
+
+export async function fetchWebStoryDetails(
+  storyId: number | string,
+): Promise<WebStoryDetails> {
+  try {
+    const { data } = await apiClient.get(`/webstories/${storyId}/details`);
+    return transformWebStoryDetails(data as RawWebStoryDetails, storyId);
+  } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const err = e as any;
+    console.error(
+      '[API] fetchWebStoryDetails failed:',
+      err?.response?.status,
+      err?.response?.data ?? err?.message,
+    );
+    throw e;
   }
 }

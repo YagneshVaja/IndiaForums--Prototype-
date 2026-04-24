@@ -15,7 +15,7 @@ import ErrorState from '../../../components/ui/ErrorState';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
-import type { WebStorySummary } from '../../../services/api';
+import { extractApiError, type WebStorySummary } from '../../../services/api';
 
 import WebStoryCard from '../components/WebStoryCard';
 import WebStoryGridSkeleton from '../components/WebStoryGridSkeleton';
@@ -34,6 +34,7 @@ export default function WebStoriesScreen() {
     data,
     isLoading,
     isError,
+    error,
     refetch,
     fetchNextPage,
     hasNextPage,
@@ -107,7 +108,7 @@ export default function WebStoriesScreen() {
       <View style={styles.screen}>
         <TopNavBack title="Web Stories" onBack={() => navigation.goBack()} />
         <ErrorState
-          message="Couldn't load web stories"
+          message={extractApiError(error, "Couldn't load web stories.")}
           onRetry={() => refetch()}
         />
       </View>

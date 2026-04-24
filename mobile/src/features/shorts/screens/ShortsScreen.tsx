@@ -18,7 +18,7 @@ import { StatusBar } from 'expo-status-bar';
 import type { HomeStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
 import ErrorState from '../../../components/ui/ErrorState';
-import type { Short } from '../../../services/api';
+import { extractApiError, type Short } from '../../../services/api';
 
 import ShortCard from '../components/ShortCard';
 import ShortSkeleton from '../components/ShortSkeleton';
@@ -49,6 +49,7 @@ export default function ShortsScreen() {
     data,
     isLoading,
     isError,
+    error,
     refetch,
     fetchNextPage,
     hasNextPage,
@@ -144,14 +145,16 @@ export default function ShortsScreen() {
     [cardHeight],
   );
 
+  const isDark = colors.bg === '#0E0F12';
+
   return (
-    <View style={styles.screen}>
-      <StatusBar style="light" />
+    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* Content */}
       {isError && shorts.length === 0 ? (
         <View style={[styles.centered, { backgroundColor: colors.bg }]}>
-          <ErrorState message="Couldn't load shorts" onRetry={() => refetch()} />
+          <ErrorState message={extractApiError(error, "Couldn't load shorts.")} onRetry={() => refetch()} />
         </View>
       ) : isLoading && shorts.length === 0 ? (
         <View style={{ height: cardHeight }}>
@@ -192,10 +195,10 @@ export default function ShortsScreen() {
               </View>
             ) : null
           }
-          removeClippedSubviews
+          removeClippedSubviews={false}
           initialNumToRender={2}
           maxToRenderPerBatch={3}
-          windowSize={3}
+          windowSize={5}
         />
       )}
 
@@ -225,7 +228,6 @@ export default function ShortsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#000',
   },
   centered: {
     flex: 1,

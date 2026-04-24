@@ -21,9 +21,10 @@ import { StatusBar, setStatusBarStyle } from 'expo-status-bar';
 
 import type { HomeStackParamList } from '../../../navigation/types';
 import ErrorState from '../../../components/ui/ErrorState';
-import type {
-  WebStoryDetail,
-  WebStorySlide,
+import {
+  extractApiError,
+  type WebStoryDetail,
+  type WebStorySlide,
 } from '../../../services/api';
 
 import PlayerHeader from '../components/PlayerHeader';
@@ -50,7 +51,7 @@ export default function WebStoryPlayerScreen() {
 
   const currentSummary = stories[storyIdx];
 
-  const { data, isLoading, isError, refetch } = useWebStoryDetails(
+  const { data, isLoading, isError, error, refetch } = useWebStoryDetails(
     currentSummary?.id ?? null,
   );
 
@@ -244,7 +245,7 @@ export default function WebStoryPlayerScreen() {
       {isError && !data ? (
         <View style={styles.centerOverlay}>
           <ErrorState
-            message="Couldn't load this story"
+            message={extractApiError(error, "Couldn't load this story.")}
             onRetry={() => refetch()}
           />
         </View>

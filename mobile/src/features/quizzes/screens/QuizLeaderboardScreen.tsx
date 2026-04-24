@@ -8,7 +8,7 @@ import ErrorState from '../../../components/ui/ErrorState';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
-import type { QuizPlayer } from '../../../services/api';
+import { extractApiError, type QuizPlayer } from '../../../services/api';
 import LeaderboardRow from '../components/LeaderboardRow';
 import { useQuizPlayers, useQuizDetails } from '../hooks/useQuizzes';
 
@@ -26,7 +26,7 @@ export default function QuizLeaderboardScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const { data: quiz } = useQuizDetails(id);
-  const { data: players = [], isLoading, isError, refetch } = useQuizPlayers(id);
+  const { data: players = [], isLoading, isError, error, refetch } = useQuizPlayers(id);
 
   const title = quiz?.title ? `🏆 ${quiz.title}` : 'Leaderboard';
 
@@ -45,7 +45,7 @@ export default function QuizLeaderboardScreen() {
     return (
       <View style={styles.screen}>
         <TopNavBack title="Leaderboard" onBack={() => navigation.goBack()} />
-        <ErrorState message="Couldn't load leaderboard" onRetry={() => refetch()} />
+        <ErrorState message={extractApiError(error, "Couldn't load leaderboard.")} onRetry={() => refetch()} />
       </View>
     );
   }

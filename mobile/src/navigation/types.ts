@@ -54,10 +54,18 @@ export type HomeStackParamList = {
   VideoDetail: { video: import('../services/api').Video };
   Shorts: undefined;
   WebStories: undefined;
-  WebStoryPlayer: { id: string };
+  WebStoryPlayer: {
+    stories: import('../services/api').WebStorySummary[];
+    index: number;
+  };
   Quizzes: undefined;
+  QuizDetail: { id: string; title?: string; thumbnail?: string | null };
   QuizPlayer: { id: string };
-  QuizResult: { id: string; score: number };
+  QuizResult: {
+    id: string;
+    score: number;
+    answers?: { questionId: number; optionIdx: number; correct: boolean }[];
+  };
   QuizLeaderboard: { id: string };
   Galleries: undefined;
   GalleryDetail: { gallery: import('../services/api').Gallery };

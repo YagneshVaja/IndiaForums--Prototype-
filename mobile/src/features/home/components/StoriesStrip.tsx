@@ -46,6 +46,18 @@ export default function StoriesStrip({ onItemPress }: Props) {
       navigation.navigate('FanFiction');
       return;
     }
+    if (s.label === 'Shorts') {
+      navigation.navigate('Shorts');
+      return;
+    }
+    if (s.label === 'Quizzes') {
+      navigation.navigate('Quizzes');
+      return;
+    }
+    if (s.label === 'Web Stories') {
+      navigation.navigate('WebStories');
+      return;
+    }
     onItemPress?.(s);
   };
 

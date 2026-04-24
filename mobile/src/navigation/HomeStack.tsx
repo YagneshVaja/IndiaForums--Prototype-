@@ -14,6 +14,14 @@ import GalleryDetailScreen from '../features/galleries/screens/GalleryDetailScre
 import FanFictionScreen from '../features/fanfiction/screens/FanFictionScreen';
 import FanFictionDetailScreen from '../features/fanfiction/screens/FanFictionDetailScreen';
 import ChapterReaderScreen from '../features/fanfiction/screens/ChapterReaderScreen';
+import ShortsScreen from '../features/shorts/screens/ShortsScreen';
+import WebStoriesScreen from '../features/webstories/screens/WebStoriesScreen';
+import WebStoryPlayerScreen from '../features/webstories/screens/WebStoryPlayerScreen';
+import QuizzesScreen from '../features/quizzes/screens/QuizzesScreen';
+import QuizDetailScreen from '../features/quizzes/screens/QuizDetailScreen';
+import QuizPlayerScreen from '../features/quizzes/screens/QuizPlayerScreen';
+import QuizResultScreen from '../features/quizzes/screens/QuizResultScreen';
+import QuizLeaderboardScreen from '../features/quizzes/screens/QuizLeaderboardScreen';
 
 function PlaceholderScreen({ route }: { route: { name: string } }) {
   const colors = useThemeStore((s) => s.colors);
@@ -39,13 +47,14 @@ export default function HomeStack() {
       <Stack.Screen name="ChapterReader" component={ChapterReaderScreen} />
       <Stack.Screen name="Videos" component={VideosScreen} />
       <Stack.Screen name="VideoDetail" component={VideoDetailScreen} />
-      <Stack.Screen name="Shorts" component={PlaceholderScreen} />
-      <Stack.Screen name="WebStories" component={PlaceholderScreen} />
-      <Stack.Screen name="WebStoryPlayer" component={PlaceholderScreen} />
-      <Stack.Screen name="Quizzes" component={PlaceholderScreen} />
-      <Stack.Screen name="QuizPlayer" component={PlaceholderScreen} />
-      <Stack.Screen name="QuizResult" component={PlaceholderScreen} />
-      <Stack.Screen name="QuizLeaderboard" component={PlaceholderScreen} />
+      <Stack.Screen name="Shorts" component={ShortsScreen} />
+      <Stack.Screen name="WebStories" component={WebStoriesScreen} />
+      <Stack.Screen name="WebStoryPlayer" component={WebStoryPlayerScreen} />
+      <Stack.Screen name="Quizzes" component={QuizzesScreen} />
+      <Stack.Screen name="QuizDetail" component={QuizDetailScreen} />
+      <Stack.Screen name="QuizPlayer" component={QuizPlayerScreen} />
+      <Stack.Screen name="QuizResult" component={QuizResultScreen} />
+      <Stack.Screen name="QuizLeaderboard" component={QuizLeaderboardScreen} />
       <Stack.Screen name="Galleries" component={GalleriesScreen} />
       <Stack.Screen name="GalleryDetail" component={GalleryDetailScreen} />
     </Stack.Navigator>

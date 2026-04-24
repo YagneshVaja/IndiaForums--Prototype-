@@ -10,6 +10,7 @@ import ErrorState from '../../../components/ui/ErrorState';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
+import { extractApiError } from '../../../services/api';
 import { useQuizDetails, useQuizPlayers } from '../hooks/useQuizzes';
 import LeaderboardRow from '../components/LeaderboardRow';
 
@@ -24,7 +25,7 @@ export default function QuizDetailScreen() {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const { data: quiz, isLoading, isError, refetch } = useQuizDetails(id);
+  const { data: quiz, isLoading, isError, error, refetch } = useQuizDetails(id);
   const { data: players = [] } = useQuizPlayers(id);
 
   const topFive = players.slice(0, 5);
@@ -57,7 +58,7 @@ export default function QuizDetailScreen() {
     return (
       <View style={styles.screen}>
         {header}
-        <ErrorState message="Couldn't load quiz" onRetry={() => refetch()} />
+        <ErrorState message={extractApiError(error, "Couldn't load quiz.")} onRetry={() => refetch()} />
       </View>
     );
   }

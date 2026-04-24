@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { ScrollView, Pressable, Text, View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
+import type { ThemeColors } from '../../../theme/tokens';
 import { SHORTS_CATEGORIES, type ShortsCategory } from '../data/categories';
 
 interface Props {
@@ -11,19 +12,19 @@ interface Props {
 }
 
 export default function ShortsCategoryBar({ activeId, onChange, onBack }: Props) {
-  const brand = useThemeStore((s) => s.colors.primary);
-  const styles = useMemo(() => makeStyles(brand), [brand]);
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <View style={styles.bar}>
       <Pressable
         onPress={onBack}
-        hitSlop={8}
+        hitSlop={10}
         accessibilityRole="button"
         accessibilityLabel="Back"
-        style={styles.backBtn}
+        style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
       >
-        <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
+        <Ionicons name="chevron-back" size={24} color={colors.text} />
       </Pressable>
 
       <ScrollView
@@ -55,50 +56,50 @@ export default function ShortsCategoryBar({ activeId, onChange, onBack }: Props)
   );
 }
 
-function makeStyles(brand: string) {
+function makeStyles(c: ThemeColors) {
+  const isDark = c.bg === '#0E0F12';
   return StyleSheet.create({
     bar: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingLeft: 8,
-      backgroundColor: 'rgba(0,0,0,0.55)',
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(255,255,255,0.08)',
+      paddingLeft: 4,
+      backgroundColor: c.bg,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
     },
     backBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
+      width: 36,
+      height: 36,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'rgba(255,255,255,0.1)',
-      marginRight: 4,
+      marginRight: 2,
+    },
+    backBtnPressed: {
+      opacity: 0.6,
+      transform: [{ scale: 0.92 }],
     },
     scroll: {
       flex: 1,
     },
     row: {
-      paddingHorizontal: 10,
+      paddingHorizontal: 6,
       paddingVertical: 8,
       gap: 6,
       alignItems: 'center',
     },
     pill: {
-      paddingHorizontal: 15,
-      paddingVertical: 5,
+      paddingHorizontal: 13,
+      paddingVertical: 6,
       borderRadius: 9999,
-      borderWidth: 1.5,
-      borderColor: 'rgba(255,255,255,0.22)',
-      backgroundColor: 'transparent',
+      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
     },
     pillActive: {
-      backgroundColor: brand,
-      borderColor: brand,
+      backgroundColor: c.primary,
     },
     label: {
       fontSize: 12,
-      fontWeight: '500',
-      color: 'rgba(255,255,255,0.6)',
+      fontWeight: '600',
+      color: c.textSecondary,
     },
     labelActive: {
       color: '#FFFFFF',
