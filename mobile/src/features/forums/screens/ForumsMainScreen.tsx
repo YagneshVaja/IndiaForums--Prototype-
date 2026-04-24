@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import ForumListView from '../components/ForumListView';
 import AllTopicsView from '../components/AllTopicsView';
+import MyView from '../components/MyView';
 import type { ForumsStackParamList } from '../../../navigation/types';
 import type { Forum, ForumTopic } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
@@ -14,7 +15,7 @@ import type { ThemeColors } from '../../../theme/tokens';
 
 type Nav = NativeStackNavigationProp<ForumsStackParamList, 'ForumsMain'>;
 
-type TopTab = 'forums' | 'all-topics';
+type TopTab = 'forums' | 'all-topics' | 'my';
 
 export default function ForumsMainScreen() {
   const navigation = useNavigation<Nav>();
@@ -65,13 +66,24 @@ export default function ForumsMainScreen() {
             </Text>
             {tab === 'all-topics' && <View style={styles.tabUnderline} />}
           </Pressable>
+          <Pressable
+            style={[styles.tab, tab === 'my' && styles.tabActive]}
+            onPress={() => setTab('my')}
+          >
+            <Text style={[styles.tabLabel, tab === 'my' && styles.tabLabelActive]}>
+              My
+            </Text>
+            {tab === 'my' && <View style={styles.tabUnderline} />}
+          </Pressable>
         </View>
       </View>
 
       {tab === 'forums' ? (
         <ForumListView onForumPress={handleForumPress} />
-      ) : (
+      ) : tab === 'all-topics' ? (
         <AllTopicsView onTopicPress={handleTopicPress} />
+      ) : (
+        <MyView onForumPress={handleForumPress} onTopicPress={handleTopicPress} />
       )}
     </View>
   );
