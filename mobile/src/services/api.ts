@@ -670,6 +670,41 @@ export interface ForumTopicsPage {
   hasNextPage: boolean;
 }
 
+// "My Forums" — a forum the user is watching, with extra per-user metadata.
+export interface MyForum extends Forum {
+  isFavourite: boolean;
+  watchId: number;
+  emailFrequency: number;
+}
+
+// Invitation to join a private forum (also used for "requested" — user-initiated
+// requests awaiting approval). Shape comes from InvitedForumDto.
+export interface InvitedForum {
+  forumId: number;
+  forumName: string;
+  forumDescription: string;
+  thumbnailUrl: string | null;
+  status: 'invited' | 'requested';
+}
+
+export interface MyForumsPage {
+  forums: MyForum[];
+  invitedForums: InvitedForum[];
+  requestedForums: InvitedForum[];
+  totalRecordCount: number;
+  totalPages: number;
+  pageNumber: number;
+  pageSize: number;
+}
+
+export interface MyTopicsPage {
+  topics: ForumTopic[];
+  totalRecordCount: number;
+  totalPages: number;
+  pageNumber: number;
+  pageSize: number;
+}
+
 export interface PostBadge {
   id: number;
   name: string;
@@ -2234,6 +2269,107 @@ export async function fetchForumTopics(
     flairs,
     pageNumber,
     hasNextPage: Boolean(data?.hasMore ?? false),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// "My …" — forums/topics the authenticated user is watching or has posted in.
+// Requires a valid session; server returns 401 otherwise.
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformMyForum(raw: any): MyForum {
+  const base = transformForum(raw, {});
+  return {
+    ...base,
+    isFavourite:    Boolean(raw.isFavourite ?? false),
+    watchId:        Number(raw.watchId ?? 0),
+    emailFrequency: Number(raw.emailFrequency ?? 0),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformInvitedForum(raw: any, status: 'invited' | 'requested'): InvitedForum {
+  return {
+    forumId:          Number(raw.forumId ?? 0),
+    forumName:        raw.forumName || '',
+    forumDescription: raw.forumDescription || raw.forumDesc || '',
+    thumbnailUrl:     buildForumAvatarUrl(raw),
+    status,
+  };
+}
+
+/** GET /my-favourite-forums — user's watched forums + pending invites/requests. */
+export async function fetchMyFavouriteForums(
+  pageNumber = 1,
+  pageSize = 20,
+): Promise<MyForumsPage> {
+  const { data } = await apiClient.get('/my-favourite-forums', {
+    params: { pn: pageNumber, ps: pageSize },
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawForums: any[] = data?.forums || [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawInvited: any[] = data?.invitedForums || [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawRequested: any[] = data?.requestedForums || [];
+
+  return {
+    forums:           rawForums.map(transformMyForum),
+    invitedForums:    rawInvited.map(r => transformInvitedForum(r, 'invited')),
+    requestedForums:  rawRequested.map(r => transformInvitedForum(r, 'requested')),
+    totalRecordCount: Number(data?.totalRecordCount ?? 0),
+    totalPages:       Number(data?.totalPages ?? 1),
+    pageNumber:       Number(data?.currentPage ?? pageNumber),
+    pageSize:         Number(data?.pageSize ?? pageSize),
+  };
+}
+
+/** GET /my-posts — topics the user has posted in, ordered by last activity. */
+export async function fetchMyPosts(
+  pageNumber = 1,
+  pageSize = 20,
+  query = '',
+  forumId: number | null = null,
+): Promise<MyTopicsPage> {
+  const params: Record<string, string | number> = {
+    pn: pageNumber,
+    ps: pageSize,
+  };
+  if (query.trim()) params.q = query.trim();
+  if (forumId)      params.fid = forumId;
+
+  const { data } = await apiClient.get('/my-posts', { params });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawTopics: any[] = data?.topics || [];
+
+  return {
+    topics:           rawTopics.map(transformTopic),
+    totalRecordCount: Number(data?.totalRecordCount ?? 0),
+    totalPages:       Number(data?.totalPages ?? 1),
+    pageNumber:       Number(data?.currentPage ?? pageNumber),
+    pageSize:         Number(data?.pageSize ?? pageSize),
+  };
+}
+
+/** GET /my-watched-topics — topics the user has subscribed to. */
+export async function fetchMyWatchedTopics(
+  pageNumber = 1,
+  pageSize = 20,
+): Promise<MyTopicsPage> {
+  const { data } = await apiClient.get('/my-watched-topics', {
+    params: { pn: pageNumber, ps: pageSize, pr: 0 },
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawTopics: any[] = data?.topics || [];
+
+  return {
+    topics:           rawTopics.map(transformTopic),
+    totalRecordCount: Number(data?.totalRecordCount ?? 0),
+    totalPages:       Number(data?.totalPages ?? 1),
+    pageNumber:       Number(data?.currentPage ?? pageNumber),
+    pageSize:         Number(data?.pageSize ?? pageSize),
   };
 }
 
