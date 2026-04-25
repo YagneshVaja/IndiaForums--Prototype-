@@ -27,6 +27,7 @@ import { useProfile } from '../hooks/useProfile';
 import type { ProfileTabKey } from '../hooks/useProfileTab';
 import ProfileHero from '../components/ProfileHero';
 import ProfileStatsRow from '../components/ProfileStatsRow';
+import ProfileAboutCard from '../components/ProfileAboutCard';
 import ProfileTabBar, { tabsFor } from '../components/ProfileTabBar';
 
 import ActivityTab from '../components/tabs/ActivityTab';
@@ -100,6 +101,7 @@ export default function ProfileScreen({ route, navigation }: Props) {
               onMessage={() => navigation.navigate('Messages')}
             />
             <ProfileStatsRow profile={q.data} />
+            <ProfileAboutCard profile={q.data} />
           </View>
 
           <ProfileTabBar tabs={tabs} active={activeTab} onChange={setActiveTab} />

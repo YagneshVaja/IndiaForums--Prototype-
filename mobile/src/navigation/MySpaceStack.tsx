@@ -14,6 +14,7 @@ import NotificationsScreen from '../features/notifications/screens/Notifications
 import MyActivitiesScreen from '../features/activities/screens/MyActivitiesScreen';
 import HelpCenterScreen from '../features/helpcenter/screens/HelpCenterScreen';
 import AboutScreen from '../features/myspace/screens/AboutScreen';
+import MySpaceSettingsScreen from '../features/myspace/screens/MySpaceSettingsScreen';
 import ChangePasswordScreen from '../features/profile/screens/ChangePasswordScreen';
 import BadgeDetailScreen from '../features/profile/screens/BadgeDetailScreen';
 import EmailLogsScreen from '../features/profile/screens/EmailLogsScreen';
@@ -38,6 +39,7 @@ export default function MySpaceStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MySpaceMain" component={MySpaceMainScreen} />
+      <Stack.Screen name="MySpaceSettings" component={MySpaceSettingsScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="Username" component={UsernameScreen} />

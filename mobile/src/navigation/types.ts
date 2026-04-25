@@ -99,6 +99,7 @@ export type SearchStackParamList = {
 
 export type MySpaceStackParamList = {
   MySpaceMain: undefined;
+  MySpaceSettings: undefined;
   Profile: { userId: string };
   EditProfile: undefined;
   Username: undefined;
