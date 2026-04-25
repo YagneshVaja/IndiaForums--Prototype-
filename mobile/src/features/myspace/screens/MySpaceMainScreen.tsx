@@ -4,9 +4,10 @@ import {
   Text,
   ScrollView,
   Pressable,
-  Image,
   StyleSheet,
   StatusBar,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,8 +23,27 @@ import { useAuthStore } from '../../../store/authStore';
 import { useNotificationsStore } from '../../../store/notificationsStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
-import ReportsForumPickerSheet from '../../forums/components/ReportsForumPickerSheet';
+import ErrorState from '../../../components/ui/ErrorState';
+import { extractApiError } from '../../../services/api';
 import { useMessagesOverview } from '../../messages/hooks/useMessages';
+
+import { useProfile } from '../../profile/hooks/useProfile';
+import type { ProfileTabKey } from '../../profile/hooks/useProfileTab';
+import ProfileHero from '../../profile/components/ProfileHero';
+import ProfileStatsRow from '../../profile/components/ProfileStatsRow';
+import ProfileAboutCard from '../../profile/components/ProfileAboutCard';
+import ProfileTabBar, { tabsFor } from '../../profile/components/ProfileTabBar';
+import ActivityTab from '../../profile/components/tabs/ActivityTab';
+import PostsTab from '../../profile/components/tabs/PostsTab';
+import CommentsTab from '../../profile/components/tabs/CommentsTab';
+import BuddiesTab from '../../profile/components/tabs/BuddiesTab';
+import FavoritesTab from '../../profile/components/tabs/FavoritesTab';
+import ForumsTab from '../../profile/components/tabs/ForumsTab';
+import BadgesTab from '../../profile/components/tabs/BadgesTab';
+import DraftsTab from '../../profile/components/tabs/DraftsTab';
+import WatchingTab from '../../profile/components/tabs/WatchingTab';
+import FFollowingTab from '../../profile/components/tabs/FFollowingTab';
+import WarningsTab from '../../profile/components/tabs/WarningsTab';
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<MySpaceStackParamList, 'MySpaceMain'>,
@@ -33,75 +53,76 @@ type Props = CompositeScreenProps<
   >
 >;
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-type IconTint = 'blue' | 'green' | 'amber' | 'red' | 'neutral';
 type Styles = ReturnType<typeof makeStyles>;
 
-const TINT: Record<IconTint, { bg: string; fg: string }> = {
-  blue: { bg: '#EBF0FF', fg: '#3558F0' },
-  green: { bg: '#E8F5EE', fg: '#1F9254' },
-  amber: { bg: '#FFF4E1', fg: '#B26A00' },
-  red: { bg: '#FDECEC', fg: '#C8001E' },
-  neutral: { bg: '#F0F1F3', fg: '#555B66' },
-};
-
-function fmtNum(n: number | null | undefined): string | null {
-  if (n == null) return null;
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
-  return String(n);
-}
-
-type MenuItemProps = {
-  icon: IoniconName;
-  tint: IconTint;
+type IconBtnProps = {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
   label: string;
-  subtitle?: string;
   badge?: number;
   onPress: () => void;
-  last?: boolean;
   styles: Styles;
-  chevronColor: string;
-  rippleColor: string;
+  iconColor: string;
 };
 
-function MenuItem({ icon, tint, label, subtitle, badge, onPress, last, styles, chevronColor, rippleColor }: MenuItemProps) {
-  const tintColors = TINT[tint];
+function HeaderIconBtn({ icon, label, badge, onPress, styles, iconColor }: IconBtnProps) {
   return (
     <Pressable
+      accessibilityLabel={label}
       onPress={onPress}
-      android_ripple={{ color: rippleColor }}
-      style={({ pressed }) => [
-        styles.menuItem,
-        !last && styles.menuItemBorder,
-        pressed && styles.menuItemPressed,
-      ]}
+      hitSlop={10}
+      style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
     >
-      <View style={[styles.menuIconWrap, { backgroundColor: tintColors.bg }]}>
-        <Ionicons name={icon} size={18} color={tintColors.fg} />
-      </View>
-      <View style={styles.menuText}>
-        <Text style={styles.menuLabel}>{label}</Text>
-        {subtitle ? <Text style={styles.menuSubtitle} numberOfLines={1}>{subtitle}</Text> : null}
-      </View>
+      <Ionicons name={icon} size={22} color={iconColor} />
       {badge != null && badge > 0 ? (
-        <View style={styles.menuBadge}>
-          <Text style={styles.menuBadgeText}>{badge > 99 ? '99+' : String(badge)}</Text>
+        <View style={styles.iconBadge}>
+          <Text style={styles.iconBadgeText}>{badge > 99 ? '99+' : String(badge)}</Text>
         </View>
       ) : null}
-      <Ionicons name="chevron-forward" size={16} color={chevronColor} />
     </Pressable>
   );
 }
 
+function TabContent({
+  tab,
+  userId,
+  viewedUserName,
+}: {
+  tab: ProfileTabKey;
+  userId: number | string;
+  viewedUserName?: string;
+}) {
+  switch (tab) {
+    case 'activity':
+      return <ActivityTab userId={userId} isOwn viewedUserName={viewedUserName} />;
+    case 'posts':
+      return <PostsTab userId={userId} isOwn />;
+    case 'comments':
+      return <CommentsTab userId={userId} isOwn />;
+    case 'buddies':
+      return <BuddiesTab userId={userId} isOwn />;
+    case 'favorites':
+      return <FavoritesTab userId={userId} isOwn />;
+    case 'forums':
+      return <ForumsTab userId={userId} isOwn />;
+    case 'badges':
+      return <BadgesTab userId={userId} isOwn />;
+    case 'drafts':
+      return <DraftsTab userId={userId} />;
+    case 'watching':
+      return <WatchingTab userId={userId} />;
+    case 'ff-following':
+      return <FFollowingTab userId={userId} variant="following" />;
+    case 'ff-followers':
+      return <FFollowingTab userId={userId} variant="followers" />;
+    case 'warnings':
+      return <WarningsTab userId={userId} />;
+  }
+}
+
 export default function MySpaceMainScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const user = useAuthStore(s => s.user);
-  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
-  const isModerator = useAuthStore(s => s.isModerator);
-  const logout = useAuthStore(s => s.logout);
-  const unreadCount = useNotificationsStore(s => s.unreadCount);
-  const [reportsPickerOpen, setReportsPickerOpen] = useState(false);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const unreadCount = useNotificationsStore((s) => s.unreadCount);
   const overview = useMessagesOverview(isAuthenticated);
   const unreadMessages = (() => {
     const raw = overview.data?.unreadMessageCount;
@@ -109,49 +130,14 @@ export default function MySpaceMainScreen({ navigation }: Props) {
     const n = typeof raw === 'string' ? parseInt(raw, 10) : raw;
     return Number.isFinite(n) ? Number(n) : 0;
   })();
+
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const stats = useMemo(() => {
-    const items: { value: string; label: string }[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const u = user as any;
-    if (u?.postCount != null) {
-      const v = fmtNum(u.postCount);
-      if (v) items.push({ value: v, label: 'Posts' });
-    }
-    const cc = u?.commentCount ?? u?.commentsCount ?? u?.totalComments;
-    if (cc != null) {
-      const v = fmtNum(cc);
-      if (v) items.push({ value: v, label: 'Comments' });
-    }
-    if (u?.joinDate) {
-      const d = new Date(u.joinDate);
-      if (!isNaN(d.getTime())) {
-        items.push({
-          value: d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
-          label: 'Joined',
-        });
-      }
-    }
-    return items;
-  }, [user]);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const u = user as any;
-  const rank: string | null = u?.rankName || u?.rank || u?.groupName || u?.userGroup || null;
-  const displayName = u?.displayName || u?.userName || 'User';
-  const avatarUrl: string | null = u?.avatarUrl || u?.thumbnailUrl || null;
-  const emailVerified: boolean | undefined = u?.emailVerified;
-
-  const handleLogout = async () => {
-    await logout();
-    navigation.getParent()?.getParent()?.reset({
-      index: 0,
-      routes: [{ name: 'Guest' }],
-    });
-  };
+  const profileQ = useProfile();
+  const tabs = useMemo(() => tabsFor(true), []);
+  const [activeTab, setActiveTab] = useState<ProfileTabKey>('activity');
 
   const statusBarStyle = mode === 'dark' ? 'light-content' : 'dark-content';
 
@@ -187,259 +173,98 @@ export default function MySpaceMainScreen({ navigation }: Props) {
     );
   }
 
-  // ── Authenticated dashboard ─────────────────────────────────────────────
+  const profile = profileQ.data;
+  const emailVerified = profile && (profile.raw as { isEmailConfirmed?: boolean }).isEmailConfirmed;
+
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <StatusBar barStyle={statusBarStyle} />
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Email verification banner */}
-        {emailVerified === false && (
-          <Pressable style={styles.verifyBanner} onPress={() => navigation.navigate('VerifyEmail')}>
-            <Ionicons name="mail-unread-outline" size={16} color="#B45309" />
-            <Text style={styles.verifyText}>Your email is not verified.</Text>
-            <Text style={styles.verifyAction}>Verify now →</Text>
-          </Pressable>
-        )}
 
-        {/* Profile Hero */}
-        <View style={styles.profileHero}>
-          <View style={styles.heroCover}>
-            <View style={styles.heroCoverOverlay} />
-          </View>
-          <View style={styles.heroBody}>
-            <View style={styles.heroAvatarRing}>
-              <View style={styles.heroAvatar}>
-                {avatarUrl ? (
-                  <Image source={{ uri: avatarUrl }} style={styles.heroAvatarImg} />
-                ) : (
-                  <Text style={styles.heroAvatarInitial}>
-                    {displayName[0]?.toUpperCase() || 'U'}
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            <Text style={styles.heroName}>{displayName}</Text>
-
-            {rank ? (
-              <View style={styles.heroRankPill}>
-                <Text style={styles.heroRankText}>{rank}</Text>
-              </View>
-            ) : null}
-
-            {stats.length > 0 && (
-              <View style={styles.heroStats}>
-                {stats.map((s, i) => (
-                  <React.Fragment key={s.label}>
-                    {i > 0 && <View style={styles.heroStatDivider} />}
-                    <View style={styles.heroStat}>
-                      <Text style={styles.heroStatValue}>{s.value}</Text>
-                      <Text style={styles.heroStatLabel}>{s.label}</Text>
-                    </View>
-                  </React.Fragment>
-                ))}
-              </View>
-            )}
-
-            <View style={styles.heroActions}>
-              <Pressable
-                style={({ pressed }) => [styles.heroPrimaryBtn, pressed && styles.btnPressed]}
-                onPress={() =>
-                  user?.userId
-                    ? navigation.navigate('Profile', { userId: String(user.userId) })
-                    : undefined
-                }
-              >
-                <Text style={styles.heroPrimaryBtnText}>View Profile</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.heroOutlineBtn, pressed && styles.btnPressed]}
-                onPress={() => navigation.navigate('EditProfile')}
-              >
-                <Text style={styles.heroOutlineBtnText}>Settings</Text>
-              </Pressable>
-            </View>
-          </View>
+      {/* Top bar — title + functional action icons */}
+      <View style={styles.topBar}>
+        <Text style={styles.topBarTitle}>My Space</Text>
+        <View style={styles.topBarActions}>
+          <HeaderIconBtn
+            icon="mail-outline"
+            label="Messages"
+            badge={unreadMessages}
+            onPress={() => navigation.navigate('Messages')}
+            styles={styles}
+            iconColor={colors.text}
+          />
+          <HeaderIconBtn
+            icon="notifications-outline"
+            label="Notifications"
+            badge={unreadCount}
+            onPress={() => navigation.navigate('Notifications')}
+            styles={styles}
+            iconColor={colors.text}
+          />
+          <HeaderIconBtn
+            icon="settings-outline"
+            label="Settings"
+            onPress={() => navigation.navigate('MySpaceSettings')}
+            styles={styles}
+            iconColor={colors.text}
+          />
         </View>
+      </View>
 
-        {/* Social */}
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionLabel}>Social</Text>
-          <View style={styles.sectionCard}>
-            <MenuItem
-              icon="people-outline"
-              tint="blue"
-              label="Buddies"
-              subtitle="Friends, requests & blocked"
-              onPress={() => navigation.navigate('Buddies')}
-              styles={styles}
-              chevronColor={colors.textTertiary}
-              rippleColor={colors.surface}
-            />
-            <MenuItem
-              icon="chatbubble-outline"
-              tint="blue"
-              label="Messages"
-              subtitle={
-                unreadMessages > 0
-                  ? `${unreadMessages} unread message${unreadMessages > 1 ? 's' : ''}`
-                  : 'Private messages'
-              }
-              badge={unreadMessages}
-              onPress={() => navigation.navigate('Messages')}
-              last
-              styles={styles}
-              chevronColor={colors.textTertiary}
-              rippleColor={colors.surface}
-            />
-          </View>
+      {profileQ.isLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} size="large" />
         </View>
-
-        {/* Account */}
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionLabel}>Account</Text>
-          <View style={styles.sectionCard}>
-            <MenuItem
-              icon="settings-outline"
-              tint="green"
-              label="Account Settings"
-              subtitle="Profile, privacy & theme"
-              onPress={() => navigation.navigate('EditProfile')}
-              styles={styles}
-              chevronColor={colors.textTertiary}
-              rippleColor={colors.surface}
-            />
-            <MenuItem
-              icon="create-outline"
-              tint="green"
-              label="Username"
-              subtitle={user?.userName ? `@${user.userName}` : 'Change your display name'}
-              onPress={() => navigation.navigate('Username')}
-              styles={styles}
-              chevronColor={colors.textTertiary}
-              rippleColor={colors.surface}
-            />
-            <MenuItem
-              icon="radio-button-on-outline"
-              tint="green"
-              label="Status"
-              subtitle="Set your online visibility"
-              onPress={() => navigation.navigate('Status')}
-              styles={styles}
-              chevronColor={colors.textTertiary}
-              rippleColor={colors.surface}
-            />
-            <MenuItem
-              icon="phone-portrait-outline"
-              tint="green"
-              label="Devices"
-              subtitle="Manage connected devices"
-              onPress={() => navigation.navigate('Devices')}
-              last
-              styles={styles}
-              chevronColor={colors.textTertiary}
-              rippleColor={colors.surface}
-            />
-          </View>
+      ) : profileQ.isError || !profile ? (
+        <View style={styles.center}>
+          <ErrorState message={extractApiError(profileQ.error)} onRetry={profileQ.refetch} />
         </View>
-
-        {/* Activity */}
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionLabel}>Activity</Text>
-          <View style={styles.sectionCard}>
-            <MenuItem
-              icon="notifications-outline"
-              tint="amber"
-              label="Notifications"
-              subtitle={
-                unreadCount > 0
-                  ? `${unreadCount} new notification${unreadCount > 1 ? 's' : ''}`
-                  : 'All caught up'
-              }
-              badge={unreadCount}
-              onPress={() => navigation.navigate('Notifications')}
-              styles={styles}
-              chevronColor={colors.textTertiary}
-              rippleColor={colors.surface}
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+          showsVerticalScrollIndicator={false}
+          stickyHeaderIndices={[1]}
+          refreshControl={
+            <RefreshControl
+              refreshing={profileQ.isRefetching}
+              onRefresh={profileQ.refetch}
+              tintColor={colors.primary}
             />
-            <MenuItem
-              icon="list-outline"
-              tint="amber"
-              label="Activity"
-              subtitle="Your wall, updates & history"
-              onPress={() => navigation.navigate('MyActivities')}
-              last={!isModerator}
-              styles={styles}
-              chevronColor={colors.textTertiary}
-              rippleColor={colors.surface}
-            />
-            {isModerator && (
-              <MenuItem
-                icon="shield-checkmark-outline"
-                tint="red"
-                label="Reports Inbox"
-                subtitle="Review flagged content"
-                onPress={() => setReportsPickerOpen(true)}
-                last
-                styles={styles}
-                chevronColor={colors.textTertiary}
-                rippleColor={colors.surface}
-              />
-            )}
-          </View>
-        </View>
-
-        {/* Support */}
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionLabel}>Support</Text>
-          <View style={styles.sectionCard}>
-            <MenuItem
-              icon="help-circle-outline"
-              tint="neutral"
-              label="Help Center"
-              subtitle="FAQ, guidelines & contact"
-              onPress={() => navigation.navigate('HelpCenter')}
-              styles={styles}
-              chevronColor={colors.textTertiary}
-              rippleColor={colors.surface}
-            />
-            <MenuItem
-              icon="information-circle-outline"
-              tint="neutral"
-              label="About IndiaForums"
-              subtitle="Version, policies & links"
-              onPress={() => navigation.navigate('About')}
-              last
-              styles={styles}
-              chevronColor={colors.textTertiary}
-              rippleColor={colors.surface}
-            />
-          </View>
-        </View>
-
-        <Pressable
-          style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}
-          onPress={handleLogout}
+          }
         >
-          <Ionicons name="log-out-outline" size={18} color="#C8001E" />
-          <Text style={styles.logoutText}>Sign Out</Text>
-        </Pressable>
-      </ScrollView>
+          {/* ── Static header ───────────────────────────────────────── */}
+          <View style={styles.staticHeader}>
+            {/* Email verification banner */}
+            {emailVerified === false && (
+              <Pressable style={styles.verifyBanner} onPress={() => navigation.navigate('VerifyEmail')}>
+                <Ionicons name="mail-unread-outline" size={16} color="#B45309" />
+                <Text style={styles.verifyText}>Your email is not verified.</Text>
+                <Text style={styles.verifyAction}>Verify now →</Text>
+              </Pressable>
+            )}
 
-      <ReportsForumPickerSheet
-        visible={reportsPickerOpen}
-        onClose={() => setReportsPickerOpen(false)}
-        onPick={(forum) => {
-          setReportsPickerOpen(false);
-          navigation.getParent()?.navigate('Forums', {
-            screen: 'ReportsInbox',
-            params: { forum },
-          });
-        }}
-      />
+            <ProfileHero
+              profile={profile}
+              onEdit={() => navigation.navigate('EditProfile')}
+              onMessage={() => navigation.navigate('Messages')}
+            />
+            <ProfileStatsRow profile={profile} />
+            <ProfileAboutCard profile={profile} />
+          </View>
+
+          {/* ── Sticky tab bar ──────────────────────────────────────── */}
+          <ProfileTabBar tabs={tabs} active={activeTab} onChange={setActiveTab} />
+
+          {/* ── Active tab content ──────────────────────────────────── */}
+          <View style={styles.tabBody}>
+            <TabContent
+              tab={activeTab}
+              userId={profile.userId}
+              viewedUserName={profile.displayName || profile.userName}
+            />
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -451,8 +276,102 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.bg,
     },
     scroll: {
-      paddingHorizontal: 16,
-      paddingTop: 12,
+      flex: 1,
+    },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingBottom: 40,
+    },
+
+    // Top bar — matches TopNavBack pattern (card bg, border-bottom)
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      height: 52,
+      paddingHorizontal: 14,
+      backgroundColor: c.card,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    topBarTitle: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: c.text,
+      letterSpacing: -0.3,
+    },
+    topBarActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    iconBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+    },
+    iconBtnPressed: {
+      backgroundColor: c.surface,
+    },
+    iconBadge: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      paddingHorizontal: 4,
+      backgroundColor: c.danger,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1.5,
+      borderColor: c.card,
+    },
+    iconBadgeText: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      lineHeight: 11,
+    },
+
+    // Static profile header
+    staticHeader: {
+      paddingHorizontal: 14,
+      paddingTop: 4,
+    },
+    tabBody: {
+      paddingHorizontal: 14,
+      paddingTop: 4,
+    },
+
+    // Email verify banner
+    verifyBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: '#FEF3C7',
+      borderWidth: 1,
+      borderColor: '#FCD38A',
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 12,
+    },
+    verifyText: {
+      flex: 1,
+      fontSize: 13,
+      color: '#92400E',
+      fontWeight: '500',
+    },
+    verifyAction: {
+      fontSize: 13,
+      color: '#B45309',
+      fontWeight: '700',
     },
 
     // Unauthenticated
@@ -512,275 +431,6 @@ function makeStyles(c: ThemeColors) {
       fontSize: 14,
       color: c.primary,
       fontWeight: '600',
-    },
-
-    // Email verify banner
-    verifyBanner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      backgroundColor: '#FEF3C7',
-      borderWidth: 1,
-      borderColor: '#FCD38A',
-      borderRadius: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      marginBottom: 12,
-    },
-    verifyText: {
-      flex: 1,
-      fontSize: 13,
-      color: '#92400E',
-      fontWeight: '500',
-    },
-    verifyAction: {
-      fontSize: 13,
-      color: '#B45309',
-      fontWeight: '700',
-    },
-
-    // Profile hero
-    profileHero: {
-      backgroundColor: c.card,
-      borderRadius: 16,
-      overflow: 'hidden',
-      marginBottom: 18,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.04,
-      shadowRadius: 8,
-      elevation: 2,
-    },
-    heroCover: {
-      height: 88,
-      width: '100%',
-      backgroundColor: c.primary,
-    },
-    heroCoverOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: '#5B7BF5',
-      opacity: 0.35,
-    },
-    heroBody: {
-      paddingHorizontal: 20,
-      paddingBottom: 20,
-      alignItems: 'center',
-      marginTop: -44,
-    },
-    heroAvatarRing: {
-      width: 88,
-      height: 88,
-      borderRadius: 44,
-      backgroundColor: c.card,
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 4,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 4,
-    },
-    heroAvatar: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: c.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
-    },
-    heroAvatarImg: {
-      width: '100%',
-      height: '100%',
-    },
-    heroAvatarInitial: {
-      fontSize: 32,
-      fontWeight: '800',
-      color: '#FFFFFF',
-    },
-    heroName: {
-      fontSize: 20,
-      fontWeight: '800',
-      color: c.text,
-      marginTop: 12,
-      letterSpacing: -0.3,
-    },
-    heroRankPill: {
-      marginTop: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 999,
-      backgroundColor: c.primarySoft,
-    },
-    heroRankText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: c.primary,
-      letterSpacing: 0.3,
-      textTransform: 'uppercase',
-    },
-    heroStats: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: 16,
-      gap: 16,
-    },
-    heroStatDivider: {
-      width: 1,
-      height: 22,
-      backgroundColor: c.border,
-    },
-    heroStat: {
-      alignItems: 'center',
-    },
-    heroStatValue: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: c.text,
-    },
-    heroStatLabel: {
-      fontSize: 11,
-      color: c.textTertiary,
-      marginTop: 2,
-      textTransform: 'uppercase',
-      letterSpacing: 0.4,
-    },
-    heroActions: {
-      flexDirection: 'row',
-      gap: 10,
-      marginTop: 18,
-      width: '100%',
-    },
-    heroPrimaryBtn: {
-      flex: 1,
-      height: 42,
-      borderRadius: 12,
-      backgroundColor: c.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    heroPrimaryBtnText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: '#FFFFFF',
-    },
-    heroOutlineBtn: {
-      flex: 1,
-      height: 42,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: c.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: c.card,
-    },
-    heroOutlineBtnText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: c.text,
-    },
-    btnPressed: {
-      opacity: 0.88,
-      transform: [{ scale: 0.98 }],
-    },
-
-    // Menu section
-    menuSection: {
-      marginBottom: 16,
-    },
-    sectionLabel: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: c.textTertiary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.6,
-      marginBottom: 8,
-      marginLeft: 4,
-    },
-    sectionCard: {
-      backgroundColor: c.card,
-      borderRadius: 14,
-      overflow: 'hidden',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.04,
-      shadowRadius: 4,
-      elevation: 1,
-    },
-
-    // Menu item
-    menuItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      gap: 12,
-    },
-    menuItemBorder: {
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border,
-    },
-    menuItemPressed: {
-      backgroundColor: c.surface,
-    },
-    menuIconWrap: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    menuText: {
-      flex: 1,
-    },
-    menuLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: c.text,
-    },
-    menuSubtitle: {
-      fontSize: 12,
-      color: c.textTertiary,
-      marginTop: 2,
-    },
-    menuBadge: {
-      minWidth: 20,
-      height: 20,
-      borderRadius: 10,
-      backgroundColor: '#C8001E',
-      paddingHorizontal: 6,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: 2,
-    },
-    menuBadgeText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: '#FFFFFF',
-    },
-
-    // Logout
-    logoutBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      height: 50,
-      borderRadius: 14,
-      backgroundColor: c.card,
-      borderWidth: 1,
-      borderColor: '#FCD4D4',
-      marginTop: 4,
-    },
-    logoutBtnPressed: {
-      opacity: 0.8,
-      backgroundColor: '#FDECEC',
-    },
-    logoutText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: '#C8001E',
     },
   });
 }
