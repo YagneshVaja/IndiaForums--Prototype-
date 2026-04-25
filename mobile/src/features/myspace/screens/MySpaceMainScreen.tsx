@@ -31,7 +31,6 @@ import { useProfile } from '../../profile/hooks/useProfile';
 import type { ProfileTabKey } from '../../profile/hooks/useProfileTab';
 import ProfileHero from '../../profile/components/ProfileHero';
 import ProfileStatsRow from '../../profile/components/ProfileStatsRow';
-import ProfileAboutCard from '../../profile/components/ProfileAboutCard';
 import ProfileTabBar, { tabsFor } from '../../profile/components/ProfileTabBar';
 import ActivityTab from '../../profile/components/tabs/ActivityTab';
 import PostsTab from '../../profile/components/tabs/PostsTab';
@@ -249,7 +248,6 @@ export default function MySpaceMainScreen({ navigation }: Props) {
               onMessage={() => navigation.navigate('Messages')}
             />
             <ProfileStatsRow profile={profile} />
-            <ProfileAboutCard profile={profile} />
           </View>
 
           {/* ── Sticky tab bar ──────────────────────────────────────── */}

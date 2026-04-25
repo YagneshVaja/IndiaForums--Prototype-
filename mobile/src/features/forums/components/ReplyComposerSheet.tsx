@@ -1,14 +1,26 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal, View, Text, TextInput, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
-import { replyToTopic } from '../../../services/api';
+import { replyToTopic, uploadPostImage, extractApiError } from '../../../services/api';
 import type { ForumTopic } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
+
+const MAX_BYTES = 10 * 1024 * 1024; // matches API's 10MB cap
+const MAX_ATTACHMENTS = 4;
+
+interface Attachment {
+  /** Local URI returned by expo-image-picker — used for the inline preview thumbnail. */
+  previewUri: string;
+  /** Server-returned filePath from /upload/post-image — appended to the message HTML on submit. */
+  filePath:   string;
+}
 
 export interface QuotedPost {
   author: string;
@@ -38,6 +50,8 @@ export default function ReplyComposerSheet({ visible, topic, quotedPost, onClose
   const [matured,     setMatured]     = useState(false);
   const [showSig,     setShowSig]     = useState(true);
   const [watchList,   setWatchList]   = useState(true);
+  const [attachments,    setAttachments]    = useState<Attachment[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -49,10 +63,69 @@ export default function ReplyComposerSheet({ visible, topic, quotedPost, onClose
     setMatured(false);
     setShowSig(true);
     setWatchList(true);
+    setAttachments([]);
+    setUploadingImage(false);
   }, [visible, quotedPost]);
 
   const charCount = text.trim().length;
-  const canSubmit = charCount >= MIN_CHARS && !submitting;
+  const hasContent = charCount >= MIN_CHARS || attachments.length > 0;
+  const canSubmit  = hasContent && !submitting && !uploadingImage;
+
+  async function handleAttachImage() {
+    if (uploadingImage || submitting) return;
+    if (attachments.length >= MAX_ATTACHMENTS) {
+      Alert.alert('Limit reached', `You can attach up to ${MAX_ATTACHMENTS} images per reply.`);
+      return;
+    }
+
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permission needed', 'Grant photo library access to attach an image.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.85,
+    });
+    if (result.canceled) return;
+    const asset = result.assets?.[0];
+    if (!asset?.uri) return;
+
+    const mime = (asset.mimeType || 'image/jpeg').toLowerCase();
+    if (mime === 'image/gif') {
+      Alert.alert('Unsupported format', 'GIF images are not allowed. Please pick a JPEG or PNG.');
+      return;
+    }
+    if (asset.fileSize != null && asset.fileSize > MAX_BYTES) {
+      Alert.alert(
+        'Image too large',
+        `Maximum file size is 10MB (yours is ${(asset.fileSize / 1024 / 1024).toFixed(1)}MB).`,
+      );
+      return;
+    }
+
+    setUploadingImage(true);
+    setError(null);
+    try {
+      const filename = asset.fileName || `reply-${Date.now()}.jpg`;
+      const res = await uploadPostImage({ uri: asset.uri, name: filename, type: mime });
+      if (res.success && res.filePath) {
+        setAttachments((prev) => [...prev, { previewUri: asset.uri, filePath: res.filePath! }]);
+      } else {
+        setError(res.message || 'Upload failed.');
+      }
+    } catch (err) {
+      const e = err as { response?: { status?: number; data?: unknown } };
+      console.error('[ReplyComposer] uploadPostImage failed', e?.response?.status, e?.response?.data);
+      setError(extractApiError(err, 'Upload failed.'));
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  function removeAttachment(index: number) {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  }
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -63,10 +136,12 @@ export default function ReplyComposerSheet({ visible, topic, quotedPost, onClose
       hasMaturedContent: matured,
       showSignature:     showSig,
       addToWatchList:    watchList,
+      attachments:       attachments.map((a) => a.filePath),
     });
     setSubmitting(false);
     if (res.ok) {
       setText('');
+      setAttachments([]);
       onSubmitted();
     } else {
       setError(res.error || 'Failed to send reply.');
@@ -74,7 +149,7 @@ export default function ReplyComposerSheet({ visible, topic, quotedPost, onClose
   }
 
   function handleClose() {
-    if (submitting) return;
+    if (submitting || uploadingImage) return;
     setError(null);
     onClose();
   }
@@ -117,9 +192,31 @@ export default function ReplyComposerSheet({ visible, topic, quotedPost, onClose
             </View>
 
             <View style={styles.editorWrap}>
-              <Text style={styles.sectionLabel}>
-                Message <Text style={styles.required}>Required</Text>
-              </Text>
+              <View style={styles.editorHeader}>
+                <Text style={styles.sectionLabel}>
+                  Message <Text style={styles.required}>Required</Text>
+                </Text>
+                <Pressable
+                  onPress={handleAttachImage}
+                  disabled={uploadingImage || submitting || attachments.length >= MAX_ATTACHMENTS}
+                  hitSlop={6}
+                  style={({ pressed }) => [
+                    styles.attachBtn,
+                    (uploadingImage || attachments.length >= MAX_ATTACHMENTS) && styles.attachBtnDisabled,
+                    pressed && !uploadingImage && styles.attachBtnPressed,
+                  ]}
+                >
+                  {uploadingImage ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Ionicons name="image-outline" size={16} color={colors.primary} />
+                  )}
+                  <Text style={styles.attachBtnText}>
+                    {uploadingImage ? 'Uploading…' : 'Attach image'}
+                  </Text>
+                </Pressable>
+              </View>
+
               <TextInput
                 value={text}
                 onChangeText={setText}
@@ -131,7 +228,32 @@ export default function ReplyComposerSheet({ visible, topic, quotedPost, onClose
                 autoFocus
                 textAlignVertical="top"
               />
-              <Text style={styles.charCount}>{charCount} chars</Text>
+
+              {attachments.length > 0 && (
+                <View style={styles.attachRow}>
+                  {attachments.map((att, i) => (
+                    <View key={att.filePath} style={styles.attachThumbWrap}>
+                      <Image
+                        source={att.previewUri}
+                        style={styles.attachThumb}
+                        contentFit="cover"
+                      />
+                      <Pressable
+                        onPress={() => removeAttachment(i)}
+                        hitSlop={6}
+                        style={styles.attachRemove}
+                        accessibilityLabel="Remove attachment"
+                      >
+                        <Ionicons name="close" size={12} color="#FFFFFF" />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <Text style={styles.charCount}>
+                {charCount} chars{attachments.length > 0 ? ` · ${attachments.length} image${attachments.length === 1 ? '' : 's'}` : ''}
+              </Text>
             </View>
 
             <View style={styles.togglesRow}>
@@ -294,6 +416,62 @@ function makeStyles(c: ThemeColors) {
     },
     editorWrap: {
       marginBottom: 12,
+    },
+    editorHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 6,
+    },
+    attachBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      backgroundColor: c.primarySoft,
+    },
+    attachBtnPressed: {
+      opacity: 0.75,
+    },
+    attachBtnDisabled: {
+      opacity: 0.5,
+    },
+    attachBtnText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.primary,
+    },
+    attachRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 8,
+    },
+    attachThumbWrap: {
+      position: 'relative',
+      width: 64,
+      height: 64,
+      borderRadius: 8,
+      overflow: 'visible',
+    },
+    attachThumb: {
+      width: 64,
+      height: 64,
+      borderRadius: 8,
+      backgroundColor: c.surface,
+    },
+    attachRemove: {
+      position: 'absolute',
+      top: -6,
+      right: -6,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     editor: {
       minHeight: 140,
