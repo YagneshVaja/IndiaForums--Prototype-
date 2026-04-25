@@ -83,7 +83,7 @@ export default function ProfileTabBar({ tabs, active, onChange }: Props) {
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     wrap: {
-      backgroundColor: c.bg,
+      backgroundColor: c.card,
       paddingVertical: 8,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: c.border,
@@ -94,15 +94,15 @@ function makeStyles(c: ThemeColors) {
     },
     chip: {
       paddingHorizontal: 14,
-      paddingVertical: 8,
+      paddingVertical: 7,
       borderRadius: 999,
-      backgroundColor: c.card,
+      backgroundColor: 'transparent',
       borderWidth: 1,
       borderColor: c.border,
     },
     chipActive: {
-      backgroundColor: c.primary,
-      borderColor: c.primary,
+      backgroundColor: c.primarySoft,
+      borderColor: c.primarySoft,
     },
     chipText: {
       fontSize: 13,
@@ -110,7 +110,8 @@ function makeStyles(c: ThemeColors) {
       color: c.textSecondary,
     },
     chipTextActive: {
-      color: '#FFFFFF',
+      color: c.primary,
+      fontWeight: '700',
     },
   });
 }
