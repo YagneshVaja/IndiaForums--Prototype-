@@ -2581,15 +2581,28 @@ export async function replyToTopic(
     hasMaturedContent?: boolean;
     showSignature?:    boolean;
     addToWatchList?:   boolean;
+    /** Server-returned filePaths from POST /upload/post-image — appended to the message HTML. */
+    attachments?:      string[];
   },
 ): Promise<ReplyResult> {
   const trimmed = message.trim();
-  if (!trimmed) return { ok: false, postId: null, error: 'Please enter a message.' };
+  const attachments = opts?.attachments ?? [];
+  if (!trimmed && attachments.length === 0) {
+    return { ok: false, postId: null, error: 'Please enter a message or attach an image.' };
+  }
+
+  const textPart = trimmed
+    ? `<p>${escapeHtml(trimmed).replace(/\n/g, '<br>')}</p>`
+    : '';
+  const imgPart = attachments
+    .filter((p) => !!p)
+    .map((p) => `<p><img src="${p}" alt="attachment" /></p>`)
+    .join('');
 
   const body = {
     topicId,
     forumId,
-    message:           `<p>${escapeHtml(trimmed).replace(/\n/g, '<br>')}</p>`,
+    message:           textPart + imgPart,
     showSignature:     opts?.showSignature     ?? true,
     addToWatchList:    opts?.addToWatchList    ?? true,
     hasMaturedContent: opts?.hasMaturedContent ?? false,
@@ -2677,6 +2690,47 @@ export async function createTopic(args: {
     console.error('[API] createTopic failed:', status, e?.response?.data ?? e?.message);
     return { ok: false, topicId: null, error: msg };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Image upload — forum post attachment
+// ---------------------------------------------------------------------------
+
+// Mirrors UploadPostImageResponseDto in features/profile/types.ts. Kept
+// inlined here so consumers in this file (forum composer flows) don't have
+// to reach into the profile feature for a forum response shape.
+export interface UploadPostImageResponse {
+  success: boolean;
+  message: string;
+  filePath: string | null;
+  mediaId: number | string | null;
+  width:   number | string | null;
+  height:  number | string | null;
+}
+
+// Local image as React Native FormData expects it. `uri` is the file://
+// or content:// path returned by expo-image-picker.
+export interface PostImageFile {
+  uri:  string;
+  name: string;
+  type: string;
+}
+
+/**
+ * Upload an image for a forum reply / topic. Server converts to WebP
+ * (q=95) and caps dimensions at 800x1200. Use the returned `filePath`
+ * (or render via mediaId) when inserting the image into post markup.
+ */
+export async function uploadPostImage(file: PostImageFile): Promise<UploadPostImageResponse> {
+  const fd = new FormData();
+  // ASP.NET IFormFile binds by parameter name; "file" is the controller default.
+  fd.append('file', file as unknown as Blob);
+  const { data } = await apiClient.post<UploadPostImageResponse>(
+    '/upload/post-image',
+    fd,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  return data;
 }
 
 // ---------------------------------------------------------------------------

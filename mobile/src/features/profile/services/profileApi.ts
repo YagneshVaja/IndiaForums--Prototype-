@@ -18,6 +18,8 @@ import type {
   UpdatePreferencesRequestDto,
   UpdateProfileCommand,
   UpdateProfileResponseDto,
+  UploadCroppedImageRequestDto,
+  UploadCroppedImageResponseDto,
   UploadUserImageRequestDto,
   UploadUserImageResponseDto,
   UserActivitiesResponseDto,
@@ -270,6 +272,15 @@ export function uploadUserThumbnail(body: UploadUserImageRequestDto) {
 export function uploadUserBanner(body: UploadUserImageRequestDto) {
   return apiClient
     .post<UploadUserImageResponseDto>('/upload/user-banner', body)
+    .then((r) => r.data);
+}
+
+// Stage a cropped image in the 24h temp folder. Use this when you need a
+// preview URL before committing — e.g. an image picker that shows the
+// cropped result, gets confirmation, then runs a follow-up save.
+export function uploadCroppedImage(body: UploadCroppedImageRequestDto) {
+  return apiClient
+    .post<UploadCroppedImageResponseDto>('/upload/cropped-image', body)
     .then((r) => r.data);
 }
 

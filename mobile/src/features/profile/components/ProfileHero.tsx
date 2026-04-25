@@ -29,6 +29,7 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
 
   const displayName = profile.displayName || profile.userName || 'User';
   const rank = profile.rankName || profile.groupName;
+  const bio = ((profile.raw as { bio?: string | null }).bio || '').trim();
 
   return (
     <View style={styles.card}>
@@ -64,6 +65,12 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
           <View style={styles.rankPill}>
             <Text style={styles.rankText}>{rank}</Text>
           </View>
+        ) : null}
+
+        {bio ? (
+          <Text style={styles.bio} numberOfLines={4}>
+            {bio}
+          </Text>
         ) : null}
 
         {profile.statusMessage ? (
@@ -235,6 +242,14 @@ function makeStyles(c: ThemeColors) {
       color: c.primary,
       letterSpacing: 0.3,
       textTransform: 'uppercase',
+    },
+    bio: {
+      marginTop: 12,
+      fontSize: 14,
+      color: c.text,
+      textAlign: 'center',
+      lineHeight: 20,
+      paddingHorizontal: 4,
     },
     status: {
       marginTop: 10,

@@ -19,10 +19,19 @@ export default function ProfileStatsRow({ profile, buddiesCount }: Props) {
     if (profile.postCount != null) out.push({ value: fmtNum(profile.postCount), label: 'Posts' });
     if (profile.commentCount != null) out.push({ value: fmtNum(profile.commentCount), label: 'Comments' });
     if (buddiesCount != null) out.push({ value: fmtNum(buddiesCount), label: 'Buddies' });
+
+    const streakRaw = (profile.raw as { visitStreakCount?: number | string }).visitStreakCount;
+    const streak = (() => {
+      if (streakRaw == null) return 0;
+      const n = typeof streakRaw === 'string' ? parseInt(streakRaw, 10) : streakRaw;
+      return Number.isFinite(n) ? Number(n) : 0;
+    })();
+    if (streak > 0) out.push({ value: fmtNum(streak), label: 'Streak' });
+
     const joined = fmtJoinMonthYear(profile.joinDate);
     if (joined) out.push({ value: joined, label: 'Joined' });
     return out;
-  }, [profile.postCount, profile.commentCount, profile.joinDate, buddiesCount]);
+  }, [profile.postCount, profile.commentCount, profile.joinDate, profile.raw, buddiesCount]);
 
   if (stats.length === 0) return null;
 

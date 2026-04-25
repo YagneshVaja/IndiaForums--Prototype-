@@ -592,6 +592,34 @@ export interface UploadUserImageResponseDto {
   isRemoved: boolean;
 }
 
+// Stage a cropped image to the server's 24-hour temp folder. Body is a
+// base64-encoded JPEG (no `data:` prefix). The returned `tempUrl` is the
+// transient resource you can preview / pass on; `fileId`/`tempPath` let a
+// follow-up call commit the file (e.g. when saving a profile or post).
+export interface UploadCroppedImageRequestDto {
+  imageData: string;
+}
+
+export interface UploadCroppedImageResponseDto {
+  tempPath: string | null;
+  fileId: string | null;
+  tempUrl: string | null;
+  // ISO 8601 — temp file expires 24h after upload.
+  expiresAt: string | null;
+}
+
+// Forum reply / topic image attachment. API converts to WebP (q=95) and
+// caps dimensions at 800x1200. mediaId/width/height come back as
+// number | string (the spec allows both forms).
+export interface UploadPostImageResponseDto {
+  success: boolean;
+  message: string;
+  filePath: string | null;
+  mediaId: number | string | null;
+  width: number | string | null;
+  height: number | string | null;
+}
+
 // ── Username change + history ───────────────────────────────────────────────
 
 export interface ChangeUsernameRequestDto {
