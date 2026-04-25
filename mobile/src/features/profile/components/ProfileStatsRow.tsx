@@ -16,9 +16,12 @@ export default function ProfileStatsRow({ profile, buddiesCount }: Props) {
 
   const stats = useMemo(() => {
     const out: { value: string; label: string }[] = [];
-    if (profile.postCount != null) out.push({ value: fmtNum(profile.postCount), label: 'Posts' });
-    if (profile.commentCount != null) out.push({ value: fmtNum(profile.commentCount), label: 'Comments' });
-    if (buddiesCount != null) out.push({ value: fmtNum(buddiesCount), label: 'Buddies' });
+
+    // Always render the foundational counts so the row layout is stable across
+    // users — even brand-new accounts with 0 posts and 0 comments. fmtNum(0) → "0".
+    out.push({ value: fmtNum(profile.postCount ?? 0), label: 'Posts' });
+    out.push({ value: fmtNum(profile.commentCount ?? 0), label: 'Comments' });
+    out.push({ value: fmtNum(buddiesCount ?? 0), label: 'Buddies' });
 
     const streakRaw = (profile.raw as { visitStreakCount?: number | string }).visitStreakCount;
     const streak = (() => {
@@ -26,14 +29,13 @@ export default function ProfileStatsRow({ profile, buddiesCount }: Props) {
       const n = typeof streakRaw === 'string' ? parseInt(streakRaw, 10) : streakRaw;
       return Number.isFinite(n) ? Number(n) : 0;
     })();
+    // Streak is a "you only see this if it's interesting" engagement metric.
     if (streak > 0) out.push({ value: fmtNum(streak), label: 'Streak' });
 
     const joined = fmtJoinMonthYear(profile.joinDate);
     if (joined) out.push({ value: joined, label: 'Joined' });
     return out;
   }, [profile.postCount, profile.commentCount, profile.joinDate, profile.raw, buddiesCount]);
-
-  if (stats.length === 0) return null;
 
   return (
     <View style={styles.card}>

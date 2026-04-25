@@ -132,13 +132,22 @@ export default function MySpaceMainScreen({ navigation }: Props) {
 
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useMemo(() => makeStyles(colors, mode), [colors, mode]);
 
   const profileQ = useProfile();
   const tabs = useMemo(() => tabsFor(true), []);
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('activity');
 
   const statusBarStyle = mode === 'dark' ? 'light-content' : 'dark-content';
+
+  const firstName = (() => {
+    const dn = profileQ.data?.displayName?.trim();
+    if (dn) return dn.split(/\s+/)[0];
+    const un = profileQ.data?.userName?.trim();
+    if (un) return un;
+    return null;
+  })();
+  const headerTitle = firstName ? `Hi, ${firstName}` : 'My Space';
 
   // ── Unauthenticated state ───────────────────────────────────────────────
   if (!isAuthenticated) {
@@ -181,7 +190,9 @@ export default function MySpaceMainScreen({ navigation }: Props) {
 
       {/* Top bar — title + functional action icons */}
       <View style={styles.topBar}>
-        <Text style={styles.topBarTitle}>My Space</Text>
+        <Text style={styles.topBarTitle} numberOfLines={1}>
+          {headerTitle}
+        </Text>
         <View style={styles.topBarActions}>
           <HeaderIconBtn
             icon="mail-outline"
@@ -235,9 +246,14 @@ export default function MySpaceMainScreen({ navigation }: Props) {
           <View style={styles.staticHeader}>
             {/* Email verification banner */}
             {emailVerified === false && (
-              <Pressable style={styles.verifyBanner} onPress={() => navigation.navigate('VerifyEmail')}>
-                <Ionicons name="mail-unread-outline" size={16} color="#B45309" />
-                <Text style={styles.verifyText}>Your email is not verified.</Text>
+              <Pressable
+                style={({ pressed }) => [styles.verifyBanner, pressed && styles.verifyBannerPressed]}
+                onPress={() => navigation.navigate('VerifyEmail')}
+              >
+                <Ionicons name="mail-unread-outline" size={16} color={styles.verifyAccent.color} />
+                <Text style={styles.verifyText} numberOfLines={1}>
+                  Your email is not verified.
+                </Text>
                 <Text style={styles.verifyAction}>Verify now →</Text>
               </Pressable>
             )}
@@ -267,7 +283,17 @@ export default function MySpaceMainScreen({ navigation }: Props) {
   );
 }
 
-function makeStyles(c: ThemeColors) {
+function makeStyles(c: ThemeColors, mode: 'light' | 'dark') {
+  // Theme-aware amber for the verify-email warning. Light: warm cream bg + dark
+  // amber text. Dark: muted brown-amber bg + warm gold text — sits naturally
+  // against the dark surface without screaming.
+  const warn = {
+    bg: mode === 'dark' ? '#3A2E12' : '#FEF3C7',
+    border: mode === 'dark' ? '#5A4519' : '#FCD38A',
+    text: mode === 'dark' ? '#F4C45A' : '#92400E',
+    accent: mode === 'dark' ? '#E0AC4D' : '#B45309',
+  };
+
   return StyleSheet.create({
     screen: {
       flex: 1,
@@ -347,29 +373,35 @@ function makeStyles(c: ThemeColors) {
       paddingTop: 4,
     },
 
-    // Email verify banner
+    // Email verify banner — theme-aware amber
     verifyBanner: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      backgroundColor: '#FEF3C7',
+      backgroundColor: warn.bg,
       borderWidth: 1,
-      borderColor: '#FCD38A',
+      borderColor: warn.border,
       borderRadius: 10,
       paddingHorizontal: 12,
       paddingVertical: 10,
       marginBottom: 12,
     },
+    verifyBannerPressed: {
+      opacity: 0.85,
+    },
     verifyText: {
       flex: 1,
       fontSize: 13,
-      color: '#92400E',
+      color: warn.text,
       fontWeight: '500',
     },
     verifyAction: {
       fontSize: 13,
-      color: '#B45309',
+      color: warn.accent,
       fontWeight: '700',
+    },
+    verifyAccent: {
+      color: warn.accent,
     },
 
     // Unauthenticated

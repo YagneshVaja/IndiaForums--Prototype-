@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Share } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
@@ -28,21 +29,88 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
   }, [profile.lastVisitedDate]);
 
   const displayName = profile.displayName || profile.userName || 'User';
+  const showHandle = !!(
+    profile.userName &&
+    profile.displayName &&
+    profile.userName !== profile.displayName
+  );
   const rank = profile.rankName || profile.groupName;
   const bio = ((profile.raw as { bio?: string | null }).bio || '').trim();
 
+  const onShare = async () => {
+    const handle = profile.userName || String(profile.userId);
+    const url = `https://www.indiaforums.com/u/${handle}`;
+    try {
+      await Share.share({
+        message: `${displayName}'s profile on Indiaforums\n${url}`,
+        url,
+      });
+    } catch {
+      // user dismissed or share failed; non-critical
+    }
+  };
+
   return (
     <View style={styles.card}>
-      {/* Banner */}
+      {/* Cover banner */}
       <View style={styles.cover}>
         {profile.bannerUrl ? (
-          <Image source={profile.bannerUrl} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
-        ) : null}
-        <View style={styles.coverOverlay} />
+          <>
+            <Image
+              source={profile.bannerUrl}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+            <View style={styles.coverScrim} />
+          </>
+        ) : (
+          <LinearGradient
+            colors={[colors.primary, colors.primarySoft]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
+
+        {/* Top-right cover actions (own profile only) */}
+        {isOwn ? (
+          <View style={styles.coverActions}>
+            <Pressable
+              onPress={onEdit}
+              hitSlop={6}
+              style={({ pressed }) => [styles.coverPill, pressed && styles.coverPillPressed]}
+              accessibilityLabel="Edit profile"
+            >
+              <Ionicons name="create-outline" size={14} color="#FFFFFF" />
+              <Text style={styles.coverPillText}>Edit</Text>
+            </Pressable>
+            <Pressable
+              onPress={onShare}
+              hitSlop={6}
+              style={({ pressed }) => [styles.coverIconBtn, pressed && styles.coverPillPressed]}
+              accessibilityLabel="Share profile"
+            >
+              <Ionicons name="share-outline" size={16} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.coverActions}>
+            <Pressable
+              onPress={onShare}
+              hitSlop={6}
+              style={({ pressed }) => [styles.coverIconBtn, pressed && styles.coverPillPressed]}
+              accessibilityLabel="Share profile"
+            >
+              <Ionicons name="share-outline" size={16} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        )}
       </View>
 
       <View style={styles.body}>
-        <View style={styles.avatarRow}>
+        {/* Avatar overlapping cover bottom-left */}
+        <View style={styles.avatarBox}>
           <Avatar
             url={profile.avatarUrl}
             userId={profile.userId}
@@ -54,11 +122,14 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
           {isOnline ? <View style={styles.onlineDot} /> : null}
         </View>
 
+        {/* Identity block — left aligned */}
         <Text style={styles.name} numberOfLines={1}>
           {displayName}
         </Text>
-        {profile.userName && profile.displayName && profile.userName !== profile.displayName ? (
-          <Text style={styles.handle} numberOfLines={1}>@{profile.userName}</Text>
+        {showHandle ? (
+          <Text style={styles.handle} numberOfLines={1}>
+            @{profile.userName}
+          </Text>
         ) : null}
 
         {rank ? (
@@ -79,20 +150,10 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
           </Text>
         ) : null}
 
-        {/* Actions — differs by self vs other */}
-        {isOwn ? (
-          <View style={styles.actions}>
-            <Pressable
-              onPress={onEdit}
-              style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
-            >
-              <Ionicons name="create-outline" size={16} color="#FFF" />
-              <Text style={styles.primaryBtnText}>Edit Profile</Text>
-            </Pressable>
-          </View>
-        ) : (
+        {/* Action row only for other-user view (Add Friend / Message) */}
+        {!isOwn ? (
           <BuddyActionBar profile={profile} onMessage={onMessage} styles={styles} colors={colors} />
-        )}
+        ) : null}
       </View>
     </View>
   );
@@ -189,27 +250,68 @@ function makeStyles(c: ThemeColors) {
       elevation: 2,
     },
     cover: {
-      height: 100,
+      height: 110,
       width: '100%',
-      backgroundColor: c.primary,
+      backgroundColor: c.primarySoft,
     },
-    coverOverlay: {
+    coverScrim: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(53, 88, 240, 0.2)',
+      backgroundColor: 'rgba(0,0,0,0.18)',
     },
-    body: {
-      paddingHorizontal: 20,
-      paddingBottom: 18,
+    coverActions: {
+      position: 'absolute',
+      top: 12,
+      right: 12,
+      flexDirection: 'row',
       alignItems: 'center',
-      marginTop: -44,
+      gap: 8,
     },
-    avatarRow: {
+    coverPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: 'rgba(0,0,0,0.36)',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'rgba(255,255,255,0.35)',
+    },
+    coverPillText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      letterSpacing: 0.2,
+    },
+    coverIconBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(0,0,0,0.36)',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'rgba(255,255,255,0.35)',
+    },
+    coverPillPressed: {
+      opacity: 0.78,
+      transform: [{ scale: 0.97 }],
+    },
+
+    body: {
+      paddingHorizontal: 16,
+      paddingBottom: 16,
+    },
+    avatarBox: {
+      marginTop: -40,
+      marginBottom: 10,
+      alignSelf: 'flex-start',
       position: 'relative',
     },
     onlineDot: {
       position: 'absolute',
-      right: 6,
-      bottom: 6,
+      right: 4,
+      bottom: 4,
       width: 14,
       height: 14,
       borderRadius: 7,
@@ -218,11 +320,10 @@ function makeStyles(c: ThemeColors) {
       borderColor: c.card,
     },
     name: {
-      fontSize: 20,
+      fontSize: 22,
       fontWeight: '800',
       color: c.text,
-      marginTop: 10,
-      letterSpacing: -0.3,
+      letterSpacing: -0.4,
     },
     handle: {
       fontSize: 13,
@@ -230,6 +331,7 @@ function makeStyles(c: ThemeColors) {
       marginTop: 2,
     },
     rankPill: {
+      alignSelf: 'flex-start',
       marginTop: 8,
       paddingHorizontal: 10,
       paddingVertical: 4,
@@ -247,18 +349,16 @@ function makeStyles(c: ThemeColors) {
       marginTop: 12,
       fontSize: 14,
       color: c.text,
-      textAlign: 'center',
       lineHeight: 20,
-      paddingHorizontal: 4,
     },
     status: {
-      marginTop: 10,
+      marginTop: 8,
       fontSize: 13,
       color: c.textSecondary,
-      textAlign: 'center',
       lineHeight: 18,
-      paddingHorizontal: 8,
+      fontStyle: 'italic',
     },
+
     actions: {
       flexDirection: 'row',
       gap: 10,
