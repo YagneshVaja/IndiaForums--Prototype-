@@ -283,7 +283,7 @@ function makeStyles(c: ThemeColors) {
       width: 20,
       height: 20,
       borderRadius: 10,
-      backgroundColor: '#FFF',
+      backgroundColor: c.onPrimary,
     },
     thumbOn: {
       transform: [{ translateX: 16 }],
@@ -296,8 +296,8 @@ function makeStyles(c: ThemeColors) {
       height: 40,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: '#FCD4D4',
-      backgroundColor: '#FFF6F6',
+      borderColor: c.dangerSoftBorder,
+      backgroundColor: c.dangerSoft,
     },
     removeText: {
       fontSize: 13,

@@ -221,7 +221,7 @@ function makeStyles(c: ThemeColors) {
     addBtnText: {
       fontSize: 13,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
     hint: {
       fontSize: 11,
@@ -270,9 +270,9 @@ function makeStyles(c: ThemeColors) {
       borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#FFF6F6',
+      backgroundColor: c.dangerSoft,
       borderWidth: 1,
-      borderColor: '#FCD4D4',
+      borderColor: c.dangerSoftBorder,
     },
   });
 }

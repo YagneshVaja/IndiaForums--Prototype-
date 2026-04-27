@@ -1021,7 +1021,7 @@ function makeStyles(c: ThemeColors) {
     heroEmoji: { fontSize: 64 },
     heroBadges: { position: 'absolute', bottom: 12, left: 14, flexDirection: 'row', gap: 6 },
     badgeBreaking: { backgroundColor: c.danger, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-    badgeBreakingText: { fontSize: 9.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.6 },
+    badgeBreakingText: { fontSize: 9.5, fontWeight: '800', color: c.onPrimary, letterSpacing: 0.6 },
     badgeTag: { backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
     badgeTagText: { fontSize: 9.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.6, textTransform: 'uppercase' },
 
@@ -1067,7 +1067,7 @@ function makeStyles(c: ThemeColors) {
       marginBottom: 14,
     },
     authorAvatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: c.primary, alignItems: 'center', justifyContent: 'center' },
-    authorAvatarText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
+    authorAvatarText: { fontSize: 13, fontWeight: '800', color: c.onPrimary },
     metaInfo: { flex: 1, minWidth: 0 },
     authorName: { fontSize: 13, fontWeight: '700', color: c.text },
     authorMeta: { fontSize: 11, color: c.textTertiary, marginTop: 2 },
@@ -1161,7 +1161,7 @@ function makeStyles(c: ThemeColors) {
       marginTop: 6,
     },
     tldrBadge: { backgroundColor: c.primary, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, marginTop: 1 },
-    tldrBadgeText: { fontSize: 9.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.5 },
+    tldrBadgeText: { fontSize: 9.5, fontWeight: '800', color: c.onPrimary, letterSpacing: 0.5 },
     tldrText: { flex: 1, fontSize: 12.5, fontWeight: '600', color: c.textSecondary, lineHeight: 19 },
 
     // Full-bleed divider
@@ -1272,7 +1272,7 @@ function makeStyles(c: ThemeColors) {
       alignSelf: 'flex-end',
     },
     composerBtnDisabled: { backgroundColor: c.primarySoft },
-    composerBtnText: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
+    composerBtnText: { fontSize: 12, fontWeight: '800', color: c.onPrimary },
     commentsEmpty: {
       alignItems: 'center',
       paddingVertical: 24,
@@ -1412,7 +1412,7 @@ function makeStyles(c: ThemeColors) {
     liveNewPillText: {
       fontSize: 9,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       letterSpacing: 0.7,
     },
     liveTimeRel: {
@@ -1524,7 +1524,7 @@ function makeStyles(c: ThemeColors) {
     listBadgeHash: {
       fontSize: 12,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       opacity: 0.75,
     },
     listBadgeHashTop: {
@@ -1533,7 +1533,7 @@ function makeStyles(c: ThemeColors) {
     listBadgeNum: {
       fontSize: 19,
       fontWeight: '900',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       letterSpacing: -0.3,
     },
     listBadgeNumTop: {

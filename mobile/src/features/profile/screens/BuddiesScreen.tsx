@@ -429,7 +429,7 @@ function makeStyles(c: ThemeColors) {
       fontWeight: '700',
       color: c.textSecondary,
     },
-    tabTextActive: { color: '#FFFFFF' },
+    tabTextActive: { color: c.onPrimary },
 
     searchWrap: {
       flexDirection: 'row',
@@ -497,7 +497,7 @@ function makeStyles(c: ThemeColors) {
     btnPrimaryText: {
       fontSize: 12,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
     btnGhost: {
       flexDirection: 'row',
@@ -520,8 +520,8 @@ function makeStyles(c: ThemeColors) {
       alignItems: 'center',
       gap: 4,
       borderWidth: 1,
-      borderColor: '#FCD4D4',
-      backgroundColor: '#FFF6F6',
+      borderColor: c.dangerSoftBorder,
+      backgroundColor: c.dangerSoft,
       paddingHorizontal: 10,
       paddingVertical: 6,
       borderRadius: 8,
@@ -529,7 +529,7 @@ function makeStyles(c: ThemeColors) {
     btnDangerText: {
       fontSize: 12,
       fontWeight: '800',
-      color: '#C8001E',
+      color: c.danger,
     },
   });
 }

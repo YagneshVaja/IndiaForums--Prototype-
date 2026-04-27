@@ -403,7 +403,7 @@ function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     embedWrap: {
       width: '100%',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: c.card,
       borderRadius: 12,
       overflow: 'hidden',
       borderWidth: 1,

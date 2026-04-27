@@ -448,12 +448,12 @@ function Banner({ kind, text }: { kind: 'error' | 'success'; text: string }) {
       <Ionicons
         name={kind === 'error' ? 'alert-circle-outline' : 'checkmark-circle-outline'}
         size={16}
-        color={kind === 'error' ? '#C8001E' : '#1F9254'}
+        color={kind === 'error' ? colors.danger : colors.success}
       />
       <Text
         style={[
           styles.bannerText,
-          { color: kind === 'error' ? '#C8001E' : '#1F9254' },
+          { color: kind === 'error' ? colors.danger : colors.success },
         ]}
       >
         {text}
@@ -546,7 +546,7 @@ function makeStyles(c: ThemeColors) {
       opacity: 0.7,
     },
     saveText: {
-      color: '#FFF',
+      color: c.onPrimary,
       fontSize: 15,
       fontWeight: '800',
       letterSpacing: 0.3,
@@ -582,14 +582,14 @@ function makeStyles(c: ThemeColors) {
       marginBottom: 12,
     },
     bannerError: {
-      backgroundColor: '#FDECEC',
+      backgroundColor: c.dangerSoft,
       borderWidth: 1,
-      borderColor: '#FCD4D4',
+      borderColor: c.dangerSoftBorder,
     },
     bannerSuccess: {
-      backgroundColor: '#E8F5EE',
+      backgroundColor: c.successSoft,
       borderWidth: 1,
-      borderColor: '#C6E6D5',
+      borderColor: c.successSoftBorder,
     },
     bannerText: {
       fontSize: 13,
@@ -646,7 +646,7 @@ function makeStyles(c: ThemeColors) {
       width: 20,
       height: 20,
       borderRadius: 10,
-      backgroundColor: '#FFF',
+      backgroundColor: c.onPrimary,
     },
     thumbOn: {
       transform: [{ translateX: 16 }],

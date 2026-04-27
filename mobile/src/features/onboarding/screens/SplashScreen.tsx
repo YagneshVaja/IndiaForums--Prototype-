@@ -85,7 +85,7 @@ function makeStyles(c: ThemeColors) {
     logoInitial: {
       fontSize: 32,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       letterSpacing: -1,
     },
     brandName: {

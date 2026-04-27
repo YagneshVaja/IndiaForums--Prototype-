@@ -144,7 +144,7 @@ function makeStyles(c: ThemeColors) {
     gemText: {
       fontSize: 10,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       letterSpacing: -0.3,
     },
     logoRow: {
@@ -213,7 +213,7 @@ function makeStyles(c: ThemeColors) {
     notifBadgeText: {
       fontSize: 9,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       lineHeight: 12,
     },
     backBtn: {

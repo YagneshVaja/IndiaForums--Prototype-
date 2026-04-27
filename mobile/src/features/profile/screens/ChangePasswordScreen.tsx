@@ -194,7 +194,7 @@ function makeStyles(c: ThemeColors) {
     primaryBtnText: {
       fontSize: 14,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
     btnDisabled: { opacity: 0.6 },
     pressed: { opacity: 0.88, transform: [{ scale: 0.98 }] },

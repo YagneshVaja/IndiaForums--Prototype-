@@ -310,7 +310,7 @@ function makeStyles(c: ThemeColors) {
       justifyContent: 'center',
     },
     primaryBtnText: {
-      color: '#FFFFFF',
+      color: c.onPrimary,
       fontSize: 15,
       fontWeight: '800',
       letterSpacing: 0.3,
@@ -355,7 +355,7 @@ function makeStyles(c: ThemeColors) {
       width: 80,
       height: 80,
       borderRadius: 40,
-      backgroundColor: '#1F9254',
+      backgroundColor: c.success,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 8,

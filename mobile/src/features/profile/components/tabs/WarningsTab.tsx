@@ -11,17 +11,20 @@ interface Props {
   userId: number | string;
 }
 
-const LEVEL_META: Record<number, { label: string; color: string; bg: string }> = {
-  1: { label: 'Low', color: '#B26A00', bg: '#FFF4E1' },
-  2: { label: 'Medium', color: '#C8001E', bg: '#FDECEC' },
-  3: { label: 'High', color: '#C8001E', bg: '#FDECEC' },
-};
+function levelMeta(c: ThemeColors): Record<number, { label: string; color: string; bg: string }> {
+  return {
+    1: { label: 'Low', color: c.warning, bg: c.warningSoft },
+    2: { label: 'Medium', color: c.danger, bg: c.dangerSoft },
+    3: { label: 'High', color: c.danger, bg: c.dangerSoft },
+  };
+}
 
 export default function WarningsTab({ userId }: Props) {
   const q = useProfileTab({ tab: 'warnings', userId, isOwn: true, page: 1 });
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const items = q.data && q.data.kind === 'warnings' ? q.data.items : [];
+  const LEVEL_META = useMemo(() => levelMeta(colors), [colors]);
 
   return (
     <TabShell

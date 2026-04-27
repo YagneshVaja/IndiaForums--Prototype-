@@ -48,7 +48,7 @@ function makeStyles(c: ThemeColors) {
     retryText: {
       fontSize: 14,
       fontWeight: '600',
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
   });
 }

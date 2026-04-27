@@ -344,7 +344,7 @@ function makeStyles(c: ThemeColors) {
     followBtnText: {
       fontSize: 12,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
     gearBtn: {
       width: 32,
@@ -414,7 +414,7 @@ function makeStyles(c: ThemeColors) {
     newBtnText: {
       fontSize: 12,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
     empty: {
       alignItems: 'center',

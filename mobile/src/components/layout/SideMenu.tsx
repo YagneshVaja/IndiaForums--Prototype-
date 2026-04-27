@@ -418,7 +418,7 @@ function makeStyles(c: ThemeColors) {
     gemText: {
       fontSize: 9,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       letterSpacing: -0.3,
     },
     wordmark: {
@@ -498,7 +498,7 @@ function makeStyles(c: ThemeColors) {
       width: 18,
       height: 18,
       borderRadius: 9,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: c.onPrimary,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.2,
@@ -556,7 +556,7 @@ function makeStyles(c: ThemeColors) {
       fontSize: 8.5,
       fontWeight: '800',
       letterSpacing: 0.4,
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
     seeMore: {
       paddingLeft: 24,

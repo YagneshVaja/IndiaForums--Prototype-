@@ -129,7 +129,7 @@ function LogRow({
         : 'other';
 
   const statusMeta: Record<'sent' | 'failed' | 'other', { color: string; icon: IoniconName }> = {
-    sent: { color: '#1F9254', icon: 'checkmark-circle-outline' },
+    sent: { color: colors.success, icon: 'checkmark-circle-outline' },
     failed: { color: colors.danger, icon: 'alert-circle-outline' },
     other: { color: colors.textSecondary, icon: 'time-outline' },
   };
@@ -170,12 +170,12 @@ function makeStyles(c: ThemeColors) {
       marginBottom: 14,
     },
     headerCardOk: {
-      backgroundColor: '#E8F5EE',
-      borderColor: '#C6E6D5',
+      backgroundColor: c.successSoft,
+      borderColor: c.successSoftBorder,
     },
     headerCardWarn: {
-      backgroundColor: '#FEF3C7',
-      borderColor: '#FCD38A',
+      backgroundColor: c.warningSoft,
+      borderColor: c.warningSoftBorder,
     },
     headerEmail: {
       fontSize: 14,

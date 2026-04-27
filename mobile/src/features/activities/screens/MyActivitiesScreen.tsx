@@ -417,7 +417,7 @@ function makeStyles(c: ThemeColors) {
     postBtnText: {
       fontSize: 13,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
     err: {
       fontSize: 12,
@@ -521,7 +521,7 @@ function makeStyles(c: ThemeColors) {
     primaryBtnSmText: {
       fontSize: 12,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
   });
 }

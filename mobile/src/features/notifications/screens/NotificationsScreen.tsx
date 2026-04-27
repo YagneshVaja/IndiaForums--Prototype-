@@ -363,7 +363,7 @@ function makeStyles(c: ThemeColors) {
       fontWeight: '700',
       color: c.textSecondary,
     },
-    filterChipTextActive: { color: '#FFFFFF' },
+    filterChipTextActive: { color: c.onPrimary },
     filterChipBadge: {
       minWidth: 18,
       height: 18,
@@ -379,10 +379,10 @@ function makeStyles(c: ThemeColors) {
     filterChipBadgeText: {
       fontSize: 10,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
     filterChipBadgeTextActive: {
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
 
     templateRow: {

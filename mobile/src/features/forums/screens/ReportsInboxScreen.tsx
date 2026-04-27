@@ -267,7 +267,7 @@ function makeStyles(c: ThemeColors) {
       justifyContent: 'center',
     },
     closeBtnBusy: { opacity: 0.7 },
-    closeBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+    closeBtnText: { color: c.onPrimary, fontSize: 12, fontWeight: '700' },
     list: { padding: 12, gap: 10, paddingBottom: 40 },
     topicRow: {
       backgroundColor: c.card,
@@ -297,7 +297,7 @@ function makeStyles(c: ThemeColors) {
       minWidth: 24,
       alignItems: 'center',
     },
-    countBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
+    countBadgeText: { color: c.onPrimary, fontSize: 11, fontWeight: '800' },
     topicMeta: {
       flexDirection: 'row',
       alignItems: 'center',

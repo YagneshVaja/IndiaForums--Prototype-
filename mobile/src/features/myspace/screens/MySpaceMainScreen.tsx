@@ -284,14 +284,11 @@ export default function MySpaceMainScreen({ navigation }: Props) {
 }
 
 function makeStyles(c: ThemeColors, mode: 'light' | 'dark') {
-  // Theme-aware amber for the verify-email warning. Light: warm cream bg + dark
-  // amber text. Dark: muted brown-amber bg + warm gold text — sits naturally
-  // against the dark surface without screaming.
   const warn = {
-    bg: mode === 'dark' ? '#3A2E12' : '#FEF3C7',
-    border: mode === 'dark' ? '#5A4519' : '#FCD38A',
-    text: mode === 'dark' ? '#F4C45A' : '#92400E',
-    accent: mode === 'dark' ? '#E0AC4D' : '#B45309',
+    bg: c.warningSoft,
+    border: c.warningSoftBorder,
+    text: c.warning,
+    accent: c.warning,
   };
 
   return StyleSheet.create({
@@ -359,7 +356,7 @@ function makeStyles(c: ThemeColors, mode: 'light' | 'dark') {
     iconBadgeText: {
       fontSize: 9,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       lineHeight: 11,
     },
 
@@ -453,7 +450,7 @@ function makeStyles(c: ThemeColors, mode: 'light' | 'dark') {
     primaryBtnText: {
       fontSize: 15,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       letterSpacing: 0.2,
     },
     signInFooterLink: {

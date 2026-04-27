@@ -357,7 +357,7 @@ function makeStyles(c: ThemeColors) {
     primaryButtonText: {
       fontSize: 16,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       letterSpacing: 0.2,
     },
     footer: {

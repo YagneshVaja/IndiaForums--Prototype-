@@ -389,6 +389,7 @@ function ActionIcon({
   kind?: 'default' | 'danger';
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const colors = useThemeStore((s) => s.colors);
   const isDanger = kind === 'danger';
   return (
     <Pressable
@@ -399,9 +400,9 @@ function ActionIcon({
       <Ionicons
         name={icon}
         size={18}
-        color={isDanger ? '#C8001E' : styles.actionIconText.color}
+        color={isDanger ? colors.danger : styles.actionIconText.color}
       />
-      <Text style={[styles.actionIconText, isDanger && { color: '#C8001E' }]}>{label}</Text>
+      <Text style={[styles.actionIconText, isDanger && { color: colors.danger }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -559,7 +560,7 @@ function makeStyles(c: ThemeColors) {
       fontWeight: '700',
       color: c.textSecondary,
     },
-    tabTextActive: { color: '#FFFFFF' },
+    tabTextActive: { color: c.onPrimary },
 
     toolbar: {
       paddingHorizontal: 14,
