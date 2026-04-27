@@ -126,7 +126,7 @@ export default function HomeScreen() {
         </View>
       </View>
     ),
-    [banners, bannersLoading, selectedCategory, articlesLoading, handleBannerPress],
+    [styles, banners, bannersLoading, selectedCategory, articlesLoading, handleBannerPress],
   );
 
   const ListFooter = useMemo(
@@ -151,7 +151,7 @@ export default function HomeScreen() {
         <View style={styles.spacer} />
       </View>
     ),
-    [handleGalleriesSeeAll, handleGalleryPress],
+    [styles, handleGalleriesSeeAll, handleGalleryPress],
   );
 
   return (

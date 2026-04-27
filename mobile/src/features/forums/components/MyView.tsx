@@ -15,7 +15,10 @@ type MySegment = 'forums' | 'posts' | 'watching';
 
 interface Props {
   onForumPress: (forum: Forum) => void;
-  onTopicPress: (topic: ForumTopic) => void;
+  onTopicPress: (
+    topic: ForumTopic,
+    opts?: { jumpToLast?: boolean; autoAction?: 'like' | 'reply' | 'quote' },
+  ) => void;
 }
 
 export default function MyView({ onForumPress, onTopicPress }: Props) {

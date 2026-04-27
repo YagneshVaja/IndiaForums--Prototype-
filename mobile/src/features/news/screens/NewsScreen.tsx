@@ -15,6 +15,7 @@ import { useSideMenuStore } from '../../../store/sideMenuStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import { useNewsArticles, useNewsVideos, useNewsGalleries } from '../hooks/useNewsData';
+import { useIsOnline } from '../../../hooks/useIsOnline';
 import {
   NEWS_CATEGORIES,
   NEWS_SUBCATEGORIES,
@@ -34,6 +35,10 @@ import type { Article, Video, Gallery } from '../../../services/api';
 type Props = NativeStackScreenProps<NewsStackParamList, 'NewsMain'>;
 
 const BATCH_SIZE = 4;
+// Sub-cat scan (e.g. TAMIL, KOREAN) auto-fetches additional pages of /articles/list
+// when the current pages contain no matches. Cap so a sub-cat with zero articles
+// can't loop through the entire archive — show empty state once the cap is hit.
+const MAX_AUTO_FETCH_PAGES = 4;
 const SECTION_CYCLE = ['videos', 'quiz', 'photos', 'stories'] as const;
 type SectionType = typeof SECTION_CYCLE[number];
 
@@ -99,10 +104,16 @@ export default function NewsScreen({ navigation }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles  = useMemo(() => makeStyles(colors), [colors]);
 
+  // /home/articles filters server-side, so when only a parent category is
+  // active (sub=ALL), we use that endpoint and skip the catId filter below.
+  const usingHomeApi = selectedCategory !== 'all' && selectedSubCat === 'all';
+
+  const isOnline = useIsOnline();
+
   const {
     data, isLoading, isError, refetch,
     fetchNextPage, hasNextPage, isFetchingNextPage,
-  } = useNewsArticles();
+  } = useNewsArticles(selectedCategory, selectedSubCat !== 'all');
 
   const { data: videos = [] }    = useNewsVideos();
   const { data: galleries = [] } = useNewsGalleries();
@@ -123,29 +134,30 @@ export default function NewsScreen({ navigation }: Props) {
     [selectedCategory],
   );
 
-  const activeCat = useMemo(
-    () => NEWS_CATEGORIES.find((c) => c.id === selectedCategory) ?? null,
-    [selectedCategory],
-  );
-
   // Filter hierarchy matches the web prototype's NewsScreen:
-  //   ALL                → no filter
-  //   parent + subcat    → articles whose catId equals Number(subcat)
-  //   parent, subcat=ALL → articles whose catId is in parent.subCatIds
+  //   ALL                → no filter (uses /articles/list, no server filter)
+  //   parent, subcat=ALL → server-filtered via /home/articles, no client filter
+  //   parent + subcat    → uses /articles/list, filter by catId === subId
   const filteredArticles: Article[] = useMemo(() => {
     if (selectedCategory === 'all') return articles;
+    if (usingHomeApi) return articles;
 
-    if (selectedSubCat !== 'all') {
-      const subId = Number(selectedSubCat);
-      return articles.filter((a) => a.catId === subId);
-    }
-
-    const ids = activeCat?.subCatIds;
-    if (!ids) return articles;
-    return articles.filter((a) => a.catId != null && ids.includes(a.catId));
-  }, [articles, selectedCategory, selectedSubCat, activeCat]);
+    const subId = Number(selectedSubCat);
+    return articles.filter((a) => a.catId === subId);
+  }, [articles, selectedCategory, selectedSubCat, usingHomeApi]);
 
   const feedItems: FeedItem[] = useMemo(() => buildFeed(filteredArticles), [filteredArticles]);
+
+  // True while the auto-fetch effect is hunting through pages for sub-cat
+  // matches. We treat this whole window as "loading" so the user doesn't
+  // briefly see "No articles found" + a footer spinner side-by-side between
+  // page fetches. Goes false once a match is found OR the page cap is hit.
+  const loadedPages = data?.pages?.length ?? 0;
+  const isScanning =
+    filteredArticles.length === 0 &&
+    articles.length > 0 &&
+    hasNextPage &&
+    loadedPages < MAX_AUTO_FETCH_PAGES;
 
   const handleCategorySelect = useCallback((id: string) => {
     setSelectedCategory(id);
@@ -165,16 +177,19 @@ export default function NewsScreen({ navigation }: Props) {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // If the current filter yields 0 matches but more pages are available,
-  // auto-fetch so a rare sub-chip (e.g. TAMIL) doesn't strand the user on an
-  // empty screen when the first 25-article page happens to have no matches.
+  // If the current sub-cat filter yields 0 matches but more pages are
+  // available, auto-fetch so a rare sub-chip (e.g. TAMIL, KOREAN) doesn't
+  // strand the user on an empty screen when the first page happens to have
+  // no matches. Capped at MAX_AUTO_FETCH_PAGES so an empty sub-cat can't
+  // chain-fetch the entire archive.
   useEffect(() => {
     if (
       !isLoading &&
       !isFetchingNextPage &&
       hasNextPage &&
       articles.length > 0 &&
-      filteredArticles.length === 0
+      filteredArticles.length === 0 &&
+      loadedPages < MAX_AUTO_FETCH_PAGES
     ) {
       fetchNextPage();
     }
@@ -184,6 +199,7 @@ export default function NewsScreen({ navigation }: Props) {
     hasNextPage,
     articles.length,
     filteredArticles.length,
+    loadedPages,
     fetchNextPage,
   ]);
 
@@ -253,15 +269,28 @@ export default function NewsScreen({ navigation }: Props) {
     [handleArticlePress, videoPool, galleryPool],
   );
 
-  const ListFooterComponent = isFetchingNextPage ? (
-    <View style={styles.footer}>
-      <ActivityIndicator size="small" color={colors.primary} />
-    </View>
-  ) : null;
+  // Footer spinner is for user-driven infinite scroll only — when we already
+  // have results and are loading more. Hidden during the sub-cat scan path
+  // (covered by the full-screen LoadingState below) so the user never sees
+  // a spinner pinned under the empty state.
+  const ListFooterComponent =
+    isFetchingNextPage && filteredArticles.length > 0 ? (
+      <View style={styles.footer}>
+        <ActivityIndicator size="small" color={colors.primary} />
+      </View>
+    ) : null;
 
-  const ListEmptyComponent = !isLoading ? (
-    <ErrorState message="No articles found." />
-  ) : null;
+  // Genuine empty state — no retry button, since retrying won't change a
+  // category that simply has no articles. Offline gets a separate, retryable
+  // message because there *is* something to retry once connectivity returns.
+  const ListEmptyComponent = !isOnline ? (
+    <ErrorState
+      message="You're offline. Check your connection and try again."
+      onRetry={refetch}
+    />
+  ) : (
+    <ErrorState message="No articles found in this category." />
+  );
 
   return (
     <View style={styles.screen}>
@@ -319,11 +348,29 @@ export default function NewsScreen({ navigation }: Props) {
         </ScrollView>
       ) : null}
 
+      {/* Persistent offline banner — visible whenever the device is offline,
+          even if we're showing cached articles. Tells the user the feed may
+          be stale and gives them a quick retry. */}
+      {!isOnline ? (
+        <Pressable style={styles.offlineBanner} onPress={() => refetch()}>
+          <Text style={styles.offlineBannerText}>
+            You're offline. Tap to retry.
+          </Text>
+        </Pressable>
+      ) : null}
+
       {/* Content */}
-      {isLoading ? (
+      {isLoading || isScanning ? (
         <LoadingState />
       ) : isError ? (
-        <ErrorState onRetry={refetch} />
+        <ErrorState
+          message={
+            isOnline
+              ? 'Something went wrong. Please try again.'
+              : "You're offline. Check your connection and try again."
+          }
+          onRetry={refetch}
+        />
       ) : (
         <FlashList
           data={feedItems}
@@ -419,6 +466,22 @@ function makeStyles(c: ThemeColors) {
     footer: {
       paddingVertical: 16,
       alignItems: 'center',
+    },
+    offlineBanner: {
+      backgroundColor: c.dangerSoft,
+      borderTopWidth: 1,
+      borderTopColor: c.dangerSoftBorder,
+      borderBottomWidth: 1,
+      borderBottomColor: c.dangerSoftBorder,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      alignItems: 'center',
+    },
+    offlineBannerText: {
+      fontSize: 12.5,
+      fontWeight: '600',
+      color: c.danger,
+      letterSpacing: 0.2,
     },
   });
 }

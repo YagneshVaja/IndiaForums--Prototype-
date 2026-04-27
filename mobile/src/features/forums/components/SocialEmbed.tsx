@@ -148,13 +148,28 @@ ${HEIGHT_REPORTER}
 }
 
 // ── Instagram ────────────────────────────────────────────────────────────────
+// Instagram's blockquote + embed.js approach is unreliable for Reels and for
+// URLs carrying tracking query params like ?igsh=... (the script's lazy
+// hydrator silently drops these). The official iframe embed URL — append
+// "embed/" to the post path — works for posts, reels, and IGTV without any
+// JS dependency, so we use it directly.
 function InstagramEmbed({ url, width }: { url: string; width?: number }) {
   const html = buildInstagramHtml(url);
   return <AutoHeightWebView html={html} url={url} width={width} platform="instagram" />;
 }
 
+function extractInstagramEmbedSrc(url: string): string | null {
+  const m = url.match(/instagram\.com\/(p|reel|reels|tv)\/([\w-]+)/i);
+  if (!m) return null;
+  const type = m[1].toLowerCase() === 'reels' ? 'reel' : m[1].toLowerCase();
+  return `https://www.instagram.com/${type}/${m[2]}/embed/captioned/`;
+}
+
 function buildInstagramHtml(url: string): string {
-  return `<!DOCTYPE html><html><head>
+  const src = extractInstagramEmbedSrc(url);
+  if (!src) {
+    // Fallback to legacy blockquote approach if path can't be parsed.
+    return `<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <style>html,body{margin:0;padding:0;background:transparent;font-family:-apple-system,system-ui,sans-serif;}blockquote.instagram-media{margin:0 !important;min-width:0 !important;width:100% !important;}</style>
 </head><body>
@@ -162,6 +177,14 @@ function buildInstagramHtml(url: string): string {
   <a href="${escapeAttr(url)}">View on Instagram</a>
 </blockquote>
 <script async src="https://www.instagram.com/embed.js"></script>
+${HEIGHT_REPORTER}
+</body></html>`;
+  }
+  return `<!DOCTYPE html><html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<style>html,body{margin:0;padding:0;background:transparent;}iframe{width:100%;border:0;display:block;}</style>
+</head><body>
+<iframe src="${escapeAttr(src)}" sandbox="allow-scripts allow-same-origin allow-popups" scrolling="no" height="560" onload="setTimeout(function(){try{var h=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(String(h));}catch(_){}},200);"></iframe>
 ${HEIGHT_REPORTER}
 </body></html>`;
 }

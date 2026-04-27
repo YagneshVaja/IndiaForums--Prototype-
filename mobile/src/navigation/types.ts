@@ -87,6 +87,9 @@ export type ForumsStackParamList = {
   TopicDetail: {
     topic: import('../services/api').ForumTopic;
     forum?: import('../services/api').Forum;
+    jumpToLast?: boolean;
+    /** When set, auto-fire the matching action on the first post once posts load. */
+    autoAction?: 'like' | 'reply' | 'quote';
   };
   ReportsInbox: { forum: import('../services/api').Forum };
 };
