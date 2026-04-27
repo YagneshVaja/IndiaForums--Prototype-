@@ -7,13 +7,13 @@ import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 
 const STORIES = [
-  { id: 1, label: 'Celebrities', emoji: '⭐', bg: '#FFF7ED' },
-  { id: 2, label: 'Videos',      emoji: '🎬', bg: '#EFF6FF' },
-  { id: 3, label: 'Galleries',   emoji: '🖼️', bg: '#F0FDF4' },
-  { id: 4, label: 'Fan Fictions',emoji: '📖', bg: '#FDF4FF' },
-  { id: 5, label: 'Quizzes',     emoji: '❓', bg: '#FFF1F2' },
-  { id: 6, label: 'Shorts',      emoji: '⚡', bg: '#FFFBEB' },
-  { id: 7, label: 'Web Stories', emoji: '🌐', bg: '#F0F9FF' },
+  { id: 1, label: 'Celebrities', emoji: '⭐', bgLight: '#FFF7ED', bgDark: '#3A2E1A' },
+  { id: 2, label: 'Videos',      emoji: '🎬', bgLight: '#EFF6FF', bgDark: '#1B2A45' },
+  { id: 3, label: 'Galleries',   emoji: '🖼️', bgLight: '#F0FDF4', bgDark: '#163225' },
+  { id: 4, label: 'Fan Fictions',emoji: '📖', bgLight: '#FDF4FF', bgDark: '#2E1B3A' },
+  { id: 5, label: 'Quizzes',     emoji: '❓', bgLight: '#FFF1F2', bgDark: '#3A1F22' },
+  { id: 6, label: 'Shorts',      emoji: '⚡', bgLight: '#FFFBEB', bgDark: '#3A2F1A' },
+  { id: 7, label: 'Web Stories', emoji: '🌐', bgLight: '#F0F9FF', bgDark: '#172A3A' },
 ] as const;
 
 type Story = typeof STORIES[number];
@@ -27,6 +27,7 @@ type Nav = NativeStackNavigationProp<HomeStackParamList>;
 export default function StoriesStrip({ onItemPress }: Props) {
   const navigation = useNavigation<Nav>();
   const colors = useThemeStore((s) => s.colors);
+  const mode = useThemeStore((s) => s.mode);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const handlePress = (s: Story) => {
@@ -75,7 +76,7 @@ export default function StoriesStrip({ onItemPress }: Props) {
           onPress={() => handlePress(s)}
         >
           <View style={styles.ring}>
-            <View style={[styles.innerCircle, { backgroundColor: s.bg }]}>
+            <View style={[styles.innerCircle, { backgroundColor: mode === 'dark' ? s.bgDark : s.bgLight }]}>
               <Text style={styles.emoji}>{s.emoji}</Text>
             </View>
           </View>

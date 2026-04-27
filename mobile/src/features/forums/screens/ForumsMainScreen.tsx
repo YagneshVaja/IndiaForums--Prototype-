@@ -28,8 +28,15 @@ export default function ForumsMainScreen() {
     navigation.navigate('ForumThread', { forum });
   };
 
-  const handleTopicPress = (topic: ForumTopic) => {
-    navigation.navigate('TopicDetail', { topic });
+  const handleTopicPress = (
+    topic: ForumTopic,
+    opts?: { jumpToLast?: boolean; autoAction?: 'like' | 'reply' | 'quote' },
+  ) => {
+    navigation.navigate('TopicDetail', {
+      topic,
+      jumpToLast: opts?.jumpToLast,
+      autoAction: opts?.autoAction,
+    });
   };
 
   const canGoBack = navigation.canGoBack();

@@ -47,7 +47,7 @@ const STICKY_THRESHOLD = 110;
 
 export default function TopicDetailScreen() {
   const navigation = useNavigation<Nav>();
-  const { topic, forum } = useRoute<Rt>().params;
+  const { topic, forum, jumpToLast, autoAction } = useRoute<Rt>().params;
   const currentUser = useAuthStore(s => s.user);
   const queryClient = useQueryClient();
   const colors = useThemeStore((s) => s.colors);
@@ -84,6 +84,10 @@ export default function TopicDetailScreen() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [modSheetOpen, setModSheetOpen] = useState(false);
   const [postSheetFor, setPostSheetFor] = useState<TopicPost | null>(null);
+
+  const listRef = useRef<React.ElementRef<typeof FlashList<TopicPost>>>(null);
+  const didJumpToLastRef = useRef(false);
+  const didAutoActionRef = useRef(false);
 
   // Same-reaction UNDO: when user taps same reaction twice, show inline alert
   const [sameReactionPostId, setSameReactionPostId] = useState<number | null>(null);
@@ -127,6 +131,15 @@ export default function TopicDetailScreen() {
       (a, b) => (likeCountMap[b.id] ?? b.likes ?? 0) - (likeCountMap[a.id] ?? a.likes ?? 0),
     );
   }, [allPosts, sortBy, likeCountMap]);
+
+  useEffect(() => {
+    if (!jumpToLast || didJumpToLastRef.current) return;
+    if (sortedPosts.length === 0) return;
+    didJumpToLastRef.current = true;
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToEnd({ animated: false });
+    });
+  }, [jumpToLast, sortedPosts.length]);
 
   const descriptionHtml = useMemo(
     () => stripSocialUrlsFromHtml(liveTopic.description),
@@ -312,6 +325,24 @@ export default function TopicDetailScreen() {
     },
     [openReply],
   );
+
+  // When the user tapped LIKE / REPLY / QUOTE on a TopicCard in All Topics,
+  // we navigate here with autoAction set. Once posts load, fire the action
+  // against the topic's first (original) post — exactly once per visit.
+  useEffect(() => {
+    if (!autoAction || didAutoActionRef.current) return;
+    if (sortedPosts.length === 0) return;
+    const firstPost = sortedPosts[0];
+    didAutoActionRef.current = true;
+    if (autoAction === 'like') {
+      const current = reactionMap[firstPost.id] ?? null;
+      if (current == null) applyReaction(firstPost, 1);
+    } else if (autoAction === 'reply') {
+      openReply(null);
+    } else if (autoAction === 'quote') {
+      handleQuote(firstPost);
+    }
+  }, [autoAction, sortedPosts, reactionMap, applyReaction, openReply, handleQuote]);
 
   const handleEdit = useCallback((post: TopicPost) => {
     setEditingId(post.id);
@@ -504,6 +535,7 @@ export default function TopicDetailScreen() {
         />
       ) : (
         <FlashList
+          ref={listRef}
           data={sortedPosts}
           keyExtractor={p => String(p.id)}
           onScroll={handleScroll}

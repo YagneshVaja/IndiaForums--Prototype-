@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import { apiClient } from '../../../services/api';
 import type {
   BuddyActionResponseDto,
@@ -262,16 +263,25 @@ export function updateMyPreferences(body: UpdatePreferencesRequestDto) {
 
 // ── Image uploads ───────────────────────────────────────────────────────────
 // API accepts a base64-encoded imageData string (no data:URL prefix).
+//
+// The /upload/* endpoints were returning 415 from RN despite the apiClient
+// default Content-Type being `application/json`. Pinning the header at the
+// call site and owning JSON.stringify ourselves bypasses any header munging
+// from axios/RN-fetch and keeps the wire shape identical to the web client.
+const JSON_UPLOAD_CONFIG: AxiosRequestConfig = {
+  headers: { 'Content-Type': 'application/json' },
+  transformRequest: [(data) => JSON.stringify(data)],
+};
 
 export function uploadUserThumbnail(body: UploadUserImageRequestDto) {
   return apiClient
-    .post<UploadUserImageResponseDto>('/upload/user-thumbnail', body)
+    .post<UploadUserImageResponseDto>('/upload/user-thumbnail', body, JSON_UPLOAD_CONFIG)
     .then((r) => r.data);
 }
 
 export function uploadUserBanner(body: UploadUserImageRequestDto) {
   return apiClient
-    .post<UploadUserImageResponseDto>('/upload/user-banner', body)
+    .post<UploadUserImageResponseDto>('/upload/user-banner', body, JSON_UPLOAD_CONFIG)
     .then((r) => r.data);
 }
 
@@ -280,7 +290,7 @@ export function uploadUserBanner(body: UploadUserImageRequestDto) {
 // cropped result, gets confirmation, then runs a follow-up save.
 export function uploadCroppedImage(body: UploadCroppedImageRequestDto) {
   return apiClient
-    .post<UploadCroppedImageResponseDto>('/upload/cropped-image', body)
+    .post<UploadCroppedImageResponseDto>('/upload/cropped-image', body, JSON_UPLOAD_CONFIG)
     .then((r) => r.data);
 }
 

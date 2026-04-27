@@ -11,7 +11,10 @@ import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
-  onTopicPress?: (topic: ForumTopic) => void;
+  onTopicPress?: (
+    topic: ForumTopic,
+    opts?: { jumpToLast?: boolean; autoAction?: 'like' | 'reply' | 'quote' },
+  ) => void;
 }
 
 export default function MyWatchedList({ onTopicPress }: Props) {

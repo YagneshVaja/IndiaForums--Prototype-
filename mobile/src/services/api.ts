@@ -44,6 +44,25 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Temporary diagnostic for the /upload/* 415 issue. Logs the merged headers
+// and body shape that actually go on the wire, with the bearer token
+// redacted. Remove once uploads are confirmed working end-to-end.
+apiClient.interceptors.request.use((config) => {
+  if ((config.url || '').startsWith('/upload/')) {
+    const safeHeaders = { ...(config.headers as Record<string, unknown> | undefined) };
+    if (safeHeaders.Authorization) safeHeaders.Authorization = '<redacted>';
+    const data = config.data;
+    console.log('[upload-debug] outgoing', {
+      url:      config.url,
+      method:   config.method,
+      headers:  safeHeaders,
+      bodyType: typeof data,
+      bodyLen:  typeof data === 'string' ? data.length : JSON.stringify(data ?? '').length,
+    });
+  }
+  return config;
+});
+
 // Single-flight refresh — all concurrent 401s wait on the same promise.
 let refreshPromise: Promise<string> | null = null;
 
@@ -1095,17 +1114,13 @@ export interface FetchArticlesParams {
 export async function fetchArticles(params: FetchArticlesParams = {}): Promise<Article[]> {
   const { category, page = 1, limit = 12 } = params;
   const articleType = chipToArticleType(category);
-  try {
-    const { data } = await apiClient.get('/home/articles', {
-      params: { articleType, pageNumber: page, pageSize: limit },
-    });
-    const articles = data?.articles ?? [];
-    return articles.map(transformHomeArticle);
-  } catch (err: unknown) {
-    const e = err as { response?: { status: number; data: unknown }; message?: string };
-    console.error('[API] fetchArticles failed:', e?.response?.status, e?.response?.data ?? e?.message);
-    return getMockArticles(category);
-  }
+  // Errors propagate so React Query sees `isError` and screens can show a
+  // real error / offline UI instead of silently rendering stale mock data.
+  const { data } = await apiClient.get('/home/articles', {
+    params: { articleType, pageNumber: page, pageSize: limit },
+  });
+  const articles = data?.articles ?? [];
+  return articles.map(transformHomeArticle);
 }
 
 // /articles/list returns ArticleDto which includes defaultCategoryId.
@@ -1139,20 +1154,16 @@ function transformListArticle(raw: any): Article {
 
 export async function fetchArticleList(params: FetchArticleListParams = {}): Promise<Article[]> {
   const { page = 1, limit = 25 } = params;
-  try {
-    const { data } = await apiClient.get('/articles/list', {
-      params: { page, pageSize: limit },
-    });
-    // Handle both { data: { articles } } and { articles } shapes.
-    const payload = data?.data ?? data;
-    const articles = payload?.articles ?? [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return articles.map((a: any) => transformListArticle(a));
-  } catch (err: unknown) {
-    const e = err as { response?: { status: number; data: unknown }; message?: string };
-    console.error('[API] fetchArticleList failed:', e?.response?.status, e?.response?.data ?? e?.message);
-    return getMockArticles();
-  }
+  // Errors propagate so React Query sees `isError` and the screen can show
+  // a real error / offline UI instead of silently rendering stale mock data.
+  const { data } = await apiClient.get('/articles/list', {
+    params: { page, pageSize: limit },
+  });
+  // Handle both { data: { articles } } and { articles } shapes.
+  const payload = data?.data ?? data;
+  const articles = payload?.articles ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return articles.map((a: any) => transformListArticle(a));
 }
 
 export async function fetchArticleDetails(idOrSlug: string): Promise<ArticleDetail> {

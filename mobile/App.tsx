@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import axios from 'axios';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RootNavigator from './src/navigation/RootNavigator';
+import { useThemeStore } from './src/store/themeStore';
 
 // Queries should fail fast when the user is offline — don't sit through 3
 // automatic retries × 15s axios timeout. Retry only for transient 5xx/timeouts.
@@ -30,14 +31,37 @@ const queryClient = new QueryClient({
   },
 });
 
+function ThemedNavigation() {
+  const mode = useThemeStore((s) => s.mode);
+  const colors = useThemeStore((s) => s.colors);
+  const navTheme = useMemo(() => {
+    const base = mode === 'dark' ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: colors.bg,
+        card: colors.card,
+        text: colors.text,
+        primary: colors.primary,
+        border: colors.border,
+        notification: colors.danger,
+      },
+    };
+  }, [mode, colors]);
+  return (
+    <NavigationContainer theme={navTheme}>
+      <RootNavigator />
+    </NavigationContainer>
+  );
+}
+
 export default function App() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <NavigationContainer>
-            <RootNavigator />
-          </NavigationContainer>
+          <ThemedNavigation />
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

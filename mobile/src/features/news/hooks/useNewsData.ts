@@ -1,16 +1,35 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { fetchArticleList, fetchVideos, fetchMediaGalleries } from '../../../services/api';
+import {
+  fetchArticleList,
+  fetchArticles,
+  fetchVideos,
+  fetchMediaGalleries,
+} from '../../../services/api';
 
 const PAGE_SIZE = 25;
 
-// NewsScreen fetches from /articles/list (which returns defaultCategoryId as
-// `catId`) and filters client-side by category/subcategory. The query is cat-
-// agnostic so React Query caches one list regardless of which chip is active.
-export function useNewsArticles() {
+// NewsScreen needs two fetch modes:
+//   • parent-only filter (TV / MOVIES / DIGITAL / LIFESTYLE / SPORTS, sub=ALL)
+//     → /home/articles?articleType=X filters server-side, so rare categories
+//       like SPORTS aren't drowned out by TV/MOVIES on /articles/list page 1.
+//   • sub-cat filter (HINDI / ENGLISH / TAMIL / …) or top-level ALL
+//     → /articles/list is the only endpoint that returns defaultCategoryId,
+//       which is what we need to filter by sub-cat client-side.
+export function useNewsArticles(parentCategory: string, hasSubCatFilter: boolean) {
+  const useHomeApi = parentCategory !== 'all' && !hasSubCatFilter;
+
   return useInfiniteQuery({
-    queryKey: ['articles', 'news', 'list'],
+    queryKey: useHomeApi
+      ? (['articles', 'news', 'by-cat', parentCategory] as const)
+      : (['articles', 'news', 'list'] as const),
     queryFn: ({ pageParam }) =>
-      fetchArticleList({ page: pageParam as number, limit: PAGE_SIZE }),
+      useHomeApi
+        ? fetchArticles({
+            category: parentCategory,
+            page: pageParam as number,
+            limit: PAGE_SIZE,
+          })
+        : fetchArticleList({ page: pageParam as number, limit: PAGE_SIZE }),
     getNextPageParam: (lastPage, _allPages, lastPageParam) => {
       if (lastPage.length < PAGE_SIZE) return undefined;
       return (lastPageParam as number) + 1;

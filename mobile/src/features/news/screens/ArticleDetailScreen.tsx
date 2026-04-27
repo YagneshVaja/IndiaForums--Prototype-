@@ -16,6 +16,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList, NewsStackParamList } from '../../../navigation/types';
 import {
   fetchArticleDetails,
+  fetchArticles,
   type Article,
   type ArticleDetail,
   type ArticleItem,
@@ -357,6 +358,24 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
     staleTime: 10 * 60 * 1000,
   });
 
+  // The /articles/{id}/details endpoint returns relatedArticles=[] in
+  // practice, so when it's empty we backfill with the latest articles in the
+  // same category from /home/articles and exclude the current one.
+  const apiRelatedCount = article?.relatedArticles?.length ?? 0;
+  const fallbackCategory = article ? (article.category || '').toLowerCase() : '';
+  const { data: fallbackRelated } = useQuery({
+    queryKey: ['article-related-fallback', fallbackCategory, article?.id],
+    queryFn: () => fetchArticles({ category: fallbackCategory, page: 1, limit: 8 }),
+    enabled: !!article && apiRelatedCount === 0 && !!fallbackCategory,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const relatedArticles: Article[] = useMemo(() => {
+    if (!article) return [];
+    if (apiRelatedCount > 0) return article.relatedArticles;
+    return (fallbackRelated ?? []).filter((a) => a.id !== article.id);
+  }, [article, apiRelatedCount, fallbackRelated]);
+
   const seed = useMemo(() => {
     if (!article) return 0;
     return article.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
@@ -659,7 +678,7 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
         </View>
 
         {/* Related News */}
-        {article.relatedArticles.length > 0 ? (
+        {relatedArticles.length > 0 ? (
           <>
             <View style={styles.fullDivider} />
             <View style={styles.contentPadded}>
@@ -667,7 +686,7 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
                 <Text style={styles.sectionLabel}>Related News</Text>
               </View>
               <View style={styles.relatedList}>
-                {article.relatedArticles.slice(0, 4).map((a) => (
+                {relatedArticles.slice(0, 4).map((a) => (
                   <Pressable
                     key={a.id}
                     style={({ pressed }) => [styles.relCard, pressed && styles.relCardPressed]}

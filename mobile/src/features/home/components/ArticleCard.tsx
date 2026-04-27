@@ -139,7 +139,7 @@ function makeStyles(c: ThemeColors) {
       letterSpacing: 0.6,
     },
     breakingBadge: {
-      backgroundColor: 'rgba(239,68,68,0.1)',
+      backgroundColor: c.dangerSoft,
       borderRadius: 4,
       paddingHorizontal: 5,
       paddingVertical: 1,
