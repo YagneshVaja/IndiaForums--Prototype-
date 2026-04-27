@@ -285,7 +285,7 @@ function makeStyles(c: ThemeColors) {
     },
     hintOk: {
       fontSize: 12,
-      color: '#1F9254',
+      color: c.success,
       fontWeight: '700',
     },
     hintErr: {
@@ -300,7 +300,7 @@ function makeStyles(c: ThemeColors) {
     },
     successText: {
       fontSize: 13,
-      color: '#1F9254',
+      color: c.success,
       fontWeight: '600',
     },
     saveBtn: {
@@ -312,7 +312,7 @@ function makeStyles(c: ThemeColors) {
       justifyContent: 'center',
     },
     saveBtnDisabled: { opacity: 0.6 },
-    saveText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+    saveText: { color: c.onPrimary, fontSize: 15, fontWeight: '800' },
     pressed: { opacity: 0.88, transform: [{ scale: 0.98 }] },
 
     historyTitle: {

@@ -296,7 +296,7 @@ function makeStyles(c: ThemeColors) {
     logoText: {
       fontSize: 22,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       letterSpacing: -0.3,
     },
     title: {
@@ -354,7 +354,7 @@ function makeStyles(c: ThemeColors) {
     primaryButtonText: {
       fontSize: 15,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
     dividerRow: {
       flexDirection: 'row',

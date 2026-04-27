@@ -78,11 +78,11 @@ function makeStyles(c: ThemeColors) {
       borderColor: c.border,
     },
     pillActive: {
-      backgroundColor: '#FEF3C7',
-      borderColor: '#FDE68A',
+      backgroundColor: c.warningSoft,
+      borderColor: c.warningSoftBorder,
     },
     icon: { fontSize: 13 },
     count: { fontSize: 11, fontWeight: '700', color: c.textTertiary },
-    countActive: { color: '#92400E' },
+    countActive: { color: c.warning },
   });
 }

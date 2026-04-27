@@ -376,7 +376,7 @@ function makeStyles(c: ThemeColors) {
       justifyContent: 'center',
     },
     avatarLetter: {
-      color: '#FFFFFF',
+      color: c.onPrimary,
       fontSize: 15,
       fontWeight: '800',
     },
@@ -495,7 +495,7 @@ function makeStyles(c: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      backgroundColor: '#fef2f2',
+      backgroundColor: c.dangerSoft,
       borderRadius: 8,
       paddingHorizontal: 10,
       paddingVertical: 8,
@@ -535,10 +535,11 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.primary,
     },
     submitBtnDisabled: {
-      backgroundColor: '#A5B5F8',
+      backgroundColor: c.primarySoft,
+      opacity: 0.6,
     },
     submitBtnText: {
-      color: '#FFFFFF',
+      color: c.onPrimary,
       fontSize: 13,
       fontWeight: '800',
     },

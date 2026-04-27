@@ -225,7 +225,7 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.primary,
       borderRadius: 8,
     },
-    emptyBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 12 },
+    emptyBtnText: { color: c.onPrimary, fontWeight: '800', fontSize: 12 },
     loadMore: {
       marginHorizontal: 12,
       marginTop: 10,

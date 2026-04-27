@@ -458,7 +458,7 @@ function makeStyles(c: ThemeColors) {
     typeBtnText: {
       fontSize: 12, fontWeight: '700', color: c.textSecondary,
     },
-    typeBtnTextActive: { color: '#FFFFFF' },
+    typeBtnTextActive: { color: c.onPrimary },
     titleInput: {
       borderWidth: 1, borderColor: c.border, borderRadius: 10,
       paddingHorizontal: 12, paddingVertical: 10,
@@ -539,7 +539,7 @@ function makeStyles(c: ThemeColors) {
     checkLabel: { fontSize: 13, fontWeight: '600', color: c.text, flex: 1 },
     errorBox: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
-      backgroundColor: '#fef2f2', borderRadius: 8,
+      backgroundColor: c.dangerSoft, borderRadius: 8,
       paddingHorizontal: 10, paddingVertical: 8, marginTop: 10,
     },
     errorText: { color: c.danger, fontSize: 12, fontWeight: '600', flex: 1 },
@@ -555,8 +555,8 @@ function makeStyles(c: ThemeColors) {
       alignItems: 'center', justifyContent: 'center', gap: 6,
       backgroundColor: c.primary,
     },
-    submitBtnDisabled: { backgroundColor: '#A5B5F8' },
-    submitBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+    submitBtnDisabled: { backgroundColor: c.primarySoft, opacity: 0.6 },
+    submitBtnText: { color: c.onPrimary, fontSize: 13, fontWeight: '800' },
     btnDisabled: { opacity: 0.5 },
   });
 }

@@ -143,7 +143,7 @@ function makeStyles(c: ThemeColors) {
     brandMarkText: {
       fontSize: 15,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       letterSpacing: -0.3,
     },
     skipButton: {
@@ -191,7 +191,7 @@ function makeStyles(c: ThemeColors) {
     nextButtonText: {
       fontSize: 15,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       letterSpacing: 0.1,
     },
   });

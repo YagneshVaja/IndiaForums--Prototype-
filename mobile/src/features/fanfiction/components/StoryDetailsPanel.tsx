@@ -200,7 +200,7 @@ function makeStyles(c: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    badgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
+    badgeText: { color: c.onPrimary, fontSize: 10, fontWeight: '800' },
     panel: {
       backgroundColor: c.card,
       borderRadius: 10,
@@ -223,9 +223,9 @@ function makeStyles(c: ThemeColors) {
     body: { fontSize: 13, color: c.textSecondary, lineHeight: 19 },
     warning: {
       fontSize: 13,
-      color: '#991B1B',
+      color: c.danger,
       lineHeight: 19,
-      backgroundColor: '#FEF2F2',
+      backgroundColor: c.dangerSoft,
       padding: 10,
       borderRadius: 8,
     },

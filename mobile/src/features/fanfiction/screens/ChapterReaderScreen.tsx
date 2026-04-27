@@ -375,8 +375,8 @@ function makeStyles(c: ThemeColors) {
     flagMembers: {
       fontSize: 9,
       fontWeight: '700',
-      color: '#B45309',
-      backgroundColor: '#FEF3C7',
+      color: c.warning,
+      backgroundColor: c.warningSoft,
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 4,
@@ -384,8 +384,8 @@ function makeStyles(c: ThemeColors) {
     flagMature: {
       fontSize: 9,
       fontWeight: '700',
-      color: '#991B1B',
-      backgroundColor: '#FEE2E2',
+      color: c.danger,
+      backgroundColor: c.dangerSoft,
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 4,

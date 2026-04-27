@@ -253,7 +253,7 @@ function makeStyles(c: ThemeColors) {
       borderRadius: 10,
     },
     startBtnPressed: { opacity: 0.9 },
-    startBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', letterSpacing: 0.3 },
+    startBtnText: { color: c.onPrimary, fontSize: 13, fontWeight: '800', letterSpacing: 0.3 },
     chaptersHeader: {
       flexDirection: 'row',
       alignItems: 'center',

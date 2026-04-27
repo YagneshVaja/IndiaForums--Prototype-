@@ -145,7 +145,7 @@ function makeStyles(c: ThemeColors) {
     logoText: {
       fontSize: 28,
       fontWeight: '900',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       letterSpacing: -0.5,
     },
     title: {

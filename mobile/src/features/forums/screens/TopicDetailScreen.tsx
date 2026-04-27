@@ -930,7 +930,7 @@ function makeStyles(c: ThemeColors) {
       justifyContent: 'center',
     },
     authorLetter: {
-      color: '#FFFFFF',
+      color: c.onPrimary,
       fontSize: 12,
       fontWeight: '800',
     },
@@ -1063,7 +1063,7 @@ function makeStyles(c: ThemeColors) {
       color: c.textSecondary,
     },
     sortBtnTextActive: {
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
     empty: {
       alignItems: 'center',
@@ -1140,7 +1140,7 @@ function makeStyles(c: ThemeColors) {
     undoBtnText: {
       fontSize: 11,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
     replyBar: {
       position: 'absolute',
@@ -1165,7 +1165,7 @@ function makeStyles(c: ThemeColors) {
       justifyContent: 'center',
     },
     replyAvatarLetter: {
-      color: '#FFFFFF',
+      color: c.onPrimary,
       fontSize: 13,
       fontWeight: '800',
     },

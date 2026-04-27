@@ -225,14 +225,16 @@ function Banner({
   text: string;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const colors = useThemeStore((s) => s.colors);
+  const tint = kind === 'error' ? colors.danger : colors.success;
   return (
     <View style={[styles.banner, kind === 'error' ? styles.bannerError : styles.bannerSuccess]}>
       <Ionicons
         name={kind === 'error' ? 'alert-circle-outline' : 'checkmark-circle-outline'}
         size={16}
-        color={kind === 'error' ? '#C8001E' : '#1F9254'}
+        color={tint}
       />
-      <Text style={[styles.bannerText, { color: kind === 'error' ? '#C8001E' : '#1F9254' }]}>
+      <Text style={[styles.bannerText, { color: tint }]}>
         {text}
       </Text>
     </View>
@@ -329,7 +331,7 @@ function makeStyles(c: ThemeColors) {
     primaryBtnText: {
       fontSize: 14,
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: c.onPrimary,
       letterSpacing: 0.3,
     },
     banner: {
@@ -341,14 +343,14 @@ function makeStyles(c: ThemeColors) {
       marginBottom: 14,
     },
     bannerError: {
-      backgroundColor: '#FDECEC',
+      backgroundColor: c.dangerSoft,
       borderWidth: 1,
-      borderColor: '#FCD4D4',
+      borderColor: c.dangerSoftBorder,
     },
     bannerSuccess: {
-      backgroundColor: '#E8F5EE',
+      backgroundColor: c.successSoft,
       borderWidth: 1,
-      borderColor: '#C6E6D5',
+      borderColor: c.successSoftBorder,
     },
     bannerText: {
       flex: 1,

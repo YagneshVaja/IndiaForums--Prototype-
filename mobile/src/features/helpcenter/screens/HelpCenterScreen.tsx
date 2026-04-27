@@ -268,7 +268,7 @@ function makeStyles(c: ThemeColors) {
       fontWeight: '700',
       color: c.textSecondary,
     },
-    chipTextActive: { color: '#FFFFFF' },
+    chipTextActive: { color: c.onPrimary },
 
     list: { gap: 8 },
     row: {

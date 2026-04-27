@@ -109,7 +109,7 @@ export default function StatusScreen({ navigation }: Props) {
 
             {q.data?.lockoutEnd ? (
               <View style={styles.warning}>
-                <Ionicons name="lock-closed-outline" size={14} color="#B26A00" />
+                <Ionicons name="lock-closed-outline" size={14} color={colors.warning} />
                 <Text style={styles.warningText}>
                   Your account is locked until {fmtDate(q.data.lockoutEnd)}.
                 </Text>
@@ -203,9 +203,9 @@ function makeStyles(c: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      backgroundColor: '#FEF3C7',
+      backgroundColor: c.warningSoft,
       borderWidth: 1,
-      borderColor: '#FCD38A',
+      borderColor: c.warningSoftBorder,
       borderRadius: 10,
       paddingHorizontal: 12,
       paddingVertical: 10,
@@ -214,7 +214,7 @@ function makeStyles(c: ThemeColors) {
     warningText: {
       flex: 1,
       fontSize: 12,
-      color: '#92400E',
+      color: c.warning,
       fontWeight: '500',
     },
 
@@ -273,7 +273,7 @@ function makeStyles(c: ThemeColors) {
     },
     successText: {
       fontSize: 13,
-      color: '#1F9254',
+      color: c.success,
       fontWeight: '600',
       marginTop: 14,
     },
@@ -286,7 +286,7 @@ function makeStyles(c: ThemeColors) {
       justifyContent: 'center',
     },
     saveBtnDisabled: { opacity: 0.6 },
-    saveText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+    saveText: { color: c.onPrimary, fontSize: 15, fontWeight: '800' },
     pressed: { opacity: 0.9 },
   });
 }

@@ -681,7 +681,7 @@ function makeStyles(c: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      backgroundColor: '#fef2f2',
+      backgroundColor: c.dangerSoft,
       borderRadius: 8,
       paddingHorizontal: 10,
       paddingVertical: 8,
@@ -692,13 +692,13 @@ function makeStyles(c: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      backgroundColor: '#ecfdf5',
+      backgroundColor: c.successSoft,
       borderRadius: 8,
       paddingHorizontal: 10,
       paddingVertical: 8,
       marginTop: 10,
     },
-    successText: { color: '#059669', fontSize: 12, fontWeight: '600', flex: 1 },
+    successText: { color: c.success, fontSize: 12, fontWeight: '600', flex: 1 },
     actions: {
       flexDirection: 'row',
       gap: 8,
@@ -722,7 +722,7 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.primary,
     },
     confirmBtnDanger: { backgroundColor: c.danger },
-    confirmBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+    confirmBtnText: { color: c.onPrimary, fontSize: 13, fontWeight: '800' },
     btnDisabled: { opacity: 0.6 },
   });
 }

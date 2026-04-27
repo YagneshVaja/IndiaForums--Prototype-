@@ -249,7 +249,7 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.primary,
     },
     replyBtnText: {
-      color: '#FFF',
+      color: c.onPrimary,
       fontSize: 14,
       fontWeight: '800',
     },
