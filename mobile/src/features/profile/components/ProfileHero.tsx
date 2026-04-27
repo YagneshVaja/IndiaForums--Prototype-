@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Share } from 'react-native';
+import type { TextStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,7 +53,7 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
 
   return (
     <View style={styles.card}>
-      {/* Cover banner */}
+      {/* Cover banner — image or gradient fallback. No overlaid actions. */}
       <View style={styles.cover}>
         {profile.bannerUrl ? (
           <>
@@ -72,54 +73,44 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
             style={StyleSheet.absoluteFill}
           />
         )}
-
-        {/* Top-right cover actions (own profile only) */}
-        {isOwn ? (
-          <View style={styles.coverActions}>
-            <Pressable
-              onPress={onEdit}
-              hitSlop={6}
-              style={({ pressed }) => [styles.coverPill, pressed && styles.coverPillPressed]}
-              accessibilityLabel="Edit profile"
-            >
-              <Ionicons name="create-outline" size={14} color="#FFFFFF" />
-              <Text style={styles.coverPillText}>Edit</Text>
-            </Pressable>
-            <Pressable
-              onPress={onShare}
-              hitSlop={6}
-              style={({ pressed }) => [styles.coverIconBtn, pressed && styles.coverPillPressed]}
-              accessibilityLabel="Share profile"
-            >
-              <Ionicons name="share-outline" size={16} color="#FFFFFF" />
-            </Pressable>
-          </View>
-        ) : (
-          <View style={styles.coverActions}>
-            <Pressable
-              onPress={onShare}
-              hitSlop={6}
-              style={({ pressed }) => [styles.coverIconBtn, pressed && styles.coverPillPressed]}
-              accessibilityLabel="Share profile"
-            >
-              <Ionicons name="share-outline" size={16} color="#FFFFFF" />
-            </Pressable>
-          </View>
-        )}
       </View>
 
       <View style={styles.body}>
-        {/* Avatar overlapping cover bottom-left */}
-        <View style={styles.avatarBox}>
-          <Avatar
-            url={profile.avatarUrl}
-            userId={profile.userId}
-            updateChecksum={profile.updateChecksum}
-            name={displayName}
-            size={80}
-            ring
-          />
-          {isOnline ? <View style={styles.onlineDot} /> : null}
+        {/* Row 1: avatar (overlapping cover) + action pills aligned to its bottom */}
+        <View style={styles.avatarRow}>
+          <View style={styles.avatarBox}>
+            <Avatar
+              url={profile.avatarUrl}
+              userId={profile.userId}
+              updateChecksum={profile.updateChecksum}
+              name={displayName}
+              size={80}
+              ring
+            />
+            {isOnline ? <View style={styles.onlineDot} /> : null}
+          </View>
+
+          <View style={styles.actionPills}>
+            {isOwn ? (
+              <Pressable
+                onPress={onEdit}
+                hitSlop={6}
+                style={({ pressed }) => [styles.editPill, pressed && styles.pillPressed]}
+                accessibilityLabel="Edit profile"
+              >
+                <Ionicons name="create-outline" size={14} color={colors.text} />
+                <Text style={styles.editPillText}>Edit</Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={onShare}
+              hitSlop={6}
+              style={({ pressed }) => [styles.iconPill, pressed && styles.pillPressed]}
+              accessibilityLabel="Share profile"
+            >
+              <Ionicons name="share-outline" size={16} color={colors.text} />
+            </Pressable>
+          </View>
         </View>
 
         {/* Identity block — left aligned */}
@@ -139,9 +130,12 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
         ) : null}
 
         {bio ? (
-          <Text style={styles.bio} numberOfLines={4}>
-            {bio}
-          </Text>
+          <ExpandableText
+            text={bio}
+            maxLines={4}
+            textStyle={styles.bio}
+            toggleStyle={styles.showMore}
+          />
         ) : null}
 
         {profile.statusMessage ? (
@@ -158,6 +152,58 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
     </View>
   );
 }
+
+interface ExpandableTextProps {
+  text: string;
+  maxLines: number;
+  textStyle: TextStyle | TextStyle[];
+  toggleStyle: TextStyle | TextStyle[];
+}
+
+// Truncates `text` to `maxLines`, then reveals a "Show more" toggle when the
+// natural line count exceeds the cap. The hidden measurer renders the full
+// text invisibly so we know whether truncation actually happened — avoids the
+// false-positive of "Show more" appearing on text that's exactly maxLines tall.
+function ExpandableText({ text, maxLines, textStyle, toggleStyle }: ExpandableTextProps) {
+  const [expanded, setExpanded] = useState(false);
+  const [canExpand, setCanExpand] = useState(false);
+
+  return (
+    <View>
+      <Text
+        style={[textStyle, expandableStyles.measurer]}
+        onTextLayout={(e) => {
+          setCanExpand(e.nativeEvent.lines.length > maxLines);
+        }}
+      >
+        {text}
+      </Text>
+
+      <Text style={textStyle} numberOfLines={expanded ? undefined : maxLines}>
+        {text}
+      </Text>
+
+      {canExpand ? (
+        <Pressable
+          onPress={() => setExpanded((v) => !v)}
+          hitSlop={6}
+          accessibilityRole="button"
+        >
+          <Text style={toggleStyle}>{expanded ? 'Show less' : 'Show more'}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+const expandableStyles = StyleSheet.create({
+  measurer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    opacity: 0,
+  },
+});
 
 interface BuddyBarProps {
   profile: NormalizedProfile;
@@ -258,55 +304,60 @@ function makeStyles(c: ThemeColors) {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: 'rgba(0,0,0,0.18)',
     },
-    coverActions: {
-      position: 'absolute',
-      top: 12,
-      right: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    coverPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 999,
-      backgroundColor: 'rgba(0,0,0,0.36)',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(255,255,255,0.35)',
-    },
-    coverPillText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: '#FFFFFF',
-      letterSpacing: 0.2,
-    },
-    coverIconBtn: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(0,0,0,0.36)',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(255,255,255,0.35)',
-    },
-    coverPillPressed: {
-      opacity: 0.78,
-      transform: [{ scale: 0.97 }],
-    },
 
     body: {
       paddingHorizontal: 16,
       paddingBottom: 16,
     },
-    avatarBox: {
+    avatarRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
       marginTop: -40,
       marginBottom: 10,
-      alignSelf: 'flex-start',
+      gap: 8,
+    },
+    avatarBox: {
       position: 'relative',
+    },
+    actionPills: {
+      marginLeft: 'auto',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      // sit slightly above the avatar baseline so the pills feel anchored to
+      // the cover edge rather than dropping below the avatar
+      marginBottom: 6,
+    },
+    editPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 12,
+      height: 32,
+      borderRadius: 999,
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    editPillText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: c.text,
+      letterSpacing: 0.1,
+    },
+    iconPill: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    pillPressed: {
+      opacity: 0.78,
+      transform: [{ scale: 0.97 }],
     },
     onlineDot: {
       position: 'absolute',
@@ -315,7 +366,7 @@ function makeStyles(c: ThemeColors) {
       width: 14,
       height: 14,
       borderRadius: 7,
-      backgroundColor: '#1F9254',
+      backgroundColor: c.success,
       borderWidth: 2,
       borderColor: c.card,
     },
@@ -351,12 +402,18 @@ function makeStyles(c: ThemeColors) {
       color: c.text,
       lineHeight: 20,
     },
+    showMore: {
+      marginTop: 4,
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.primary,
+      letterSpacing: 0.1,
+    },
     status: {
       marginTop: 8,
       fontSize: 13,
       color: c.textSecondary,
       lineHeight: 18,
-      fontStyle: 'italic',
     },
 
     actions: {
@@ -378,7 +435,7 @@ function makeStyles(c: ThemeColors) {
     primaryBtnText: {
       fontSize: 14,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: c.onPrimary,
     },
     outlineBtn: {
       flex: 1,
