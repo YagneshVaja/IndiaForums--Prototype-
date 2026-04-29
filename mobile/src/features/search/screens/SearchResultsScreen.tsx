@@ -28,7 +28,7 @@ export default function SearchResultsScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const query = useSearchStore((s) => s.query);
-  const setQuery = useSearchStore((s) => s.setQuery);
+  const setQueryQuiet = useSearchStore((s) => s.setQueryQuiet);
   const submit = useSearchStore((s) => s.submit);
   const submittedQuery = useSearchStore((s) => s.submittedQuery);
   const results = useSearchStore((s) => s.results);
@@ -66,7 +66,7 @@ export default function SearchResultsScreen() {
     <View style={styles.screen}>
       <SearchInputHeader
         value={query}
-        onChangeText={setQuery}
+        onChangeText={setQueryQuiet}
         onSubmit={handleResubmit}
         onBack={() => navigation.goBack()}
       />

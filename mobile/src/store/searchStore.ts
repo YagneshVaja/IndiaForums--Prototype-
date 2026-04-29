@@ -88,6 +88,9 @@ interface SearchState {
 
   // Actions
   setQuery: (q: string) => void;
+  /** Update `query` without firing /suggest. Used by SearchResultsScreen
+   * where the typeahead dropdown is not visible. */
+  setQueryQuiet: (q: string) => void;
   fetchSuggestions: (q: string) => Promise<void>;
   submit: (q: string) => Promise<void>;
   setEntityFilter: (type: string | null) => Promise<void>;
@@ -125,6 +128,14 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       return;
     }
     void get().fetchSuggestions(q);
+  },
+
+  setQueryQuiet: (q) => {
+    // Cancel any in-flight suggest from a prior screen so its late
+    // response can't repopulate the dropdown after the user moves on.
+    suggestController?.abort();
+    suggestController = null;
+    set({ query: q, suggestions: [], suggestStatus: 'idle' });
   },
 
   fetchSuggestions: async (q) => {

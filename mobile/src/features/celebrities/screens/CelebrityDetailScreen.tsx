@@ -113,9 +113,11 @@ function HeroContent({ celebrity, styles }: { celebrity: HomeStackParamList['Cel
   return (
     <View style={styles.heroContent}>
       <View style={styles.heroTop}>
-        <View style={styles.rankPill}>
-          <Text style={styles.rankPillText}>#{celebrity.rank} This Week</Text>
-        </View>
+        {celebrity.rank > 0 ? (
+          <View style={styles.rankPill}>
+            <Text style={styles.rankPillText}>#{celebrity.rank} This Week</Text>
+          </View>
+        ) : <View />}
         <TrendBadge trend={celebrity.trend} rankDiff={celebrity.rankDiff} />
       </View>
       <View style={styles.heroBottom}>
