@@ -35,13 +35,15 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 type IconTint = 'blue' | 'green' | 'amber' | 'red' | 'neutral';
 type Styles = ReturnType<typeof makeStyles>;
 
-const TINT: Record<IconTint, { bg: string; fg: string }> = {
-  blue: { bg: '#EBF0FF', fg: '#3558F0' },
-  green: { bg: '#E8F5EE', fg: '#1F9254' },
-  amber: { bg: '#FFF4E1', fg: '#B26A00' },
-  red: { bg: '#FDECEC', fg: '#C8001E' },
-  neutral: { bg: '#F0F1F3', fg: '#555B66' },
-};
+function tintColors(c: ThemeColors): Record<IconTint, { bg: string; fg: string }> {
+  return {
+    blue: { bg: c.primarySoft, fg: c.primary },
+    green: { bg: c.successSoft, fg: c.success },
+    amber: { bg: c.warningSoft, fg: c.warning },
+    red: { bg: c.dangerSoft, fg: c.danger },
+    neutral: { bg: c.surface, fg: c.textSecondary },
+  };
+}
 
 type RowProps = {
   icon: IoniconName;
@@ -53,10 +55,11 @@ type RowProps = {
   styles: Styles;
   chevronColor: string;
   rippleColor: string;
+  tints: Record<IconTint, { bg: string; fg: string }>;
 };
 
-function Row({ icon, tint, label, subtitle, onPress, last, styles, chevronColor, rippleColor }: RowProps) {
-  const t = TINT[tint];
+function Row({ icon, tint, label, subtitle, onPress, last, styles, chevronColor, rippleColor, tints }: RowProps) {
+  const t = tints[tint];
   return (
     <Pressable
       onPress={onPress}
@@ -84,6 +87,7 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const tints = useMemo(() => tintColors(colors), [colors]);
   const user = useAuthStore((s) => s.user);
   const isModerator = useAuthStore((s) => s.isModerator);
   const logout = useAuthStore((s) => s.logout);
@@ -120,6 +124,7 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
             styles={styles}
             chevronColor={colors.textTertiary}
             rippleColor={colors.surface}
+            tints={tints}
           />
           <Row
             icon="at-outline"
@@ -130,6 +135,7 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
             styles={styles}
             chevronColor={colors.textTertiary}
             rippleColor={colors.surface}
+            tints={tints}
           />
           <Row
             icon="radio-button-on-outline"
@@ -140,6 +146,7 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
             styles={styles}
             chevronColor={colors.textTertiary}
             rippleColor={colors.surface}
+            tints={tints}
           />
           <Row
             icon="phone-portrait-outline"
@@ -151,6 +158,7 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
             styles={styles}
             chevronColor={colors.textTertiary}
             rippleColor={colors.surface}
+            tints={tints}
           />
         </View>
 
@@ -166,6 +174,7 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
             styles={styles}
             chevronColor={colors.textTertiary}
             rippleColor={colors.surface}
+            tints={tints}
           />
           <Row
             icon="list-outline"
@@ -177,6 +186,7 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
             styles={styles}
             chevronColor={colors.textTertiary}
             rippleColor={colors.surface}
+            tints={tints}
           />
           {isModerator && (
             <Row
@@ -189,6 +199,7 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
               styles={styles}
               chevronColor={colors.textTertiary}
               rippleColor={colors.surface}
+            tints={tints}
             />
           )}
         </View>
@@ -205,6 +216,7 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
             styles={styles}
             chevronColor={colors.textTertiary}
             rippleColor={colors.surface}
+            tints={tints}
           />
           <Row
             icon="information-circle-outline"
@@ -216,6 +228,7 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
             styles={styles}
             chevronColor={colors.textTertiary}
             rippleColor={colors.surface}
+            tints={tints}
           />
         </View>
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Modal, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ForumFlair } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
@@ -35,30 +35,36 @@ export default function FlairDropdown({ flairs, activeId, onChange }: Props) {
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
           <View style={styles.dropdown}>
-            <Pressable
-              style={[styles.option, activeId == null && styles.optionActive]}
-              onPress={() => { onChange(null); setOpen(false); }}
+            <ScrollView
+              bounces={false}
+              showsVerticalScrollIndicator
+              contentContainerStyle={styles.dropdownContent}
             >
-              <View style={[styles.dot, { backgroundColor: colors.textTertiary }]} />
-              <Text style={[styles.optionLabel, activeId == null && styles.optionLabelActive]}>All</Text>
-              {activeId == null && <Ionicons name="checkmark" size={14} color={colors.primary} />}
-            </Pressable>
-            {flairs.map(f => {
-              const active = f.id === activeId;
-              return (
-                <Pressable
-                  key={f.id}
-                  style={[styles.option, active && styles.optionActive]}
-                  onPress={() => { onChange(f.id); setOpen(false); }}
-                >
-                  <View style={[styles.dot, { backgroundColor: f.bgColor }]} />
-                  <Text style={[styles.optionLabel, active && styles.optionLabelActive]} numberOfLines={1}>
-                    {f.name}
-                  </Text>
-                  {active && <Ionicons name="checkmark" size={14} color={colors.primary} />}
-                </Pressable>
-              );
-            })}
+              <Pressable
+                style={[styles.option, activeId == null && styles.optionActive]}
+                onPress={() => { onChange(null); setOpen(false); }}
+              >
+                <View style={[styles.dot, { backgroundColor: colors.textTertiary }]} />
+                <Text style={[styles.optionLabel, activeId == null && styles.optionLabelActive]}>All</Text>
+                {activeId == null && <Ionicons name="checkmark" size={14} color={colors.primary} />}
+              </Pressable>
+              {flairs.map(f => {
+                const active = f.id === activeId;
+                return (
+                  <Pressable
+                    key={f.id}
+                    style={[styles.option, active && styles.optionActive]}
+                    onPress={() => { onChange(f.id); setOpen(false); }}
+                  >
+                    <View style={[styles.dot, { backgroundColor: f.bgColor }]} />
+                    <Text style={[styles.optionLabel, active && styles.optionLabelActive]} numberOfLines={1}>
+                      {f.name}
+                    </Text>
+                    {active && <Ionicons name="checkmark" size={14} color={colors.primary} />}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
         </Pressable>
       </Modal>
@@ -105,13 +111,16 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.card,
       borderRadius: 12,
       minWidth: 200,
-      maxHeight: 300,
-      paddingVertical: 6,
+      maxHeight: 360,
+      overflow: 'hidden',
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.15,
       shadowRadius: 12,
       elevation: 10,
+    },
+    dropdownContent: {
+      paddingVertical: 6,
     },
     option: {
       flexDirection: 'row',

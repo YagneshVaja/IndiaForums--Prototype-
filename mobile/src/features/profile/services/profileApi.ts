@@ -15,6 +15,7 @@ import type {
   MyPostsResponseDto,
   MyProfileResponseDto,
   MyWarningDetailsResponseDto,
+  UserFanFictionDto,
   BadgeDetailsResponseDto,
   UpdatePreferencesRequestDto,
   UpdateProfileCommand,
@@ -72,11 +73,59 @@ export function getUserHoverCard(userId: Id) {
 
 export function getUserActivities(
   userId: Id,
-  params: { mode: string; pageSize: number; cursor?: string; yearWeekNum?: string },
+  params: { mode: string; pageSize: number; cursor?: string | number; yearWeekNum?: string },
 ) {
   return apiClient
     .get<UserActivitiesResponseDto>(`/user-activities/${userId}`, { params })
     .then((r) => r.data);
+}
+
+// ── Fan-fictions authored by a user ─────────────────────────────────────────
+// /fan-fictions accepts a (contentType, contentId) filter pair. ContentType=9
+// means "user" per the search-endpoint description in the OpenAPI spec.
+// Returns a normalized envelope so the profile tab can paginate uniformly.
+const CONTENT_TYPE_USER = 9;
+
+interface RawFanFictionsResponse {
+  data?: { fanFictions?: UserFanFictionDto[]; items?: UserFanFictionDto[] };
+  fanFictions?: UserFanFictionDto[];
+  pagination?: {
+    currentPage?: number | string;
+    pageSize?: number | string;
+    totalPages?: number | string;
+    totalItems?: number | string;
+    hasNextPage?: boolean;
+  };
+}
+
+export async function getUserFanFictions(
+  userId: Id,
+  params: { pn: number; ps: number },
+): Promise<{ items: UserFanFictionDto[]; total: number; page: number; totalPages: number }> {
+  const { data } = await apiClient.get<RawFanFictionsResponse>('/fan-fictions', {
+    params: {
+      contentType: CONTENT_TYPE_USER,
+      contentId: userId,
+      pageNumber: params.pn,
+      pageSize: params.ps,
+    },
+  });
+  const list =
+    data?.data?.fanFictions ??
+    data?.data?.items ??
+    data?.fanFictions ??
+    [];
+  const p = data?.pagination ?? {};
+  const numv = (v: number | string | undefined): number => {
+    if (v == null) return 0;
+    return typeof v === 'number' ? v : parseInt(v, 10) || 0;
+  };
+  return {
+    items: list,
+    total: numv(p.totalItems),
+    page: numv(p.currentPage) || params.pn,
+    totalPages: numv(p.totalPages) || 1,
+  };
 }
 
 // ── Posts / Comments tabs ───────────────────────────────────────────────────

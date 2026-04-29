@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import type { Forum } from '../../../services/api';
 import { formatCount } from '../utils/format';
+import { useForumFollowStore } from '../store/forumFollowStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 
@@ -16,6 +17,8 @@ interface Props {
 function ForumCardImpl({ forum, onPress }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const followOverride = useForumFollowStore((s) => s.byForumId[forum.id]);
+  const followCount = followOverride?.countOverride ?? forum.followCount;
 
   return (
     <Pressable style={styles.card} onPress={() => onPress(forum)}>
@@ -46,7 +49,7 @@ function ForumCardImpl({ forum, onPress }: Props) {
         <View style={styles.divider} />
         <StatCol label="Topics" value={formatCount(forum.topicCount)} styles={styles} />
         <View style={styles.divider} />
-        <StatCol label="Flwrs" value={formatCount(forum.followCount)} styles={styles} />
+        <StatCol label="Flwrs" value={formatCount(followCount)} styles={styles} />
       </View>
     </Pressable>
   );

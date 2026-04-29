@@ -1,5 +1,4 @@
 import React from 'react';
-import { View, Text } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MySpaceStackParamList } from './types';
 import MySpaceMainScreen from '../features/myspace/screens/MySpaceMainScreen';
@@ -22,16 +21,9 @@ import MessagesInboxScreen from '../features/messages/screens/MessagesInboxScree
 import MessageThreadScreen from '../features/messages/screens/MessageThreadScreen';
 import MessageComposeScreen from '../features/messages/screens/MessageComposeScreen';
 import MessageFoldersScreen from '../features/messages/screens/MessageFoldersScreen';
-import { useThemeStore } from '../store/themeStore';
-
-function PlaceholderScreen({ route }: { route: { name: string } }) {
-  const colors = useThemeStore((s) => s.colors);
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
-      <Text style={{ fontSize: 16, color: colors.textSecondary }}>{route.name}</Text>
-    </View>
-  );
-}
+import ForumThreadScreen from '../features/forums/screens/ForumThreadScreen';
+import TopicDetailScreen from '../features/forums/screens/TopicDetailScreen';
+import ArticleDetailScreen from '../features/news/screens/ArticleDetailScreen';
 
 const Stack = createNativeStackNavigator<MySpaceStackParamList>();
 
@@ -50,18 +42,17 @@ export default function MySpaceStack() {
       <Stack.Screen name="EmailLogs" component={EmailLogsScreen} />
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
       <Stack.Screen name="BadgeDetail" component={BadgeDetailScreen} />
-      <Stack.Screen name="MyArticles" component={PlaceholderScreen} />
       <Stack.Screen name="MyActivities" component={MyActivitiesScreen} />
-      <Stack.Screen name="MyFanFiction" component={PlaceholderScreen} />
       <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
-      <Stack.Screen name="Followers" component={PlaceholderScreen} />
-      <Stack.Screen name="Following" component={PlaceholderScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="Messages" component={MessagesInboxScreen} />
       <Stack.Screen name="MessageThread" component={MessageThreadScreen} />
       <Stack.Screen name="MessageFolders" component={MessageFoldersScreen} />
       <Stack.Screen name="Compose" component={MessageComposeScreen} />
+      <Stack.Screen name="ForumThread" component={ForumThreadScreen} />
+      <Stack.Screen name="TopicDetail" component={TopicDetailScreen} />
+      <Stack.Screen name="ArticleDetail" component={ArticleDetailScreen} />
     </Stack.Navigator>
   );
 }

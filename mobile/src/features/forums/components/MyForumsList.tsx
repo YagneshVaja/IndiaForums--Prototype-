@@ -8,6 +8,7 @@ import ErrorState from '../../../components/ui/ErrorState';
 import { describeFetchError } from '../../../services/fetchError';
 import ForumCard from './ForumCard';
 import { useMyFavouriteForums } from '../hooks/useMyFavouriteForums';
+import { useForumFollowStore } from '../store/forumFollowStore';
 import type { Forum, InvitedForum } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
@@ -33,6 +34,7 @@ export default function MyForumsList({ onForumPress }: Props) {
   } = useMyFavouriteForums(true);
 
   const firstPage = data?.pages[0];
+  const followOverrides = useForumFollowStore((s) => s.byForumId);
   const forums = useMemo<Forum[]>(() => {
     const seen = new Set<number>();
     const out: Forum[] = [];
@@ -40,11 +42,13 @@ export default function MyForumsList({ onForumPress }: Props) {
       for (const f of p.forums) {
         if (seen.has(f.id)) continue;
         seen.add(f.id);
+        // Optimistically hide forums the user just unfollowed.
+        if (followOverrides[f.id]?.isFollowing === false) continue;
         out.push(f);
       }
     }
     return out;
-  }, [data]);
+  }, [data, followOverrides]);
   const invitedForums = firstPage?.invitedForums ?? [];
   const requestedForums = firstPage?.requestedForums ?? [];
   const pendingCount = invitedForums.length + requestedForums.length;

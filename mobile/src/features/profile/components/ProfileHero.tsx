@@ -1,14 +1,17 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Share } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Share, Linking, Alert } from 'react-native';
 import type { TextStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import Avatar from './Avatar';
 import type { NormalizedProfile } from '../hooks/useProfile';
 import { useBuddyActions } from '../hooks/useBuddyActions';
+import { usePhotoPicker } from '../hooks/usePhotoPicker';
+import ReportUserSheet from './ReportUserSheet';
 
 interface Props {
   profile: NormalizedProfile;
@@ -21,6 +24,13 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const isOwn = profile.isOwnProfile;
+  const qc = useQueryClient();
+
+  // Quick-edit pickers — refetch /me after upload so hero + EditProfile both
+  // pick up the new URL without a manual reload.
+  const invalidateProfile = () => qc.invalidateQueries({ queryKey: ['profile'] });
+  const avatarPicker = usePhotoPicker({ variant: 'avatar', onUploaded: invalidateProfile });
+  const bannerPicker = usePhotoPicker({ variant: 'banner', onUploaded: invalidateProfile });
 
   const isOnline = useMemo(() => {
     const raw = profile.lastVisitedDate;
@@ -37,6 +47,24 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
   );
   const rank = profile.rankName || profile.groupName;
   const bio = ((profile.raw as { bio?: string | null }).bio || '').trim();
+  const pronoun = ((profile.raw as { pronoun?: string | null }).pronoun || '').trim();
+
+  // Country flag — convert ISO 3166-1 alpha-2 country codes to a regional
+  // indicator emoji (e.g. "IN" → 🇮🇳). Backend already gates on showCountry,
+  // so just render whenever countryCode is present.
+  const flag = useMemo(() => flagEmoji(profile.countryCode), [profile.countryCode]);
+
+  // Social links live on raw — UpdateProfileCommand can write them but the
+  // typed schema doesn't list them on read. The API returns them in practice.
+  const socials = useMemo(() => {
+    const r = profile.raw as Partial<Record<'facebook' | 'twitter' | 'instagram' | 'youtube', string | null>>;
+    return [
+      { key: 'facebook' as const, value: (r.facebook || '').trim() },
+      { key: 'twitter' as const, value: (r.twitter || '').trim() },
+      { key: 'instagram' as const, value: (r.instagram || '').trim() },
+      { key: 'youtube' as const, value: (r.youtube || '').trim() },
+    ].filter((s) => s.value.length > 0);
+  }, [profile.raw]);
 
   const onShare = async () => {
     const handle = profile.userName || String(profile.userId);
@@ -53,7 +81,7 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
 
   return (
     <View style={styles.card}>
-      {/* Cover banner — image or gradient fallback. No overlaid actions. */}
+      {/* Cover banner — image or gradient fallback. */}
       <View style={styles.cover}>
         {profile.bannerUrl ? (
           <>
@@ -73,6 +101,20 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
             style={StyleSheet.absoluteFill}
           />
         )}
+        {isOwn ? (
+          <Pressable
+            onPress={bannerPicker.uploading ? undefined : bannerPicker.pick}
+            hitSlop={6}
+            accessibilityLabel="Change cover photo"
+            style={({ pressed }) => [styles.coverEditBtn, pressed && styles.coverEditPressed]}
+          >
+            {bannerPicker.uploading ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Ionicons name="camera" size={14} color="#FFF" />
+            )}
+          </Pressable>
+        ) : null}
       </View>
 
       <View style={styles.body}>
@@ -87,7 +129,21 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
               size={80}
               ring
             />
-            {isOnline ? <View style={styles.onlineDot} /> : null}
+            {isOnline && !isOwn ? <View style={styles.onlineDot} /> : null}
+            {isOwn ? (
+              <Pressable
+                onPress={avatarPicker.uploading ? undefined : avatarPicker.pick}
+                hitSlop={6}
+                accessibilityLabel="Change profile photo"
+                style={({ pressed }) => [styles.avatarEditBtn, pressed && styles.avatarEditPressed]}
+              >
+                {avatarPicker.uploading ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Ionicons name="camera" size={12} color="#FFF" />
+                )}
+              </Pressable>
+            ) : null}
           </View>
 
           <View style={styles.actionPills}>
@@ -110,22 +166,37 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
             >
               <Ionicons name="share-outline" size={16} color={colors.text} />
             </Pressable>
+            {!isOwn ? (
+              <OverflowMenu profile={profile} colors={colors} styles={styles} />
+            ) : null}
           </View>
         </View>
 
         {/* Identity block — left aligned */}
-        <Text style={styles.name} numberOfLines={1}>
-          {displayName}
-        </Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>
+            {displayName}
+          </Text>
+          {flag ? <Text style={styles.flag}>{flag}</Text> : null}
+        </View>
         {showHandle ? (
           <Text style={styles.handle} numberOfLines={1}>
             @{profile.userName}
           </Text>
         ) : null}
 
-        {rank ? (
-          <View style={styles.rankPill}>
-            <Text style={styles.rankText}>{rank}</Text>
+        {rank || pronoun ? (
+          <View style={styles.pillRow}>
+            {rank ? (
+              <View style={styles.rankPill}>
+                <Text style={styles.rankText}>{rank}</Text>
+              </View>
+            ) : null}
+            {pronoun ? (
+              <View style={styles.pronounPill}>
+                <Text style={styles.pronounText}>{pronoun}</Text>
+              </View>
+            ) : null}
           </View>
         ) : null}
 
@@ -142,6 +213,14 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
           <Text style={styles.status} numberOfLines={3}>
             {profile.statusMessage}
           </Text>
+        ) : null}
+
+        {socials.length > 0 ? (
+          <View style={styles.socialRow}>
+            {socials.map((s) => (
+              <SocialIconLink key={s.key} platform={s.key} value={s.value} colors={colors} styles={styles} />
+            ))}
+          </View>
         ) : null}
 
         {/* Action row only for other-user view (Add Friend / Message) */}
@@ -204,6 +283,141 @@ const expandableStyles = StyleSheet.create({
     opacity: 0,
   },
 });
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+// ISO 3166-1 alpha-2 → regional-indicator emoji (e.g. "IN" → "🇮🇳").
+function flagEmoji(iso2: string | null): string | null {
+  if (!iso2 || iso2.length !== 2) return null;
+  const code = iso2.toUpperCase();
+  const a = code.charCodeAt(0);
+  const b = code.charCodeAt(1);
+  if (a < 65 || a > 90 || b < 65 || b > 90) return null;
+  return String.fromCodePoint(0x1f1e6 + a - 65) + String.fromCodePoint(0x1f1e6 + b - 65);
+}
+
+const SOCIAL_ICONS: Record<
+  'facebook' | 'twitter' | 'instagram' | 'youtube',
+  { icon: keyof typeof Ionicons.glyphMap; color: string; baseUrl: string }
+> = {
+  facebook: { icon: 'logo-facebook', color: '#1877F2', baseUrl: 'https://facebook.com/' },
+  twitter: { icon: 'logo-twitter', color: '#1DA1F2', baseUrl: 'https://x.com/' },
+  instagram: { icon: 'logo-instagram', color: '#E4405F', baseUrl: 'https://instagram.com/' },
+  youtube: { icon: 'logo-youtube', color: '#FF0000', baseUrl: 'https://youtube.com/' },
+};
+
+// Resolves the user-entered value (handle or full URL) to an openable URL.
+// Bare "@handle" gets the @ stripped and pinned to the platform's base URL.
+function resolveSocialUrl(platform: keyof typeof SOCIAL_ICONS, value: string): string {
+  const v = value.trim();
+  if (/^https?:\/\//i.test(v)) return v;
+  return SOCIAL_ICONS[platform].baseUrl + v.replace(/^@+/, '');
+}
+
+function SocialIconLink({
+  platform,
+  value,
+  styles,
+}: {
+  platform: keyof typeof SOCIAL_ICONS;
+  value: string;
+  colors: ThemeColors;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  const meta = SOCIAL_ICONS[platform];
+  const url = resolveSocialUrl(platform, value);
+  return (
+    <Pressable
+      onPress={() => Linking.openURL(url).catch(() => {})}
+      hitSlop={6}
+      accessibilityLabel={`Open ${platform}`}
+      style={({ pressed }) => [
+        styles.socialIcon,
+        { backgroundColor: meta.color + '22' },
+        pressed && { opacity: 0.78, transform: [{ scale: 0.95 }] },
+      ]}
+    >
+      <Ionicons name={meta.icon} size={16} color={meta.color} />
+    </Pressable>
+  );
+}
+
+// Overflow menu (·· · ) — surfaced on other-user profiles only. Exposes
+// Block/Unblock and Report. Other moderation actions (Mute, Copy link)
+// would slot in here.
+function OverflowMenu({
+  profile,
+  colors,
+  styles,
+}: {
+  profile: NormalizedProfile;
+  colors: ThemeColors;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  const bd = profile.buddyDetails;
+  const blocked =
+    (typeof bd?.block === 'string' ? parseInt(bd.block, 10) : bd?.block ?? 0) === 1;
+  const friend = (typeof bd?.friend === 'string' ? parseInt(bd.friend, 10) : bd?.friend ?? 0) === 1;
+  const actions = useBuddyActions({
+    userId: profile.userId,
+    requestId: bd?.userMapId ?? null,
+    isFriend: friend,
+  });
+  const handle = profile.userName || profile.displayName || 'user';
+  const [reportOpen, setReportOpen] = useState(false);
+
+  const open = () => {
+    const blockLabel = blocked ? `Unblock @${handle}` : `Block @${handle}`;
+    const blockMessage = blocked
+      ? `Allow @${handle} to message and tag you again?`
+      : `@${handle} won't be able to message or tag you. You can unblock anytime.`;
+    Alert.alert(`@${handle}`, undefined, [
+      {
+        text: blockLabel,
+        style: blocked ? 'default' : 'destructive',
+        onPress: () =>
+          Alert.alert(blocked ? 'Unblock user?' : 'Block user?', blockMessage, [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: blocked ? 'Unblock' : 'Block',
+              style: blocked ? 'default' : 'destructive',
+              onPress: () => actions.block.mutate(!blocked),
+            },
+          ]),
+      },
+      {
+        text: `Report @${handle}`,
+        style: 'destructive',
+        onPress: () => setReportOpen(true),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  return (
+    <>
+      <Pressable
+        onPress={open}
+        disabled={actions.block.isPending}
+        hitSlop={6}
+        accessibilityLabel="More options"
+        style={({ pressed }) => [styles.iconPill, pressed && styles.pillPressed]}
+      >
+        {actions.block.isPending ? (
+          <ActivityIndicator size="small" color={colors.text} />
+        ) : (
+          <Ionicons name="ellipsis-horizontal" size={16} color={colors.text} />
+        )}
+      </Pressable>
+      <ReportUserSheet
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        userId={profile.userId}
+        userHandle={handle}
+      />
+    </>
+  );
+}
 
 interface BuddyBarProps {
   profile: NormalizedProfile;
@@ -304,6 +518,38 @@ function makeStyles(c: ThemeColors) {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: 'rgba(0,0,0,0.18)',
     },
+    coverEditBtn: {
+      position: 'absolute',
+      top: 10,
+      right: 10,
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    coverEditPressed: {
+      opacity: 0.78,
+      transform: [{ scale: 0.96 }],
+    },
+    avatarEditBtn: {
+      position: 'absolute',
+      right: -2,
+      bottom: -2,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: c.card,
+    },
+    avatarEditPressed: {
+      opacity: 0.85,
+      transform: [{ scale: 0.94 }],
+    },
 
     body: {
       paddingHorizontal: 16,
@@ -370,20 +616,35 @@ function makeStyles(c: ThemeColors) {
       borderWidth: 2,
       borderColor: c.card,
     },
+    nameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
     name: {
+      flexShrink: 1,
       fontSize: 22,
       fontWeight: '800',
       color: c.text,
       letterSpacing: -0.4,
+    },
+    flag: {
+      fontSize: 18,
+      lineHeight: 22,
     },
     handle: {
       fontSize: 13,
       color: c.textTertiary,
       marginTop: 2,
     },
-    rankPill: {
-      alignSelf: 'flex-start',
+    pillRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: 6,
       marginTop: 8,
+    },
+    rankPill: {
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 999,
@@ -395,6 +656,20 @@ function makeStyles(c: ThemeColors) {
       color: c.primary,
       letterSpacing: 0.3,
       textTransform: 'uppercase',
+    },
+    pronounPill: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+    },
+    pronounText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.textSecondary,
+      letterSpacing: 0.2,
     },
     bio: {
       marginTop: 12,
@@ -414,6 +689,18 @@ function makeStyles(c: ThemeColors) {
       fontSize: 13,
       color: c.textSecondary,
       lineHeight: 18,
+    },
+    socialRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 12,
+    },
+    socialIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
 
     actions: {

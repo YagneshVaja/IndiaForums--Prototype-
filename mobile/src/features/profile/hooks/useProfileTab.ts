@@ -4,6 +4,11 @@ import { getMyActivities } from '../../activities/services/activitiesApi';
 
 export type ProfileTabKey =
   | 'activity'
+  | 'wall'
+  | 'scrapbook'
+  | 'slambook'
+  | 'testimonial'
+  | 'fan-fictions'
   | 'posts'
   | 'comments'
   | 'buddies'
@@ -47,15 +52,25 @@ async function loadTab(
   ps: number,
 ): Promise<TabResult> {
   switch (tab) {
-    case 'activity': {
-      // Self → /user-activities (no path id). Other → /user-activities/{userId}.
-      // The "mode" param is only required on the path-id variant.
-      if (isOwn) {
-        const r = await getMyActivities({ pageSize: ps });
-        return { kind: 'activity', items: r.activities, nextUrl: r.nextUrl };
-      }
-      const r = await api.getUserActivities(userId, { mode: '3', pageSize: ps });
-      return { kind: 'activity', items: r.activities, nextUrl: r.nextUrl };
+    case 'activity':
+      return loadActivityFeed('all', userId, isOwn, ps);
+    case 'wall':
+      return loadActivityFeed('wall', userId, isOwn, ps);
+    case 'scrapbook':
+      return loadActivityFeed('scrapbook', userId, isOwn, ps);
+    case 'slambook':
+      return loadActivityFeed('slambook', userId, isOwn, ps);
+    case 'testimonial':
+      return loadActivityFeed('testimonial', userId, isOwn, ps);
+    case 'fan-fictions': {
+      const r = await api.getUserFanFictions(userId, { pn: page, ps });
+      return {
+        kind: 'fan-fictions',
+        items: r.items,
+        total: r.total,
+        page: r.page,
+        totalPages: r.totalPages,
+      };
     }
     case 'posts': {
       const r = isOwn
@@ -182,6 +197,21 @@ function num(v: number | string | null | undefined): number {
   return typeof v === 'number' ? v : parseInt(v, 10) || 0;
 }
 
+// Activity feed loader — covers both /user-activities (own) and
+// /user-activities/{userId} (other) with a single mode discriminator.
+// Modes recognised by the API: all, wall, scrapbook, slambook, testimonial, feed.
+async function loadActivityFeed(
+  mode: 'all' | 'wall' | 'scrapbook' | 'slambook' | 'testimonial' | 'feed',
+  userId: number | string,
+  isOwn: boolean,
+  ps: number,
+): Promise<TabResult> {
+  const r = isOwn
+    ? await getMyActivities({ mode, pageSize: ps })
+    : await api.getUserActivities(userId, { mode, pageSize: ps });
+  return { kind: 'activity', items: r.activities, nextUrl: r.nextUrl };
+}
+
 // ── Discriminated union for tab results ─────────────────────────────────────
 
 import type {
@@ -198,6 +228,7 @@ import type {
   MyPostTopicDto,
   ShowDto,
   UserBadgeDto,
+  UserFanFictionDto,
   WarningDto,
 } from '../types';
 
@@ -217,6 +248,13 @@ export type TabResult =
       totalPages: number;
     }
   | { kind: 'badges'; items: UserBadgeDto[] }
+  | {
+      kind: 'fan-fictions';
+      items: UserFanFictionDto[];
+      total: number;
+      page: number;
+      totalPages: number;
+    }
   | { kind: 'drafts'; items: ForumDraftDto[]; total: number; page: number; totalPages: number }
   | { kind: 'watching'; items: MyPostTopicDto[]; total: number; page: number; totalPages: number }
   | { kind: 'ff-following'; items: FollowingDto[]; total: number; page: number; totalPages: number }

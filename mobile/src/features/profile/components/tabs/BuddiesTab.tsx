@@ -1,7 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useThemeStore } from '../../../../store/themeStore';
 import type { ThemeColors } from '../../../../theme/tokens';
+import type { MySpaceStackParamList } from '../../../../navigation/types';
 import { useProfileTab } from '../../hooks/useProfileTab';
 import TabShell from './TabShell';
 import Avatar from '../Avatar';
@@ -17,9 +20,15 @@ export default function BuddiesTab({ userId, isOwn }: Props) {
   const q = useProfileTab({ tab: 'buddies', userId, isOwn, page });
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const nav = useNavigation<NativeStackNavigationProp<MySpaceStackParamList>>();
 
   const data = q.data && q.data.kind === 'buddies' ? q.data : null;
   const items = data?.items ?? [];
+
+  const openProfile = useCallback(
+    (b: BuddyDto) => nav.push('Profile', { userId: String(b.userId) }),
+    [nav],
+  );
 
   return (
     <TabShell
@@ -37,25 +46,50 @@ export default function BuddiesTab({ userId, isOwn }: Props) {
     >
       <View style={styles.grid}>
         {items.map((b) => (
-          <BuddyCell key={String(b.userId)} b={b} styles={styles} />
+          <BuddyCell
+            key={String(b.userId)}
+            b={b}
+            styles={styles}
+            onPress={() => openProfile(b)}
+          />
         ))}
       </View>
     </TabShell>
   );
 }
 
-function BuddyCell({ b, styles }: { b: BuddyDto; styles: ReturnType<typeof makeStyles> }) {
+function BuddyCell({
+  b,
+  styles,
+  onPress,
+}: {
+  b: BuddyDto;
+  styles: ReturnType<typeof makeStyles>;
+  onPress?: () => void;
+}) {
   const name = b.realName || b.userName;
+  const isOnline = (() => {
+    if (!b.lastVisitedDate) return false;
+    const t = new Date(b.lastVisitedDate).getTime();
+    return !isNaN(t) && Date.now() - t < 24 * 60 * 60 * 1000;
+  })();
+
   return (
-    <Pressable style={({ pressed }) => [styles.cell, pressed && styles.cellPressed]}>
-      <Avatar
-        url={b.thumbnailUrl}
-        userId={b.userId}
-        updateChecksum={b.updateChecksum}
-        avatarType={b.avatarType}
-        name={name}
-        size={56}
-      />
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.cell, pressed && styles.cellPressed]}
+    >
+      <View style={styles.avatarBox}>
+        <Avatar
+          url={b.thumbnailUrl}
+          userId={b.userId}
+          updateChecksum={b.updateChecksum}
+          avatarType={b.avatarType}
+          name={name}
+          size={56}
+        />
+        {isOnline ? <View style={styles.onlineDot} /> : null}
+      </View>
       <Text style={styles.name} numberOfLines={1}>{name}</Text>
       {b.groupName ? <Text style={styles.rank} numberOfLines={1}>{b.groupName}</Text> : null}
     </Pressable>
@@ -80,6 +114,20 @@ function makeStyles(c: ThemeColors) {
     },
     cellPressed: {
       opacity: 0.88,
+    },
+    avatarBox: {
+      position: 'relative',
+    },
+    onlineDot: {
+      position: 'absolute',
+      right: 0,
+      bottom: 0,
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: c.success,
+      borderWidth: 2,
+      borderColor: c.card,
     },
     name: {
       fontSize: 12,
