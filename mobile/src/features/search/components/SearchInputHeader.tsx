@@ -3,6 +3,7 @@ import {
   View, TextInput, Pressable, StyleSheet, Keyboard,
   type NativeSyntheticEvent, type TextInputSubmitEditingEventData,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
@@ -25,6 +26,7 @@ export default function SearchInputHeader({
   placeholder = 'Search movies, shows, celebrities…',
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const inputRef = useRef<TextInput | null>(null);
 
@@ -36,7 +38,7 @@ export default function SearchInputHeader({
   }
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, { paddingTop: insets.top + 10 }]}>
       {onBack ? (
         <Pressable
           onPress={onBack}

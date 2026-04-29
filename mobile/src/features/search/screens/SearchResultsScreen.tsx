@@ -72,38 +72,42 @@ export default function SearchResultsScreen() {
       />
 
       {entityTypes.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipStrip}
-          keyboardShouldPersistTaps="handled"
-        >
-          <EntityTypeChip
-            label="All"
-            active={activeEntityType == null}
-            onPress={() => setEntityFilter(null)}
-          />
-          {entityTypes.map((t) => (
+        <View style={styles.chipStripWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipStrip}
+            keyboardShouldPersistTaps="handled"
+          >
             <EntityTypeChip
-              key={t}
-              label={t}
-              active={activeEntityType === t}
-              onPress={() => setEntityFilter(t)}
+              label="All"
+              active={activeEntityType == null}
+              onPress={() => setEntityFilter(null)}
             />
-          ))}
-        </ScrollView>
+            {entityTypes.map((t) => (
+              <EntityTypeChip
+                key={t}
+                label={t}
+                active={activeEntityType === t}
+                onPress={() => setEntityFilter(t)}
+              />
+            ))}
+          </ScrollView>
+        </View>
       ) : null}
 
-      <Body
-        status={resultsStatus}
-        results={results}
-        submittedQuery={submittedQuery}
-        searchLogId={searchLogId}
-        onRetry={refreshResults}
-        onPressItem={openResult}
-        styles={styles}
-        colors={colors}
-      />
+      <View style={styles.body}>
+        <Body
+          status={resultsStatus}
+          results={results}
+          submittedQuery={submittedQuery}
+          searchLogId={searchLogId}
+          onRetry={refreshResults}
+          onPressItem={openResult}
+          styles={styles}
+          colors={colors}
+        />
+      </View>
 
       <UnsupportedEntitySheet ref={sheetRef} />
     </View>
@@ -182,14 +186,18 @@ function Body({
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: c.bg },
-    chipStrip: {
-      flexDirection: 'row',
-      gap: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
+    body: { flex: 1 },
+    chipStripWrap: {
       backgroundColor: c.card,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: c.border,
+    },
+    chipStrip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
     },
     center: {
       flex: 1, alignItems: 'center', justifyContent: 'center',
