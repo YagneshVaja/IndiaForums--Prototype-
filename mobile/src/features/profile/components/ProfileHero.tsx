@@ -12,6 +12,8 @@ import type { NormalizedProfile } from '../hooks/useProfile';
 import { useBuddyActions } from '../hooks/useBuddyActions';
 import { usePhotoPicker } from '../hooks/usePhotoPicker';
 import ReportUserSheet from './ReportUserSheet';
+import { getGroupName } from '../utils/groups';
+import { usePronoun } from '../utils/profileLocalCache';
 
 interface Props {
   profile: NormalizedProfile;
@@ -45,9 +47,21 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
     profile.displayName &&
     profile.userName !== profile.displayName
   );
-  const rank = profile.rankName || profile.groupName;
-  const bio = ((profile.raw as { bio?: string | null }).bio || '').trim();
-  const pronoun = ((profile.raw as { pronoun?: string | null }).pronoun || '').trim();
+  // The OpenAPI spec only returns `groupId` (numeric) — never the rank text —
+  // and doesn't expose `pronoun` on any read endpoint. So:
+  //   - rank: resolved client-side from groupId via a lookup table
+  //   - pronoun: read from a dedicated SecureStore-backed query, independent
+  //     of /me, so the hero always reflects the cached value regardless of
+  //     when the profile query last ran. Falls back to raw.pronoun in case a
+  //     future API version starts returning it.
+  const rawProfile = profile.raw as unknown as Partial<{
+    bio: string | null;
+    pronoun: string | null;
+  }>;
+  const rank = getGroupName(profile.groupId);
+  const bio = (rawProfile.bio || '').trim();
+  const cachedPronoun = usePronoun(profile.isOwnProfile ? profile.userId : null);
+  const pronoun = (cachedPronoun || rawProfile.pronoun || '').trim();
 
   // Country flag — convert ISO 3166-1 alpha-2 country codes to a regional
   // indicator emoji (e.g. "IN" → 🇮🇳). Backend already gates on showCountry,
@@ -185,18 +199,20 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
           </Text>
         ) : null}
 
-        {rank || pronoun ? (
-          <View style={styles.pillRow}>
-            {rank ? (
-              <View style={styles.rankPill}>
-                <Text style={styles.rankText}>{rank}</Text>
-              </View>
-            ) : null}
-            {pronoun ? (
-              <View style={styles.pronounPill}>
-                <Text style={styles.pronounText}>{pronoun}</Text>
-              </View>
-            ) : null}
+        {/* Rank/title (e.g. "Navigator") — plain text, matches the live web's
+            quiet treatment so it doesn't compete with the display name. */}
+        {rank ? (
+          <Text style={styles.rank} numberOfLines={1}>
+            {rank}
+          </Text>
+        ) : null}
+
+        {/* Pronoun — small bordered pill on its own line. */}
+        {pronoun ? (
+          <View style={styles.pronounRow}>
+            <View style={styles.pronounPill}>
+              <Text style={styles.pronounText}>{pronoun}</Text>
+            </View>
           </View>
         ) : null}
 
@@ -637,25 +653,15 @@ function makeStyles(c: ThemeColors) {
       color: c.textTertiary,
       marginTop: 2,
     },
-    pillRow: {
+    rank: {
+      marginTop: 6,
+      fontSize: 13,
+      fontWeight: '500',
+      color: c.textSecondary,
+    },
+    pronounRow: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      alignItems: 'center',
-      gap: 6,
       marginTop: 8,
-    },
-    rankPill: {
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 999,
-      backgroundColor: c.primarySoft,
-    },
-    rankText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: c.primary,
-      letterSpacing: 0.3,
-      textTransform: 'uppercase',
     },
     pronounPill: {
       paddingHorizontal: 10,

@@ -46,26 +46,33 @@ export default function SubFilterPills<K extends string>({ filters, active, onCh
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     row: {
-      gap: 6,
-      paddingVertical: 8,
+      gap: 8,
+      paddingVertical: 10,
     },
     pill: {
-      paddingHorizontal: 12,
-      paddingVertical: 5,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
       borderRadius: 999,
-      backgroundColor: c.surface,
+      backgroundColor: 'transparent',
       borderWidth: 1,
       borderColor: c.border,
     },
     pillActive: {
       backgroundColor: c.primary,
       borderColor: c.primary,
+      // Subtle lift on the active filter so it pops out of the row
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 2,
     },
     label: {
       fontSize: 12,
       fontWeight: '700',
       color: c.textSecondary,
-      letterSpacing: 0.2,
+      letterSpacing: 0.3,
+      textTransform: 'uppercase',
     },
     labelActive: {
       color: c.onPrimary,

@@ -167,7 +167,7 @@ export default function OwnWallComposer() {
           updateChecksum={me.updateChecksum}
           avatarType={(me.raw as { avatarType?: number | string }).avatarType}
           name={me.displayName || me.userName}
-          size={40}
+          size={36}
         />
         <TextInput
           value={content}
@@ -327,13 +327,19 @@ function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     card: {
       backgroundColor: c.card,
-      borderRadius: 14,
+      borderRadius: 16,
       padding: 14,
       marginTop: 8,
-      marginBottom: 4,
+      marginBottom: 6,
       borderWidth: 1,
       borderColor: c.border,
-      gap: 10,
+      gap: 12,
+      // Subtle elevation so the composer floats above the page on light mode
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 1,
     },
     heading: {
       fontSize: 15,
@@ -348,12 +354,12 @@ function makeStyles(c: ThemeColors) {
     },
     input: {
       flex: 1,
-      minHeight: 60,
-      maxHeight: 160,
+      minHeight: 84,
+      maxHeight: 180,
       paddingHorizontal: 12,
       paddingVertical: 10,
       backgroundColor: c.surface,
-      borderRadius: 10,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: c.border,
       fontSize: 14,
@@ -366,10 +372,11 @@ function makeStyles(c: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 12,
-      paddingVertical: 8,
+      paddingLeft: 12,
+      paddingRight: 6,
+      paddingVertical: 6,
       backgroundColor: c.surface,
-      borderRadius: 10,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: c.border,
     },
@@ -381,12 +388,12 @@ function makeStyles(c: ThemeColors) {
     toolbarActions: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 2,
     },
     toolBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 8,
+      width: 36,
+      height: 36,
+      borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: 'transparent',
@@ -397,7 +404,7 @@ function makeStyles(c: ThemeColors) {
 
     linkInput: {
       backgroundColor: c.surface,
-      borderRadius: 10,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: c.border,
       paddingHorizontal: 12,
@@ -410,13 +417,14 @@ function makeStyles(c: ThemeColors) {
     },
 
     attachWrap: {
-      width: 120,
-      height: 120,
-      borderRadius: 10,
+      width: 110,
+      height: 110,
+      borderRadius: 12,
       overflow: 'hidden',
       borderWidth: 1,
       borderColor: c.border,
       position: 'relative',
+      backgroundColor: c.surface,
     },
     attachThumb: {
       width: '100%',
@@ -424,12 +432,12 @@ function makeStyles(c: ThemeColors) {
     },
     attachRemove: {
       position: 'absolute',
-      top: 4,
-      right: 4,
+      top: 6,
+      right: 6,
       width: 22,
       height: 22,
       borderRadius: 11,
-      backgroundColor: 'rgba(0,0,0,0.6)',
+      backgroundColor: 'rgba(0,0,0,0.7)',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -445,25 +453,33 @@ function makeStyles(c: ThemeColors) {
       fontWeight: '600',
     },
     postBtn: {
-      paddingHorizontal: 22,
-      height: 36,
-      borderRadius: 8,
+      paddingHorizontal: 26,
+      height: 40,
+      borderRadius: 10,
       backgroundColor: c.success,
       alignItems: 'center',
       justifyContent: 'center',
+      // Mini lift to give the action button presence
+      shadowColor: c.success,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+      elevation: 3,
     },
     postBtnDisabled: {
-      opacity: 0.5,
+      opacity: 0.45,
+      shadowOpacity: 0,
+      elevation: 0,
     },
     postBtnText: {
       fontSize: 13,
-      fontWeight: '800',
+      fontWeight: '900',
       color: '#FFFFFF',
-      letterSpacing: 0.6,
+      letterSpacing: 0.8,
     },
     pressed: {
       opacity: 0.88,
-      transform: [{ scale: 0.98 }],
+      transform: [{ scale: 0.97 }],
     },
     errorRow: {
       flexDirection: 'row',

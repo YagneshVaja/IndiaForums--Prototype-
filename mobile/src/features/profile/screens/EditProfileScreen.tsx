@@ -37,6 +37,8 @@ import type {
   UserPreferencesDto,
 } from '../types';
 import ImageUploader from '../components/ImageUploader';
+import { savePronoun, pronounQueryKey, loadPronoun } from '../utils/profileLocalCache';
+import { useQueryClient } from '@tanstack/react-query';
 
 type Props = NativeStackScreenProps<MySpaceStackParamList, 'EditProfile'>;
 
@@ -94,6 +96,7 @@ function ProfileForm() {
   const q = useProfile();
   const updateAuthUser = useAuthStore((s) => s.updateUser);
   const nav = useNavigation<NativeStackNavigationProp<MySpaceStackParamList>>();
+  const qc = useQueryClient();
 
   const [form, setForm] = useState({
     displayName: '',
@@ -136,6 +139,9 @@ function ProfileForm() {
       youtube?: string | null;
       instagram?: string | null;
     };
+    // Pre-fill from /me. Pronoun is overwritten right after by the local
+    // cache load (the GET /me endpoint doesn't include pronoun), so the
+    // user always sees the current value when re-opening this screen.
     setForm({
       displayName: raw.displayName || q.data.displayName || '',
       bio: raw.bio || '',
@@ -157,6 +163,18 @@ function ProfileForm() {
     setAvatarUrl(q.data.avatarUrl);
     setBannerUrl(q.data.bannerUrl);
     setUpdateChecksum(q.data.updateChecksum);
+
+    // Pull pronoun from SecureStore — the API doesn't return it, so without
+    // this the field would always reset to empty even after the user has
+    // previously saved it on this device.
+    let cancelled = false;
+    loadPronoun(q.data.userId).then((v) => {
+      if (cancelled || !v) return;
+      setForm((f) => ({ ...f, pronoun: v }));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [q.data]);
 
   if (q.isLoading) {
@@ -208,6 +226,12 @@ function ProfileForm() {
       };
       const res = await updateMyProfile(body);
       if (res.updateChecksum) setUpdateChecksum(res.updateChecksum);
+      // Persist pronoun to SecureStore — the GET /me endpoint doesn't
+      // return it, so the hero relies on this cache to re-display the
+      // value. Invalidate the dedicated pronoun query so any mounted hero
+      // re-reads SecureStore immediately.
+      await savePronoun(q.data!.userId, form.pronoun);
+      qc.invalidateQueries({ queryKey: pronounQueryKey(q.data!.userId) });
       updateAuthUser({ displayName: form.displayName.trim() });
       hapticSuccess();
       setSuccess(res.message || 'Profile updated');
