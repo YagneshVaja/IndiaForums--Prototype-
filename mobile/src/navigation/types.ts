@@ -104,8 +104,13 @@ export type ForumsStackParamList = {
 
 export type SearchStackParamList = {
   SearchMain: undefined;
+  SearchResults: undefined;
   ArticleDetail: { id: string; thumbnailUrl?: string; title?: string };
-  CelebrityProfile: { id: string };
+  CelebrityProfile: { celebrity: import('../services/api').Celebrity };
+  VideoDetail: { video: import('../services/api').Video };
+  GalleryDetail:
+    | { gallery: import('../services/api').Gallery }
+    | { id: string | number; title?: string; thumbnail?: string | null };
 };
 
 export type MySpaceStackParamList = {
