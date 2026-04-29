@@ -4045,11 +4045,18 @@ export interface QuizQuestion {
   question: string;
   options: string[];
   optionIds: number[];
+  optionImageUrls:    (string | null)[];   // GIF / photo per option, parallel to options
+  optionImageCredits: (string | null)[];   // pre-formatted credit line per option
+  optionResultIds:    number[];            // for personality quizzes — option → result range
   points: number[];
   correct: number;   // -1 for personality (no single correct)
   isTrivia: boolean;
   questionImageUrl: string | null;
   questionImageCredit: string | null;
+  // API hints — values are server-defined enums; surfaced for future use
+  answerTypeId: number;
+  answerLayoutTypeId: number;
+  doReveal: boolean;
   revealTitle: string | null;
   revealDescription: string | null;
   revealImageUrl: string | null;
@@ -4071,6 +4078,11 @@ export interface QuizDetail extends Quiz {
   tags: string[];
   results: QuizResultRange[];
   quiz_questions: QuizQuestion[];
+  // API hints / extras
+  timerMode: number;                // server-defined: 0 off / 1 per-q / 2 total etc.
+  viewMode: number;
+  imageCredits: string | null;
+  authorByLine: string | null;
 }
 
 export interface QuizPlayer {
@@ -4093,9 +4105,28 @@ export interface QuizCreator {
   isPrivate: boolean;
 }
 
-export interface SubmitAnswer {
-  questionId: number;
-  optionId: number;
+// Per OpenAPI SubmitQuizResponseRequestDto — server expects the *aggregate*
+// score and chosen result, not per-answer data.
+export interface QuizSubmitPayload {
+  quizTypeId: number;
+  userName: string;
+  userEmail: string;
+  totalPointsScored: number;
+  finalResultForUser: number;   // resultId for personality, 0 for trivia
+}
+
+// Per OpenAPI SubmitQuizResponseDto — flattened for callers
+export interface QuizSubmitResult {
+  success: boolean;
+  isAuthenticated: boolean;
+  message: string;
+  responseId: number;
+  responseGuid: string | null;
+  percentageBelow: number;       // "you beat X% of players"
+  totalCount: number;
+  finalResultForUser: number;
+  totalUserPoints: number;
+  results: QuizResultRange[];
 }
 
 // ── Transforms ──────────────────────────────────────────────────────────────
@@ -4133,18 +4164,24 @@ function transformQuiz(raw: any, index: number): Quiz {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildQuizQuestions(questions: any[], options: any[]): QuizQuestion[] {
+function buildQuizQuestions(questions: any[], options: any[], quizTypeId: number): QuizQuestion[] {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const byQuestion: Record<number, any[]> = {};
   for (const opt of options) {
     (byQuestion[opt.questionId] = byQuestion[opt.questionId] || []).push(opt);
   }
+  // The API ships isCorrect=true on personality quizzes too (typeId 3 marks
+  // a "primary" answer with isCorrect even though scoring is points-based).
+  // quizTypeId===1 is the only authoritative trivia signal.
+  const isTriviaQuiz = quizTypeId === 1;
   return questions
     .slice()
     .sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0))
     .map((q) => {
       const opts = byQuestion[q.questionId] || [];
-      const correctIdx = opts.findIndex((o) => o.isCorrect === true);
+      const correctIdx = isTriviaQuiz
+        ? opts.findIndex((o) => o.isCorrect === true)
+        : -1;
       const imgUrl =
         q.questionImageUrl || q.QuestionImageUrl ||
         q.imageUrl || q.ImageUrl ||
@@ -4158,13 +4195,24 @@ function buildQuizQuestions(questions: any[], options: any[]): QuizQuestion[] {
         question:    q.question || '',
         options:     opts.map((o) => o.text || ''),
         optionIds:   opts.map((o) => Number(o.optionId)),
-        points:      opts.map((o) => o.points || 0),
+        optionImageUrls: opts.map((o) =>
+          o.thumbnailUrl || o.ThumbnailUrl ||
+          o.imageUrl || o.ImageUrl || null,
+        ),
+        optionImageCredits: opts.map((o) =>
+          o.imageCredits || o.ImageCredits || o.uploaderName || null,
+        ),
+        optionResultIds: opts.map((o) => Number(o.resultId) || 0),
+        points:      opts.map((o) => Number(o.points) || 0),
         correct:     correctIdx,
-        isTrivia:    correctIdx >= 0,
+        isTrivia:    isTriviaQuiz,
         questionImageUrl:    imgUrl,
         questionImageCredit: creditSource
           ? `via ${String(creditSource).charAt(0).toUpperCase()}${String(creditSource).slice(1)}`
           : null,
+        answerTypeId:       Number(q.answerTypeId)       || 0,
+        answerLayoutTypeId: Number(q.answerLayoutTypeId) || 0,
+        doReveal:           q.doReveal === true,
         revealTitle:       q.revealTitle       || null,
         revealDescription: q.revealDescription || null,
         revealImageUrl:    q.revealThumbnailUrl || q.revealImageUrl || null,
@@ -4194,15 +4242,23 @@ function transformQuizDetail(raw: any, index = 0): QuizDetail {
     estimatedTimeLabel: estimatedSec > 0 ? `${Math.ceil(estimatedSec / 60)} min` : null,
     directCommentCount: raw.directCommentCount || 0,
     tags,
+    timerMode:          Number(raw.timerMode) || 0,
+    viewMode:           Number(raw.viewMode)  || 0,
+    imageCredits:       raw.imageCredits || null,
+    authorByLine:       raw.authorByLine || null,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     results: (raw.results || []).map((r: any) => ({
-      resultId:    r.resultId    ?? 0,
+      resultId:    Number(r.resultId)   || 0,
       title:       r.title       || '',
       description: r.description || '',
-      lowerRange:  r.lowerRange  ?? 0,
-      upperRange:  r.upperRange  ?? 0,
+      lowerRange:  Number(r.lowerRange) || 0,
+      upperRange:  Number(r.upperRange) || 0,
     })),
-    quiz_questions: buildQuizQuestions(raw.questions || [], raw.options || []),
+    quiz_questions: buildQuizQuestions(
+      raw.questions || [],
+      raw.options || [],
+      Number(raw.quizTypeId) || 0,
+    ),
   };
 }
 
@@ -4308,12 +4364,12 @@ export async function fetchQuizDetails(quizId: number | string): Promise<QuizDet
 
 export async function fetchQuizPlayers(
   quizId: number | string,
-  page = 1,
+  pageNum = 1,
   pageSize = 20,
 ): Promise<QuizPlayer[]> {
   try {
     const { data } = await apiClient.get(`/quizzes/${quizId}/players`, {
-      params: { page, pageSize },
+      params: { pageNum, pageSize },
     });
     const raw = Array.isArray(data) ? data : (data?.data || []);
     return raw.map(transformQuizPlayer);
@@ -4327,7 +4383,7 @@ export async function fetchQuizPlayers(
 export async function fetchQuizCreators(pageSize = 10): Promise<QuizCreator[]> {
   try {
     const { data } = await apiClient.get('/quizzes/creators', {
-      params: { page: 1, pageSize },
+      params: { pageNum: 1, pageSize },
     });
     const raw = Array.isArray(data) ? data : (data?.data || []);
     return raw.map(transformQuizCreator);
@@ -4340,17 +4396,34 @@ export async function fetchQuizCreators(pageSize = 10): Promise<QuizCreator[]> {
 
 export async function submitQuizResponse(
   quizId: number | string,
-  answers: SubmitAnswer[],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<any | null> {
+  payload: QuizSubmitPayload,
+): Promise<QuizSubmitResult | null> {
   try {
-    const { data } = await apiClient.post(`/quizzes/${quizId}/response`, { answers });
-    return data?.data ?? data ?? null;
+    const { data } = await apiClient.post(`/quizzes/${quizId}/response`, payload);
+    const body = data ?? {};
+    const inner = body.response ?? null;
+    return {
+      success:            body.success === true,
+      isAuthenticated:    body.isAuthenticated === true,
+      message:            body.message || '',
+      responseId:         Number(inner?.responseId) || 0,
+      responseGuid:       inner?.responseGuid || null,
+      percentageBelow:    Number(inner?.percentageBelow) || 0,
+      totalCount:         Number(inner?.totalCount)      || 0,
+      finalResultForUser: Number(inner?.finalResultForUser) || 0,
+      totalUserPoints:    Number(body.totalUserPoints)  || 0,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      results:            (body.results || []).map((r: any) => ({
+        resultId:    Number(r.resultId)   || 0,
+        title:       r.title       || '',
+        description: r.description || '',
+        lowerRange:  Number(r.lowerRange) || 0,
+        upperRange:  Number(r.upperRange) || 0,
+      })),
+    };
   } catch (err: unknown) {
-    // Known backend bug: POST /response always 400s (FinalResultForUser FromSql) —
-    // see docs/backend-issues-2026-04-07.md Class D. Caller falls back to local score.
     const e = err as { response?: { status: number }; message?: string };
-    console.warn('[API] submitQuizResponse failed (fallback to local score):', e?.response?.status, e?.message);
+    console.warn('[API] submitQuizResponse failed:', e?.response?.status, e?.message);
     return null;
   }
 }

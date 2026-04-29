@@ -105,16 +105,23 @@ export default function QuizDetailScreen() {
           </View>
         </LinearGradient>
 
-        {/* Byline (author · date) */}
+        {/* Byline — prefer server-formatted authorByLine when present, else
+            synthesize from author + date */}
         <View style={styles.bylineRow}>
-          <Text style={styles.bylineText} numberOfLines={1}>
-            <Text style={styles.bylineAuthor}>
-              {quiz.author && quiz.author !== 'IndiaForums' ? quiz.author : 'Team IndiaForums'}
+          {quiz.authorByLine ? (
+            <Text style={styles.bylineText} numberOfLines={1}>
+              <Text style={styles.bylineAuthor}>{quiz.authorByLine}</Text>
             </Text>
-            {quiz.publishedFormatted ? (
-              <Text style={styles.bylineDate}> · {quiz.publishedFormatted}</Text>
-            ) : null}
-          </Text>
+          ) : (
+            <Text style={styles.bylineText} numberOfLines={1}>
+              <Text style={styles.bylineAuthor}>
+                {quiz.author && quiz.author !== 'IndiaForums' ? quiz.author : 'Team IndiaForums'}
+              </Text>
+              {quiz.publishedFormatted ? (
+                <Text style={styles.bylineDate}> · {quiz.publishedFormatted}</Text>
+              ) : null}
+            </Text>
+          )}
         </View>
 
         {/* Meta row — horizontal scroll so extras don't squish */}

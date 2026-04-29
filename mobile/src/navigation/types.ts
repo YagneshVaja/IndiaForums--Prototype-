@@ -65,6 +65,14 @@ export type HomeStackParamList = {
     id: string;
     score: number;
     answers?: { questionId: number; optionIdx: number; correct: boolean }[];
+    // Server-confirmed stats from POST /quizzes/{id}/response — null when
+    // submit failed or the user is unauthenticated.
+    server?: {
+      percentageBelow: number;
+      totalCount: number;
+      totalUserPoints: number;
+      finalResultForUser: number;
+    } | null;
   };
   QuizLeaderboard: { id: string };
   Galleries: undefined;

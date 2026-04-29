@@ -42,7 +42,7 @@ function pickBadge(pct: number): { emoji: string; label: string; msg: string } {
 export default function QuizResultScreen() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<Rt>();
-  const { id, score, answers = [] } = params;
+  const { id, score, answers = [], server = null } = params;
 
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -144,6 +144,31 @@ export default function QuizResultScreen() {
             </View>
           ) : null}
         </LinearGradient>
+
+        {/* Server-confirmed stats — only shown when submit succeeded.
+            percentageBelow = how many players you scored higher than. */}
+        {server && server.totalCount > 0 ? (
+          <View style={styles.serverRow}>
+            <View style={styles.serverPill}>
+              <Text style={styles.serverPillValue}>
+                {Math.round(server.percentageBelow)}%
+              </Text>
+              <Text style={styles.serverPillLabel}>BEAT</Text>
+            </View>
+            <View style={styles.serverPill}>
+              <Text style={styles.serverPillValue}>
+                {server.totalCount.toLocaleString()}
+              </Text>
+              <Text style={styles.serverPillLabel}>PLAYERS</Text>
+            </View>
+            <View style={styles.serverPill}>
+              <Text style={styles.serverPillValue}>
+                {server.totalUserPoints.toFixed(0)}
+              </Text>
+              <Text style={styles.serverPillLabel}>POINTS</Text>
+            </View>
+          </View>
+        ) : null}
 
         {/* Stats tiles */}
         {isTrivia && !matchedResult ? (
@@ -318,6 +343,36 @@ function makeStyles(c: ThemeColors) {
       opacity: 0.95,
       lineHeight: 19,
       textAlign: 'center',
+    },
+
+    serverRow: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingHorizontal: 14,
+      paddingTop: 14,
+    },
+    serverPill: {
+      flex: 1,
+      paddingVertical: 10,
+      paddingHorizontal: 6,
+      borderRadius: 12,
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+      alignItems: 'center',
+      gap: 2,
+    },
+    serverPillValue: {
+      fontSize: 18,
+      fontWeight: '900',
+      color: c.text,
+      letterSpacing: -0.4,
+    },
+    serverPillLabel: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: c.textTertiary,
+      letterSpacing: 0.5,
     },
 
     statsRow: {
