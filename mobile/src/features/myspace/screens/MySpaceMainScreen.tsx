@@ -28,9 +28,10 @@ import { extractApiError } from '../../../services/api';
 import { useMessagesOverview } from '../../messages/hooks/useMessages';
 
 import { useProfile } from '../../profile/hooks/useProfile';
+import { useBuddiesCount } from '../../profile/hooks/useBuddiesCount';
 import type { ProfileTabKey } from '../../profile/hooks/useProfileTab';
 import ProfileHero from '../../profile/components/ProfileHero';
-import ProfileStatsRow from '../../profile/components/ProfileStatsRow';
+import ProfileStatsRow, { type StatTileKey } from '../../profile/components/ProfileStatsRow';
 import ProfileTabBar, { tabsFor } from '../../profile/components/ProfileTabBar';
 import ActivityTab from '../../profile/components/tabs/ActivityTab';
 import PostsTab from '../../profile/components/tabs/PostsTab';
@@ -138,6 +139,7 @@ export default function MySpaceMainScreen({ navigation }: Props) {
   const styles = useMemo(() => makeStyles(colors, mode), [colors, mode]);
 
   const profileQ = useProfile();
+  const buddiesCountQ = useBuddiesCount(profileQ.data?.userId, true);
   const tabs = useMemo(
     () =>
       tabsFor(true, {
@@ -273,7 +275,11 @@ export default function MySpaceMainScreen({ navigation }: Props) {
               onEdit={() => navigation.navigate('EditProfile')}
               onMessage={() => navigation.navigate('Messages')}
             />
-            <ProfileStatsRow profile={profile} />
+            <ProfileStatsRow
+              profile={profile}
+              buddiesCount={buddiesCountQ.data}
+              onTilePress={(key: StatTileKey) => setActiveTab(key)}
+            />
           </View>
 
           {/* ── Sticky tab bar ──────────────────────────────────────── */}

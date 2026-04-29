@@ -24,9 +24,10 @@ import ErrorState from '../../../components/ui/ErrorState';
 import { extractApiError } from '../../../services/api';
 
 import { useProfile } from '../hooks/useProfile';
+import { useBuddiesCount } from '../hooks/useBuddiesCount';
 import type { ProfileTabKey } from '../hooks/useProfileTab';
 import ProfileHero from '../components/ProfileHero';
-import ProfileStatsRow from '../components/ProfileStatsRow';
+import ProfileStatsRow, { type StatTileKey } from '../components/ProfileStatsRow';
 import ProfileTabBar, { tabsFor } from '../components/ProfileTabBar';
 
 import ActivityTab from '../components/tabs/ActivityTab';
@@ -59,6 +60,7 @@ export default function ProfileScreen({ route, navigation }: Props) {
   const q = useProfile(viewedUserId);
 
   const isOwn = q.data?.isOwnProfile ?? true;
+  const buddiesCountQ = useBuddiesCount(q.data?.userId, isOwn);
   const tabs = useMemo(
     () =>
       tabsFor(isOwn, {
@@ -106,7 +108,11 @@ export default function ProfileScreen({ route, navigation }: Props) {
               onEdit={() => navigation.navigate('EditProfile')}
               onMessage={() => navigation.navigate('Messages')}
             />
-            <ProfileStatsRow profile={q.data} />
+            <ProfileStatsRow
+              profile={q.data}
+              buddiesCount={buddiesCountQ.data}
+              onTilePress={(key: StatTileKey) => setActiveTab(key)}
+            />
           </View>
 
           <ProfileTabBar tabs={tabs} active={activeTab} onChange={setActiveTab} />

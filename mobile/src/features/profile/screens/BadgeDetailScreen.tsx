@@ -21,9 +21,15 @@ import { TopNavBack } from '../../../components/layout/TopNavBar';
 import ErrorState from '../../../components/ui/ErrorState';
 import EmptyState from '../components/EmptyState';
 import { extractApiError } from '../../../services/api';
-import { fmtDate, stripHtml } from '../utils/format';
+import { timeAgo, stripHtml } from '../utils/format';
 
 import { getMyBadgeDetail, getUserBadgeDetail } from '../services/profileApi';
+import type { UserBadgeLevelDto, BadgeDetailDto } from '../types';
+
+// TODO: wire up an "Update priority" action when the backend ships a
+// /my-badges/{id}/priority (or similar) endpoint. The live web has it but the
+// public OpenAPI spec doesn't expose anything to set badge priority/featured
+// status, so this screen is read-only for now.
 
 type Props = NativeStackScreenProps<MySpaceStackParamList, 'BadgeDetail'>;
 
@@ -58,7 +64,7 @@ export default function BadgeDetailScreen({ route, navigation }: Props) {
       <TopNavBack title={badge?.name || 'Badge'} onBack={() => navigation.goBack()} />
 
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }}
+        contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 40 }}
       >
         {q.isLoading ? (
           <View style={styles.center}>
@@ -70,42 +76,6 @@ export default function BadgeDetailScreen({ route, navigation }: Props) {
           <EmptyState icon="ribbon-outline" title="Badge not found" />
         ) : (
           <>
-            {/* Hero */}
-            <View style={styles.hero}>
-              <View style={styles.badgeImg}>
-                {badge.thumbnailUrl ? (
-                  <Image
-                    source={badge.thumbnailUrl}
-                    style={{ width: '100%', height: '100%' }}
-                    contentFit="contain"
-                  />
-                ) : (
-                  <Ionicons name="ribbon" size={56} color={colors.primary} />
-                )}
-              </View>
-              <Text style={styles.name}>{badge.name}</Text>
-              {badge.description ? (
-                <Text style={styles.desc}>{stripHtml(badge.description)}</Text>
-              ) : null}
-
-              <View style={styles.pills}>
-                <View style={styles.pill}>
-                  <Text style={styles.pillText}>Level {String(badge.level)}</Text>
-                </View>
-                {Number(badge.points) > 0 ? (
-                  <View style={styles.pillAlt}>
-                    <Text style={styles.pillAltText}>{String(badge.points)} pts</Text>
-                  </View>
-                ) : null}
-                {badge.isRepeatable ? (
-                  <View style={styles.pillAlt}>
-                    <Text style={styles.pillAltText}>Repeatable</Text>
-                  </View>
-                ) : null}
-              </View>
-            </View>
-
-            {/* Levels earned */}
             <Text style={styles.sectionLabel}>
               {levels.length === 0
                 ? 'No levels yet'
@@ -121,36 +91,13 @@ export default function BadgeDetailScreen({ route, navigation }: Props) {
             ) : (
               <View style={styles.list}>
                 {levels.map((l) => (
-                  <View
+                  <LevelRow
                     key={String(l.badgeLevelId) + '_' + String(l.levelCounter)}
-                    style={[styles.levelCard, l.superSeeded && styles.levelCardSuperseded]}
-                  >
-                    <View style={styles.levelHead}>
-                      <View style={styles.levelPill}>
-                        <Text style={styles.levelPillText}>Level {String(l.level)}</Text>
-                      </View>
-                      <Text style={styles.levelDate}>{fmtDate(l.createdWhen)}</Text>
-                    </View>
-                    {l.title ? (
-                      <Text style={styles.levelTitle} numberOfLines={2}>
-                        {l.title}
-                      </Text>
-                    ) : null}
-                    {l.summary ? (
-                      <Text style={styles.levelBody} numberOfLines={4}>
-                        {stripHtml(l.summary)}
-                      </Text>
-                    ) : null}
-                    {l.authorNote ? (
-                      <Text style={styles.levelNote}>{stripHtml(l.authorNote)}</Text>
-                    ) : null}
-                    {l.displayName ? (
-                      <Text style={styles.levelBy}>Awarded by {l.displayName}</Text>
-                    ) : null}
-                    {l.superSeeded ? (
-                      <Text style={styles.supersededText}>Superseded by higher level</Text>
-                    ) : null}
-                  </View>
+                    level={l}
+                    badge={badge}
+                    styles={styles}
+                    colors={colors}
+                  />
                 ))}
               </View>
             )}
@@ -161,79 +108,70 @@ export default function BadgeDetailScreen({ route, navigation }: Props) {
   );
 }
 
+interface RowProps {
+  level: UserBadgeLevelDto;
+  badge: BadgeDetailDto;
+  styles: ReturnType<typeof makeStyles>;
+  colors: ThemeColors;
+}
+
+// One earned level → one horizontal row. Image left, content right. Mirrors
+// the live website's badge-detail layout. Author note / awarded-by /
+// superseded indicators are kept but demoted to a small secondary line so we
+// don't lose information that the live web doesn't show.
+function LevelRow({ level, badge, styles, colors }: RowProps) {
+  const imageUrl = level.thumbnailUrl || badge.thumbnailUrl;
+  const title = level.title || badge.name;
+  const summary = stripHtml(level.summary || badge.description || '');
+  const ago = timeAgo(level.createdWhen);
+
+  const extras: string[] = [];
+  if (level.displayName) extras.push(`Awarded by ${level.displayName}`);
+  if (level.authorNote) extras.push(stripHtml(level.authorNote));
+  if (level.superSeeded) extras.push('Superseded by higher level');
+
+  return (
+    <View style={[styles.row, level.superSeeded && styles.rowSuperseded]}>
+      <View style={styles.badgeImg}>
+        {imageUrl ? (
+          <Image
+            source={imageUrl}
+            style={{ width: '100%', height: '100%' }}
+            contentFit="contain"
+          />
+        ) : (
+          <Ionicons name="ribbon" size={36} color={colors.primary} />
+        )}
+      </View>
+      <View style={styles.rowBody}>
+        <Text style={styles.title} numberOfLines={2}>
+          {title}
+        </Text>
+        {summary ? (
+          <Text style={styles.summary} numberOfLines={3}>
+            {summary}
+          </Text>
+        ) : null}
+        {ago ? (
+          <View style={styles.timeRow}>
+            <Ionicons name="time-outline" size={13} color={colors.textTertiary} />
+            <Text style={styles.timeText}>{ago}</Text>
+          </View>
+        ) : null}
+        {extras.length > 0 ? (
+          <Text style={styles.extras} numberOfLines={2}>
+            {extras.join(' · ')}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: c.bg },
     center: { paddingVertical: 48, alignItems: 'center' },
-
-    hero: {
-      alignItems: 'center',
-      paddingVertical: 20,
-      paddingHorizontal: 16,
-      gap: 10,
-      backgroundColor: c.card,
-      borderRadius: 16,
-      marginBottom: 20,
-    },
-    badgeImg: {
-      width: 96,
-      height: 96,
-      borderRadius: 48,
-      backgroundColor: c.primarySoft,
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
-      marginBottom: 4,
-    },
-    name: {
-      fontSize: 20,
-      fontWeight: '800',
-      color: c.text,
-      textAlign: 'center',
-      letterSpacing: -0.3,
-    },
-    desc: {
-      fontSize: 13,
-      color: c.textSecondary,
-      textAlign: 'center',
-      lineHeight: 19,
-      paddingHorizontal: 8,
-    },
-    pills: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      gap: 6,
-      marginTop: 6,
-    },
-    pill: {
-      paddingHorizontal: 12,
-      paddingVertical: 4,
-      borderRadius: 999,
-      backgroundColor: c.primarySoft,
-    },
-    pillText: {
-      fontSize: 11,
-      fontWeight: '800',
-      color: c.primary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    pillAlt: {
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 999,
-      backgroundColor: c.surface,
-      borderWidth: 1,
-      borderColor: c.border,
-    },
-    pillAltText: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: c.textSecondary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.4,
-    },
 
     sectionLabel: {
       fontSize: 11,
@@ -241,72 +179,64 @@ function makeStyles(c: ThemeColors) {
       color: c.textTertiary,
       letterSpacing: 0.6,
       textTransform: 'uppercase',
-      marginBottom: 8,
+      marginBottom: 10,
       paddingHorizontal: 4,
     },
+
     list: { gap: 10 },
-    levelCard: {
+
+    row: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 14,
       backgroundColor: c.card,
       borderRadius: 12,
       padding: 14,
-      gap: 6,
-      borderLeftWidth: 3,
-      borderLeftColor: c.primary,
     },
-    levelCardSuperseded: {
-      opacity: 0.55,
-      borderLeftColor: c.textTertiary,
+    rowSuperseded: {
+      opacity: 0.6,
     },
-    levelHead: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    levelPill: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 999,
+    badgeImg: {
+      width: 76,
+      height: 76,
+      borderRadius: 38,
       backgroundColor: c.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
     },
-    levelPillText: {
-      fontSize: 10,
+    rowBody: {
+      flex: 1,
+      gap: 4,
+    },
+    title: {
+      fontSize: 15,
       fontWeight: '800',
-      color: c.primary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.4,
-    },
-    levelDate: {
-      fontSize: 11,
-      color: c.textTertiary,
-      fontWeight: '600',
-    },
-    levelTitle: {
-      fontSize: 14,
-      fontWeight: '700',
       color: c.text,
+      letterSpacing: -0.2,
     },
-    levelBody: {
+    summary: {
       fontSize: 13,
       color: c.textSecondary,
-      lineHeight: 19,
+      lineHeight: 18,
     },
-    levelNote: {
+    timeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginTop: 2,
+    },
+    timeText: {
       fontSize: 12,
-      fontStyle: 'italic',
-      color: c.textSecondary,
-      backgroundColor: c.surface,
-      padding: 10,
-      borderRadius: 8,
-    },
-    levelBy: {
-      fontSize: 11,
       color: c.textTertiary,
       fontWeight: '600',
     },
-    supersededText: {
+    extras: {
+      marginTop: 4,
       fontSize: 11,
-      color: c.textTertiary,
       fontStyle: 'italic',
+      color: c.textTertiary,
+      lineHeight: 15,
     },
   });
 }
