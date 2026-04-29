@@ -111,6 +111,13 @@ export type SearchStackParamList = {
   GalleryDetail:
     | { gallery: import('../services/api').Gallery }
     | { id: string | number; title?: string; thumbnail?: string | null };
+  ForumThread: { forum: import('../services/api').Forum };
+  TopicDetail: {
+    topic: import('../services/api').ForumTopic;
+    forum?: import('../services/api').Forum;
+    jumpToLast?: boolean;
+    autoAction?: 'like' | 'reply' | 'quote';
+  };
 };
 
 export type MySpaceStackParamList = {

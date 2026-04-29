@@ -9,7 +9,12 @@ import {
   type SuggestItemDto,
   type SearchResultItemDto,
 } from '../../../services/searchApi';
-import { fetchVideoDetails, type Celebrity } from '../../../services/api';
+import {
+  fetchVideoDetails,
+  type Celebrity,
+  type Forum,
+  type ForumTopic,
+} from '../../../services/api';
 import type { UnsupportedEntitySheetHandle } from '../components/UnsupportedEntitySheet';
 
 type Nav = NativeStackNavigationProp<SearchStackParamList>;
@@ -62,6 +67,69 @@ function synthesizeCelebrity(e: SearchEntityShape): Celebrity {
     prevRank: 0,
     trend: 'stable',
     rankDiff: 0,
+  };
+}
+
+/**
+ * Builds a minimal ForumTopic from a search payload. TopicDetailScreen drives
+ * its post fetch off `topic.id` and merges the server's `topicDetail` over the
+ * route param via `{ ...topic, ...firstPage.topicDetail }`, so the zeroed
+ * fields below are placeholders that get replaced as soon as the first page
+ * lands.
+ */
+function synthesizeForumTopic(e: SearchEntityShape): ForumTopic {
+  return {
+    id: e.entityId ?? 0,
+    forumId: 0,
+    forumName: '',
+    forumThumbnail: null,
+    title: e.title,
+    description: '',
+    poster: '',
+    lastBy: '',
+    time: '',
+    lastTime: '',
+    replies: 0,
+    views: 0,
+    likes: 0,
+    locked: false,
+    pinned: false,
+    flairId: 0,
+    topicImage: e.imageUrl,
+    tags: [],
+    linkTypeValue: '',
+    poll: null,
+  };
+}
+
+/**
+ * Builds a minimal Forum from a search payload. ForumThreadScreen drives its
+ * topic-list fetch off `forum.id` and merges the server's `forumDetail` over
+ * the route param via `firstPage?.forumDetail || forum`, so the zeroed fields
+ * below are placeholders that get replaced as soon as the first page lands.
+ */
+function synthesizeForum(e: SearchEntityShape): Forum {
+  return {
+    id: e.entityId ?? 0,
+    name: e.title,
+    description: '',
+    categoryId: 0,
+    slug: e.url ?? '',
+    topicCount: 0,
+    postCount: 0,
+    followCount: 0,
+    rank: 0,
+    prevRank: 0,
+    rankDisplay: '',
+    bg: '',
+    emoji: '',
+    bannerUrl: null,
+    thumbnailUrl: e.imageUrl,
+    locked: false,
+    hot: false,
+    priorityPosts: 0,
+    editPosts: 0,
+    deletePosts: 0,
   };
 }
 
@@ -137,6 +205,16 @@ export function useEntityNavigator(): UseEntityNavigator {
         case 'Person':
           navigation.push('CelebrityProfile', {
             celebrity: synthesizeCelebrity(e),
+          });
+          return;
+        case 'Topic':
+          navigation.push('TopicDetail', {
+            topic: synthesizeForumTopic(e),
+          });
+          return;
+        case 'Forum':
+          navigation.push('ForumThread', {
+            forum: synthesizeForum(e),
           });
           return;
         default:

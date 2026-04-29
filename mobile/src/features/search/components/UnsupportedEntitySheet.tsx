@@ -69,8 +69,8 @@ const UnsupportedEntitySheet = forwardRef<UnsupportedEntitySheetHandle, object>(
                 </View>
               </View>
               <Text style={styles.body2}>
-                This {payload.entityType.toLowerCase()} page isn't available in
-                the app yet. Open it on the web to view full details.
+                We're still building {payload.entityType.toLowerCase()} pages
+                in the app. Open it on the web for now.
               </Text>
               <Pressable
                 onPress={handleOpen}
