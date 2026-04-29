@@ -26,9 +26,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ErrorState from '../../../components/ui/ErrorState';
 import { useThemeStore } from '../../../store/themeStore';
+import { useAuthStore } from '../../../store/authStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
-import { extractApiError, submitQuizResponse, type SubmitAnswer } from '../../../services/api';
+import { extractApiError, submitQuizResponse } from '../../../services/api';
 import { useQuizDetails } from '../hooks/useQuizzes';
 import CircularTimer from '../components/CircularTimer';
 
@@ -69,6 +70,7 @@ export default function QuizPlayerScreen() {
   const { id } = params;
 
   const colors = useThemeStore((s) => s.colors);
+  const user   = useAuthStore((s) => s.user);
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -135,32 +137,57 @@ export default function QuizPlayerScreen() {
     finishedRef.current = true;
     hapticFinish();
     setSubmitting(true);
-    const payload: SubmitAnswer[] = Object.values(finalMap)
-      .filter((a) => a.optionId > 0)
-      .map((a) => ({ questionId: a.questionId, optionId: a.optionId }));
 
-    let localScore = 0;
+    const isTriviaQuiz = !!questions[0]?.isTrivia;
+
+    let totalPoints = 0;
     Object.values(finalMap).forEach((a) => {
-      if (questions[0]?.isTrivia) {
-        if (a.correct) localScore += 10;
+      if (isTriviaQuiz) {
+        if (a.correct) totalPoints += 10;
       } else {
-        localScore += a.points || 0;
+        totalPoints += a.points || 0;
       }
     });
 
-    await submitQuizResponse(id, payload);
+    // Personality quizzes need finalResultForUser = matched result range's id.
+    // Trivia has no result ranges → 0.
+    let finalResultForUser = 0;
+    if (!isTriviaQuiz && quiz) {
+      const matched = quiz.results.find(
+        (r) => totalPoints >= r.lowerRange && totalPoints <= r.upperRange,
+      ) || quiz.results[0];
+      finalResultForUser = matched?.resultId ?? 0;
+    }
+
+    const submitResult = quiz && user
+      ? await submitQuizResponse(id, {
+          quizTypeId:         quiz.quizTypeId,
+          userName:           user.userName || '',
+          userEmail:          user.email || '',
+          totalPointsScored:  totalPoints,
+          finalResultForUser,
+        })
+      : null;
+
     setSubmitting(false);
     navigation.replace('QuizResult', {
       id: String(id),
-      score: localScore,
-      // Pass the answered map so the result screen can show a per-question review
+      score: totalPoints,
       answers: Object.values(finalMap).map((a) => ({
         questionId: a.questionId,
         optionIdx:  a.optionIdx,
         correct:    a.correct,
       })),
+      server: submitResult
+        ? {
+            percentageBelow:    submitResult.percentageBelow,
+            totalCount:         submitResult.totalCount,
+            totalUserPoints:    submitResult.totalUserPoints,
+            finalResultForUser: submitResult.finalResultForUser,
+          }
+        : null,
     });
-  }, [id, navigation, questions]);
+  }, [id, navigation, questions, quiz, user]);
 
   const goNext = useCallback(() => {
     setShowReveal(false);
@@ -198,17 +225,12 @@ export default function QuizPlayerScreen() {
       hapticTap();
     }
 
-    if (!currentQ.isTrivia) {
-      // Personality / range-based: briefly highlight then auto-advance
-      const answeredAt = qIdxRef.current;
-      setTimeout(() => {
-        if (qIdxRef.current === answeredAt) goNextRef.current();
-      }, 700);
-      return;
-    }
-
-    // Trivia: show reveal panel if content exists
-    if (currentQ.revealTitle || currentQ.revealDescription || currentQ.revealImageUrl) {
+    // Reveal panel — works for both trivia and personality, gated on the
+    // explicit doReveal flag plus the presence of any reveal content.
+    const hasRevealContent = !!(
+      currentQ.revealTitle || currentQ.revealDescription || currentQ.revealImageUrl
+    );
+    if (currentQ.doReveal && hasRevealContent) {
       setTimeout(() => setShowReveal(true), 450);
     }
   }, [currentQ, isAnswered]);
@@ -342,70 +364,158 @@ export default function QuizPlayerScreen() {
           </View>
         ) : null}
 
-        {currentQ.options.map((opt, i) => {
+        {/* Adaptive option layout — grid when all options have images (trivia,
+            ≤4 opts) AND the API hint doesn't force a list. answerLayoutTypeId
+            comes from the server as an undocumented enum; we treat 1 as
+            "force list" (the most common convention) and any other value as
+            "no preference, use client adaptive logic". */}
+        {(() => {
+          const allHaveImages = currentQ.optionImageUrls.every(Boolean);
+          const apiForcesList = currentQ.answerLayoutTypeId === 1;
+          const useGrid =
+            isTrivia &&
+            allHaveImages &&
+            currentQ.options.length <= 4 &&
+            !apiForcesList;
           const selectedIdx = currentAnswer?.optionIdx ?? -1;
-          const isSelected = i === selectedIdx;
-          const isCorrect = isTrivia && i === currentQ.correct;
 
-          let optStyle = styles.option;
-          let letterStyle = styles.letter;
-          let textStyle = styles.optionText;
-          let filled = false;
+          const visualState = (i: number) => {
+            const isSelected = i === selectedIdx;
+            const isCorrect = isTrivia && i === currentQ.correct;
+            let bg = styles.optionNeutralBg;
+            let border = styles.optionNeutralBorder;
+            let dim = false;
+            let filled = false;
 
-          if (isAnswered && isTrivia) {
-            if (isCorrect) {
-              optStyle = { ...styles.option, ...styles.optionCorrect };
-              letterStyle = { ...styles.letter, ...styles.letterFilled };
-              filled = true;
-            } else if (isSelected) {
-              optStyle = { ...styles.option, ...styles.optionWrong };
-              letterStyle = { ...styles.letter, ...styles.letterFilled };
-              filled = true;
-            } else {
-              optStyle = { ...styles.option, ...styles.optionDim };
+            if (isAnswered && isTrivia) {
+              if (isCorrect) {
+                bg = styles.optionCorrectBg;
+                border = styles.optionCorrectBorder;
+                filled = true;
+              } else if (isSelected) {
+                bg = styles.optionWrongBg;
+                border = styles.optionWrongBorder;
+                filled = true;
+              } else {
+                dim = true;
+              }
+            } else if (isAnswered && !isTrivia) {
+              if (isSelected) {
+                bg = styles.optionSelectedBg;
+                border = styles.optionSelectedBorder;
+                filled = true;
+              } else {
+                dim = true;
+              }
             }
-          } else if (isAnswered && !isTrivia) {
-            if (isSelected) {
-              optStyle = { ...styles.option, ...styles.optionSelected };
-              letterStyle = { ...styles.letter, ...styles.letterFilled };
-              filled = true;
-            } else {
-              optStyle = { ...styles.option, ...styles.optionDim };
-            }
+            return { isSelected, isCorrect, bg, border, dim, filled };
+          };
+
+          if (useGrid) {
+            return (
+              <View style={styles.gridWrap}>
+                {currentQ.options.map((opt, i) => {
+                  const v = visualState(i);
+                  const showTick  = isTrivia && isAnswered && v.isCorrect;
+                  const showCross = isTrivia && isAnswered && v.isSelected && !v.isCorrect;
+                  return (
+                    <Pressable
+                      key={`${currentQ.questionId}-${i}`}
+                      style={({ pressed }) => [
+                        styles.gridCard,
+                        v.border,
+                        v.dim && styles.optionDim,
+                        pressed && !isAnswered && styles.optionPressed,
+                      ]}
+                      onPress={() => handlePick(i)}
+                      disabled={isAnswered}
+                    >
+                      <View style={styles.gridImgWrap}>
+                        <Image
+                          source={{ uri: currentQ.optionImageUrls[i] ?? '' }}
+                          style={styles.gridImg}
+                          contentFit="cover"
+                          transition={150}
+                        />
+                        {showTick ? (
+                          <View style={[styles.gridOverlayBadge, styles.gridBadgeCorrect]}>
+                            <Text style={styles.gridBadgeText}>✓</Text>
+                          </View>
+                        ) : null}
+                        {showCross ? (
+                          <View style={[styles.gridOverlayBadge, styles.gridBadgeWrong]}>
+                            <Text style={styles.gridBadgeText}>✗</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <View style={[styles.gridFooter, v.bg]}>
+                        <View style={[styles.letter, v.filled && styles.letterFilled]}>
+                          <Text style={[styles.letterText, v.filled && styles.letterTextFilled]}>
+                            {String.fromCharCode(65 + i)}
+                          </Text>
+                        </View>
+                        <View style={styles.gridTextCol}>
+                          <Text
+                            style={[styles.gridText, v.filled && styles.optionTextFilled]}
+                            numberOfLines={2}
+                          >
+                            {opt}
+                          </Text>
+                        </View>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            );
           }
 
-          if (filled) textStyle = { ...styles.optionText, color: '#FFFFFF' };
-
-          return (
-            <Pressable
-              key={`${currentQ.questionId}-${i}`}
-              style={({ pressed }) => [optStyle, pressed && !isAnswered && styles.optionPressed]}
-              onPress={() => handlePick(i)}
-              disabled={isAnswered}
-            >
-              <View style={letterStyle}>
-                <Text
-                  style={[
-                    styles.letterText,
-                    filled && styles.letterTextFilled,
-                  ]}
-                >
-                  {String.fromCharCode(65 + i)}
-                </Text>
-              </View>
-              <Text style={textStyle}>{opt}</Text>
-              {isTrivia && isAnswered && isCorrect ? (
-                <Text style={styles.tick}>✓</Text>
-              ) : null}
-              {isTrivia && isAnswered && isSelected && !isCorrect ? (
-                <Text style={styles.cross}>✗</Text>
-              ) : null}
-            </Pressable>
-          );
-        })}
+          // Inline rows — text-only or partial-image
+          return currentQ.options.map((opt, i) => {
+            const v = visualState(i);
+            const imgUrl = currentQ.optionImageUrls[i];
+            const showTick  = isTrivia && isAnswered && v.isCorrect;
+            const showCross = isTrivia && isAnswered && v.isSelected && !v.isCorrect;
+            return (
+              <Pressable
+                key={`${currentQ.questionId}-${i}`}
+                style={({ pressed }) => [
+                  styles.option,
+                  v.bg,
+                  v.border,
+                  v.dim && styles.optionDim,
+                  pressed && !isAnswered && styles.optionPressed,
+                ]}
+                onPress={() => handlePick(i)}
+                disabled={isAnswered}
+              >
+                <View style={[styles.letter, v.filled && styles.letterFilled]}>
+                  <Text style={[styles.letterText, v.filled && styles.letterTextFilled]}>
+                    {String.fromCharCode(65 + i)}
+                  </Text>
+                </View>
+                {imgUrl ? (
+                  <Image
+                    source={{ uri: imgUrl }}
+                    style={styles.inlineThumb}
+                    contentFit="cover"
+                    transition={120}
+                  />
+                ) : null}
+                <View style={styles.inlineTextCol}>
+                  <Text style={[styles.optionText, v.filled && styles.optionTextFilled]}>
+                    {opt}
+                  </Text>
+                </View>
+                {showTick  ? <Text style={styles.tick}>✓</Text>  : null}
+                {showCross ? <Text style={styles.cross}>✗</Text> : null}
+              </Pressable>
+            );
+          });
+        })()}
 
         {/* Reveal panel */}
-        {showReveal && (currentQ.revealTitle || currentQ.revealDescription || currentQ.revealImageUrl) ? (
+        {showReveal && currentQ.doReveal && (currentQ.revealTitle || currentQ.revealDescription || currentQ.revealImageUrl) ? (
           <View style={styles.reveal}>
             {currentQ.revealImageUrl ? (
               <Image
@@ -425,8 +535,10 @@ export default function QuizPlayerScreen() {
         ) : null}
       </Animated.ScrollView>
 
-      {/* Next button — only for trivia (personality auto-advances) */}
-      {isAnswered && isTrivia ? (
+      {/* Next button — shown after every answer; consistent UX between
+          trivia and personality (personality used to auto-advance with no
+          visible cue, which read as a bug). */}
+      {isAnswered ? (
         <View style={[styles.footer, { paddingBottom: 14 + insets.bottom }]}>
           <Pressable
             onPress={goNext}
@@ -561,15 +673,19 @@ function makeStyles(c: ThemeColors) {
       gap: 12,
       padding: 14,
       borderRadius: 12,
-      backgroundColor: c.card,
       borderWidth: 1.5,
-      borderColor: c.border,
     },
-    optionPressed:  { opacity: 0.7 },
-    optionSelected: { backgroundColor: c.primary, borderColor: c.primary },
-    optionCorrect:  { backgroundColor: '#16a34a', borderColor: '#16a34a' },
-    optionWrong:    { backgroundColor: '#dc2626', borderColor: '#dc2626' },
-    optionDim:      { opacity: 0.45 },
+    // Background + border are applied separately so grid + inline can share state
+    optionNeutralBg:      { backgroundColor: c.card },
+    optionNeutralBorder:  { borderColor: c.border },
+    optionSelectedBg:     { backgroundColor: c.primary },
+    optionSelectedBorder: { borderColor: c.primary },
+    optionCorrectBg:      { backgroundColor: '#16a34a' },
+    optionCorrectBorder:  { borderColor: '#16a34a' },
+    optionWrongBg:        { backgroundColor: '#dc2626' },
+    optionWrongBorder:    { borderColor: '#dc2626' },
+    optionPressed:        { opacity: 0.7 },
+    optionDim:            { opacity: 0.45 },
 
     letter: {
       width: 30,
@@ -588,14 +704,78 @@ function makeStyles(c: ThemeColors) {
     letterTextFilled: { color: '#FFFFFF' },
 
     optionText: {
-      flex: 1,
       fontSize: 14,
       fontWeight: '700',
       color: c.text,
       lineHeight: 20,
     },
+    optionTextFilled: { color: '#FFFFFF' },
+
+    inlineTextCol: { flex: 1 },
+    inlineThumb: {
+      width: 52,
+      height: 52,
+      borderRadius: 8,
+      backgroundColor: c.surface,
+    },
+
     tick:  { fontSize: 16, color: '#FFFFFF', fontWeight: '800' },
     cross: { fontSize: 16, color: '#FFFFFF', fontWeight: '800' },
+
+    // Grid mode — image-on-top cards, two columns
+    gridWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    gridCard: {
+      width: '48.5%',
+      borderRadius: 12,
+      borderWidth: 1.5,
+      backgroundColor: c.card,
+      overflow: 'hidden',
+    },
+    gridImgWrap: {
+      width: '100%',
+      aspectRatio: 1,
+      backgroundColor: c.surface,
+    },
+    gridImg: {
+      width: '100%',
+      height: '100%',
+    },
+    gridOverlayBadge: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    gridBadgeCorrect: { backgroundColor: '#16a34a' },
+    gridBadgeWrong:   { backgroundColor: '#dc2626' },
+    gridBadgeText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '900',
+    },
+    gridFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 10,
+    },
+    gridTextCol: { flex: 1 },
+    gridText: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: c.text,
+      lineHeight: 17,
+      letterSpacing: -0.1,
+    },
 
     reveal: {
       marginTop: 8,
