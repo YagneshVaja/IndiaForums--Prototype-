@@ -15,7 +15,7 @@ import type { ThemeColors } from '../../../../theme/tokens';
 import { useProfileTab } from '../../hooks/useProfileTab';
 import type { ActivityDto } from '../../types';
 import TabShell from './TabShell';
-import { stripHtml, timeAgo } from '../../utils/format';
+import { fmtNum, stripHtml, timeAgo } from '../../utils/format';
 import Avatar from '../Avatar';
 import WallComposerSheet from '../../../activities/components/WallComposerSheet';
 import OwnWallComposer from '../../../activities/components/OwnWallComposer';
@@ -219,8 +219,16 @@ function ActivityCard({ a, meId, isDeleting, onEdit, onDelete, styles, colors }:
 
   // Optimistic like state — server is source of truth, so we don't try to
   // hydrate a "viewer has liked?" boolean from the list payload (it isn't
-  // returned). We just track the toggle locally for instant feedback.
+  // returned). We just track the toggle locally for instant feedback. Count
+  // is also kept locally so the badge bumps on tap.
+  const initialLikeCount = (() => {
+    const v = a.likeCount;
+    if (v == null) return 0;
+    const n = typeof v === 'string' ? parseInt(v, 10) : v;
+    return Number.isFinite(n) ? Number(n) : 0;
+  })();
   const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [likeBusy, setLikeBusy] = useState(false);
 
   async function toggleLike() {
@@ -228,6 +236,7 @@ function ActivityCard({ a, meId, isDeleting, onEdit, onDelete, styles, colors }:
     hapticTap();
     const nextLiked = !liked;
     setLiked(nextLiked);
+    setLikeCount((c) => Math.max(0, c + (nextLiked ? 1 : -1)));
     setLikeBusy(true);
     try {
       const res = await reactToContent({
@@ -236,9 +245,13 @@ function ActivityCard({ a, meId, isDeleting, onEdit, onDelete, styles, colors }:
         reactionType: REACTION_LOVED,
         operationType: nextLiked ? 1 : 0,
       });
-      if (!res.success) setLiked(!nextLiked);
+      if (!res.success) {
+        setLiked(!nextLiked);
+        setLikeCount((c) => Math.max(0, c + (nextLiked ? -1 : 1)));
+      }
     } catch {
       setLiked(!nextLiked);
+      setLikeCount((c) => Math.max(0, c + (nextLiked ? -1 : 1)));
     } finally {
       setLikeBusy(false);
     }
@@ -338,7 +351,17 @@ function ActivityCard({ a, meId, isDeleting, onEdit, onDelete, styles, colors }:
           ]}
           accessibilityLabel="Like"
         >
+          <Ionicons
+            name={liked ? 'heart' : 'heart-outline'}
+            size={14}
+            color={liked ? colors.onPrimary : colors.primary}
+          />
           <Text style={[styles.likeBtnText, liked && styles.likeBtnTextActive]}>LIKE</Text>
+          {likeCount > 0 ? (
+            <Text style={[styles.likeCountText, liked && styles.likeBtnTextActive]}>
+              {fmtNum(likeCount)}
+            </Text>
+          ) : null}
         </Pressable>
         <Pressable
           onPress={handleReply}
@@ -346,7 +369,11 @@ function ActivityCard({ a, meId, isDeleting, onEdit, onDelete, styles, colors }:
           style={({ pressed }) => [styles.replyBtn, pressed && styles.pressed]}
           accessibilityLabel="Reply"
         >
+          <Ionicons name="chatbubble-outline" size={13} color={colors.success} />
           <Text style={styles.replyBtnText}>Reply</Text>
+          {Number(a.commentCount) > 0 ? (
+            <Text style={styles.replyCountText}>{fmtNum(a.commentCount)}</Text>
+          ) : null}
         </Pressable>
       </View>
     </View>
@@ -373,45 +400,56 @@ function makeStyles(c: ThemeColors) {
       color: c.primary,
       letterSpacing: 0.3,
     },
-    pressed: { opacity: 0.85 },
+    pressed: {
+      opacity: 0.85,
+      transform: [{ scale: 0.97 }],
+    },
 
     list: {
       gap: 10,
-      paddingVertical: 4,
+      paddingVertical: 6,
     },
     card: {
       backgroundColor: c.card,
-      borderRadius: 12,
-      padding: 14,
+      borderRadius: 14,
+      padding: 16,
       borderWidth: 1,
       borderColor: c.border,
-      gap: 10,
+      gap: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 1,
     },
     cardHeader: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      gap: 10,
+      gap: 12,
     },
     headerText: {
       flex: 1,
       minWidth: 0,
-      gap: 2,
+      gap: 3,
     },
     nameRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      flexWrap: 'wrap',
     },
     author: {
-      fontSize: 14,
+      flexShrink: 1,
+      fontSize: 15,
       fontWeight: '800',
       color: c.primary,
+      letterSpacing: -0.1,
     },
     recipient: {
-      fontSize: 14,
+      flexShrink: 1,
+      fontSize: 15,
       fontWeight: '800',
       color: c.primary,
+      letterSpacing: -0.1,
     },
     handle: {
       fontSize: 12,
@@ -422,15 +460,17 @@ function makeStyles(c: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
+      marginTop: 1,
     },
     time: {
       fontSize: 11,
       color: c.textTertiary,
+      fontWeight: '500',
     },
     menuBtn: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: c.surface,
@@ -444,12 +484,13 @@ function makeStyles(c: ThemeColors) {
     body: {
       fontSize: 14,
       color: c.text,
-      lineHeight: 20,
+      lineHeight: 21,
     },
     image: {
       width: '100%',
-      height: 180,
-      borderRadius: 10,
+      height: 200,
+      borderRadius: 12,
+      backgroundColor: c.surface,
     },
 
     linkChip: {
@@ -457,8 +498,8 @@ function makeStyles(c: ThemeColors) {
       alignItems: 'center',
       gap: 6,
       paddingHorizontal: 10,
-      paddingVertical: 7,
-      borderRadius: 8,
+      paddingVertical: 8,
+      borderRadius: 10,
       backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.border,
@@ -474,16 +515,20 @@ function makeStyles(c: ThemeColors) {
       justifyContent: 'flex-end',
       alignItems: 'center',
       gap: 8,
+      paddingTop: 4,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.border,
       marginTop: 2,
     },
     likeBtn: {
-      paddingHorizontal: 18,
-      height: 32,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 16,
+      height: 36,
       borderRadius: 999,
       borderWidth: 1.5,
       borderColor: c.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
       backgroundColor: 'transparent',
     },
     likeBtnActive: {
@@ -498,14 +543,21 @@ function makeStyles(c: ThemeColors) {
     likeBtnTextActive: {
       color: c.onPrimary,
     },
+    likeCountText: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: c.primary,
+      marginLeft: 2,
+    },
     replyBtn: {
-      paddingHorizontal: 18,
-      height: 32,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 16,
+      height: 36,
       borderRadius: 999,
       borderWidth: 1.5,
       borderColor: c.success,
-      alignItems: 'center',
-      justifyContent: 'center',
       backgroundColor: 'transparent',
     },
     replyBtnText: {
@@ -513,6 +565,12 @@ function makeStyles(c: ThemeColors) {
       fontWeight: '800',
       color: c.success,
       letterSpacing: 0.4,
+    },
+    replyCountText: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: c.success,
+      marginLeft: 2,
     },
   });
 }
