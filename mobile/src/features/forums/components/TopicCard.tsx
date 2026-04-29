@@ -1,13 +1,15 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import type { ForumTopic } from '../../../services/api';
+import { parseTopReactionTypes, REACTION_META, type ForumTopic } from '../../../services/api';
 import { formatCount } from '../utils/format';
 import { stripPostHtml } from '../utils/stripHtml';
 import { extractSocialUrls } from '../utils/socialUrls';
 import SocialEmbed from './SocialEmbed';
 import PostHtml from './PostHtml';
+import type { AnchorRect } from './ReactionPickerSheet';
+import { ensureOpPost, useTopicLike } from '../hooks/useTopicLike';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 
@@ -20,14 +22,67 @@ interface Props {
     topic: ForumTopic,
     opts?: { jumpToLast?: boolean; autoAction?: 'like' | 'reply' | 'quote' },
   ) => void;
+  /** Open a reply composer for this topic without leaving the listing. */
+  onReply?: (topic: ForumTopic) => void;
+  /** Open a reply composer pre-quoted with this topic's OP. */
+  onQuote?: (topic: ForumTopic) => void;
+  /** Surface a transient message (sign-in prompt, like error). */
+  onToast?: (msg: string) => void;
+  /** Open the full reaction picker anchored to the LIKE button. */
+  onOpenReactionPicker?: (topic: ForumTopic, anchor: AnchorRect) => void;
+  /** Open the bottom-sheet list of users who reacted. */
+  onOpenReactionsList?: (topic: ForumTopic) => void;
 }
 
 const PREVIEW_TEXT_LINES = 2;
 
-function TopicCardImpl({ topic, viewMode, onPress }: Props) {
+function TopicCardImpl({
+  topic, viewMode, onPress, onReply, onQuote, onOpenReactionPicker, onOpenReactionsList,
+}: Props) {
   const detailed = viewMode === 'detailed';
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  const { reaction, opLikeCount, pending, opPost } = useTopicLike(topic);
+  const liked = reaction != null;
+  const reactionMeta = reaction != null ? REACTION_META[reaction] : null;
+
+  // Stacked-emoji breakdown — derived from the OP post's reactionJson once it
+  // has been fetched (lazy: first reaction tap or first reactions-list open).
+  // Falls back to the user's own reaction emoji, then a single 👍.
+  const topReactionTypes = useMemo(
+    () => parseTopReactionTypes(opPost?.reactionJson),
+    [opPost?.reactionJson],
+  );
+  const stackedEmojis = useMemo<string[]>(() => {
+    if (topReactionTypes.length > 0) {
+      return topReactionTypes
+        .slice(0, 3)
+        .map((c) => REACTION_META[c]?.emoji)
+        .filter(Boolean) as string[];
+    }
+    if (reactionMeta) return [reactionMeta.emoji];
+    return ['👍'];
+  }, [topReactionTypes, reactionMeta]);
+
+  const likeBtnRef = useRef<View>(null);
+
+  function handleOpenPicker() {
+    if (!onOpenReactionPicker) return;
+    likeBtnRef.current?.measureInWindow((x, y, width, height) => {
+      onOpenReactionPicker(topic, { x, y, width, height });
+    });
+  }
+
+  function handleReply() {
+    if (onReply) onReply(topic);
+    else onPress?.(topic, { autoAction: 'reply' });
+  }
+
+  function handleQuote() {
+    if (onQuote) onQuote(topic);
+    else onPress?.(topic, { autoAction: 'quote' });
+  }
 
   const socialUrls = useMemo(
     () => extractSocialUrls(topic.description),
@@ -49,6 +104,13 @@ function TopicCardImpl({ topic, viewMode, onPress }: Props) {
   // Every detailed card starts collapsed for visual consistency. Tapping
   // Expand reveals full content and the action bar; the button then hides.
   const [expanded, setExpanded] = useState(false);
+
+  // Once expanded we need OP-level reaction data (count + breakdown) so the
+  // pill matches what the reactions sheet will show. Cached per session.
+  useEffect(() => {
+    if (!expanded || opPost) return;
+    ensureOpPost(topic);
+  }, [expanded, opPost, topic]);
 
   return (
     <Pressable style={styles.card} onPress={() => onPress?.(topic)}>
@@ -121,32 +183,65 @@ function TopicCardImpl({ topic, viewMode, onPress }: Props) {
 
       {detailed && expanded && (
         <View style={styles.actionBar}>
-          <View style={styles.reactionSummary}>
-            <View style={styles.reactionIconWrap}>
-              <Ionicons name="thumbs-up" size={11} color="#FFFFFF" />
+          {opLikeCount == null ? (
+            // OP not yet fetched — show a neutral placeholder so the card
+            // doesn't display a misleading topic-aggregate count.
+            <View style={styles.reactionSummary}>
+              <View style={[styles.reactionIconWrap, styles.reactionIconWrapEmpty]}>
+                <Ionicons name="thumbs-up" size={11} color={colors.textTertiary} />
+              </View>
+              <Text style={styles.reactionCount}>—</Text>
             </View>
-            <Text style={styles.reactionCount}>{formatCount(topic.likes)}</Text>
-          </View>
+          ) : opLikeCount > 0 ? (
+            <Pressable
+              style={styles.reactionSummary}
+              onPress={() => onOpenReactionsList?.(topic)}
+              hitSlop={6}
+            >
+              <View style={styles.emojiStack}>
+                {stackedEmojis.map((e, i) => (
+                  <View
+                    key={`${e}-${i}`}
+                    style={[styles.emojiChip, i > 0 && styles.emojiChipOverlap]}
+                  >
+                    <Text style={styles.emojiChipText}>{e}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.reactionCount}>{formatCount(opLikeCount)}</Text>
+            </Pressable>
+          ) : (
+            <View style={styles.reactionSummary}>
+              <View style={[styles.reactionIconWrap, styles.reactionIconWrapEmpty]}>
+                <Ionicons name="thumbs-up" size={11} color={colors.textTertiary} />
+              </View>
+              <Text style={styles.reactionCount}>0</Text>
+            </View>
+          )}
           <View style={styles.actionButtons}>
-            <ActionBtn
-              icon="thumbs-up-outline"
-              label="LIKE"
-              tint={colors.primary}
-              onPress={() => onPress?.(topic, { autoAction: 'like' })}
-              styles={styles}
-            />
+            <View ref={likeBtnRef} collapsable={false}>
+              <ReactionBtn
+                reactionEmoji={reactionMeta?.emoji ?? null}
+                reactionLabel={reactionMeta?.label ?? null}
+                tint={colors.primary}
+                onPress={handleOpenPicker}
+                styles={styles}
+                loading={pending}
+                active={liked}
+              />
+            </View>
             <ActionBtn
               icon="create-outline"
               label="REPLY"
               tint="#34C759"
-              onPress={() => onPress?.(topic, { autoAction: 'reply' })}
+              onPress={handleReply}
               styles={styles}
             />
             <ActionBtn
               icon="chatbox-ellipses-outline"
               label="QUOTE"
               tint={colors.textSecondary}
-              onPress={() => onPress?.(topic, { autoAction: 'quote' })}
+              onPress={handleQuote}
               styles={styles}
             />
           </View>
@@ -195,16 +290,58 @@ function Stat({ icon, value, styles, iconColor }: {
   );
 }
 
-function ActionBtn({ icon, label, tint, onPress, styles }: {
+function ReactionBtn({
+  reactionEmoji, reactionLabel, tint, onPress, styles, loading, active,
+}: {
+  reactionEmoji: string | null;
+  reactionLabel: string | null;
+  tint: string;
+  onPress: () => void;
+  styles: Styles;
+  loading?: boolean;
+  active?: boolean;
+}) {
+  const label = (reactionLabel ?? 'Like').toUpperCase();
+  return (
+    <Pressable
+      style={[styles.actionBtn, active && styles.actionBtnActive]}
+      onPress={onPress}
+      hitSlop={6}
+      disabled={loading}
+    >
+      {loading ? (
+        <ActivityIndicator size="small" color={tint} />
+      ) : reactionEmoji ? (
+        <Text style={styles.actionBtnEmoji}>{reactionEmoji}</Text>
+      ) : (
+        <Ionicons name="thumbs-up-outline" size={14} color={tint} />
+      )}
+      <Text style={[styles.actionBtnLabel, { color: tint }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function ActionBtn({ icon, label, tint, onPress, styles, loading, active }: {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   label: string;
   tint: string;
   onPress: () => void;
   styles: Styles;
+  loading?: boolean;
+  active?: boolean;
 }) {
   return (
-    <Pressable style={styles.actionBtn} onPress={onPress} hitSlop={6}>
-      <Ionicons name={icon} size={14} color={tint} />
+    <Pressable
+      style={[styles.actionBtn, active && styles.actionBtnActive]}
+      onPress={onPress}
+      hitSlop={6}
+      disabled={loading}
+    >
+      {loading ? (
+        <ActivityIndicator size="small" color={tint} />
+      ) : (
+        <Ionicons name={icon} size={14} color={tint} />
+      )}
       <Text style={[styles.actionBtnLabel, { color: tint }]}>{label}</Text>
     </Pressable>
   );
@@ -345,6 +482,32 @@ function makeStyles(c: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
+    reactionIconWrapEmpty: {
+      backgroundColor: c.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+    },
+    emojiStack: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    emojiChip: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: c.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+    },
+    emojiChipOverlap: {
+      marginLeft: -6,
+    },
+    emojiChipText: {
+      fontSize: 10,
+      lineHeight: 12,
+    },
     reactionCount: {
       fontSize: 12,
       fontWeight: '700',
@@ -359,12 +522,21 @@ function makeStyles(c: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
+      paddingHorizontal: 6,
       paddingVertical: 4,
+      borderRadius: 8,
+    },
+    actionBtnActive: {
+      backgroundColor: c.primarySoft,
     },
     actionBtnLabel: {
       fontSize: 11,
       fontWeight: '700',
       letterSpacing: 0.4,
+    },
+    actionBtnEmoji: {
+      fontSize: 14,
+      lineHeight: 16,
     },
     bottomRow: {
       flexDirection: 'row',

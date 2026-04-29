@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Modal, View, Text, Image, Pressable, FlatList, ActivityIndicator, StyleSheet,
+  Modal, View, Text, Image, Pressable, FlatList, ActivityIndicator, StyleSheet, Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -130,6 +130,7 @@ export default function ReactionsSheet({ post, visible, onClose }: Props) {
               <FlatList
                 data={filtered}
                 keyExtractor={(l, i) => `${l.userId || 'x'}-${i}`}
+                style={styles.listFlex}
                 contentContainerStyle={styles.listContent}
                 renderItem={({ item }) => <LikerRow liker={item} styles={styles} accent={colors.primary} />}
               />
@@ -188,6 +189,8 @@ function LikerRow({ liker, styles, accent }: { liker: ThreadLiker; styles: Style
   );
 }
 
+const SHEET_HEIGHT = Math.round(Dimensions.get('window').height * 0.7);
+
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     overlay: { flex: 1, justifyContent: 'flex-end' },
@@ -200,7 +203,9 @@ function makeStyles(c: ThemeColors) {
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       paddingTop: 8,
-      maxHeight: '80%',
+      height: SHEET_HEIGHT,
+      flexDirection: 'column',
+      overflow: 'hidden',
     },
     handle: {
       alignSelf: 'center',
@@ -261,7 +266,11 @@ function makeStyles(c: ThemeColors) {
     },
     tabCountActive: { color: '#FFFFFF' },
     listWrap: {
-      minHeight: 140,
+      flex: 1,
+      minHeight: 0,
+    },
+    listFlex: {
+      flex: 1,
     },
     listContent: {
       paddingVertical: 6,

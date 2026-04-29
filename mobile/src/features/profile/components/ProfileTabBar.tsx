@@ -3,32 +3,52 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { ProfileTabKey } from '../hooks/useProfileTab';
+import { fmtNum } from '../utils/format';
 
 export interface Tab {
   key: ProfileTabKey;
   label: string;
+  count?: number | string | null;
 }
 
+// Tab order mirrors the web /my page (Activity → Badges → Posts → Comments →
+// Buddies → Fan Fiction → Favorites → Forums). Scrapbook/Slambook/Testimonial
+// and FF Following/Followers live as sub-filters inside Activity and Fan
+// Fiction respectively, matching web's dropdown chevrons.
 const BASE_TABS: Tab[] = [
   { key: 'activity', label: 'Activity' },
+  { key: 'badges', label: 'Badges' },
   { key: 'posts', label: 'Posts' },
   { key: 'comments', label: 'Comments' },
   { key: 'buddies', label: 'Buddies' },
+  { key: 'fan-fictions', label: 'Fan Fiction' },
   { key: 'favorites', label: 'Favorites' },
   { key: 'forums', label: 'Forums' },
-  { key: 'badges', label: 'Badges' },
 ];
 
 const SELF_TABS: Tab[] = [
   { key: 'drafts', label: 'Drafts' },
   { key: 'watching', label: 'Watching' },
-  { key: 'ff-following', label: 'Following' },
-  { key: 'ff-followers', label: 'FF Fans' },
   { key: 'warnings', label: 'Warnings' },
 ];
 
-export function tabsFor(isOwn: boolean): Tab[] {
-  return isOwn ? [...BASE_TABS, ...SELF_TABS] : BASE_TABS;
+export interface TabCounts {
+  posts?: number | string | null;
+  comments?: number | string | null;
+  badges?: number | string | null;
+  buddies?: number | string | null;
+}
+
+export function tabsFor(isOwn: boolean, counts?: TabCounts): Tab[] {
+  const base = isOwn ? [...BASE_TABS, ...SELF_TABS] : [...BASE_TABS];
+  if (!counts) return base;
+  return base.map((t) => {
+    if (t.key === 'posts') return { ...t, count: counts.posts };
+    if (t.key === 'comments') return { ...t, count: counts.comments };
+    if (t.key === 'badges') return { ...t, count: counts.badges };
+    if (t.key === 'buddies') return { ...t, count: counts.buddies };
+    return t;
+  });
 }
 
 interface Props {
@@ -61,6 +81,8 @@ export default function ProfileTabBar({ tabs, active, onChange }: Props) {
       >
         {tabs.map((t) => {
           const isActive = t.key === active;
+          const showCount =
+            t.count != null && String(t.count).length > 0 && Number(t.count) > 0;
           return (
             <Pressable
               key={t.key}
@@ -71,7 +93,15 @@ export default function ProfileTabBar({ tabs, active, onChange }: Props) {
               }}
               style={[styles.chip, isActive && styles.chipActive]}
             >
-              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{t.label}</Text>
+              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                {t.label}
+                {showCount ? (
+                  <Text style={[styles.chipCount, isActive && styles.chipCountActive]}>
+                    {'  '}
+                    {fmtNum(t.count!)}
+                  </Text>
+                ) : null}
+              </Text>
             </Pressable>
           );
         })}
@@ -112,6 +142,14 @@ function makeStyles(c: ThemeColors) {
     chipTextActive: {
       color: c.primary,
       fontWeight: '700',
+    },
+    chipCount: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.textTertiary,
+    },
+    chipCountActive: {
+      color: c.primary,
     },
   });
 }

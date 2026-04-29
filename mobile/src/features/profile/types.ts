@@ -505,6 +505,29 @@ export interface MyWarningDetailsResponseDto {
   warningHistory: WarningDto[];
 }
 
+// Fan fictions authored by a user — fetched from /fan-fictions with
+// contentType=9 (User) + contentId={userId}. Mirrors FanFictionListItemDto
+// but only the fields the profile tab uses; everything else is optional.
+export interface UserFanFictionDto {
+  fanFictionId: number | string;
+  title: string | null;
+  summary: string | null;
+  ffPageUrl: string | null;
+  ffUpdateChecksum: string | null;
+  ffThumbnail: string | null;
+  totalViewCount: number | string;
+  totalLikeCount: number | string;
+  totalCommentCount: number | string;
+  followCount: number | string;
+  totalFollowers: number | string;
+  chapterCount: number | string;
+  statusCode: number | string;
+  rating: number | string;
+  lastUpdatedWhen: string | null;
+  userId: number | string;
+  userName: string | null;
+}
+
 export interface UserActivitiesResponseDto {
   activities: ActivityDto[];
   user: UserProfileDto | null;

@@ -112,17 +112,25 @@ export type MySpaceStackParamList = {
   EmailLogs: undefined;
   ChangePassword: undefined;
   BadgeDetail: { badgeId: string; userId?: string };
-  MyArticles: undefined;
   MyActivities: undefined;
-  MyFanFiction: undefined;
   HelpCenter: undefined;
   About: undefined;
   Buddies: undefined;
-  Followers: { userId: string };
-  Following: { userId: string };
   Notifications: undefined;
   Messages: undefined;
   MessageThread: { threadId: string };
   MessageFolders: undefined;
   Compose: { recipientId?: string };
+  // Forum entry points reachable from profile tabs (Posts, Watching, Forums).
+  // Same shape as ForumsStackParamList — screens are reused as-is.
+  ForumThread: { forum: import('../services/api').Forum };
+  TopicDetail: {
+    topic: import('../services/api').ForumTopic;
+    forum?: import('../services/api').Forum;
+    jumpToLast?: boolean;
+    autoAction?: 'like' | 'reply' | 'quote';
+  };
+  // Article entry point reachable from the Comments tab — comments link out
+  // to the article they were posted on.
+  ArticleDetail: { id: string; thumbnailUrl?: string; title?: string };
 };

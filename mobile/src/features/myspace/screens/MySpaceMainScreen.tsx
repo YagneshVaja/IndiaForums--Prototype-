@@ -41,8 +41,8 @@ import ForumsTab from '../../profile/components/tabs/ForumsTab';
 import BadgesTab from '../../profile/components/tabs/BadgesTab';
 import DraftsTab from '../../profile/components/tabs/DraftsTab';
 import WatchingTab from '../../profile/components/tabs/WatchingTab';
-import FFollowingTab from '../../profile/components/tabs/FFollowingTab';
 import WarningsTab from '../../profile/components/tabs/WarningsTab';
+import FanFictionsTab from '../../profile/components/tabs/FanFictionsTab';
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<MySpaceStackParamList, 'MySpaceMain'>,
@@ -92,7 +92,14 @@ function TabContent({
 }) {
   switch (tab) {
     case 'activity':
+    case 'scrapbook':
+    case 'slambook':
+    case 'testimonial':
       return <ActivityTab userId={userId} isOwn viewedUserName={viewedUserName} />;
+    case 'fan-fictions':
+    case 'ff-following':
+    case 'ff-followers':
+      return <FanFictionsTab userId={userId} isOwn />;
     case 'posts':
       return <PostsTab userId={userId} isOwn />;
     case 'comments':
@@ -109,10 +116,6 @@ function TabContent({
       return <DraftsTab userId={userId} />;
     case 'watching':
       return <WatchingTab userId={userId} />;
-    case 'ff-following':
-      return <FFollowingTab userId={userId} variant="following" />;
-    case 'ff-followers':
-      return <FFollowingTab userId={userId} variant="followers" />;
     case 'warnings':
       return <WarningsTab userId={userId} />;
   }
@@ -135,7 +138,14 @@ export default function MySpaceMainScreen({ navigation }: Props) {
   const styles = useMemo(() => makeStyles(colors, mode), [colors, mode]);
 
   const profileQ = useProfile();
-  const tabs = useMemo(() => tabsFor(true), []);
+  const tabs = useMemo(
+    () =>
+      tabsFor(true, {
+        posts: profileQ.data?.postCount,
+        comments: profileQ.data?.commentCount,
+      }),
+    [profileQ.data?.postCount, profileQ.data?.commentCount],
+  );
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('activity');
 
   const statusBarStyle = mode === 'dark' ? 'light-content' : 'dark-content';

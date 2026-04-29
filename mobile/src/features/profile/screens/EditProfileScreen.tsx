@@ -24,6 +24,7 @@ import type { ThemeColors } from '../../../theme/tokens';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import ErrorState from '../../../components/ui/ErrorState';
 import { extractApiError } from '../../../services/api';
+import { hapticError, hapticSuccess } from '../../../utils/haptics';
 
 import { useProfile } from '../hooks/useProfile';
 import { usePreferences } from '../hooks/usePreferences';
@@ -99,7 +100,18 @@ function ProfileForm() {
     bio: '',
     email: '',
     userName: '',
+    pronoun: '',
+    forumSignature: '',
+    avatarTitle: '',
+    dob: '',
+    facebook: '',
+    twitter: '',
+    youtube: '',
+    instagram: '',
   });
+  // Gender: 0 = unset / prefer not to say, 1 = male, 2 = female, 3 = other.
+  // Backend may use different ints; treat anything out of 1-3 as unset.
+  const [gender, setGender] = useState<0 | 1 | 2 | 3>(0);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [updateChecksum, setUpdateChecksum] = useState<string | null>(null);
@@ -115,13 +127,33 @@ function ProfileForm() {
       email?: string | null;
       bio?: string | null;
       forumSignature?: string | null;
+      pronoun?: string | null;
+      avatarTitle?: string | null;
+      dob?: string | null;
+      gender?: number | string | null;
+      facebook?: string | null;
+      twitter?: string | null;
+      youtube?: string | null;
+      instagram?: string | null;
     };
     setForm({
       displayName: raw.displayName || q.data.displayName || '',
       bio: raw.bio || '',
       email: raw.email || '',
       userName: raw.userName || q.data.userName || '',
+      pronoun: raw.pronoun || '',
+      forumSignature: raw.forumSignature || '',
+      avatarTitle: raw.avatarTitle || '',
+      // API returns DOB as a full ISO datetime; collapse to the date portion
+      // for display in the YYYY-MM-DD input.
+      dob: raw.dob ? String(raw.dob).slice(0, 10) : '',
+      facebook: raw.facebook || '',
+      twitter: raw.twitter || '',
+      youtube: raw.youtube || '',
+      instagram: raw.instagram || '',
     });
+    const g = typeof raw.gender === 'string' ? parseInt(raw.gender, 10) : raw.gender;
+    setGender(g === 1 || g === 2 || g === 3 ? g : 0);
     setAvatarUrl(q.data.avatarUrl);
     setBannerUrl(q.data.bannerUrl);
     setUpdateChecksum(q.data.updateChecksum);
@@ -149,6 +181,11 @@ function ProfileForm() {
       setError('Display name is required');
       return;
     }
+    const dobTrim = form.dob.trim();
+    if (dobTrim && !/^\d{4}-\d{2}-\d{2}$/.test(dobTrim)) {
+      setError('Date of birth must be in YYYY-MM-DD format');
+      return;
+    }
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -158,14 +195,25 @@ function ProfileForm() {
         groupId: q.data!.groupId ?? 0,
         displayName: form.displayName.trim(),
         bio: form.bio.trim() || null,
+        pronoun: form.pronoun.trim() || null,
+        forumSignature: form.forumSignature.trim() || null,
+        avatarTitle: form.avatarTitle.trim() || null,
+        dob: dobTrim || null,
+        gender: gender === 0 ? null : gender,
+        facebook: form.facebook.trim() || null,
+        twitter: form.twitter.trim() || null,
+        youtube: form.youtube.trim() || null,
+        instagram: form.instagram.trim() || null,
         updateChecksum: updateChecksum || undefined,
       };
       const res = await updateMyProfile(body);
       if (res.updateChecksum) setUpdateChecksum(res.updateChecksum);
       updateAuthUser({ displayName: form.displayName.trim() });
+      hapticSuccess();
       setSuccess(res.message || 'Profile updated');
       q.refetch();
     } catch (err) {
+      hapticError();
       setError(extractApiError(err, 'Failed to update profile'));
     } finally {
       setSaving(false);
@@ -206,7 +254,10 @@ function ProfileForm() {
         />
       </Field>
 
-      <Field label="Email" hint="Contact support to change your email">
+      <Field
+        label="Email"
+        hint="Email can't be changed in the app — write to support to update it."
+      >
         <TextInput
           value={form.email}
           editable={false}
@@ -226,6 +277,46 @@ function ProfileForm() {
         />
       </Field>
 
+      <Field label="Pronoun" hint="e.g. she/her, he/him, they/them">
+        <TextInput
+          value={form.pronoun}
+          onChangeText={change('pronoun')}
+          placeholder="Add your pronouns"
+          placeholderTextColor={colors.textTertiary}
+          maxLength={30}
+          autoCapitalize="none"
+          style={styles.input}
+        />
+      </Field>
+
+      <Field label="Gender">
+        <GenderRadio value={gender} onChange={setGender} />
+      </Field>
+
+      <Field label="Date of birth" hint="Format: YYYY-MM-DD">
+        <TextInput
+          value={form.dob}
+          onChangeText={change('dob')}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor={colors.textTertiary}
+          maxLength={10}
+          keyboardType="numbers-and-punctuation"
+          autoCapitalize="none"
+          style={styles.input}
+        />
+      </Field>
+
+      <Field label="Avatar title" hint="A short title shown beside your avatar">
+        <TextInput
+          value={form.avatarTitle}
+          onChangeText={change('avatarTitle')}
+          placeholder="e.g. K-drama enthusiast"
+          placeholderTextColor={colors.textTertiary}
+          maxLength={50}
+          style={styles.input}
+        />
+      </Field>
+
       <Field label="Bio" hint={`${form.bio.length}/250`}>
         <TextInput
           value={form.bio}
@@ -238,6 +329,44 @@ function ProfileForm() {
           style={[styles.input, styles.textarea]}
         />
       </Field>
+
+      <Field
+        label="Forum signature"
+        hint={`Appears under your forum posts. ${form.forumSignature.length}/500`}
+      >
+        <TextInput
+          value={form.forumSignature}
+          onChangeText={change('forumSignature')}
+          placeholder="A short tagline that follows your posts"
+          placeholderTextColor={colors.textTertiary}
+          multiline
+          numberOfLines={3}
+          maxLength={500}
+          style={[styles.input, styles.textarea]}
+        />
+      </Field>
+
+      <Text style={styles.sectionHeader}>Social links</Text>
+      <SocialInput
+        platform="facebook"
+        value={form.facebook}
+        onChange={change('facebook')}
+      />
+      <SocialInput
+        platform="twitter"
+        value={form.twitter}
+        onChange={change('twitter')}
+      />
+      <SocialInput
+        platform="instagram"
+        value={form.instagram}
+        onChange={change('instagram')}
+      />
+      <SocialInput
+        platform="youtube"
+        value={form.youtube}
+        onChange={change('youtube')}
+      />
 
       <Pressable
         onPress={save}
@@ -260,6 +389,112 @@ function ProfileForm() {
         <Text style={styles.secondaryRowText}>Change password</Text>
         <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
       </Pressable>
+    </View>
+  );
+}
+
+// ── Gender radio group ──────────────────────────────────────────────────────
+
+const GENDER_OPTIONS: { value: 0 | 1 | 2 | 3; label: string }[] = [
+  { value: 1, label: 'Male' },
+  { value: 2, label: 'Female' },
+  { value: 3, label: 'Non-binary' },
+  { value: 0, label: 'Prefer not to say' },
+];
+
+function GenderRadio({
+  value,
+  onChange,
+}: {
+  value: 0 | 1 | 2 | 3;
+  onChange: (v: 0 | 1 | 2 | 3) => void;
+}) {
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  return (
+    <View style={styles.radioGroup}>
+      {GENDER_OPTIONS.map((opt) => {
+        const active = opt.value === value;
+        return (
+          <Pressable
+            key={opt.value}
+            onPress={() => onChange(opt.value)}
+            style={({ pressed }) => [
+              styles.radioPill,
+              active && styles.radioPillActive,
+              pressed && styles.pressed,
+            ]}
+          >
+            <View style={[styles.radioDot, active && styles.radioDotActive]} />
+            <Text style={[styles.radioLabel, active && styles.radioLabelActive]}>
+              {opt.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+// ── Social link input ───────────────────────────────────────────────────────
+
+const SOCIAL_META: Record<
+  'facebook' | 'twitter' | 'instagram' | 'youtube',
+  { label: string; icon: keyof typeof Ionicons.glyphMap; placeholder: string; color: string }
+> = {
+  facebook: {
+    label: 'Facebook',
+    icon: 'logo-facebook',
+    placeholder: 'username or facebook.com/...',
+    color: '#1877F2',
+  },
+  twitter: {
+    label: 'Twitter / X',
+    icon: 'logo-twitter',
+    placeholder: '@handle or x.com/...',
+    color: '#1DA1F2',
+  },
+  instagram: {
+    label: 'Instagram',
+    icon: 'logo-instagram',
+    placeholder: '@handle or instagram.com/...',
+    color: '#E4405F',
+  },
+  youtube: {
+    label: 'YouTube',
+    icon: 'logo-youtube',
+    placeholder: 'channel URL or @handle',
+    color: '#FF0000',
+  },
+};
+
+function SocialInput({
+  platform,
+  value,
+  onChange,
+}: {
+  platform: keyof typeof SOCIAL_META;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const meta = SOCIAL_META[platform];
+  return (
+    <View style={styles.socialField}>
+      <View style={[styles.socialIconWrap, { backgroundColor: meta.color + '22' }]}>
+        <Ionicons name={meta.icon} size={16} color={meta.color} />
+      </View>
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        placeholder={meta.placeholder}
+        placeholderTextColor={colors.textTertiary}
+        autoCapitalize="none"
+        autoCorrect={false}
+        maxLength={120}
+        style={styles.socialInput}
+      />
     </View>
   );
 }
@@ -533,6 +768,81 @@ function makeStyles(c: ThemeColors) {
       fontSize: 11,
       color: c.textTertiary,
       marginTop: 4,
+    },
+    sectionHeader: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: c.textTertiary,
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
+      marginTop: 18,
+      marginBottom: 10,
+      paddingHorizontal: 4,
+    },
+    radioGroup: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    radioPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 999,
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    radioPillActive: {
+      backgroundColor: c.primarySoft,
+      borderColor: c.primary,
+    },
+    radioDot: {
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      borderWidth: 2,
+      borderColor: c.border,
+      backgroundColor: 'transparent',
+    },
+    radioDotActive: {
+      borderColor: c.primary,
+      backgroundColor: c.primary,
+    },
+    radioLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.textSecondary,
+    },
+    radioLabelActive: {
+      color: c.primary,
+      fontWeight: '700',
+    },
+    socialField: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 10,
+    },
+    socialIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    socialInput: {
+      flex: 1,
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 13,
+      color: c.text,
     },
     saveBtn: {
       marginTop: 8,

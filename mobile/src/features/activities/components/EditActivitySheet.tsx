@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   View,
@@ -13,79 +13,72 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import { extractApiError } from '../../../services/api';
-import { postOnWall } from '../services/activitiesApi';
-
-type FeedKind = 'testimonial' | 'slambook' | 'scrapbook';
-
-// API feedTypeId mapping (from FEED_META used across screens)
-const FEED_TYPE_ID: Record<FeedKind, number> = {
-  testimonial: 16,
-  slambook: 17,
-  scrapbook: 18,
-};
-
-const OPTIONS: { kind: FeedKind; label: string; icon: React.ComponentProps<typeof Ionicons>['name']; color: string; hint: string }[] = [
-  { kind: 'scrapbook', label: 'Scrapbook', icon: 'book-outline', color: '#B26A00', hint: 'Leave a friendly note' },
-  { kind: 'testimonial', label: 'Testimonial', icon: 'ribbon-outline', color: '#16A96B', hint: 'Vouch for this user' },
-  { kind: 'slambook', label: 'Slambook', icon: 'heart-outline', color: '#7C5CE9', hint: 'Share a memory' },
-];
+import { hapticError, hapticSuccess } from '../../../utils/haptics';
+import { stripHtml } from '../../profile/utils/format';
+import { updateActivity } from '../services/activitiesApi';
+import { buildActivityHtml } from '../utils/composeHtml';
+import type { ActivityDto } from '../../profile/types';
 
 interface Props {
   visible: boolean;
+  activity: ActivityDto | null;
   onClose: () => void;
-  wallUserId: number | string;
-  wallUserName: string;
-  // Pre-select a feed kind when the sheet is opened from a typed tab
-  // (e.g. tapping "Add a slambook entry" on the Slambook tab → 'slambook').
-  defaultKind?: FeedKind;
 }
 
-export default function WallComposerSheet({
-  visible,
-  onClose,
-  wallUserId,
-  wallUserName,
-  defaultKind,
-}: Props) {
+const MAX_LEN = 1000;
+
+export default function EditActivitySheet({ visible, activity, onClose }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const qc = useQueryClient();
 
-  const [kind, setKind] = useState<FeedKind>(defaultKind ?? 'scrapbook');
-  const [content, setContent] = useState('');
+  const [text, setText] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
 
-  // When the sheet opens from a typed tab, sync local state to that kind.
-  React.useEffect(() => {
-    if (visible && defaultKind) setKind(defaultKind);
-  }, [visible, defaultKind]);
+  // Re-prime the form whenever a different activity opens. Strip the stored
+  // HTML to plain text so the user edits prose, not markup — we'll re-wrap on
+  // save. Existing inline images are preserved by saving back full HTML only
+  // when the text actually changed; the simpler path is: editing text
+  // overwrites content, and image preservation is a deferred enhancement.
+  useEffect(() => {
+    if (visible && activity) {
+      setText(stripHtml(activity.content || activity.subject || ''));
+      setLinkUrl(activity.linkUrl ?? '');
+    }
+  }, [visible, activity]);
 
-  const post = useMutation({
-    mutationFn: () =>
-      postOnWall({
-        wallUserId,
-        feedTypeId: FEED_TYPE_ID[kind],
-        content: content.trim(),
-      }),
+  const save = useMutation({
+    mutationFn: () => {
+      if (!activity) throw new Error('No activity to edit');
+      const html = buildActivityHtml(text, []);
+      return updateActivity(activity.activityId, {
+        activityId: activity.activityId,
+        content: html,
+        linkUrl: linkUrl.trim() || null,
+      });
+    },
     onSuccess: (res) => {
       if (!res.isSuccess) {
-        Alert.alert('Error', res.message || 'Failed to post.');
+        hapticError();
+        Alert.alert('Error', res.message || 'Failed to update.');
         return;
       }
+      hapticSuccess();
       qc.invalidateQueries({ queryKey: ['profile-tab', 'activity'] });
-      qc.invalidateQueries({ queryKey: ['profile', 'user', String(wallUserId)] });
-      setContent('');
       onClose();
     },
-    onError: (err) => Alert.alert('Error', extractApiError(err, 'Failed to post.')),
+    onError: (err) => {
+      hapticError();
+      Alert.alert('Error', extractApiError(err, 'Failed to update.'));
+    },
   });
 
-  const submit = () => {
-    if (!content.trim()) return Alert.alert('Error', 'Please write something.');
-    post.mutate();
-  };
+  const trimmed = text.trim();
+  const canSave = trimmed.length > 0 && !save.isPending;
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -97,65 +90,58 @@ export default function WallComposerSheet({
         <View style={styles.sheet}>
           <View style={styles.dragHandle} />
           <View style={styles.header}>
-            <Text style={styles.title}>Write on {wallUserName}'s wall</Text>
+            <Text style={styles.title}>Edit post</Text>
             <Pressable onPress={onClose} hitSlop={8} style={styles.closeBtn}>
               <Ionicons name="close" size={16} color={colors.text} />
             </Pressable>
           </View>
 
-          <Text style={styles.subtitle}>Pick a type, then write your message.</Text>
-
-          <View style={styles.options}>
-            {OPTIONS.map((opt) => {
-              const active = kind === opt.kind;
-              return (
-                <Pressable
-                  key={opt.kind}
-                  onPress={() => setKind(opt.kind)}
-                  style={[styles.option, active && { borderColor: opt.color, backgroundColor: opt.color + '15' }]}
-                >
-                  <Ionicons name={opt.icon} size={18} color={opt.color} />
-                  <Text style={[styles.optionLabel, active && { color: opt.color }]}>{opt.label}</Text>
-                  <Text style={styles.optionHint}>{opt.hint}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
           <TextInput
-            value={content}
-            onChangeText={setContent}
-            placeholder="Write a note..."
+            value={text}
+            onChangeText={setText}
+            placeholder="What's on your mind?"
             placeholderTextColor={colors.textTertiary}
             multiline
-            numberOfLines={5}
-            maxLength={500}
-            editable={!post.isPending}
+            maxLength={MAX_LEN}
+            editable={!save.isPending}
             style={styles.input}
+            autoFocus
           />
-          <Text style={styles.counter}>{content.length}/500</Text>
+          <Text style={styles.counter}>{text.length}/{MAX_LEN}</Text>
+
+          <TextInput
+            value={linkUrl}
+            onChangeText={setLinkUrl}
+            placeholder="Insert valid URL (optional)"
+            placeholderTextColor={colors.textTertiary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            editable={!save.isPending}
+            style={styles.linkInput}
+          />
 
           <View style={styles.footer}>
             <Pressable
               onPress={onClose}
-              disabled={post.isPending}
+              disabled={save.isPending}
               style={({ pressed }) => [styles.ghostBtn, pressed && styles.pressed]}
             >
               <Text style={styles.ghostBtnText}>Cancel</Text>
             </Pressable>
             <Pressable
-              onPress={submit}
-              disabled={post.isPending || !content.trim()}
+              onPress={() => save.mutate()}
+              disabled={!canSave}
               style={({ pressed }) => [
                 styles.primaryBtn,
-                pressed && styles.pressed,
-                (post.isPending || !content.trim()) && { opacity: 0.6 },
+                pressed && canSave && styles.pressed,
+                !canSave && { opacity: 0.6 },
               ]}
             >
-              {post.isPending ? (
+              {save.isPending ? (
                 <ActivityIndicator color="#FFF" size="small" />
               ) : (
-                <Text style={styles.primaryBtnText}>Post</Text>
+                <Text style={styles.primaryBtnText}>Save</Text>
               )}
             </Pressable>
           </View>
@@ -182,7 +168,7 @@ function makeStyles(c: ThemeColors) {
       paddingTop: 8,
       paddingHorizontal: 16,
       paddingBottom: 28,
-      gap: 12,
+      gap: 10,
     },
     dragHandle: {
       alignSelf: 'center',
@@ -211,34 +197,6 @@ function makeStyles(c: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    subtitle: {
-      fontSize: 12,
-      color: c.textSecondary,
-    },
-    options: {
-      flexDirection: 'row',
-      gap: 8,
-    },
-    option: {
-      flex: 1,
-      padding: 12,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: c.border,
-      backgroundColor: c.surface,
-      gap: 4,
-      alignItems: 'center',
-    },
-    optionLabel: {
-      fontSize: 12,
-      fontWeight: '800',
-      color: c.text,
-    },
-    optionHint: {
-      fontSize: 10,
-      color: c.textTertiary,
-      textAlign: 'center',
-    },
     input: {
       backgroundColor: c.surface,
       borderRadius: 10,
@@ -248,7 +206,7 @@ function makeStyles(c: ThemeColors) {
       paddingVertical: 10,
       fontSize: 14,
       color: c.text,
-      minHeight: 96,
+      minHeight: 110,
       textAlignVertical: 'top',
     },
     counter: {
@@ -256,9 +214,20 @@ function makeStyles(c: ThemeColors) {
       color: c.textTertiary,
       textAlign: 'right',
     },
+    linkInput: {
+      backgroundColor: c.surface,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: c.border,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 13,
+      color: c.text,
+    },
     footer: {
       flexDirection: 'row',
       gap: 10,
+      marginTop: 4,
     },
     ghostBtn: {
       flex: 1,

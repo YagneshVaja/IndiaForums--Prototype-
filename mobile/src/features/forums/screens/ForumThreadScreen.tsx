@@ -6,6 +6,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import LoadingState from '../../../components/ui/LoadingState';
@@ -17,9 +18,11 @@ import ThreadCard from '../components/ThreadCard';
 import NewTopicComposerSheet from '../components/NewTopicComposerSheet';
 import ForumTopicSettingsSheet from '../components/ForumTopicSettingsSheet';
 import { useForumTopics } from '../hooks/useForumTopics';
+import { useMyFavouriteForums } from '../hooks/useMyFavouriteForums';
+import { useForumFollowStore, selectForumFollow } from '../store/forumFollowStore';
 import { formatCount } from '../utils/format';
 import type { ForumsStackParamList } from '../../../navigation/types';
-import { searchTopics, type Forum, type ForumTopic } from '../../../services/api';
+import { searchTopics, setForumFollow, type Forum, type ForumTopic } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 
@@ -38,6 +41,20 @@ export default function ForumThreadScreen() {
   const [search, setSearch] = useState('');
   const [newTopicOpen, setNewTopicOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queryClient = useQueryClient();
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2800);
+  }, []);
+
+  useEffect(() => () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+  }, []);
 
   // null = not in search mode, [] = api returned nothing, 'fallback' = use client filter
   const [searchResults, setSearchResults] = useState<ForumTopic[] | 'fallback' | null>(null);
@@ -67,6 +84,48 @@ export default function ForumThreadScreen() {
     () => (data?.pages || []).flatMap(p => p.topics),
     [data],
   );
+
+  // Bootstrap follow state from the cached "My Forums" list — if this forum
+  // appears in any loaded page, the current user already follows it.
+  const { data: myForumsData } = useMyFavouriteForums(true);
+  const isFollowingFromCache = useMemo(() => {
+    for (const page of myForumsData?.pages ?? []) {
+      if (page.forums.some(f => f.id === detail.id)) return true;
+    }
+    return false;
+  }, [myForumsData, detail.id]);
+
+  const followSlot = useForumFollowStore(selectForumFollow(detail.id));
+  const isFollowing = followSlot.isFollowing ?? isFollowingFromCache;
+  const followCount = followSlot.countOverride ?? detail.followCount;
+
+  const handleToggleFollow = useCallback(async () => {
+    if (followBusy) return;
+    const next = !isFollowing;
+    const baseCount = followSlot.countOverride ?? detail.followCount;
+    const optimisticCount = Math.max(0, baseCount + (next ? 1 : -1));
+    setFollowBusy(true);
+    // Optimistic update.
+    useForumFollowStore.getState().set(detail.id, {
+      isFollowing: next,
+      countOverride: optimisticCount,
+    });
+    const res = await setForumFollow(detail.id, next);
+    setFollowBusy(false);
+    if (res.ok) {
+      // Refresh the lists that show followed forums so server-side counts and
+      // membership reconcile with our optimistic state.
+      queryClient.invalidateQueries({ queryKey: ['my-favourite-forums'] });
+      queryClient.invalidateQueries({ queryKey: ['profile-tab', 'forums'] });
+    } else {
+      // Roll back.
+      useForumFollowStore.getState().set(detail.id, {
+        isFollowing: !next,
+        countOverride: baseCount,
+      });
+      showToast(res.error ?? 'Could not update follow.');
+    }
+  }, [followBusy, isFollowing, followSlot.countOverride, detail.id, detail.followCount, queryClient, showToast]);
 
   // Live API search with 350 ms debounce; falls back to client-side on error
   useEffect(() => {
@@ -166,8 +225,27 @@ export default function ForumThreadScreen() {
                     <Text style={styles.identityDesc} numberOfLines={2}>{detail.description}</Text>
                   )}
                 </View>
-                <Pressable style={styles.followBtn}>
-                  <Text style={styles.followBtnText}>Follow</Text>
+                <Pressable
+                  style={[
+                    styles.followBtn,
+                    isFollowing && styles.followBtnActive,
+                    followBusy && styles.followBtnBusy,
+                  ]}
+                  onPress={handleToggleFollow}
+                  disabled={followBusy}
+                  accessibilityRole="button"
+                  accessibilityLabel={isFollowing ? 'Unfollow forum' : 'Follow forum'}
+                >
+                  {followBusy ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={isFollowing ? colors.primary : colors.onPrimary}
+                    />
+                  ) : (
+                    <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
+                      {isFollowing ? 'Following' : 'Follow'}
+                    </Text>
+                  )}
                 </Pressable>
                 {hasModerationRights && (
                   <>
@@ -191,7 +269,7 @@ export default function ForumThreadScreen() {
                 <View style={styles.statDivider} />
                 <StatCell label="Posts" value={formatCount(detail.postCount)} styles={styles} />
                 <View style={styles.statDivider} />
-                <StatCell label="Followers" value={formatCount(detail.followCount)} styles={styles} />
+                <StatCell label="Followers" value={formatCount(followCount)} styles={styles} />
                 <View style={styles.statDivider} />
                 <StatCell label="Ranked" value={`#${detail.rank || '–'}`} styles={styles} />
               </View>
@@ -268,6 +346,12 @@ export default function ForumThreadScreen() {
         onClose={() => setSettingsOpen(false)}
         onActionComplete={() => refetch()}
       />
+
+      {toast && (
+        <Pressable style={styles.toast} onPress={() => setToast(null)}>
+          <Text style={styles.toastText} numberOfLines={2}>{toast}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -340,11 +424,46 @@ function makeStyles(c: ThemeColors) {
       paddingVertical: 7,
       paddingHorizontal: 14,
       borderRadius: 16,
+      minWidth: 84,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    followBtnActive: {
+      backgroundColor: c.primarySoft,
+      borderWidth: 1,
+      borderColor: c.primary,
+      paddingVertical: 6,
+    },
+    followBtnBusy: {
+      opacity: 0.7,
     },
     followBtnText: {
       fontSize: 12,
       fontWeight: '700',
       color: c.onPrimary,
+    },
+    followBtnTextActive: {
+      color: c.primary,
+    },
+    toast: {
+      position: 'absolute',
+      left: 14,
+      right: 14,
+      bottom: 24,
+      backgroundColor: c.text,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      elevation: 8,
+    },
+    toastText: {
+      color: c.card,
+      fontSize: 12,
+      fontWeight: '600',
     },
     gearBtn: {
       width: 32,

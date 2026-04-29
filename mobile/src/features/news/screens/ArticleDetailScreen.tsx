@@ -13,7 +13,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { HomeStackParamList, NewsStackParamList } from '../../../navigation/types';
+import type {
+  HomeStackParamList,
+  NewsStackParamList,
+  MySpaceStackParamList,
+} from '../../../navigation/types';
 import {
   fetchArticleDetails,
   fetchArticles,
@@ -32,7 +36,8 @@ type Styles = ReturnType<typeof makeStyles>;
 
 type Props =
   | NativeStackScreenProps<HomeStackParamList, 'ArticleDetail'>
-  | NativeStackScreenProps<NewsStackParamList, 'ArticleDetail'>;
+  | NativeStackScreenProps<NewsStackParamList, 'ArticleDetail'>
+  | NativeStackScreenProps<MySpaceStackParamList, 'ArticleDetail'>;
 
 // ── Reactions ────────────────────────────────────────────────────────────
 const REACTIONS = [

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { useThemeStore } from '../../../../store/themeStore';
 import type { ThemeColors } from '../../../../theme/tokens';
@@ -102,7 +102,7 @@ function HorizStrip({ children }: { children: React.ReactNode }) {
 
 function CelebrityCard({ c, styles }: { c: CelebrityDto; styles: ReturnType<typeof makeStyles> }) {
   return (
-    <Pressable style={({ pressed }) => [styles.posterCard, pressed && styles.pressed]}>
+    <View style={styles.posterCard}>
       {c.thumbnailUrl ? (
         <Image source={c.thumbnailUrl} style={styles.poster} contentFit="cover" />
       ) : (
@@ -111,13 +111,13 @@ function CelebrityCard({ c, styles }: { c: CelebrityDto; styles: ReturnType<type
         </View>
       )}
       <Text style={styles.posterLabel} numberOfLines={2}>{c.displayName}</Text>
-    </Pressable>
+    </View>
   );
 }
 
 function MovieCard({ m, styles }: { m: MovieDto; styles: ReturnType<typeof makeStyles> }) {
   return (
-    <Pressable style={({ pressed }) => [styles.posterCard, pressed && styles.pressed]}>
+    <View style={styles.posterCard}>
       {m.posterUrl ? (
         <Image source={m.posterUrl} style={styles.poster} contentFit="cover" />
       ) : (
@@ -127,13 +127,13 @@ function MovieCard({ m, styles }: { m: MovieDto; styles: ReturnType<typeof makeS
       )}
       <Text style={styles.posterLabel} numberOfLines={2}>{m.titleName}</Text>
       {m.startYear ? <Text style={styles.posterSub}>{String(m.startYear)}</Text> : null}
-    </Pressable>
+    </View>
   );
 }
 
 function ShowCard({ s, styles }: { s: ShowDto; styles: ReturnType<typeof makeStyles> }) {
   return (
-    <Pressable style={({ pressed }) => [styles.posterCard, pressed && styles.pressed]}>
+    <View style={styles.posterCard}>
       {s.posterUrl ? (
         <Image source={s.posterUrl} style={styles.poster} contentFit="cover" />
       ) : (
@@ -142,7 +142,7 @@ function ShowCard({ s, styles }: { s: ShowDto; styles: ReturnType<typeof makeSty
         </View>
       )}
       <Text style={styles.posterLabel} numberOfLines={2}>{s.titleName}</Text>
-    </Pressable>
+    </View>
   );
 }
 
@@ -178,9 +178,6 @@ function makeStyles(c: ThemeColors) {
       fontSize: 11,
       color: c.textTertiary,
       marginTop: 2,
-    },
-    pressed: {
-      opacity: 0.88,
     },
   });
 }

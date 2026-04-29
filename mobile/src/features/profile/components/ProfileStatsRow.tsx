@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
-import { fmtNum, fmtJoinMonthYear } from '../utils/format';
+import { fmtNum, fmtJoinMonthYear, timeAgo } from '../utils/format';
 import type { NormalizedProfile } from '../hooks/useProfile';
 
 interface Props {
@@ -34,20 +34,40 @@ export default function ProfileStatsRow({ profile, buddiesCount }: Props) {
 
     const joined = fmtJoinMonthYear(profile.joinDate);
     if (joined) out.push({ value: joined, label: 'Joined' });
+
+    const visited = timeAgo(profile.lastVisitedDate);
+    if (visited) out.push({ value: visited, label: 'Visited' });
     return out;
-  }, [profile.postCount, profile.commentCount, profile.joinDate, profile.raw, buddiesCount]);
+  }, [
+    profile.postCount,
+    profile.commentCount,
+    profile.joinDate,
+    profile.lastVisitedDate,
+    profile.raw,
+    buddiesCount,
+  ]);
 
   return (
     <View style={styles.card}>
-      {stats.map((s, i) => (
-        <React.Fragment key={s.label}>
-          {i > 0 && <View style={styles.divider} />}
-          <View style={styles.stat}>
-            <Text style={styles.value}>{s.value}</Text>
-            <Text style={styles.label}>{s.label}</Text>
-          </View>
-        </React.Fragment>
-      ))}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.row}
+      >
+        {stats.map((s, i) => (
+          <React.Fragment key={s.label}>
+            {i > 0 && <View style={styles.divider} />}
+            <View style={styles.stat}>
+              <Text style={styles.value} numberOfLines={1}>
+                {s.value}
+              </Text>
+              <Text style={styles.label} numberOfLines={1}>
+                {s.label}
+              </Text>
+            </View>
+          </React.Fragment>
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -55,13 +75,8 @@ export default function ProfileStatsRow({ profile, buddiesCount }: Props) {
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     card: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-around',
       backgroundColor: c.card,
       borderRadius: 14,
-      paddingVertical: 14,
-      paddingHorizontal: 8,
       marginBottom: 12,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
@@ -69,9 +84,21 @@ function makeStyles(c: ThemeColors) {
       shadowRadius: 4,
       elevation: 1,
     },
-    stat: {
-      flex: 1,
+    // flexGrow: 1 makes the row fill the card width when stats fit (so
+    // space-around distributes them evenly). When stats overflow, the
+    // ScrollView takes over and items size to their content.
+    row: {
+      flexGrow: 1,
+      flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-around',
+      paddingVertical: 14,
+      paddingHorizontal: 8,
+    },
+    stat: {
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      minWidth: 56,
     },
     value: {
       fontSize: 16,

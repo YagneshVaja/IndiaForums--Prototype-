@@ -1,13 +1,18 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useThemeStore } from '../../../../store/themeStore';
 import type { ThemeColors } from '../../../../theme/tokens';
+import type { MySpaceStackParamList } from '../../../../navigation/types';
 import { useProfileTab } from '../../hooks/useProfileTab';
 import TabShell from './TabShell';
 import type { MyForumDto, InvitedForumDto } from '../../types';
 import { fmtNum } from '../../utils/format';
+import { forumFromMyForumDto } from '../../utils/navAdapters';
+import { useForumFollowStore } from '../../../forums/store/forumFollowStore';
 
 interface Props {
   userId: number | string;
@@ -19,8 +24,23 @@ export default function ForumsTab({ userId, isOwn }: Props) {
   const q = useProfileTab({ tab: 'forums', userId, isOwn, page });
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const nav = useNavigation<NativeStackNavigationProp<MySpaceStackParamList>>();
+  const followOverrides = useForumFollowStore((s) => s.byForumId);
   const data = q.data && q.data.kind === 'forums' ? q.data : null;
-  const items = data?.items ?? [];
+  const rawItems = data?.items ?? [];
+
+  const openForum = useCallback(
+    (f: MyForumDto) =>
+      nav.navigate('ForumThread', { forum: forumFromMyForumDto(f) }),
+    [nav],
+  );
+  // Optimistically hide forums the (own) user just unfollowed.
+  const items = useMemo(() => {
+    if (!isOwn) return rawItems;
+    return rawItems.filter(
+      (f) => followOverrides[Number(f.forumId)]?.isFollowing !== false,
+    );
+  }, [rawItems, followOverrides, isOwn]);
   const invited = data?.invited ?? [];
   const requested = data?.requested ?? [];
   const isEmpty = !q.isLoading && items.length === 0 && invited.length === 0 && requested.length === 0;
@@ -71,6 +91,7 @@ export default function ForumsTab({ userId, isOwn }: Props) {
               f={f}
               styles={styles}
               colors={colors}
+              onPress={() => openForum(f)}
             />
           ))}
         </Section>
@@ -104,13 +125,20 @@ function ForumRow({
   f,
   styles,
   colors,
+  onPress,
 }: {
   f: MyForumDto;
   styles: ReturnType<typeof makeStyles>;
   colors: ThemeColors;
+  onPress?: () => void;
 }) {
+  const override = useForumFollowStore((s) => s.byForumId[Number(f.forumId)]);
+  const followCount = override?.countOverride ?? Number(f.followCount);
   return (
-    <Pressable style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+    >
       <View style={styles.thumbWrap}>
         {f.thumbnailUrl ? (
           <Image source={f.thumbnailUrl} style={styles.thumb} contentFit="cover" />
@@ -126,7 +154,7 @@ function ForumRow({
           <Text style={styles.rowDesc} numberOfLines={2}>{f.forumDescription}</Text>
         ) : null}
         <View style={styles.metaRow}>
-          <Text style={styles.meta}>👥 {fmtNum(f.followCount)}</Text>
+          <Text style={styles.meta}>👥 {fmtNum(followCount)}</Text>
           <Text style={styles.meta}>🧵 {fmtNum(f.topicsCount)}</Text>
           <Text style={styles.meta}>💬 {fmtNum(f.postsCount)}</Text>
         </View>

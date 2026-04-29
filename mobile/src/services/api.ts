@@ -2815,6 +2815,42 @@ function wrapModError(err: unknown, fallback: string): string {
   return e?.response?.data?.message || e?.message || fallback;
 }
 
+export interface FollowForumResult {
+  ok: boolean;
+  /** True when the failure was due to missing/expired auth — caller should prompt sign-in. */
+  authRequired?: boolean;
+  error?: string;
+}
+
+/**
+ * Follow ("like") or unfollow ("dislike") a forum.
+ * Endpoint: POST /forums/{forumId}/follow?type=like|dislike
+ */
+export async function setForumFollow(
+  forumId: number,
+  follow: boolean,
+): Promise<FollowForumResult> {
+  try {
+    await apiClient.post(`/forums/${forumId}/follow`, null, {
+      params: { type: follow ? 'like' : 'dislike' },
+    });
+    return { ok: true };
+  } catch (err) {
+    const e = err as {
+      response?: { status?: number; data?: { message?: string } };
+      message?: string;
+    };
+    const status = e?.response?.status;
+    if (status === 401) {
+      return { ok: false, authRequired: true, error: 'Please sign in to follow this forum.' };
+    }
+    return {
+      ok: false,
+      error: e?.response?.data?.message || e?.message || 'Failed to update follow.',
+    };
+  }
+}
+
 export async function closeTopic(topicId: number, forumId: number): Promise<ModResult> {
   try {
     await apiClient.post(`/forums/topics/${topicId}/close`, {

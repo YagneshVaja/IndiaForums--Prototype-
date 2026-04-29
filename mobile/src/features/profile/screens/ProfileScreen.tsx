@@ -38,8 +38,8 @@ import ForumsTab from '../components/tabs/ForumsTab';
 import BadgesTab from '../components/tabs/BadgesTab';
 import DraftsTab from '../components/tabs/DraftsTab';
 import WatchingTab from '../components/tabs/WatchingTab';
-import FFollowingTab from '../components/tabs/FFollowingTab';
 import WarningsTab from '../components/tabs/WarningsTab';
+import FanFictionsTab from '../components/tabs/FanFictionsTab';
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<MySpaceStackParamList, 'Profile'>,
@@ -59,7 +59,14 @@ export default function ProfileScreen({ route, navigation }: Props) {
   const q = useProfile(viewedUserId);
 
   const isOwn = q.data?.isOwnProfile ?? true;
-  const tabs = useMemo(() => tabsFor(isOwn), [isOwn]);
+  const tabs = useMemo(
+    () =>
+      tabsFor(isOwn, {
+        posts: q.data?.postCount,
+        comments: q.data?.commentCount,
+      }),
+    [isOwn, q.data?.postCount, q.data?.commentCount],
+  );
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('activity');
 
   const statusBarStyle = mode === 'dark' ? 'light-content' : 'dark-content';
@@ -130,8 +137,16 @@ function TabContent({
   viewedUserName?: string;
 }) {
   switch (tab) {
+    // 'activity' is the umbrella; scrap/slam/test are sub-filters owned by
+    // ActivityTab, but if a deep-link arrives with one of those keys we still
+    // honor it by routing into the same component (it'll preselect 'all').
     case 'activity':
+    case 'scrapbook':
+    case 'slambook':
+    case 'testimonial':
       return <ActivityTab userId={userId} isOwn={isOwn} viewedUserName={viewedUserName} />;
+    case 'fan-fictions':
+      return <FanFictionsTab userId={userId} isOwn={isOwn} />;
     case 'posts':
       return <PostsTab userId={userId} isOwn={isOwn} />;
     case 'comments':
@@ -148,10 +163,11 @@ function TabContent({
       return <DraftsTab userId={userId} />;
     case 'watching':
       return <WatchingTab userId={userId} />;
+    // ff-following / ff-followers are now sub-sections of FanFictionsTab.
+    // The keys still exist in useProfileTab for deep-link compatibility.
     case 'ff-following':
-      return <FFollowingTab userId={userId} variant="following" />;
     case 'ff-followers':
-      return <FFollowingTab userId={userId} variant="followers" />;
+      return <FanFictionsTab userId={userId} isOwn={isOwn} />;
     case 'warnings':
       return <WarningsTab userId={userId} />;
   }

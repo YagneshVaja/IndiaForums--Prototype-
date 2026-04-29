@@ -1,7 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useThemeStore } from '../../../../store/themeStore';
 import type { ThemeColors } from '../../../../theme/tokens';
+import type { MySpaceStackParamList } from '../../../../navigation/types';
 import { useProfileTab } from '../../hooks/useProfileTab';
 import TabShell from './TabShell';
 import Avatar from '../Avatar';
@@ -18,6 +21,7 @@ export default function FFollowingTab({ userId, variant }: Props) {
   const q = useProfileTab({ tab, userId, isOwn: true, page });
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const nav = useNavigation<NativeStackNavigationProp<MySpaceStackParamList>>();
 
   const data = q.data;
   const items: (FollowingDto | FollowerDto)[] =
@@ -45,6 +49,7 @@ export default function FFollowingTab({ userId, variant }: Props) {
         {items.map((u) => (
           <Pressable
             key={String(u.userId)}
+            onPress={() => nav.push('Profile', { userId: String(u.userId) })}
             style={({ pressed }) => [styles.row, pressed && styles.pressed]}
           >
             <Avatar

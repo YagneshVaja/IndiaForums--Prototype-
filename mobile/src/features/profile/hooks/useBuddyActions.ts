@@ -5,6 +5,7 @@ import {
   cancelFriendRequest,
   sendFriendRequest,
 } from '../services/profileApi';
+import { hapticError, hapticMedium, hapticSuccess } from '../../../utils/haptics';
 
 type Id = number | string;
 
@@ -32,27 +33,40 @@ export function useBuddyActions(target: Target) {
     qc.invalidateQueries({ queryKey: ['buddies'] });
   };
 
+  const onSuccess = () => {
+    hapticSuccess();
+    invalidate();
+  };
+  const onError = () => hapticError();
+
   const send = useMutation({
     mutationFn: () => sendFriendRequest(target.userId),
-    onSuccess: invalidate,
+    onSuccess,
+    onError,
   });
   const accept = useMutation({
     mutationFn: () => acceptFriendRequest(target.requestId ?? 0),
-    onSuccess: invalidate,
+    onSuccess,
+    onError,
   });
   const cancel = useMutation({
     mutationFn: () => cancelFriendRequest(target.requestId ?? 0),
-    onSuccess: invalidate,
+    onSuccess,
+    onError,
   });
   const block = useMutation({
-    mutationFn: (shouldBlock: boolean) =>
-      blockUser({
+    mutationFn: (shouldBlock: boolean) => {
+      // Medium impact on initiation since block is a "weighty" action.
+      hapticMedium();
+      return blockUser({
         requestId: target.requestId ?? 0,
         blockedUserId: target.userId,
         block: shouldBlock,
         isFriend: !!target.isFriend,
-      }),
-    onSuccess: invalidate,
+      });
+    },
+    onSuccess,
+    onError,
   });
 
   return { send, accept, cancel, block };
