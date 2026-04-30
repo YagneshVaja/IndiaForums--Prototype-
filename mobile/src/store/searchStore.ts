@@ -183,12 +183,15 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     resultsController = ctrl;
 
     const filter = initialFilter ?? null;
+    // Stale-while-revalidate: keep `results` and `searchLogId` from the
+    // previous query visible until the new fetch lands. Chip strip stays
+    // mounted (entityTypes is derived from `results`), so the user sees
+    // continuous content + a loading indicator instead of a flash of empty
+    // state. When the new data arrives below, results swap atomically.
     set({
       query: trimmed,
       submittedQuery: trimmed,
       activeEntityType: filter,
-      results: [],
-      searchLogId: null,
       resultsStatus: 'loading',
       // Clear typeahead — we're navigating away from it.
       suggestions: [],
