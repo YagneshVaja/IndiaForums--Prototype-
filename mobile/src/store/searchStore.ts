@@ -216,8 +216,11 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   },
 
   setEntityFilter: async (type) => {
+    // Client-side filter only — never re-fetch on chip tap. The screen
+    // computes its displayed list from `results` + `activeEntityType`.
+    // Server-side type-filtered re-queries are reserved for explicit
+    // pull-to-refresh, which goes through refreshResults() directly.
     set({ activeEntityType: type });
-    await get().refreshResults();
   },
 
   refreshResults: async () => {

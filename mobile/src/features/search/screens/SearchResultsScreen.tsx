@@ -138,12 +138,21 @@ function Body({
   status, results, submittedQuery, activeEntityType, searchLogId,
   isPullRefreshing, onRetry, onPullToRefresh, onPressItem, query, styles, colors,
 }: BodyProps) {
+  // Client-side filter so chip taps feel instant. activeEntityType is the
+  // chip the user picked; we narrow the full server result set in memory
+  // rather than re-querying. Pull-to-refresh re-fetches with the active
+  // filter applied to get a fresh server-filtered top 50.
+  const displayedResults = useMemo(() => {
+    if (!activeEntityType) return results;
+    return results.filter((r) => r.entityType === activeEntityType);
+  }, [results, activeEntityType]);
+
   // Hooks must run unconditionally — compute groups before any early return.
   // When the All filter is active and the result set spans multiple entity
   // types, we render section headers between groups so the user can scan by
   // category. With a single type or a specific filter active, we fall back
   // to the flat list.
-  const groups = useMemo(() => groupResults(results), [results]);
+  const groups = useMemo(() => groupResults(displayedResults), [displayedResults]);
   const showSections = activeEntityType == null && groups.length > 1;
 
   if (status === 'loading' && results.length === 0) {
@@ -171,11 +180,16 @@ function Body({
     );
   }
 
-  if (status === 'empty') {
+  // status === 'empty' means the server returned zero. If we're
+  // client-filtering and the filter narrows down to zero locally, treat
+  // that the same way.
+  if (status === 'empty' || displayedResults.length === 0) {
     return (
       <View style={styles.center}>
         <Ionicons name="search-outline" size={36} color={colors.textTertiary} />
-        <Text style={styles.emptyTitle}>No results for "{submittedQuery}"</Text>
+        <Text style={styles.emptyTitle}>
+          No {activeEntityType ? `${activeEntityType.toLowerCase()} ` : ''}results for "{submittedQuery}"
+        </Text>
         <Text style={styles.emptyBody}>
           Try a different spelling or remove filters.
         </Text>
@@ -201,7 +215,7 @@ function Body({
         }}
         ListHeaderComponent={
           <ResultsContextLine
-            count={results.length}
+            count={displayedResults.length}
             query={submittedQuery}
             activeEntityType={activeEntityType}
           />
@@ -226,11 +240,11 @@ function Body({
 
   return (
     <FlashList
-      data={results}
+      data={displayedResults}
       keyExtractor={(r, i) => `${i}-${r.entityType}-${r.entityId}`}
       ListHeaderComponent={
         <ResultsContextLine
-          count={results.length}
+          count={displayedResults.length}
           query={submittedQuery}
           activeEntityType={activeEntityType}
         />
