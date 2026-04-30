@@ -5,15 +5,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { SearchResultItemDto } from '../../../services/searchApi';
+import { entityMetadataLine } from '../utils/entityMetadata';
+import HighlightedText from './HighlightedText';
 
 interface Props {
   item: SearchResultItemDto;
+  query: string;
   onPress: () => void;
 }
 
-export default function ResultCard({ item, onPress }: Props) {
+export default function ResultCard({ item, query, onPress }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const meta = entityMetadataLine(item.entityType, item.summary);
   return (
     <Pressable
       onPress={onPress}
@@ -29,10 +33,14 @@ export default function ResultCard({ item, onPress }: Props) {
         </View>
       )}
       <View style={styles.body}>
-        <View style={styles.pill}>
-          <Text style={styles.pillText}>{item.entityType}</Text>
-        </View>
-        <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
+        <Text style={styles.meta} numberOfLines={1}>{meta}</Text>
+        <HighlightedText
+          text={item.title}
+          match={query}
+          style={styles.title}
+          highlightStyle={styles.titleMatch}
+          numberOfLines={2}
+        />
         {item.summary ? (
           <Text style={styles.summary} numberOfLines={2}>{item.summary}</Text>
         ) : null}
@@ -51,19 +59,12 @@ function makeStyles(c: ThemeColors) {
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: c.border,
     },
-    thumb: {
-      width: 92, height: 70, borderRadius: 8,
-      backgroundColor: c.surface,
-    },
+    thumb: { width: 92, height: 70, borderRadius: 8, backgroundColor: c.surface },
     thumbFallback: { alignItems: 'center', justifyContent: 'center' },
     body: { flex: 1, gap: 4 },
-    pill: {
-      alignSelf: 'flex-start',
-      paddingHorizontal: 8, paddingVertical: 2,
-      borderRadius: 6, backgroundColor: c.primarySoft,
-    },
-    pillText: { fontSize: 10, fontWeight: '700', color: c.primary },
+    meta: { fontSize: 11, fontWeight: '700', color: c.primary, textTransform: 'uppercase', letterSpacing: 0.4 },
     title: { fontSize: 14, fontWeight: '600', color: c.text, lineHeight: 19 },
+    titleMatch: { fontWeight: '800', color: c.text },
     summary: { fontSize: 12, color: c.textSecondary, lineHeight: 17 },
   });
 }

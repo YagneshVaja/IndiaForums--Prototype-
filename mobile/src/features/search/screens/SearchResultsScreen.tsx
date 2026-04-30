@@ -170,7 +170,7 @@ function Body({
       data={results}
       keyExtractor={(r) => `${r.entityType}-${r.entityId}`}
       renderItem={({ item }) => (
-        <ResultCard item={item} onPress={() => onPressItem(item, searchLogId)} />
+        <ResultCard item={item} query={submittedQuery} onPress={() => onPressItem(item, searchLogId)} />
       )}
       refreshControl={
         <RefreshControl

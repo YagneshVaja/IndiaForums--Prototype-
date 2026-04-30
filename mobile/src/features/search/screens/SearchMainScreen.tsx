@@ -67,7 +67,7 @@ export default function SearchMainScreen() {
           keyExtractor={(s, i) => `${s.entityType ?? 'q'}-${s.entityId ?? `idx${i}`}`}
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
-            <SuggestionRow item={item} onPress={() => openSuggestion(item)} />
+            <SuggestionRow item={item} query={query} onPress={() => openSuggestion(item)} />
           )}
           ListFooterComponent={
             <SearchForRow

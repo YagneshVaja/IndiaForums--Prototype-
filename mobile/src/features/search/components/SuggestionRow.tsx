@@ -5,15 +5,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { SuggestItemDto } from '../../../services/searchApi';
+import { entityMetadataLine } from '../utils/entityMetadata';
+import HighlightedText from './HighlightedText';
 
 interface Props {
   item: SuggestItemDto;
+  query: string;
   onPress: () => void;
 }
 
-export default function SuggestionRow({ item, onPress }: Props) {
+export default function SuggestionRow({ item, query, onPress }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const meta = entityMetadataLine(item.entityType);
   return (
     <Pressable
       onPress={onPress}
@@ -29,15 +33,21 @@ export default function SuggestionRow({ item, onPress }: Props) {
         </View>
       )}
       <View style={styles.body}>
-        <Text style={styles.phrase} numberOfLines={1}>{item.phrase}</Text>
-        {item.entityType ? (
-          <View style={styles.pill}>
-            <Text style={styles.pillText}>{item.entityType}</Text>
-          </View>
-        ) : null}
+        <HighlightedText
+          text={item.phrase}
+          match={query}
+          style={styles.phrase}
+          highlightStyle={styles.phraseMatch}
+          numberOfLines={1}
+        />
+        {meta ? <Text style={styles.meta} numberOfLines={1}>{meta}</Text> : null}
       </View>
-      <Ionicons name="arrow-up-outline" size={16} color={colors.textTertiary}
-                style={{ transform: [{ rotate: '-45deg' }] }} />
+      <Ionicons
+        name="arrow-up-outline"
+        size={16}
+        color={colors.textTertiary}
+        style={{ transform: [{ rotate: '-45deg' }] }}
+      />
     </Pressable>
   );
 }
@@ -52,19 +62,11 @@ function makeStyles(c: ThemeColors) {
       paddingVertical: 10,
     },
     rowPressed: { backgroundColor: c.surface },
-    thumb: {
-      width: 36, height: 36, borderRadius: 8,
-      backgroundColor: c.surface,
-    },
-    thumbFallback: {
-      alignItems: 'center', justifyContent: 'center',
-    },
-    body: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-    phrase: { flexShrink: 1, color: c.text, fontSize: 14, fontWeight: '500' },
-    pill: {
-      paddingHorizontal: 8, paddingVertical: 2,
-      borderRadius: 6, backgroundColor: c.primarySoft,
-    },
-    pillText: { fontSize: 10, fontWeight: '700', color: c.primary },
+    thumb: { width: 36, height: 36, borderRadius: 8, backgroundColor: c.surface },
+    thumbFallback: { alignItems: 'center', justifyContent: 'center' },
+    body: { flex: 1, gap: 2 },
+    phrase: { color: c.text, fontSize: 14, fontWeight: '500' },
+    phraseMatch: { fontWeight: '800', color: c.text },
+    meta: { fontSize: 11, color: c.textSecondary },
   });
 }
