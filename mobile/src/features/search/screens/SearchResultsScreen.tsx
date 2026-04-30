@@ -227,7 +227,7 @@ function Body({
   return (
     <FlashList
       data={results}
-      keyExtractor={(r) => `${r.entityType}-${r.entityId}`}
+      keyExtractor={(r, i) => `${i}-${r.entityType}-${r.entityId}`}
       ListHeaderComponent={
         <ResultsContextLine
           count={results.length}

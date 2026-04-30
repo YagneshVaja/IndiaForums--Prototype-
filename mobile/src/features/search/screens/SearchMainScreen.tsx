@@ -123,9 +123,11 @@ export default function SearchMainScreen() {
         <FlatList<Row>
           data={suggestionRows}
           keyExtractor={(row, i) => {
-            if (row.kind === 'spotlight') return `sp-${row.item.entityId ?? i}`;
+            // Always include the index to defend against the API returning
+            // two phrases that resolve to the same (entityType, entityId).
+            if (row.kind === 'spotlight') return `sp-${i}-${row.item.entityId ?? 0}`;
             if (row.kind === 'section') return `sec-${row.entityType}`;
-            if (row.kind === 'suggestion') return `s-${row.item.entityType ?? 'q'}-${row.item.entityId ?? i}`;
+            if (row.kind === 'suggestion') return `s-${i}-${row.item.entityType ?? 'q'}-${row.item.entityId ?? 0}`;
             return row.key;
           }}
           keyboardShouldPersistTaps="handled"
