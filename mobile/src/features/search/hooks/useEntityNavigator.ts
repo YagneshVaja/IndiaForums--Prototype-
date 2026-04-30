@@ -14,6 +14,7 @@ import {
   type Celebrity,
   type Forum,
   type ForumTopic,
+  type Movie,
 } from '../../../services/api';
 import type { UnsupportedEntitySheetHandle } from '../components/UnsupportedEntitySheet';
 
@@ -99,6 +100,33 @@ function synthesizeForumTopic(e: SearchEntityShape): ForumTopic {
     tags: [],
     linkTypeValue: '',
     poll: null,
+  };
+}
+
+/**
+ * Builds a minimal Movie from a search payload. MovieDetailScreen reads
+ * { titleId, titleName, posterUrl } for the hero and refetches story / cast /
+ * reviews on mount via useMovieDetail(titleId). The remaining fields are
+ * intentionally zero/null — the screen guards rating display on
+ * criticRatingCount/audienceRatingCount > 0 and falls back gracefully when
+ * releaseDate and startYear are absent, so no broken zeros surface in the UI.
+ */
+function synthesizeMovie(e: SearchEntityShape): Movie {
+  return {
+    titleId: e.entityId ?? 0,
+    titleName: e.title,
+    startYear: null,
+    pageUrl: e.url ?? '',
+    posterUrl: e.imageUrl,
+    hasThumbnail: !!e.imageUrl,
+    releaseDate: null,
+    titleShortDesc: null,
+    titleTypeId: 0,
+    audienceRating: 0,
+    criticRating: 0,
+    audienceRatingCount: 0,
+    criticRatingCount: 0,
+    averageRating: 0,
   };
 }
 
@@ -224,6 +252,11 @@ export function useEntityNavigator(): UseEntityNavigator {
         case 'Forum':
           navigation.push('ForumThread', {
             forum: synthesizeForum(e),
+          });
+          return;
+        case 'Movie':
+          navigation.push('MovieDetail', {
+            movie: synthesizeMovie(e),
           });
           return;
         default:

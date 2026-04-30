@@ -81,6 +81,10 @@ export type HomeStackParamList = {
   GalleryDetail:
     | { gallery: import('../services/api').Gallery }
     | { id: string | number; title?: string; thumbnail?: string | null };
+  Movies: undefined;
+  // Pass the Movie object from the hub list so the hero renders instantly;
+  // detail-only fields (story/cast/reviews) are fetched on mount.
+  MovieDetail: { movie: import('../services/api').Movie };
 };
 
 export type NewsStackParamList = {
@@ -118,6 +122,7 @@ export type SearchStackParamList = {
     jumpToLast?: boolean;
     autoAction?: 'like' | 'reply' | 'quote';
   };
+  MovieDetail: { movie: import('../services/api').Movie };
 };
 
 export type MySpaceStackParamList = {
