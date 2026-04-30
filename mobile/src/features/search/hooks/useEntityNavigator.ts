@@ -169,7 +169,16 @@ export function useEntityNavigator(): UseEntityNavigator {
 
       switch (e.entityType) {
         case 'Article':
-          navigation.push('ArticleDetail', { id: String(id) });
+          // Pass thumbnailUrl + title from the search payload — the
+          // /articles/{id}/details endpoint frequently returns
+          // thumbnailUrl=null/undefined for articles, so the hero would
+          // otherwise be blank until ArticleDetailScreen falls back to the
+          // route param. Search has the image we need; just hand it over.
+          navigation.push('ArticleDetail', {
+            id: String(id),
+            thumbnailUrl: e.imageUrl ?? undefined,
+            title: e.title,
+          });
           return;
         case 'Gallery':
           navigation.push('GalleryDetail', {
