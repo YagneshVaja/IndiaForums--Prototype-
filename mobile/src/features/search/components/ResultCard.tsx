@@ -6,6 +6,7 @@ import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { SearchResultItemDto } from '../../../services/searchApi';
 import { entityMetadataLine } from '../utils/entityMetadata';
+import { entityIcon } from '../utils/entityIcon';
 import HighlightedText from './HighlightedText';
 
 interface Props {
@@ -29,7 +30,7 @@ export default function ResultCard({ item, query, onPress }: Props) {
         <Image source={{ uri: item.imageUrl }} style={styles.thumb} contentFit="cover" />
       ) : (
         <View style={[styles.thumb, styles.thumbFallback]}>
-          <Ionicons name="image-outline" size={20} color={colors.textTertiary} />
+          <Ionicons name={entityIcon(item.entityType)} size={26} color={colors.primary} />
         </View>
       )}
       <View style={styles.body}>
@@ -60,7 +61,7 @@ function makeStyles(c: ThemeColors) {
       borderBottomColor: c.border,
     },
     thumb: { width: 92, height: 70, borderRadius: 8, backgroundColor: c.surface },
-    thumbFallback: { alignItems: 'center', justifyContent: 'center' },
+    thumbFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: c.primarySoft },
     body: { flex: 1, gap: 4 },
     meta: { fontSize: 11, fontWeight: '700', color: c.primary, textTransform: 'uppercase', letterSpacing: 0.4 },
     title: { fontSize: 14, fontWeight: '600', color: c.text, lineHeight: 19 },

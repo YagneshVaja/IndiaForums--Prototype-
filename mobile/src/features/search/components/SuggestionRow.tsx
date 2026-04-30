@@ -6,6 +6,7 @@ import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { SuggestItemDto } from '../../../services/searchApi';
 import { entityMetadataLine } from '../utils/entityMetadata';
+import { entityIcon } from '../utils/entityIcon';
 import HighlightedText from './HighlightedText';
 
 interface Props {
@@ -29,7 +30,7 @@ export default function SuggestionRow({ item, query, onPress }: Props) {
         <Image source={{ uri: item.imageUrl }} style={styles.thumb} contentFit="cover" />
       ) : (
         <View style={[styles.thumb, styles.thumbFallback]}>
-          <Ionicons name="search" size={14} color={colors.textTertiary} />
+          <Ionicons name={entityIcon(item.entityType)} size={16} color={colors.primary} />
         </View>
       )}
       <View style={styles.body}>
@@ -63,7 +64,7 @@ function makeStyles(c: ThemeColors) {
     },
     rowPressed: { backgroundColor: c.surface },
     thumb: { width: 36, height: 36, borderRadius: 8, backgroundColor: c.surface },
-    thumbFallback: { alignItems: 'center', justifyContent: 'center' },
+    thumbFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: c.primarySoft },
     body: { flex: 1, gap: 2 },
     phrase: { color: c.text, fontSize: 14, fontWeight: '500' },
     phraseMatch: { fontWeight: '800', color: c.text },

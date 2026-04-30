@@ -1,4 +1,4 @@
-import type { SuggestItemDto } from '../../../services/searchApi';
+import type { SuggestItemDto, SearchResultItemDto } from '../../../services/searchApi';
 
 const ORDER = [
   'Person',
@@ -9,6 +9,7 @@ const ORDER = [
   'Article',
   'Video',
   'Gallery',
+  'FanFiction',
 ];
 
 export interface SuggestionGroup {
@@ -16,13 +17,20 @@ export interface SuggestionGroup {
   items: SuggestItemDto[];
 }
 
+export interface ResultGroup {
+  entityType: string;
+  items: SearchResultItemDto[];
+}
+
 /**
- * Groups suggestions by entityType in a fixed order. Buckets containing zero
- * items are dropped. Within a bucket, the original order (weight) is preserved.
+ * Generic worker. Groups items by entityType in the fixed ORDER above.
+ * Empty buckets are dropped. Original order is preserved within each bucket.
  * Items with a null entityType go into a final "Other" bucket.
  */
-export function groupSuggestions(items: SuggestItemDto[]): SuggestionGroup[] {
-  const buckets = new Map<string, SuggestItemDto[]>();
+function groupByEntityType<T extends { entityType: string | null }>(
+  items: T[],
+): { entityType: string; items: T[] }[] {
+  const buckets = new Map<string, T[]>();
   for (const item of items) {
     const key = item.entityType ?? 'Other';
     const bucket = buckets.get(key);
@@ -30,7 +38,7 @@ export function groupSuggestions(items: SuggestItemDto[]): SuggestionGroup[] {
     else buckets.set(key, [item]);
   }
 
-  const groups: SuggestionGroup[] = [];
+  const groups: { entityType: string; items: T[] }[] = [];
   for (const t of ORDER) {
     const items = buckets.get(t);
     if (items && items.length > 0) groups.push({ entityType: t, items });
@@ -42,4 +50,12 @@ export function groupSuggestions(items: SuggestItemDto[]): SuggestionGroup[] {
     groups.push({ entityType, items });
   }
   return groups;
+}
+
+export function groupSuggestions(items: SuggestItemDto[]): SuggestionGroup[] {
+  return groupByEntityType(items);
+}
+
+export function groupResults(items: SearchResultItemDto[]): ResultGroup[] {
+  return groupByEntityType(items);
 }

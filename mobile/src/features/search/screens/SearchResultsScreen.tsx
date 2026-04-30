@@ -12,14 +12,17 @@ import type { SearchStackParamList } from '../../../navigation/types';
 import { useSearchStore } from '../../../store/searchStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
+import type { SearchResultItemDto } from '../../../services/searchApi';
 
 import SearchInputHeader from '../components/SearchInputHeader';
 import EntityTypeChip from '../components/EntityTypeChip';
 import ResultCard from '../components/ResultCard';
 import ResultCardSkeleton from '../components/ResultCardSkeleton';
 import ResultsContextLine from '../components/ResultsContextLine';
+import SuggestionSection from '../components/SuggestionSection';
 import UnsupportedEntitySheet from '../components/UnsupportedEntitySheet';
 import { useEntityNavigator } from '../hooks/useEntityNavigator';
+import { groupResults } from '../utils/groupSuggestions';
 
 type Nav = NativeStackNavigationProp<SearchStackParamList, 'SearchResults'>;
 type Styles = ReturnType<typeof makeStyles>;
@@ -135,6 +138,14 @@ function Body({
   status, results, submittedQuery, activeEntityType, searchLogId,
   isPullRefreshing, onRetry, onPullToRefresh, onPressItem, query, styles, colors,
 }: BodyProps) {
+  // Hooks must run unconditionally — compute groups before any early return.
+  // When the All filter is active and the result set spans multiple entity
+  // types, we render section headers between groups so the user can scan by
+  // category. With a single type or a specific filter active, we fall back
+  // to the flat list.
+  const groups = useMemo(() => groupResults(results), [results]);
+  const showSections = activeEntityType == null && groups.length > 1;
+
   if (status === 'loading' && results.length === 0) {
     return (
       <View>
@@ -169,6 +180,47 @@ function Body({
           Try a different spelling or remove filters.
         </Text>
       </View>
+    );
+  }
+
+  if (showSections) {
+    type Row =
+      | { kind: 'section'; entityType: string }
+      | { kind: 'card'; item: SearchResultItemDto };
+    const rows: Row[] = [];
+    for (const group of groups) {
+      rows.push({ kind: 'section', entityType: group.entityType });
+      for (const item of group.items) rows.push({ kind: 'card', item });
+    }
+    return (
+      <FlashList<Row>
+        data={rows}
+        keyExtractor={(row, i) => {
+          if (row.kind === 'section') return `sec-${row.entityType}`;
+          return `${row.item.entityType}-${row.item.entityId}-${i}`;
+        }}
+        ListHeaderComponent={
+          <ResultsContextLine
+            count={results.length}
+            query={submittedQuery}
+            activeEntityType={activeEntityType}
+          />
+        }
+        renderItem={({ item }) =>
+          item.kind === 'section' ? (
+            <SuggestionSection entityType={item.entityType} />
+          ) : (
+            <ResultCard item={item.item} query={query} onPress={() => onPressItem(item.item, searchLogId)} />
+          )
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={isPullRefreshing}
+            onRefresh={onPullToRefresh}
+            tintColor={colors.primary}
+          />
+        }
+      />
     );
   }
 

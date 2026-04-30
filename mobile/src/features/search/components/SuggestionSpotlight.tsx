@@ -6,6 +6,7 @@ import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { SuggestItemDto } from '../../../services/searchApi';
 import { entityMetadataLine } from '../utils/entityMetadata';
+import { entityIcon } from '../utils/entityIcon';
 import HighlightedText from './HighlightedText';
 
 interface Props {
@@ -31,7 +32,7 @@ export default function SuggestionSpotlight({ item, query, onPress }: Props) {
           <Image source={{ uri: item.imageUrl }} style={styles.thumb} contentFit="cover" />
         ) : (
           <View style={[styles.thumb, styles.thumbFallback]}>
-            <Ionicons name="image-outline" size={24} color={colors.textTertiary} />
+            <Ionicons name={entityIcon(item.entityType)} size={28} color={colors.primary} />
           </View>
         )}
         <View style={styles.body}>
@@ -72,7 +73,7 @@ function makeStyles(c: ThemeColors) {
     },
     cardPressed: { opacity: 0.85 },
     thumb: { width: 64, height: 64, borderRadius: 10, backgroundColor: c.bg },
-    thumbFallback: { alignItems: 'center', justifyContent: 'center' },
+    thumbFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: c.primarySoft },
     body: { flex: 1, gap: 4 },
     meta: { fontSize: 10, fontWeight: '700', color: c.primary, letterSpacing: 0.5 },
     phrase: { fontSize: 16, fontWeight: '700', color: c.text, lineHeight: 21 },

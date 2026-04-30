@@ -28,6 +28,8 @@ export function entityMetadataLine(
       return 'Forum Topic';
     case 'forum':
       return 'Forum';
+    case 'fanfiction':
+      return 'Fan Fiction';
     default:
       return entityType ?? '';
   }
