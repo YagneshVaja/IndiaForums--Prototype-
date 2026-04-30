@@ -94,7 +94,11 @@ interface SearchState {
    * where the typeahead dropdown is not visible. */
   setQueryQuiet: (q: string) => void;
   fetchSuggestions: (q: string) => Promise<void>;
-  submit: (q: string) => Promise<void>;
+  /** Submit a query and load full results.
+   * Pass `initialFilter` to land on results already filtered to that
+   * entityType (used by the browse tiles); otherwise the active filter
+   * resets to null. */
+  submit: (q: string, initialFilter?: string | null) => Promise<void>;
   setEntityFilter: (type: string | null) => Promise<void>;
   refreshResults: () => Promise<void>;
 
@@ -165,7 +169,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     }
   },
 
-  submit: async (q) => {
+  submit: async (q, initialFilter) => {
     const trimmed = q.trim();
     if (!trimmed) return;
 
@@ -178,10 +182,11 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     const ctrl = new AbortController();
     resultsController = ctrl;
 
+    const filter = initialFilter ?? null;
     set({
       query: trimmed,
       submittedQuery: trimmed,
-      activeEntityType: null,
+      activeEntityType: filter,
       results: [],
       searchLogId: null,
       resultsStatus: 'loading',
@@ -191,7 +196,10 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     });
 
     try {
-      const data = await apiSearchResults({ q: trimmed }, ctrl.signal);
+      const data = await apiSearchResults(
+        { q: trimmed, entityType: filter },
+        ctrl.signal,
+      );
       if (resultsController !== ctrl) return;
       set({
         results: data.results,
