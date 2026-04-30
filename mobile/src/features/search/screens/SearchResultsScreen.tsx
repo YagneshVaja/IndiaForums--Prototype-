@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ActivityIndicator, Pressable, RefreshControl,
+  View, Text, StyleSheet, Pressable, RefreshControl,
   ScrollView,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -16,6 +16,8 @@ import type { ThemeColors } from '../../../theme/tokens';
 import SearchInputHeader from '../components/SearchInputHeader';
 import EntityTypeChip from '../components/EntityTypeChip';
 import ResultCard from '../components/ResultCard';
+import ResultCardSkeleton from '../components/ResultCardSkeleton';
+import ResultsContextLine from '../components/ResultsContextLine';
 import UnsupportedEntitySheet from '../components/UnsupportedEntitySheet';
 import { useEntityNavigator } from '../hooks/useEntityNavigator';
 
@@ -34,16 +36,14 @@ export default function SearchResultsScreen() {
   const results = useSearchStore((s) => s.results);
   const searchLogId = useSearchStore((s) => s.searchLogId);
   const resultsStatus = useSearchStore((s) => s.resultsStatus);
+  const isPullRefreshing = useSearchStore((s) => s.isPullRefreshing);
   const activeEntityType = useSearchStore((s) => s.activeEntityType);
   const setEntityFilter = useSearchStore((s) => s.setEntityFilter);
   const refreshResults = useSearchStore((s) => s.refreshResults);
+  const pullToRefresh = useSearchStore((s) => s.pullToRefresh);
 
   const { sheetRef, openResult } = useEntityNavigator();
 
-  // Build the chip list dynamically from the result set so we never show a
-  // chip with zero matches. "All" is always first; the active filter is
-  // included even if the current narrowed result set wouldn't otherwise
-  // contain it (so the user can tap it back off).
   const entityTypes = useMemo(() => {
     const set = new Set<string>();
     for (const r of results) set.add(r.entityType);
@@ -51,8 +51,6 @@ export default function SearchResultsScreen() {
     return Array.from(set).sort();
   }, [results, activeEntityType]);
 
-  // Fire-and-forget resubmit so the spinner shows immediately. The store
-  // mutates resultsStatus synchronously inside submit before any await.
   const handleResubmit = useCallback(
     (q: string) => {
       const trimmed = q.trim();
@@ -101,9 +99,13 @@ export default function SearchResultsScreen() {
           status={resultsStatus}
           results={results}
           submittedQuery={submittedQuery}
+          activeEntityType={activeEntityType}
           searchLogId={searchLogId}
+          isPullRefreshing={isPullRefreshing}
           onRetry={refreshResults}
+          onPullToRefresh={pullToRefresh}
           onPressItem={openResult}
+          query={submittedQuery}
           styles={styles}
           colors={colors}
         />
@@ -118,20 +120,25 @@ interface BodyProps {
   status: ReturnType<typeof useSearchStore.getState>['resultsStatus'];
   results: ReturnType<typeof useSearchStore.getState>['results'];
   submittedQuery: string;
+  activeEntityType: string | null;
   searchLogId: number | null;
+  isPullRefreshing: boolean;
   onRetry: () => void;
+  onPullToRefresh: () => Promise<void>;
   onPressItem: ReturnType<typeof useEntityNavigator>['openResult'];
+  query: string;
   styles: Styles;
   colors: ThemeColors;
 }
 
 function Body({
-  status, results, submittedQuery, searchLogId, onRetry, onPressItem, styles, colors,
+  status, results, submittedQuery, activeEntityType, searchLogId,
+  isPullRefreshing, onRetry, onPullToRefresh, onPressItem, query, styles, colors,
 }: BodyProps) {
   if (status === 'loading' && results.length === 0) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.primary} />
+      <View>
+        {Array.from({ length: 4 }, (_, i) => <ResultCardSkeleton key={i} />)}
       </View>
     );
   }
@@ -169,13 +176,20 @@ function Body({
     <FlashList
       data={results}
       keyExtractor={(r) => `${r.entityType}-${r.entityId}`}
+      ListHeaderComponent={
+        <ResultsContextLine
+          count={results.length}
+          query={submittedQuery}
+          activeEntityType={activeEntityType}
+        />
+      }
       renderItem={({ item }) => (
-        <ResultCard item={item} query={submittedQuery} onPress={() => onPressItem(item, searchLogId)} />
+        <ResultCard item={item} query={query} onPress={() => onPressItem(item, searchLogId)} />
       )}
       refreshControl={
         <RefreshControl
-          refreshing={status === 'loading'}
-          onRefresh={onRetry}
+          refreshing={isPullRefreshing}
+          onRefresh={onPullToRefresh}
           tintColor={colors.primary}
         />
       }
