@@ -86,6 +86,8 @@ interface SearchState {
 
   recents: RecentSearch[];
 
+  isPullRefreshing: boolean;
+
   // Actions
   setQuery: (q: string) => void;
   /** Update `query` without firing /suggest. Used by SearchResultsScreen
@@ -99,10 +101,12 @@ interface SearchState {
   addRecent: (q: string) => void;
   removeRecent: (q: string) => void;
   clearRecents: () => void;
+  pullToRefresh: () => Promise<void>;
 }
 
 let suggestController: AbortController | null = null;
 let resultsController: AbortController | null = null;
+let suggestDebounce: ReturnType<typeof setTimeout> | null = null;
 
 export const useSearchStore = create<SearchState>((set, get) => ({
   query: '',
@@ -118,16 +122,23 @@ export const useSearchStore = create<SearchState>((set, get) => ({
 
   recents: readRecents(),
 
+  isPullRefreshing: false,
+
   setQuery: (q) => {
     set({ query: q });
+    if (suggestDebounce) clearTimeout(suggestDebounce);
     if (q.trim().length < 2) {
-      // Cancel any in-flight suggest, blank the dropdown.
       suggestController?.abort();
       suggestController = null;
       set({ suggestions: [], suggestStatus: 'idle' });
       return;
     }
-    void get().fetchSuggestions(q);
+    // Show loading immediately so the skeleton renders even while we wait
+    // for the debounce window. The actual fetch is delayed by 200ms.
+    set({ suggestStatus: 'loading' });
+    suggestDebounce = setTimeout(() => {
+      void get().fetchSuggestions(q);
+    }, 200);
   },
 
   setQueryQuiet: (q) => {
@@ -250,5 +261,14 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   clearRecents: () => {
     set({ recents: [] });
     writeRecents([]);
+  },
+
+  pullToRefresh: async () => {
+    set({ isPullRefreshing: true });
+    try {
+      await get().refreshResults();
+    } finally {
+      set({ isPullRefreshing: false });
+    }
   },
 }));
