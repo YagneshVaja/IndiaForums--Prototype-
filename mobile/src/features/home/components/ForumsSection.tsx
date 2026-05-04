@@ -1,122 +1,187 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
+import { useHomeForumTopics } from '../hooks/useHomeForumTopics';
+import { formatCount } from '../../forums/utils/format';
+import LoadingState from '../../../components/ui/LoadingState';
+import type { ForumTopic, HomeForumTopic, HomeTopicType } from '../../../services/api';
 
-interface Thread {
-  id: number;
-  forumName: string;
-  bg: string;
-  emoji: string;
-  title: string;
-  poster: string;
-  ago: string;
-  likes: string;
-  views: string;
-  comments: string;
-  lastBy: string;
-  lastTime: string;
-}
+type TabId = 'announcements' | 'latest' | 'popular';
 
-const FORUM_TABS = [
-  { id: 'announcements', label: 'Announcements' },
-  { id: 'latest',        label: 'Latest' },
-  { id: 'popular',       label: 'Popular' },
+const TABS: Array<{ id: TabId; label: string; topicType: HomeTopicType }> = [
+  { id: 'announcements', label: 'Announcements', topicType: 'ga' },
+  { id: 'latest',        label: 'Latest',        topicType: 'lt' },
+  { id: 'popular',       label: 'Popular',       topicType: 'popular' },
 ];
 
-const FORUMS: Record<string, Thread[]> = {
-  announcements: [
-    { id: 1, forumName: 'Current Affairs', bg: '#1e3a8a', emoji: '🌐', title: 'US & Israel vs Iran ongoing war discussion thread', poster: 'Leprechaun', ago: '2 days ago', likes: '891', views: '9.8k', comments: '299', lastBy: 'Cynical1', lastTime: '10 min ago' },
-    { id: 2, forumName: 'Forum Games',     bg: '#7c3aed', emoji: '🎮', title: 'Deal or No Deal Season 2 (R2 Leaderboard + R3 p25)', poster: 'Minionite', ago: '10 days ago', likes: '426', views: '9.6k', comments: '244', lastBy: 'Delusional_Minx', lastTime: '3 hours ago' },
-    { id: 3, forumName: 'Suggestions',     bg: '#b45309', emoji: '💬', title: 'Site Updates and Issues Discussions #9', poster: 'vijay', ago: '1 year ago', likes: '2.6k', views: '381.7k', comments: '1.6k', lastBy: 'gaadiglow', lastTime: '16 hours ago' },
-  ],
-  latest: [
-    { id: 1, forumName: 'Bollywood',       bg: '#7f1d1d', emoji: '🎬', title: "SRK's new film title officially revealed — first look drops tonight!", poster: 'FilmBuff_IN', ago: '18 min ago', likes: '142', views: '2.1k', comments: '67', lastBy: 'SRKfan2026', lastTime: '2 min ago' },
-    { id: 2, forumName: 'Cricket',         bg: '#14532d', emoji: '🏏', title: 'IPL 2026 — Match Day 18 live discussion: MI vs CSK', poster: 'CricketMania', ago: '45 min ago', likes: '3.2k', views: '44k', comments: '891', lastBy: 'WankhedeRoar', lastTime: 'just now' },
-    { id: 3, forumName: 'K-Drama',         bg: '#0c4a6e', emoji: '📺', title: 'Squid Game S3 episode 4 — unpacking that brutal finale twist', poster: 'KDramaLover', ago: '2 hours ago', likes: '567', views: '8.9k', comments: '203', lastBy: 'NetflixIndia_fan', lastTime: '12 min ago' },
-  ],
-  popular: [
-    { id: 1, forumName: 'Bigg Boss',       bg: '#4a2c8a', emoji: '👁️', title: 'BB18 All-Time Ranking Megathread — vote for your winner', poster: 'BBWatcher', ago: '5 days ago', likes: '12.4k', views: '2.1M', comments: '8.7k', lastBy: 'Vote4Shilpa', lastTime: '1 min ago' },
-    { id: 2, forumName: 'Celebrities',     bg: '#831843', emoji: '⭐', title: 'Deepika vs Alia — who is the true queen of Bollywood in 2026?', poster: 'StargazerIN', ago: '3 days ago', likes: '9.1k', views: '890k', comments: '4.2k', lastBy: 'BollyQueen', lastTime: '5 min ago' },
-    { id: 3, forumName: 'Current Affairs', bg: '#1e3a8a', emoji: '🌐', title: 'US & Israel vs Iran ongoing war discussion thread', poster: 'Leprechaun', ago: '2 days ago', likes: '891', views: '9.8k', comments: '299', lastBy: 'Cynical1', lastTime: '10 min ago' },
-  ],
-};
+const PREVIEW_COUNT = 3;
 
 interface Props {
-  onThreadPress?: (thread: Thread) => void;
+  onTopicPress?: (topic: ForumTopic) => void;
 }
 
-export default function ForumsSection({ onThreadPress }: Props) {
-  const [activeTab, setActiveTab] = useState<'announcements' | 'latest' | 'popular'>('announcements');
-  const threads = FORUMS[activeTab];
+/**
+ * Turn a forum slug ("suggestions-comments") into a display name
+ * ("Suggestions Comments"). The /home/topics endpoint returns the slug only;
+ * forumName isn't part of the lightweight schema.
+ */
+function forumNameFromSlug(slug: string): string {
+  if (!slug) return '';
+  return slug
+    .split('-')
+    .map((part) => (part.length === 0 ? '' : part[0].toUpperCase() + part.slice(1)))
+    .join(' ');
+}
+
+/**
+ * Build a minimal ForumTopic for navigation. TopicDetailScreen refetches the
+ * full record on mount keyed off `id`, so the empty fields here are
+ * placeholders that get replaced once the post fetch lands. Same pattern as
+ * search → TopicDetail (see useEntityNavigator.synthesizeForumTopic).
+ */
+function synthesizeForumTopic(t: HomeForumTopic, displayName: string): ForumTopic {
+  return {
+    id:            t.topicId,
+    forumId:       t.forumId,
+    forumName:     displayName,
+    forumThumbnail: t.forumThumbnail,
+    title:         t.title,
+    description:   '',
+    poster:        '',
+    lastBy:        '',
+    time:          '',
+    lastTime:      t.lastTime,
+    replies:       t.replies,
+    views:         0,
+    likes:         0,
+    locked:        false,
+    pinned:        false,
+    flairId:       0,
+    topicImage:    null,
+    tags:          [],
+    linkTypeValue: '',
+    poll:          null,
+  };
+}
+
+export default function ForumsSection({ onTopicPress }: Props) {
+  const [activeTab, setActiveTab] = useState<TabId>('announcements');
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
+  const topicType = TABS.find((t) => t.id === activeTab)!.topicType;
+  const { data: topics = [], isLoading, isFetching } = useHomeForumTopics(topicType);
+
+  const visibleTopics = useMemo(() => topics.slice(0, PREVIEW_COUNT), [topics]);
+
   return (
     <View style={styles.section}>
-      {/* Section header */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Forums</Text>
       </View>
 
-      {/* Tabs */}
       <View style={styles.tabRow}>
-        {FORUM_TABS.map(tab => {
+        {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <Pressable
               key={tab.id}
               style={styles.tab}
-              onPress={() => setActiveTab(tab.id as typeof activeTab)}
+              onPress={() => setActiveTab(tab.id)}
+              accessibilityRole="button"
+              accessibilityLabel={tab.label}
             >
               <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
                 {tab.label}
               </Text>
-              {isActive && <View style={styles.tabIndicator} />}
+              {isActive ? <View style={styles.tabIndicator} /> : null}
             </Pressable>
           );
         })}
       </View>
 
-      {/* Thread list */}
       <View style={styles.threadList}>
-        {threads.map(t => (
-          <Pressable
-            key={t.id}
-            style={({ pressed }) => [styles.thread, pressed && styles.threadPressed]}
-            onPress={() => onThreadPress?.(t)}
-          >
-            {/* Forum name */}
-            <Text style={styles.forumName}>{t.forumName}</Text>
-
-            {/* Title */}
-            <Text style={styles.threadTitle} numberOfLines={2}>{t.title}</Text>
-
-            {/* Author row */}
-            <View style={styles.authorRow}>
-              <View style={[styles.authorAvatar, { backgroundColor: t.bg }]}>
-                <Text style={styles.authorInitial}>{t.poster.charAt(0).toUpperCase()}</Text>
-              </View>
-              <Text style={styles.authorName}>{t.poster}</Text>
-              <Text style={styles.dot}>·</Text>
-              <Text style={styles.authorTime}>{t.ago}</Text>
-            </View>
-
-            {/* Stats */}
-            <View style={styles.statsRow}>
-              <View style={styles.statsLeft}>
-                <Text style={styles.stat}>♥ {t.likes}</Text>
-                <Text style={styles.stat}>💬 {t.comments}</Text>
-                <Text style={styles.stat}>👁 {t.views}</Text>
-              </View>
-              <Text style={styles.lastReply} numberOfLines={1}>
-                {t.lastTime} · {t.lastBy}
-              </Text>
-            </View>
-          </Pressable>
-        ))}
+        {isLoading && topics.length === 0 ? (
+          <LoadingState height={260} />
+        ) : visibleTopics.length === 0 ? (
+          <Text style={styles.empty}>
+            {isFetching ? 'Loading…' : 'No topics yet.'}
+          </Text>
+        ) : (
+          visibleTopics.map((t) => (
+            <TopicRow
+              key={t.topicId}
+              topic={t}
+              styles={styles}
+              colors={colors}
+              onPress={onTopicPress}
+            />
+          ))
+        )}
       </View>
     </View>
+  );
+}
+
+interface TopicRowProps {
+  topic: HomeForumTopic;
+  styles: ReturnType<typeof makeStyles>;
+  colors: ThemeColors;
+  onPress?: (topic: ForumTopic) => void;
+}
+
+function TopicRow({ topic, styles, colors, onPress }: TopicRowProps) {
+  const displayName = forumNameFromSlug(topic.forumPageUrl);
+  const initial = (displayName || '?').charAt(0).toUpperCase();
+
+  const handlePress = () => {
+    if (!onPress) return;
+    onPress(synthesizeForumTopic(topic, displayName));
+  };
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.thread, pressed && styles.threadPressed]}
+      onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={topic.title}
+    >
+      <View style={styles.thumbWrap}>
+        {topic.forumThumbnail ? (
+          <Image
+            source={{ uri: topic.forumThumbnail }}
+            style={styles.thumb}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={120}
+          />
+        ) : (
+          <View style={[styles.thumb, styles.thumbFallback]}>
+            <Text style={styles.thumbInitial}>{initial}</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.body}>
+        <Text style={styles.forumName} numberOfLines={1}>{displayName}</Text>
+        <Text style={styles.threadTitle} numberOfLines={2}>{topic.title}</Text>
+
+        <View style={styles.metaRow}>
+          <View style={styles.metaLeft}>
+            <Text style={styles.stat}>💬 {formatCount(topic.replies)} replies</Text>
+            {topic.lastTime ? (
+              <>
+                <Text style={styles.dot}>·</Text>
+                <Text style={styles.stat} numberOfLines={1}>{topic.lastTime}</Text>
+              </>
+            ) : null}
+          </View>
+          <Text style={[styles.chevron, { color: colors.textTertiary }]}>›</Text>
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -171,19 +236,47 @@ function makeStyles(c: ThemeColors) {
     threadList: {
       paddingHorizontal: 14,
       paddingBottom: 16,
-      gap: 8,
+      gap: 10,
     },
     thread: {
+      flexDirection: 'row',
+      gap: 12,
       borderRadius: 12,
       backgroundColor: c.card,
       borderWidth: 1,
       borderColor: c.border,
       padding: 12,
-      gap: 4,
+      alignItems: 'center',
     },
     threadPressed: {
       backgroundColor: c.primarySoft,
       borderColor: c.primary,
+    },
+    thumbWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      overflow: 'hidden',
+      flexShrink: 0,
+      backgroundColor: c.surface,
+    },
+    thumb: {
+      width: '100%',
+      height: '100%',
+    },
+    thumbFallback: {
+      backgroundColor: c.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    thumbInitial: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: c.primary,
+    },
+    body: {
+      flex: 1,
+      minWidth: 0,
     },
     forumName: {
       fontSize: 10,
@@ -198,62 +291,40 @@ function makeStyles(c: ThemeColors) {
       fontWeight: '700',
       color: c.text,
       lineHeight: 18,
-      marginBottom: 4,
+      marginBottom: 6,
     },
-    authorRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      marginBottom: 8,
-    },
-    authorAvatar: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    authorInitial: {
-      fontSize: 9,
-      fontWeight: '800',
-      color: '#FFFFFF',
-    },
-    authorName: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: c.textSecondary,
-    },
-    dot: {
-      fontSize: 10,
-      color: c.textTertiary,
-    },
-    authorTime: {
-      fontSize: 10,
-      color: c.textTertiary,
-    },
-    statsRow: {
+    metaRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      borderTopWidth: 1,
-      borderTopColor: c.border,
-      paddingTop: 8,
+      gap: 8,
     },
-    statsLeft: {
+    metaLeft: {
       flexDirection: 'row',
-      gap: 10,
+      alignItems: 'center',
+      flexShrink: 1,
+      gap: 4,
     },
     stat: {
       fontSize: 10.5,
       fontWeight: '600',
       color: c.textTertiary,
     },
-    lastReply: {
-      fontSize: 9.5,
-      fontWeight: '600',
+    dot: {
+      fontSize: 10,
       color: c.textTertiary,
-      maxWidth: '45%',
-      textAlign: 'right',
+      marginHorizontal: 2,
+    },
+    chevron: {
+      fontSize: 18,
+      fontWeight: '700',
+      lineHeight: 18,
+    },
+    empty: {
+      fontSize: 12,
+      color: c.textTertiary,
+      textAlign: 'center',
+      paddingVertical: 24,
     },
   });
 }

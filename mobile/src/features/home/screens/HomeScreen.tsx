@@ -1,7 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, RefreshControl } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TopNavBrand } from '../../../components/layout/TopNavBar';
 import { useSideMenuStore } from '../../../store/sideMenuStore';
@@ -16,14 +17,13 @@ import StoriesStrip from '../components/StoriesStrip';
 import PhotoGallerySection from '../components/PhotoGallerySection';
 import WebStoriesStrip from '../components/WebStoriesStrip';
 import ForumsSection from '../components/ForumsSection';
+import ChannelsSection from '../components/ChannelsSection';
 import { useFeaturedBanners, useHomeArticles } from '../hooks/useHomeData';
 import type { HomeStackParamList } from '../../../navigation/types';
-import type { Banner, Article } from '../../../services/api';
-import { GALLERIES } from '../data/galleries';
+import type { Banner, Article, ForumTopic, Gallery } from '../../../services/api';
 import { WEB_STORIES } from '../data/webStories';
 
 const CATEGORIES = ['All', 'Television', 'Movies', 'Digital', 'Lifestyle', 'Sports'];
-const PREVIEW_GALLERIES = GALLERIES.slice(0, 4);
 const PREVIEW_WEB_STORIES = WEB_STORIES.slice(0, 8);
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
@@ -39,6 +39,37 @@ export default function HomeScreen() {
   const queryCategory = selectedCategory === 'All' ? undefined : selectedCategory;
   const { data: banners = [], isLoading: bannersLoading } = useFeaturedBanners();
   const { data: articles = [], isLoading: articlesLoading } = useHomeArticles(queryCategory);
+
+  // /home/articles often returns empty sectionName, which makes
+  // transformHomeArticle default category to "Movies". When the user has a
+  // chip selected, that lie is jarring — every Television article shows a
+  // MOVIES badge. Override the displayed category to match the active chip
+  // so the badge mirrors the user's filter intent. "All" leaves the per-
+  // article category alone.
+  const displayArticles = useMemo<Article[]>(() => {
+    if (selectedCategory === 'All') return articles;
+    return articles.map((a) => ({ ...a, category: selectedCategory }));
+  }, [articles, selectedCategory]);
+
+  // Pull-to-refresh: invalidate all home-relevant query keys in one shot. The
+  // local `refreshing` flag drives the spinner because some sections own their
+  // own queries (ForumsSection → 'home-forum-topics') and aren't observable
+  // from this component, so we can't rely on a single hook's `isRefetching`.
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['banners'] }),
+        queryClient.invalidateQueries({ queryKey: ['articles'] }),
+        queryClient.invalidateQueries({ queryKey: ['home-forum-topics'] }),
+        queryClient.invalidateQueries({ queryKey: ['home-media-galleries'] }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient]);
 
   const handleBannerPress = useCallback(
     (banner: Banner) => {
@@ -67,25 +98,27 @@ export default function HomeScreen() {
     [navigation],
   );
 
+  // Cross-tab jump: HomeStack → MainTab parent → News tab. Lowercased category
+  // matches NEWS_CATEGORIES ids ('all' | 'television' | 'movies' | ...).
+  const handleNewsViewAll = useCallback(() => {
+    navigation.getParent()?.navigate('News', {
+      screen: 'NewsMain',
+      params: { initialCategory: selectedCategory.toLowerCase() },
+    });
+  }, [navigation, selectedCategory]);
+
+  // TopicDetail is registered in HomeStack itself, so push within the stack
+  // — back gesture returns to Home rather than dropping the user into the
+  // Forums tab.
+  const handleTopicPress = useCallback(
+    (topic: ForumTopic) => {
+      navigation.navigate('TopicDetail', { topic });
+    },
+    [navigation],
+  );
+
   const handleGalleryPress = useCallback(
-    (g: { id: number; title: string; count: number; emoji: string; bg: string }) =>
-      navigation.navigate('GalleryDetail', {
-        gallery: {
-          id: g.id,
-          title: g.title,
-          pageUrl: null,
-          cat: null,
-          catLabel: null,
-          count: g.count,
-          emoji: g.emoji,
-          bg: g.bg,
-          time: '',
-          featured: false,
-          thumbnail: null,
-          viewCount: 0,
-          views: null,
-        },
-      }),
+    (gallery: Gallery) => navigation.navigate('GalleryDetail', { gallery }),
     [navigation],
   );
 
@@ -121,37 +154,52 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.articlesTop}>
-          <SectionHeader title="Latest News" />
+          <SectionHeader
+            title="Latest News"
+            actionLabel="View all"
+            onAction={handleNewsViewAll}
+          />
           {articlesLoading ? <LoadingState height={300} /> : null}
         </View>
       </View>
     ),
-    [styles, banners, bannersLoading, selectedCategory, articlesLoading, handleBannerPress],
+    [
+      styles,
+      banners,
+      bannersLoading,
+      selectedCategory,
+      articlesLoading,
+      handleBannerPress,
+      handleNewsViewAll,
+    ],
   );
 
   const ListFooter = useMemo(
     () => (
       <View>
         <View style={styles.sectionGap}>
+          <ForumsSection onTopicPress={handleTopicPress} />
+        </View>
+
+        <View style={styles.sectionGap}>
           <PhotoGallerySection
-            galleries={PREVIEW_GALLERIES}
             onSeeAll={handleGalleriesSeeAll}
             onGalleryPress={handleGalleryPress}
           />
         </View>
 
         <View style={styles.sectionGap}>
-          <WebStoriesStrip stories={PREVIEW_WEB_STORIES} onSeeAll={() => {}} />
+          <ChannelsSection />
         </View>
 
         <View style={styles.sectionGap}>
-          <ForumsSection />
+          <WebStoriesStrip stories={PREVIEW_WEB_STORIES} onSeeAll={() => {}} />
         </View>
 
         <View style={styles.spacer} />
       </View>
     ),
-    [styles, handleGalleriesSeeAll, handleGalleryPress],
+    [styles, handleGalleriesSeeAll, handleGalleryPress, handleTopicPress],
   );
 
   return (
@@ -159,13 +207,20 @@ export default function HomeScreen() {
       <TopNavBrand onMenuPress={useSideMenuStore.getState().open} />
 
       <FlashList
-        data={articlesLoading ? [] : articles}
+        data={articlesLoading ? [] : displayArticles}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={ListHeader}
         ListFooterComponent={ListFooter}
         contentContainerStyle={styles.articlesBg}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+          />
+        }
       />
     </View>
   );

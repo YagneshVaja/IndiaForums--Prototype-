@@ -98,9 +98,25 @@ function getItemType(item: FeedItem): string {
   return item.type;
 }
 
-export default function NewsScreen({ navigation }: Props) {
-  const [selectedCategory, setSelectedCategory] = useState('all');
+export default function NewsScreen({ navigation, route }: Props) {
+  // Home's "View all" pill passes initialCategory so the News tab opens
+  // pre-filtered to whatever chip was active on Home. We seed state from it
+  // and re-sync via the effect below so a *return* visit (the News stack
+  // preserves state across tab switches) still picks up the new param.
+  const initialCategory = route.params?.initialCategory ?? 'all';
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [selectedSubCat,   setSelectedSubCat]   = useState('all');
+
+  useEffect(() => {
+    const next = route.params?.initialCategory;
+    if (next && next !== selectedCategory) {
+      setSelectedCategory(next);
+      setSelectedSubCat('all');
+    }
+    // Intentionally exclude selectedCategory: this effect is a one-shot sync
+    // when the *param* changes, not a feedback loop on local state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.initialCategory]);
   const colors = useThemeStore((s) => s.colors);
   const styles  = useMemo(() => makeStyles(colors), [colors]);
 

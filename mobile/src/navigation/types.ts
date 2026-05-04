@@ -104,10 +104,29 @@ export type HomeStackParamList = {
     jumpToLast?: boolean;
     autoAction?: 'like' | 'reply' | 'quote';
   };
+  /** Pushed from the home Channels section "See full ranking" CTA. */
+  ChannelDetail: { channelId: number };
+  /** Forum thread reachable from ShowDetail's "Open discussion" CTA. Same
+   *  shape as the ForumsStack version so we can reuse ForumThreadScreen as-is. */
+  ForumThread: { forum: import('../services/api').Forum };
+  /**
+   * Pushed when a user taps a show on the channel detail grid. We pass the
+   * full ChannelOverviewShow so the hero renders instantly off the cached
+   * poster + rank data; the forum-backed sections fetch on mount.
+   */
+  ShowDetail: {
+    show: import('../services/api').ChannelOverviewShow;
+    /** Channel name + brand color for the hero metadata strip. */
+    channelName?: string;
+    channelBrand?: string;
+  };
 };
 
 export type NewsStackParamList = {
-  NewsMain: undefined;
+  // initialCategory is set when entering News from Home's "View all" pill, so
+  // the News tab opens pre-filtered to whatever category chip was active on
+  // Home. Lowercase id matching NEWS_CATEGORIES (e.g. 'movies', 'television').
+  NewsMain: { initialCategory?: string } | undefined;
   ArticleDetail: { id: string; thumbnailUrl?: string; title?: string };
   CategoryFeed: { category: string };
 };

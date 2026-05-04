@@ -15,6 +15,9 @@ import MoviesScreen from '../features/movies/screens/MoviesScreen';
 import MovieDetailScreen from '../features/movies/screens/MovieDetailScreen';
 import WriteMovieReviewScreen from '../features/movies/screens/WriteMovieReviewScreen';
 import TopicDetailScreen from '../features/forums/screens/TopicDetailScreen';
+import ChannelDetailScreen from '../features/home/screens/ChannelDetailScreen';
+import ShowDetailScreen from '../features/home/screens/ShowDetailScreen';
+import ForumThreadScreen from '../features/forums/screens/ForumThreadScreen';
 import FanFictionScreen from '../features/fanfiction/screens/FanFictionScreen';
 import FanFictionDetailScreen from '../features/fanfiction/screens/FanFictionDetailScreen';
 import ChapterReaderScreen from '../features/fanfiction/screens/ChapterReaderScreen';
@@ -65,6 +68,9 @@ export default function HomeStack() {
       <Stack.Screen name="MovieDetail" component={MovieDetailScreen} />
       <Stack.Screen name="WriteMovieReview" component={WriteMovieReviewScreen} />
       <Stack.Screen name="TopicDetail" component={TopicDetailScreen} />
+      <Stack.Screen name="ChannelDetail" component={ChannelDetailScreen} />
+      <Stack.Screen name="ShowDetail" component={ShowDetailScreen} />
+      <Stack.Screen name="ForumThread" component={ForumThreadScreen} />
     </Stack.Navigator>
   );
 }

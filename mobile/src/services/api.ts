@@ -681,6 +681,28 @@ export interface AllTopicsPage {
   hasNextPage: boolean;
 }
 
+/**
+ * Lightweight topic shape returned by `GET /home/topics?topicType=ga|lt|popular`
+ * — the homepage forum-preview endpoint. No poster / view / like fields and
+ * no rich body; just enough for a 3-up preview card. Cross-navigate to the
+ * full TopicDetailScreen with a synthesized ForumTopic (id+title) to load
+ * the rest on mount.
+ */
+export interface HomeForumTopic {
+  topicId: number;
+  forumId: number;
+  title: string;
+  replies: number;
+  /** Pre-formatted human-readable string e.g. "2 days ago". */
+  lastTime: string;
+  /** Slug like "suggestions-comments" or "bollywood". */
+  forumPageUrl: string;
+  forumThumbnail: string | null;
+}
+
+/** Discriminator for /home/topics — server enum. */
+export type HomeTopicType = 'ga' | 'lt' | 'popular';
+
 export interface ForumTopicsPage {
   topics: ForumTopic[];
   forumDetail: Forum | null;
@@ -2413,6 +2435,8 @@ export async function updateMovieReview(args: {
 export interface MovieDiscussionTopic {
   topicId: number;
   title: string;
+  /** Snippet of the original post body — used as a 2-line preview on the card. */
+  summary: string | null;
   pageUrl: string;
   /** Composed live-site URL — `/forum/topic/{id}/{pageUrl}`. */
   externalUrl: string;
@@ -2425,30 +2449,31 @@ export async function fetchMovieDiscussionTopics(
   const query = movieTitle.trim();
   if (!query) return [];
   try {
-    const { data } = await apiClient.get('/search/smart', {
-      params: { query },
+    // /search/results?entityType=Topic cold-starts in ~2s. The grouped
+    // /search/smart endpoint we used previously cold-started at ~12s for
+    // the same movie title; this alternative is ~5x faster on cold and
+    // identical (~50ms) when warm.
+    const { data } = await apiClient.get('/search/results', {
+      params: { q: query, entityType: 'Topic', pageSize: limit, page: 1 },
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sections: any[] = data?.sections || [];
-    const topicsSection = sections.find((s) => s?.section === 'Topics' || s?.contentTypeId === 8);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const items: any[] = topicsSection?.items || [];
-    const mapped = items.slice(0, limit).map((it) => {
-      const id = Number(it.itemId ?? it.id ?? 0);
-      const slug = String(it.pageUrl ?? '');
+    const results: any[] = data?.results || [];
+    return results.slice(0, limit).map((r) => {
+      const id   = Number(r.entityId ?? r.itemId ?? 0);
+      const slug = String(r.url ?? r.pageUrl ?? '');
+      const rawSummary = String(r.summary ?? '').trim();
       return {
-        topicId: id,
-        title: String(it.title ?? '').trim(),
-        pageUrl: slug,
+        topicId:     id,
+        title:       String(r.title ?? '').trim(),
+        summary:     rawSummary || null,
+        pageUrl:     slug,
         externalUrl: slug
           ? `https://www.indiaforums.com/forum/topic/${id}/${slug}`
           : `https://www.indiaforums.com/forum/topic/${id}`,
       };
     });
-    console.log('[discussion] query=', JSON.stringify(query), 'sections=', sections.map((s) => s.section).join(','), 'topics=', mapped.length);
-    return mapped;
   } catch (err) {
-    const e = err as { response?: { status: number; data?: unknown }; message?: string };
+    const e = err as { response?: { status: number }; message?: string };
     console.warn('[discussion] fetch failed:', e?.response?.status, e?.message ?? err);
     return [];
   }
@@ -2683,6 +2708,144 @@ export async function fetchAllForumTopics(
     pageNumber,
     pageSize,
     hasNextPage: totalCount > pageNumber * pageSize,
+  };
+}
+
+/**
+ * Homepage forum-preview feed. `topicType`:
+ *   - 'ga'      = announcements (general/sticky)
+ *   - 'lt'      = latest
+ *   - 'popular' = popular
+ * Schema is lighter than `/forums/topics`; tap-through synthesizes a minimal
+ * ForumTopic and TopicDetailScreen refetches the rest.
+ */
+export async function fetchHomeForumTopics(
+  topicType: HomeTopicType,
+  pageSize = 5,
+): Promise<HomeForumTopic[]> {
+  const { data } = await apiClient.get('/home/topics', {
+    params: { topicType, pageNumber: 1, pageSize },
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawTopics: any[] = data?.topics || [];
+  return rawTopics.map((raw) => ({
+    topicId:        Number(raw.topicId ?? 0),
+    forumId:        Number(raw.forumId ?? 0),
+    title:          String(raw.title || ''),
+    replies:        Number(raw.replies ?? 0),
+    lastTime:       timeAgo(raw.lastPostedAt),
+    forumPageUrl:   String(raw.forumPageUrl || ''),
+    forumThumbnail: raw.forumThumbnailUrl || null,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Channels — full channel overview for /channels/{id}/overview
+// ---------------------------------------------------------------------------
+
+/** A show in a channel's overview catalog. `posterUrl` is a real CDN image. */
+export interface ChannelOverviewShow {
+  titleId: number;
+  titleName: string;
+  pageUrl: string;
+  rankCurrentWeek: number;
+  rankLastWeek: number;
+  /** When true, the show is on the weekly ChaskaMeter ranking. */
+  chaskaMeter: boolean;
+  archive: boolean;
+  forumId: number;
+  posterUrl: string | null;
+}
+
+/** Channel detail header info from `/channels/{id}/overview.channel`. */
+export interface ChannelOverviewMeta {
+  channelId: number;
+  channelName: string;
+  /** Multi-paragraph description. May contain `\r\n` line breaks. */
+  description: string;
+  pageUrl: string;
+  thumbnailUrl: string | null;
+  articleCount: number;
+  videoCount: number;
+  topicCount: number;
+  /** Fan-fic count. */
+  ffCount: number;
+  forumId: number;
+  website: string;
+}
+
+export interface ChannelOverview {
+  channel: ChannelOverviewMeta;
+  shows: ChannelOverviewShow[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+/** Archive filter for /channels/{id}/overview. */
+export type ChannelArchiveFilter = 0 | 1 | 2;
+/** ON AIR — active shows only. */
+export const CHANNEL_AR_ON_AIR: ChannelArchiveFilter = 0;
+/** OFF AIR — archived shows excluding locked forums (still has a community). */
+export const CHANNEL_AR_OFF_AIR: ChannelArchiveFilter = 1;
+/** ARCHIVED — every retired show on the channel, including locked forums. */
+export const CHANNEL_AR_ARCHIVED: ChannelArchiveFilter = 2;
+
+/**
+ * Full channel overview — channel meta + paginated catalog of shows. Powers
+ * the ChannelDetailScreen pushed from the home channels section.
+ *
+ * `archive` filter:
+ *   - 0 ON AIR    — active shows only
+ *   - 1 OFF AIR   — recently retired (forum still active)
+ *   - 2 ARCHIVED  — full historical archive (incl. locked forums)
+ */
+export async function fetchChannelOverview(
+  channelId: number,
+  pageNumber = 1,
+  pageSize = 24,
+  archive: ChannelArchiveFilter = CHANNEL_AR_ON_AIR,
+): Promise<ChannelOverview> {
+  const { data } = await apiClient.get(`/channels/${channelId}/overview`, {
+    params: { page: pageNumber, pageSize, ar: archive },
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const raw: any = data ?? {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const c: any = raw.channel ?? {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawShows: any[] = raw.shows ?? [];
+
+  return {
+    channel: {
+      channelId:    Number(c.channelId ?? channelId),
+      channelName:  String(c.channelName ?? '').trim(),
+      description:  String(c.channelDesc ?? ''),
+      pageUrl:      String(c.pageUrl ?? ''),
+      thumbnailUrl: c.thumbnailUrl ?? null,
+      articleCount: Number(c.articleCount ?? 0),
+      videoCount:   Number(c.videoCount ?? 0),
+      topicCount:   Number(c.topicCount ?? 0),
+      ffCount:      Number(c.ffCount ?? 0),
+      forumId:      Number(c.forumId ?? 0),
+      website:      String(c.website ?? ''),
+    },
+    shows: rawShows.map((s) => ({
+      titleId:         Number(s.titleId ?? 0),
+      titleName:       String(s.titleName ?? '').trim(),
+      pageUrl:         String(s.pageUrl ?? ''),
+      rankCurrentWeek: Number(s.rankCurrentWeek ?? 0),
+      rankLastWeek:    Number(s.rankLastWeek ?? 0),
+      chaskaMeter:     Boolean(s.chaskaMeter ?? false),
+      archive:         Boolean(s.archive ?? false),
+      forumId:         Number(s.forumId ?? 0),
+      posterUrl:       s.posterUrl ?? null,
+    })),
+    totalCount: Number(raw.totalCount ?? rawShows.length),
+    pageNumber: Number(raw.pageNumber ?? pageNumber),
+    pageSize:   Number(raw.pageSize ?? pageSize),
+    totalPages: Number(raw.totalPages ?? 1),
   };
 }
 
