@@ -2032,6 +2032,449 @@ function getMockGalleryDetail(id: string | number): GalleryDetail {
 }
 
 // ---------------------------------------------------------------------------
+// Movies
+// ---------------------------------------------------------------------------
+
+export type MovieMode = 'latest' | 'upcoming';
+
+export interface Movie {
+  titleId: number;
+  titleName: string;
+  startYear: number | null;
+  pageUrl: string;
+  posterUrl: string | null;
+  hasThumbnail: boolean;
+  releaseDate: string | null;
+  titleShortDesc: string | null;
+  titleTypeId: number;
+  audienceRating: number;
+  criticRating: number;
+  audienceRatingCount: number;
+  criticRatingCount: number;
+  averageRating: number;
+}
+
+export interface MoviesPage {
+  movies: Movie[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+// Detail shapes are intentionally permissive — the upstream endpoints are
+// currently returning 4xx/5xx for every titleId we tested. We type the few
+// fields we expect from the OpenAPI summaries and fall back to `unknown`
+// elsewhere so the UI can render whatever the server eventually sends.
+export interface MovieStory {
+  titleId: number;
+  titleName?: string | null;
+  plot?: string | null;
+  about?: string | null;
+  director?: string | null;
+  language?: string | null;
+  genre?: string | null;
+  runtime?: string | null;
+  releaseDate?: string | null;
+  raw?: unknown;
+}
+
+export interface MovieCastMember {
+  personId: number;
+  name: string;
+  role: string | null;
+  characterName: string | null;
+  imageUrl: string | null;
+}
+
+export interface MovieCastPage {
+  cast: MovieCastMember[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface MovieReview {
+  reviewId: string;
+  /** Numeric user id for user-authored reviews; null for critic/publication. */
+  userId: number | null;
+  authorName: string;
+  authorImageUrl: string | null;
+  /** 0-100 percent (server stores as N/outOf, we normalise on read). */
+  rating: number | null;
+  title: string | null;
+  body: string;
+  postedAt: string | null;
+  isCritic: boolean;
+  /** Critic reviews include a `url` pointing to the full piece on
+   *  indiaforums.com. Used to render a "Read full review →" CTA. */
+  fullReviewUrl: string | null;
+}
+
+export interface MovieReviewsPayload {
+  criticReviews: MovieReview[];
+  userReviews: MovieReview[];
+  criticTotal: number;
+  userTotal: number;
+  /** /reviews now embeds the full movie metadata; we surface a few fields the
+   *  detail screen needs (synopsis, language) since /story is still 5xx. */
+  movie?: {
+    titleShortDesc: string | null;
+    language: string | null;
+    forumId: number | null;
+    articleCount: number | null;
+    topicCount: number | null;
+    commentCount: number | null;
+    viewCount: number | null;
+    fanCount: number | null;
+  };
+}
+
+export async function fetchMovies(
+  mode: MovieMode = 'latest',
+  page = 1,
+  pageSize = 24,
+): Promise<MoviesPage> {
+  const { data } = await apiClient.get('/movies', {
+    params: { mode, page, pageSize },
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const raw: any = data ?? {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const movies: Movie[] = (raw.movies || []).map((m: any) => ({
+    titleId:             Number(m.titleId),
+    titleName:           String(m.titleName ?? ''),
+    startYear:           m.startYear ?? null,
+    pageUrl:             String(m.pageUrl ?? ''),
+    posterUrl:           m.posterUrl ?? null,
+    hasThumbnail:        !!m.hasThumbnail,
+    releaseDate:         m.releaseDate ?? null,
+    titleShortDesc:      m.titleShortDesc ?? null,
+    titleTypeId:         Number(m.titleTypeId ?? 0),
+    audienceRating:      Number(m.audienceRating ?? 0),
+    criticRating:        Number(m.criticRating ?? 0),
+    audienceRatingCount: Number(m.audienceRatingCount ?? 0),
+    criticRatingCount:   Number(m.criticRatingCount ?? 0),
+    averageRating:       Number(m.averageRating ?? 0),
+  }));
+  return {
+    movies,
+    totalCount: Number(raw.totalCount ?? movies.length),
+    pageNumber: Number(raw.pageNumber ?? page),
+    pageSize:   Number(raw.pageSize ?? pageSize),
+    totalPages: Number(raw.totalPages ?? 1),
+  };
+}
+
+export async function fetchMovieStory(titleId: number): Promise<MovieStory | null> {
+  try {
+    const { data } = await apiClient.get(`/movies/${titleId}/story`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any = data ?? {};
+    return {
+      titleId,
+      titleName:   raw.titleName ?? null,
+      plot:        raw.plot ?? raw.story ?? raw.synopsis ?? null,
+      about:       raw.about ?? raw.aboutFilm ?? null,
+      director:    raw.director ?? null,
+      language:    raw.language ?? null,
+      genre:       raw.genre ?? null,
+      runtime:     raw.runtime ?? null,
+      releaseDate: raw.releaseDate ?? null,
+      raw,
+    };
+  } catch {
+    // /movies/{id}/story is currently 5xx upstream; UI shows a fallback. No log.
+    return null;
+  }
+}
+
+export async function fetchMovieCast(
+  titleId: number,
+  page = 1,
+  pageSize = 12,
+): Promise<MovieCastPage | null> {
+  try {
+    const { data } = await apiClient.get(`/movies/${titleId}/cast`, {
+      params: { page, pageSize },
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any = data ?? {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cast: MovieCastMember[] = (raw.cast || raw.castMembers || []).map((c: any) => ({
+      personId:      Number(c.personId ?? c.id ?? 0),
+      name:          String(c.displayName ?? c.name ?? c.personName ?? ''),
+      role:          c.titleRoleName ?? c.role ?? c.roleName ?? null,
+      characterName: c.personRoleName ?? c.characterName ?? c.character ?? null,
+      imageUrl:      c.thumbnailUrl ?? c.imageUrl ?? null,
+    }));
+    return {
+      cast,
+      totalCount: Number(raw.totalCount ?? cast.length),
+      pageNumber: Number(raw.pageNumber ?? page),
+      pageSize:   Number(raw.pageSize ?? pageSize),
+      totalPages: Number(raw.totalPages ?? 1),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Strip HTML tags + collapse whitespace. Reviews come back as HTML strings. */
+function stripHtmlSimple(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+export async function fetchMovieReviews(
+  titleId: number,
+  criticPageSize = 5,
+  userPageSize = 5,
+): Promise<MovieReviewsPayload | null> {
+  try {
+    const { data } = await apiClient.get(`/movies/${titleId}/reviews`, {
+      params: {
+        criticPage: 1, criticPageSize,
+        userPage:   1, userPageSize,
+      },
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any = data ?? {};
+
+    // Critic reviews use `publicationReviewId`, `name` (publication name),
+    // `subject` (title), `summary` (HTML body), `rating`/`outOf` (e.g. 6/10),
+    // `createdWhen`. User reviews use a slightly different shape — we accept
+    // the same fields plus the older fallbacks so we degrade gracefully.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mapReview = (r: any, isCritic: boolean): MovieReview => {
+      const ratingPercent =
+        r.rating != null && r.outOf
+          ? Math.round((Number(r.rating) / Number(r.outOf)) * 100)
+          : r.rating != null
+            ? Number(r.rating)
+            : null;
+      const fallbackId = `${r.titleId ?? titleId}-${r.publicationId ?? r.userId ?? 'x'}-${r.createdWhen ?? ''}`;
+      return {
+        reviewId:       String(
+          r.publicationReviewId ?? r.userReviewId ?? r.reviewId ?? r.id ?? fallbackId,
+        ),
+        userId:         r.userId != null ? Number(r.userId) : null,
+        authorName:     String(
+          r.publication?.name ?? r.name ?? r.userName ?? r.criticName ?? r.author ?? 'Anonymous',
+        ),
+        authorImageUrl:
+          r.avatarUrl ??
+          r.publication?.thumbnailUrl ??
+          r.authorImageUrl ??
+          r.profileImageUrl ??
+          null,
+        rating:         ratingPercent,
+        title:          r.subject ?? r.title ?? r.headline ?? null,
+        body:           stripHtmlSimple(String(r.summary ?? r.body ?? r.review ?? r.text ?? '')),
+        postedAt:       r.createdWhen ?? r.postedAt ?? r.createdAt ?? null,
+        isCritic,
+        fullReviewUrl:  r.url ?? r.fullReviewUrl ?? null,
+      };
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const critic = (raw.criticReviews || raw.critics || []).map((r: any) => mapReview(r, true));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const user   = (raw.userReviews   || raw.users   || []).map((r: any) => mapReview(r, false));
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const m: any = raw.movie || {};
+    const movieMeta = raw.movie ? {
+      titleShortDesc: m.titleShortDesc ?? null,
+      language:       m.language ?? null,
+      forumId:        m.forumId ?? null,
+      articleCount:   m.articleCount ?? null,
+      topicCount:     m.topicCount ?? null,
+      commentCount:   m.commentCount ?? null,
+      viewCount:      m.viewCount ?? null,
+      fanCount:       m.fanCount ?? null,
+    } : undefined;
+
+    // The backend sometimes returns *Count: 0 even when *Reviews has rows
+    // (observed right after POST). Take the larger of the two so freshly
+    // submitted reviews still surface in the UI.
+    const criticTotal = Math.max(Number(raw.criticReviewsCount ?? 0), critic.length);
+    const userTotal   = Math.max(Number(raw.userReviewsCount   ?? 0), user.length);
+
+    return {
+      criticReviews: critic,
+      userReviews:   user,
+      criticTotal,
+      userTotal,
+      movie:         movieMeta,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export interface SubmitMovieReviewResult {
+  ok: boolean;
+  error?: string;
+}
+
+export async function submitMovieReview(args: {
+  titleId: number;
+  /** 1–5 stars from the UI; mapped to 20/40/60/80/100 on the wire. */
+  rating: number;
+  subject: string;
+  review: string;
+}): Promise<SubmitMovieReviewResult> {
+  const subject = args.subject.trim();
+  const review  = args.review.trim();
+  if (!args.rating || args.rating < 1 || args.rating > 5) {
+    return { ok: false, error: 'Please pick a rating from 1 to 5.' };
+  }
+  if (!subject) return { ok: false, error: 'Subject is required.' };
+  if (!review)  return { ok: false, error: 'Message is required.' };
+
+  // The server expects rating as a percentage in 20-point steps (one star = 20%).
+  const ratingPercent = args.rating * 20;
+
+  try {
+    await apiClient.post(`/movies/${args.titleId}/reviews`, {
+      titleId: args.titleId,
+      rating:  ratingPercent,
+      subject,
+      review,
+    });
+    return { ok: true };
+  } catch (err: unknown) {
+    const e = err as {
+      response?: { status: number; data?: { message?: string; detail?: string; error?: string } };
+      message?: string;
+    };
+    const status = e?.response?.status;
+    const apiMsg = e?.response?.data?.message ?? e?.response?.data?.detail ?? e?.response?.data?.error;
+    if (status === 401) return { ok: false, error: 'Please sign in to write a review.' };
+    return { ok: false, error: apiMsg || e?.message || 'Failed to submit review.' };
+  }
+}
+
+export async function updateMovieReview(args: {
+  titleId: number;
+  reviewId: number;
+  /** 1-5 stars; mapped to 20/40/60/80/100 on the wire (same as POST). */
+  rating: number;
+  subject: string;
+  review: string;
+}): Promise<SubmitMovieReviewResult> {
+  const subject = args.subject.trim();
+  const review  = args.review.trim();
+  if (!args.rating || args.rating < 1 || args.rating > 5) {
+    return { ok: false, error: 'Please pick a rating from 1 to 5.' };
+  }
+  if (!subject) return { ok: false, error: 'Subject is required.' };
+  if (!review)  return { ok: false, error: 'Message is required.' };
+
+  const ratingPercent = args.rating * 20;
+  try {
+    await apiClient.put(`/movies/${args.titleId}/reviews/${args.reviewId}`, {
+      titleId:  args.titleId,
+      reviewId: args.reviewId,
+      rating:   ratingPercent,
+      subject,
+      review,
+    });
+    return { ok: true };
+  } catch (err: unknown) {
+    const e = err as {
+      response?: { status: number; data?: { message?: string; detail?: string; error?: string } };
+      message?: string;
+    };
+    const status = e?.response?.status;
+    const apiMsg = e?.response?.data?.message ?? e?.response?.data?.detail ?? e?.response?.data?.error;
+    if (status === 401) return { ok: false, error: 'Please sign in to update your review.' };
+    if (status === 403) return { ok: false, error: "You can only edit your own reviews." };
+    return { ok: false, error: apiMsg || e?.message || 'Failed to update review.' };
+  }
+}
+
+/** Topic surfaced by /search/smart for the Discussion tab. The smart-search
+ *  payload only returns title + id + slug, so we don't have author/replies/views
+ *  numbers like the live site's table. We render a compact list and link out
+ *  to the full topic on indiaforums.com. */
+export interface MovieDiscussionTopic {
+  topicId: number;
+  title: string;
+  pageUrl: string;
+  /** Composed live-site URL — `/forum/topic/{id}/{pageUrl}`. */
+  externalUrl: string;
+}
+
+export async function fetchMovieDiscussionTopics(
+  movieTitle: string,
+  limit = 6,
+): Promise<MovieDiscussionTopic[]> {
+  const query = movieTitle.trim();
+  if (!query) return [];
+  try {
+    const { data } = await apiClient.get('/search/smart', {
+      params: { query },
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sections: any[] = data?.sections || [];
+    const topicsSection = sections.find((s) => s?.section === 'Topics' || s?.contentTypeId === 8);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const items: any[] = topicsSection?.items || [];
+    const mapped = items.slice(0, limit).map((it) => {
+      const id = Number(it.itemId ?? it.id ?? 0);
+      const slug = String(it.pageUrl ?? '');
+      return {
+        topicId: id,
+        title: String(it.title ?? '').trim(),
+        pageUrl: slug,
+        externalUrl: slug
+          ? `https://www.indiaforums.com/forum/topic/${id}/${slug}`
+          : `https://www.indiaforums.com/forum/topic/${id}`,
+      };
+    });
+    console.log('[discussion] query=', JSON.stringify(query), 'sections=', sections.map((s) => s.section).join(','), 'topics=', mapped.length);
+    return mapped;
+  } catch (err) {
+    const e = err as { response?: { status: number; data?: unknown }; message?: string };
+    console.warn('[discussion] fetch failed:', e?.response?.status, e?.message ?? err);
+    return [];
+  }
+}
+
+export async function deleteMovieReview(args: {
+  titleId: number;
+  reviewId: number;
+}): Promise<SubmitMovieReviewResult> {
+  try {
+    await apiClient.delete(`/movies/${args.titleId}/reviews/${args.reviewId}`);
+    return { ok: true };
+  } catch (err: unknown) {
+    const e = err as {
+      response?: { status: number; data?: { message?: string; detail?: string; error?: string } };
+      message?: string;
+    };
+    const status = e?.response?.status;
+    const apiMsg = e?.response?.data?.message ?? e?.response?.data?.detail ?? e?.response?.data?.error;
+    if (status === 401) return { ok: false, error: 'Please sign in to delete your review.' };
+    if (status === 403) return { ok: false, error: "You can only delete your own reviews." };
+    return { ok: false, error: apiMsg || e?.message || 'Failed to delete review.' };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Forums — transforms & API
 // ---------------------------------------------------------------------------
 

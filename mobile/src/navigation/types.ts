@@ -85,6 +85,25 @@ export type HomeStackParamList = {
   // Pass the Movie object from the hub list so the hero renders instantly;
   // detail-only fields (story/cast/reviews) are fetched on mount.
   MovieDetail: { movie: import('../services/api').Movie };
+  WriteMovieReview: {
+    titleId: number;
+    titleName: string;
+    /** When supplied, the screen opens in edit mode for the user's existing review. */
+    existingReview?: {
+      reviewId: number;
+      rating: number;     // 1–5 stars (already converted from server percent)
+      subject: string;
+      message: string;
+    };
+  };
+  // Forum thread reachable from Movie → Discussion. Same shape as the
+  // ForumsStack version so we can reuse TopicDetailScreen as-is.
+  TopicDetail: {
+    topic: import('../services/api').ForumTopic;
+    forum?: import('../services/api').Forum;
+    jumpToLast?: boolean;
+    autoAction?: 'like' | 'reply' | 'quote';
+  };
 };
 
 export type NewsStackParamList = {
