@@ -8,12 +8,13 @@ import type { ThemeColors } from '../../../theme/tokens';
 
 const STORIES = [
   { id: 1, label: 'Celebrities', emoji: '⭐', bgLight: '#FFF7ED', bgDark: '#3A2E1A' },
-  { id: 2, label: 'Videos',      emoji: '🎬', bgLight: '#EFF6FF', bgDark: '#1B2A45' },
-  { id: 3, label: 'Galleries',   emoji: '🖼️', bgLight: '#F0FDF4', bgDark: '#163225' },
-  { id: 4, label: 'Fan Fictions',emoji: '📖', bgLight: '#FDF4FF', bgDark: '#2E1B3A' },
-  { id: 5, label: 'Quizzes',     emoji: '❓', bgLight: '#FFF1F2', bgDark: '#3A1F22' },
-  { id: 6, label: 'Shorts',      emoji: '⚡', bgLight: '#FFFBEB', bgDark: '#3A2F1A' },
-  { id: 7, label: 'Web Stories', emoji: '🌐', bgLight: '#F0F9FF', bgDark: '#172A3A' },
+  { id: 2, label: 'Movies',      emoji: '🎬', bgLight: '#FEF2F2', bgDark: '#3A1A1A' },
+  { id: 3, label: 'Videos',      emoji: '📺', bgLight: '#EFF6FF', bgDark: '#1B2A45' },
+  { id: 4, label: 'Galleries',   emoji: '🖼️', bgLight: '#F0FDF4', bgDark: '#163225' },
+  { id: 5, label: 'Fan Fictions',emoji: '📖', bgLight: '#FDF4FF', bgDark: '#2E1B3A' },
+  { id: 6, label: 'Quizzes',     emoji: '❓', bgLight: '#FFF1F2', bgDark: '#3A1F22' },
+  { id: 7, label: 'Shorts',      emoji: '⚡', bgLight: '#FFFBEB', bgDark: '#3A2F1A' },
+  { id: 8, label: 'Web Stories', emoji: '🌐', bgLight: '#F0F9FF', bgDark: '#172A3A' },
 ] as const;
 
 type Story = typeof STORIES[number];
@@ -33,6 +34,10 @@ export default function StoriesStrip({ onItemPress }: Props) {
   const handlePress = (s: Story) => {
     if (s.label === 'Celebrities') {
       navigation.navigate('Celebrities');
+      return;
+    }
+    if (s.label === 'Movies') {
+      navigation.navigate('Movies');
       return;
     }
     if (s.label === 'Videos') {
