@@ -132,7 +132,10 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
       </View>
 
       <View style={styles.body}>
-        {/* Row 1: avatar (overlapping cover) + action pills aligned to its bottom */}
+        {/* Avatar overlapping the cover. Visitor profiles get the action
+            pills (Share + overflow) on the right; own profile shows nothing
+            here — the user reaches Edit via the Settings cog in the top
+            bar, freeing this space for a cleaner horizontal identity row. */}
         <View style={styles.avatarRow}>
           <View style={styles.avatarBox}>
             <Avatar
@@ -160,61 +163,57 @@ export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
             ) : null}
           </View>
 
-          <View style={styles.actionPills}>
-            {isOwn ? (
+          {!isOwn ? (
+            <View style={styles.actionPills}>
               <Pressable
-                onPress={onEdit}
+                onPress={onShare}
                 hitSlop={6}
-                style={({ pressed }) => [styles.editPill, pressed && styles.pillPressed]}
-                accessibilityLabel="Edit profile"
+                style={({ pressed }) => [styles.iconPill, pressed && styles.pillPressed]}
+                accessibilityLabel="Share profile"
               >
-                <Ionicons name="create-outline" size={14} color={colors.text} />
-                <Text style={styles.editPillText}>Edit</Text>
+                <Ionicons name="share-outline" size={16} color={colors.text} />
               </Pressable>
-            ) : null}
-            <Pressable
-              onPress={onShare}
-              hitSlop={6}
-              style={({ pressed }) => [styles.iconPill, pressed && styles.pillPressed]}
-              accessibilityLabel="Share profile"
-            >
-              <Ionicons name="share-outline" size={16} color={colors.text} />
-            </Pressable>
-            {!isOwn ? (
               <OverflowMenu profile={profile} colors={colors} styles={styles} />
+            </View>
+          ) : null}
+        </View>
+
+        {/* Identity block — Instagram/Threads-inspired hierarchy:
+            • Row 1 (heading): display name + flag + pronoun pill inline.
+              Pronoun is identity-level info, so it pairs with the name —
+              not buried at the end of the meta footer.
+            • Row 2 (meta): @handle · rank, both quiet gray text.
+            Two rows keeps each scannable; horizontal flow within each row
+            keeps the block compact. Pronoun pill on row 1 wraps gracefully
+            if the name is long. */}
+        <View style={styles.identityBlock}>
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1}>
+              {displayName}
+            </Text>
+            {flag ? <Text style={styles.flag}>{flag}</Text> : null}
+            {pronoun ? (
+              <View style={styles.pronounPill}>
+                <Text style={styles.pronounText}>{pronoun}</Text>
+              </View>
             ) : null}
           </View>
-        </View>
-
-        {/* Identity block — left aligned */}
-        <View style={styles.nameRow}>
-          <Text style={styles.name} numberOfLines={1}>
-            {displayName}
-          </Text>
-          {flag ? <Text style={styles.flag}>{flag}</Text> : null}
-        </View>
-        {showHandle ? (
-          <Text style={styles.handle} numberOfLines={1}>
-            @{profile.userName}
-          </Text>
-        ) : null}
-
-        {/* Rank/title (e.g. "Navigator") — plain text, matches the live web's
-            quiet treatment so it doesn't compete with the display name. */}
-        {rank ? (
-          <Text style={styles.rank} numberOfLines={1}>
-            {rank}
-          </Text>
-        ) : null}
-
-        {/* Pronoun — small bordered pill on its own line. */}
-        {pronoun ? (
-          <View style={styles.pronounRow}>
-            <View style={styles.pronounPill}>
-              <Text style={styles.pronounText}>{pronoun}</Text>
+          {showHandle || rank ? (
+            <View style={styles.metaRow}>
+              {showHandle ? (
+                <Text style={styles.handle} numberOfLines={1}>
+                  @{profile.userName}
+                </Text>
+              ) : null}
+              {showHandle && rank ? <Text style={styles.dot}>·</Text> : null}
+              {rank ? (
+                <Text style={styles.rank} numberOfLines={1}>
+                  {rank}
+                </Text>
+              ) : null}
             </View>
-          </View>
-        ) : null}
+          ) : null}
+        </View>
 
         {bio ? (
           <ExpandableText
@@ -590,23 +589,6 @@ function makeStyles(c: ThemeColors) {
       // the cover edge rather than dropping below the avatar
       marginBottom: 6,
     },
-    editPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 12,
-      height: 32,
-      borderRadius: 999,
-      backgroundColor: c.card,
-      borderWidth: 1,
-      borderColor: c.border,
-    },
-    editPillText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: c.text,
-      letterSpacing: 0.1,
-    },
     iconPill: {
       width: 32,
       height: 32,
@@ -632,10 +614,20 @@ function makeStyles(c: ThemeColors) {
       borderWidth: 2,
       borderColor: c.card,
     },
+    // Two-row identity. Tight 4px vertical gap glues the rows into a
+    // single visual unit (heavy gap would split it into two blocks).
+    identityBlock: {
+      gap: 4,
+    },
+    // Row 1: name + flag + pronoun pill, all baseline-aligned. The name
+    // can shrink/truncate so the pronoun pill never gets pushed off-screen
+    // by a long display name.
     nameRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      flexWrap: 'wrap',
+      columnGap: 8,
+      rowGap: 4,
     },
     name: {
       flexShrink: 1,
@@ -643,39 +635,59 @@ function makeStyles(c: ThemeColors) {
       fontWeight: '800',
       color: c.text,
       letterSpacing: -0.4,
+      lineHeight: 26,
     },
     flag: {
       fontSize: 18,
       lineHeight: 22,
-    },
-    handle: {
-      fontSize: 13,
-      color: c.textTertiary,
-      marginTop: 2,
-    },
-    rank: {
-      marginTop: 6,
-      fontSize: 13,
-      fontWeight: '500',
-      color: c.textSecondary,
-    },
-    pronounRow: {
-      flexDirection: 'row',
-      marginTop: 8,
+      // Pull the flag a hair closer to the name; the gap inside nameRow
+      // is calibrated for word boundaries, the flag should hug the name.
+      marginLeft: -2,
     },
     pronounPill: {
-      paddingHorizontal: 10,
-      paddingVertical: 4,
+      paddingHorizontal: 9,
+      paddingVertical: 2,
       borderRadius: 999,
       borderWidth: 1,
       borderColor: c.border,
       backgroundColor: c.surface,
+      // Tiny vertical nudge so the pill optical-centers with the cap-line
+      // of the much taller name text next to it.
+      marginTop: 2,
     },
     pronounText: {
       fontSize: 11,
       fontWeight: '600',
       color: c.textSecondary,
-      letterSpacing: 0.2,
+      letterSpacing: 0.3,
+      lineHeight: 14,
+    },
+    // Row 2: @handle · rank — single muted meta line, Twitter-style.
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      columnGap: 6,
+      rowGap: 2,
+    },
+    handle: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: c.textTertiary,
+      lineHeight: 20,
+    },
+    dot: {
+      fontSize: 14,
+      color: c.textTertiary,
+      lineHeight: 20,
+      opacity: 0.6,
+    },
+    rank: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.textSecondary,
+      lineHeight: 20,
+      letterSpacing: 0.1,
     },
     bio: {
       marginTop: 12,
