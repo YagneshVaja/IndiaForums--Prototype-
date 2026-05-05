@@ -6,7 +6,6 @@ import {
   Pressable,
   StyleSheet,
   RefreshControl,
-  ActivityIndicator,
   Alert,
   type LayoutChangeEvent,
   type NativeSyntheticEvent,
@@ -34,6 +33,7 @@ import ReviewCard from '../components/ReviewCard';
 import MetadataPills, { type Pill } from '../components/MetadataPills';
 import MovieDetailSkeleton from '../components/MovieDetailSkeleton';
 import DiscussionTopicRow from '../components/DiscussionTopicRow';
+import DiscussionListSkeleton from '../components/DiscussionListSkeleton';
 import { useMovieDetail } from '../hooks/useMovieDetail';
 import { useMovieNews } from '../hooks/useMovieNews';
 import { useMovieDiscussion } from '../hooks/useMovieDiscussion';
@@ -480,9 +480,7 @@ export default function MovieDetailScreen() {
           <View onLayout={onSectionLayout('discussion')}>
             <SectionHeader title="Discussion" />
             {!hasReachedDiscussion || (discussion.isLoading && discussionTopics.length === 0) ? (
-              <View style={styles.sectionLoadingVisible}>
-                <ActivityIndicator size="small" color={colors.primary} />
-              </View>
+              <DiscussionListSkeleton rows={3} />
             ) : discussion.isError ? (
               <View style={styles.discussionInline}>
                 <Text style={styles.emptyInline}>Couldn't load discussion threads.</Text>
@@ -497,9 +495,13 @@ export default function MovieDetailScreen() {
                 ))}
               </View>
             ) : (
-              <Text style={styles.emptyInline}>
-                No discussion threads found for this movie yet.
-              </Text>
+              <View style={styles.discussionEmpty}>
+                <Text style={styles.discussionEmptyEmoji}>💬</Text>
+                <Text style={styles.discussionEmptyTitle}>No threads yet</Text>
+                <Text style={styles.discussionEmptyBody}>
+                  Be the first to start a conversation about this movie on IndiaForums.
+                </Text>
+              </View>
             )}
           </View>
 
@@ -635,7 +637,33 @@ function makeStyles(c: ThemeColors) {
 
     discussionList: {
       marginTop: 4,
+    },
+    discussionEmpty: {
+      marginHorizontal: 14,
+      marginTop: 4,
+      marginBottom: 14,
+      paddingHorizontal: 22,
+      paddingVertical: 26,
+      borderRadius: 12,
       backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderStyle: 'dashed',
+      alignItems: 'center',
+    },
+    discussionEmptyEmoji: { fontSize: 32, marginBottom: 8, opacity: 0.6 },
+    discussionEmptyTitle: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: c.text,
+      marginBottom: 4,
+    },
+    discussionEmptyBody: {
+      fontSize: 12.5,
+      color: c.textSecondary,
+      textAlign: 'center',
+      lineHeight: 18,
+      maxWidth: 280,
     },
     discussionInline: {
       paddingHorizontal: 16,
