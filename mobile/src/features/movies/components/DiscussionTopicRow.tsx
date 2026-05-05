@@ -14,12 +14,8 @@ interface Props {
   topic: MovieDiscussionTopic;
 }
 
-/**
- * TopicDetailScreen reads `topic.id` for the post fetch and merges
- * `firstPage.topicDetail` over the route param when posts arrive, so we
- * synthesise a stub with sensible empty defaults — matching the pattern in
- * features/search/hooks/useEntityNavigator.synthesizeForumTopic.
- */
+// TopicDetailScreen reads `topic.id` and merges firstPage.topicDetail over the
+// route param, so a stub with sensible empty defaults is enough to navigate.
 function synthesiseForumTopic(t: MovieDiscussionTopic): ForumTopic {
   return {
     id: t.topicId,
@@ -27,14 +23,17 @@ function synthesiseForumTopic(t: MovieDiscussionTopic): ForumTopic {
     forumName: '',
     forumThumbnail: null,
     title: t.title,
-    description: '',
+    description: t.summary ?? '',
     poster: '',
+    posterId: 0,
     lastBy: '',
+    lastById: 0,
     time: '',
     lastTime: '',
     replies: 0,
     views: 0,
     likes: 0,
+    userCount: 0,
     locked: false,
     pinned: false,
     flairId: 0,
@@ -57,16 +56,20 @@ function DiscussionTopicRowImpl({ topic }: Props) {
   return (
     <Pressable
       onPress={handlePress}
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       accessibilityRole="button"
       accessibilityLabel={topic.title}
     >
-      <View style={styles.iconWrap}>
-        <Ionicons name="chatbubbles-outline" size={18} color={colors.primary} />
-      </View>
+      <View style={styles.accentBar} />
       <View style={styles.body}>
-        <Text style={styles.title} numberOfLines={3}>{topic.title}</Text>
-        <Text style={styles.host}>Forum thread</Text>
+        <Text style={styles.title} numberOfLines={2}>{topic.title}</Text>
+        {topic.summary ? (
+          <Text style={styles.summary} numberOfLines={2}>{topic.summary}</Text>
+        ) : null}
+        <View style={styles.metaRow}>
+          <Ionicons name="chatbubbles-outline" size={12} color={colors.primary} />
+          <Text style={styles.metaText}>Forum thread · Tap to read</Text>
+        </View>
       </View>
       <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
     </Pressable>
@@ -78,35 +81,49 @@ export default DiscussionTopicRow;
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
-    row: {
+    card: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: c.border,
+      gap: 10,
+      marginHorizontal: 14,
+      marginBottom: 8,
+      padding: 12,
+      borderRadius: 12,
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
     },
-    rowPressed: { opacity: 0.7 },
-    iconWrap: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: c.primarySoft,
-      alignItems: 'center',
-      justifyContent: 'center',
+    cardPressed: { opacity: 0.7, transform: [{ scale: 0.99 }] },
+    accentBar: {
+      width: 3,
+      alignSelf: 'stretch',
+      borderRadius: 2,
+      backgroundColor: c.primary,
     },
     body: { flex: 1 },
     title: {
-      fontSize: 13.5,
-      fontWeight: '700',
+      fontSize: 14,
+      fontWeight: '800',
       color: c.text,
-      lineHeight: 18,
+      lineHeight: 19,
     },
-    host: {
-      marginTop: 3,
+    summary: {
+      marginTop: 4,
+      fontSize: 12.5,
+      lineHeight: 17,
+      color: c.textSecondary,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginTop: 8,
+    },
+    metaText: {
       fontSize: 11,
-      color: c.textTertiary,
+      fontWeight: '700',
+      color: c.primary,
+      letterSpacing: 0.2,
     },
   });
 }

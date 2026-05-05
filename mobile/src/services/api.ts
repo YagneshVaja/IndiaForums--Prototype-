@@ -649,12 +649,18 @@ export interface ForumTopic {
   title: string;
   description: string;
   poster: string;
+  /** userId of the topic starter — used to build the OP's avatar URL. */
+  posterId: number;
   lastBy: string;
+  /** userId of the last replier — used to build the avatar shown next to lastTime. */
+  lastById: number;
   time: string;
   lastTime: string;
   replies: number;
   views: number;
   likes: number;
+  /** Number of unique participants in the discussion (raw.userCount). */
+  userCount: number;
   locked: boolean;
   pinned: boolean;
   flairId: number;
@@ -759,6 +765,10 @@ export interface TopicPost {
   author: string;
   realName: string;
   rank: string;
+  /** Numeric user level shown next to rank on the live site (e.g. Sparkler · 30). */
+  userLevel: number;
+  /** Consecutive-day visit streak — shown as a streak chip when notable (>=30). */
+  visitStreakCount: number;
   message: string;
   time: string;
   rawTime: string;
@@ -785,6 +795,7 @@ export interface TopicPost {
 export interface TopicPostsPage {
   posts: TopicPost[];
   topicDetail: ForumTopic | null;
+  flairs: ForumFlair[];
   pageNumber: number;
   hasNextPage: boolean;
 }
@@ -2524,7 +2535,9 @@ function transformForum(raw: any, categoriesMap: Record<number, ForumCategory> =
   const cat = categoriesMap[raw.categoryId] || null;
   const slug = cat?.slug || 'general';
 
-  const rankDiff = Number(raw.previousRank || 0) - Number(raw.currentRank || 0);
+  const currentRank  = Number(raw.currentRank ?? raw.rank ?? 0);
+  const previousRank = Number(raw.previousRank ?? raw.prevRank ?? 0);
+  const rankDiff = previousRank - currentRank;
   let rankDisplay = '';
   if (rankDiff > 0) rankDisplay = '+' + rankDiff;
   else if (rankDiff < 0) rankDisplay = String(rankDiff);
@@ -2535,11 +2548,13 @@ function transformForum(raw: any, categoriesMap: Record<number, ForumCategory> =
     description:   raw.forumDescription || raw.forumDesc || '',
     categoryId:    Number(raw.categoryId ?? 0),
     slug,
-    topicCount:    Number(raw.topicsCount ?? 0),
-    postCount:     Number(raw.postsCount ?? 0),
-    followCount:   Number(raw.followCount ?? 0),
-    rank:          Number(raw.currentRank ?? 0),
-    prevRank:      Number(raw.previousRank ?? 0),
+    topicCount:    Number(raw.topicsCount ?? raw.topicCount ?? raw.totalTopics ?? 0),
+    postCount:     Number(raw.postsCount ?? raw.postCount ?? raw.totalPosts ?? 0),
+    followCount:   Number(
+      raw.followCount ?? raw.totalFollowers ?? raw.followerCount ?? raw.followersCount ?? raw.followers ?? 0,
+    ),
+    rank:          currentRank,
+    prevRank:      previousRank,
     rankDisplay,
     bg:            cat?.bg || FORUM_CAT_GRADIENTS[slug] || FORUM_CAT_GRADIENTS.general,
     emoji:         cat?.emoji || FORUM_CAT_EMOJIS[slug] || FORUM_CAT_EMOJIS.general,
@@ -2609,6 +2624,22 @@ function parseTopicTags(raw: any): TopicTag[] {
   }
 }
 
+/**
+ * Build a user avatar URL from `userId` + optional checksum, mirroring the
+ * indiaforums.com pattern: `/user/100x100/{prefix}/{last4}.webp?uc={checksum}`.
+ * - userId is split into "everything before last 4 digits" / "last 4 digits"
+ * - For ids ≤ 4 digits the prefix is `0`.
+ *   e.g.  983350 → 98/3350,  604055 → 60/4055,  9918 → 0/9918
+ */
+export function buildUserAvatarUrl(userId: number, checksum?: string | null): string | null {
+  if (!userId || !Number.isFinite(userId)) return null;
+  const idStr = String(userId);
+  const last4 = idStr.length >= 4 ? idStr.slice(-4) : idStr.padStart(4, '0');
+  const prefix = idStr.length > 4 ? idStr.slice(0, -4) : '0';
+  const qs = checksum ? `?uc=${checksum}` : '';
+  return `https://img.indiaforums.com/user/100x100/${prefix}/${last4}.webp${qs}`;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildForumAvatarUrl(raw: any): string | null {
   if (raw.thumbnailUrl) return String(raw.thumbnailUrl);
@@ -2633,13 +2664,16 @@ function transformTopic(raw: any): ForumTopic {
     title:         raw.subject || '',
     description:   raw.topicDesc || '',
     poster:        raw.startThreadUserName || 'Anonymous',
+    posterId:      Number(raw.startAuthorId ?? 0),
     lastBy:        raw.lastThreadUserName || '',
+    lastById:      Number(raw.lastAuthorId ?? 0),
     time:          timeAgo(raw.startThreadDate || new Date().toISOString()),
     lastTime:      timeAgo(raw.lastThreadDate || new Date().toISOString()),
     replies:       Number(raw.replyCount ?? 0),
     views:         Number(raw.viewCount ?? 0),
     likes:         Number(raw.likeCount ?? 0),
-    locked:        Boolean(raw.locked ?? false),
+    userCount:     Number(raw.userCount ?? 0),
+    locked:        Boolean(raw.topicLocked ?? raw.forumLocked ?? raw.locked ?? false),
     pinned:        Number(raw.priority ?? 0) > 0,
     flairId:       Number(raw.flairId ?? 0),
     topicImage:    raw.topicImage || null,
@@ -3023,6 +3057,8 @@ function transformPost(raw: any): TopicPost {
     author:       raw.userName ?? raw.authorName ?? 'Anonymous',
     realName:     raw.realName || '',
     rank:         raw.name || '',
+    userLevel:    Number(raw.userLevel ?? 0),
+    visitStreakCount: Number(raw.visitStreakCount ?? 0),
     message:      raw.message ?? raw.body ?? raw.content ?? '',
     time:         timeAgo(rawTime),
     rawTime,
@@ -3049,9 +3085,15 @@ export async function fetchTopicPosts(
   topicId: number,
   pageNumber = 1,
   pageSize = 20,
+  searchQuery = '',
+  signal?: AbortSignal,
 ): Promise<TopicPostsPage> {
+  const params: Record<string, string | number> = { pageNumber, pageSize };
+  if (searchQuery.trim()) params.searchQuery = searchQuery.trim();
+
   const { data } = await apiClient.get(`/forums/topics/${topicId}/posts`, {
-    params: { pageNumber, pageSize },
+    params,
+    signal,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3060,11 +3102,17 @@ export async function fetchTopicPosts(
   const rawPollDetail   = data?.pollDetail || null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawPollChoices: any[] = data?.pollChoices || [];
-  const startAuthorId   = rawDetail?.startAuthorId ?? null;
+  // OP is identified by threadId matching startThreadId — *not* by author,
+  // since the OP author often replies again later in the thread. We force-set
+  // (not OR-set) so any incorrect `isOriginalPoster` flag from the raw payload
+  // is overridden by this canonical signal.
+  const startThreadId = rawDetail?.startThreadId != null
+    ? Number(rawDetail.startThreadId)
+    : null;
 
   const posts = rawPosts.map(r => {
     const post = transformPost(r);
-    if (startAuthorId && post.authorId === Number(startAuthorId)) post.isOp = true;
+    post.isOp = startThreadId != null && post.id === startThreadId;
     return post;
   });
 
@@ -3083,12 +3131,73 @@ export async function fetchTopicPosts(
       }
     : null;
 
+  // Parse flair definitions from forumDetail.flairJson — same pattern used by
+  // fetchForumTopics. Surfaces them on TopicDetailScreen so the topic's flair
+  // can be rendered as a colored chip.
+  let flairs: ForumFlair[] = [];
+  if (data?.forumDetail?.flairJson) {
+    try {
+      const parsed = JSON.parse(data.forumDetail.flairJson);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      flairs = (parsed?.json || []).map((f: any) => ({
+        id:      Number(f.id),
+        name:    f.nm || '',
+        bgColor: f.bgcolor || '#E5E7EB',
+        fgColor: f.fgcolor || '#1A1A1A',
+      }));
+    } catch { /* malformed */ }
+  }
+
+  // The API returns `totalCount` (not `hasMore`); derive pagination from it.
+  const totalCount = Number(data?.totalCount ?? 0);
+  const apiPageNumber = Number(data?.pageNumber ?? pageNumber);
+  const apiPageSize = Number(data?.pageSize ?? pageSize);
+
   return {
     posts,
     topicDetail: detailWithPoll ? transformTopic(detailWithPoll) : null,
-    pageNumber,
-    hasNextPage: Boolean(data?.hasMore ?? false),
+    flairs,
+    pageNumber: apiPageNumber,
+    hasNextPage: apiPageNumber * apiPageSize < totalCount,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Topic top posters — "Frequent Posters" strip on topic detail
+// ---------------------------------------------------------------------------
+
+export interface TopicTopPoster {
+  userId: number;
+  userName: string;
+  groupName: string;
+  postCount: number;
+  avatarUrl: string | null;
+}
+
+/**
+ * Fetch the list of users who posted in a topic, ordered by post count (highest
+ * first). Powers the "Frequent Posters" horizontal strip on TopicDetailScreen.
+ */
+export async function fetchTopicTopPosters(
+  topicId: number,
+  pageSize = 12,
+): Promise<TopicTopPoster[]> {
+  try {
+    const { data } = await apiClient.get(`/forums/topics/${topicId}/users`, {
+      params: { pageNumber: 1, pageSize },
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any[] = data?.users || [];
+    return raw.map(u => ({
+      userId:    Number(u.userId ?? 0),
+      userName:  String(u.userName ?? ''),
+      groupName: String(u.groupName ?? ''),
+      postCount: Number(u.postCount ?? 0),
+      avatarUrl: buildUserAvatarUrl(Number(u.userId ?? 0), u.updateChecksum),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 export interface ReplyResult {
@@ -3364,30 +3473,36 @@ export interface SearchTopicResult {
   flairId?:   number | null;
 }
 
-export async function searchTopics(args: {
-  query:   string;
-  forumId: number;
-  pageSize?: number;
-}): Promise<SearchTopicResult[]> {
+export async function searchTopics(
+  args: {
+    query:   string;
+    forumId: number;
+    pageSize?: number;
+  },
+  signal?: AbortSignal,
+): Promise<SearchTopicResult[]> {
+  // Use the smart-search endpoint with entityType=Topic — `/search?contentType=8`
+  // returns 500 server errors and `forumId` filtering is not supported server-side,
+  // so this performs a global topic search across all forums.
   try {
-    const { data } = await apiClient.get('/search', {
+    const { data } = await apiClient.get('/search/results', {
       params: {
-        query:       args.query,
-        contentType: 8,
-        forumId:     args.forumId,
-        pageSize:    args.pageSize ?? 30,
+        q:          args.query,
+        entityType: 'Topic',
+        pageSize:   args.pageSize ?? 30,
       },
+      signal,
     });
-    const raw: unknown[] = data?.results ?? data?.topics ?? [];
+    const raw: unknown[] = data?.results ?? [];
     if (!Array.isArray(raw) || raw.length === 0) return [];
     return (raw as Record<string, unknown>[]).map(r => ({
-      id:          Number(r.topicId ?? r.id ?? 0),
-      title:       String(r.subject ?? r.title ?? ''),
-      description: String(r.message ?? r.description ?? r.snippet ?? ''),
-      poster:      String(r.startedByUserName ?? r.poster ?? ''),
-      time:        String(r.startThreadDate   ?? r.time   ?? ''),
-      replies:     Number(r.replyCount        ?? r.replies ?? 0),
-      flairId:     r.flairId != null ? Number(r.flairId) : null,
+      id:          Number(r.entityId ?? 0),
+      title:       String(r.title ?? ''),
+      description: String(r.summary ?? ''),
+      poster:      '',
+      time:        '',
+      replies:     0,
+      flairId:     null,
     }));
   } catch {
     return [];

@@ -3,10 +3,11 @@ import {
   View, Text, Pressable, Image, ActivityIndicator, StyleSheet,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import LoadingState from '../../../components/ui/LoadingState';
@@ -56,10 +57,7 @@ export default function ForumThreadScreen() {
     if (toastTimer.current) clearTimeout(toastTimer.current);
   }, []);
 
-  // null = not in search mode, [] = api returned nothing, 'fallback' = use client filter
-  const [searchResults, setSearchResults] = useState<ForumTopic[] | 'fallback' | null>(null);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
 
   const {
     data,
@@ -127,51 +125,50 @@ export default function ForumThreadScreen() {
     }
   }, [followBusy, isFollowing, followSlot.countOverride, detail.id, detail.followCount, queryClient, showToast]);
 
-  // Live API search with 350 ms debounce; falls back to client-side on error
+  // Tight debounce — 200ms feels snappy, still bundles fast typing.
   useEffect(() => {
     const q = search.trim();
-    if (!q) {
-      setSearchResults(null);
-      setSearchLoading(false);
-      if (searchDebounce.current) clearTimeout(searchDebounce.current);
-      return;
-    }
-    setSearchLoading(true);
-    if (searchDebounce.current) clearTimeout(searchDebounce.current);
-    searchDebounce.current = setTimeout(async () => {
-      const results = await searchTopics({ query: q, forumId: detail.id });
-      if (results.length > 0) {
-        setSearchResults(results as unknown as ForumTopic[]);
-      } else {
-        setSearchResults('fallback');
-      }
-      setSearchLoading(false);
-    }, 350);
-    return () => {
-      if (searchDebounce.current) clearTimeout(searchDebounce.current);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, detail.id]);
+    const t = setTimeout(() => setDebouncedQuery(q), 200);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // React Query handles caching (re-typing a recent query is instant) and
+  // automatically aborts in-flight requests when `queryKey` changes — so
+  // typing 'war' → 'wars' cancels the stale 'war' request mid-flight.
+  const searchQuery = useQuery({
+    queryKey: ['forum-topic-search', debouncedQuery],
+    queryFn: ({ signal }) =>
+      searchTopics({ query: debouncedQuery, forumId: detail.id }, signal),
+    enabled: debouncedQuery.length > 0,
+    staleTime: 60_000,
+  });
+  const searchLoading = searchQuery.isFetching && debouncedQuery.length > 0;
+  const apiResults = searchQuery.data;
 
   const filteredTopics = useMemo(() => {
-    // API returned results — use them
-    if (Array.isArray(searchResults)) return searchResults;
-
-    let list = allTopics;
-    if (activeFlairId != null) {
-      list = list.filter(t => t.flairId === activeFlairId);
-    }
-    // Client-side fallback (searchResults === 'fallback' or no search)
     const q = search.trim().toLowerCase();
+
+    // Instant-feedback local filter — runs on every keystroke against the
+    // already-loaded topics so the user sees something immediately while
+    // the API request is still in flight.
+    let local = allTopics;
+    if (activeFlairId != null) {
+      local = local.filter(t => t.flairId === activeFlairId);
+    }
     if (q) {
-      list = list.filter(t =>
+      local = local.filter(t =>
         t.title.toLowerCase().includes(q) ||
         t.description.toLowerCase().includes(q) ||
         t.poster.toLowerCase().includes(q)
       );
     }
-    return list;
-  }, [allTopics, activeFlairId, search, searchResults]);
+
+    // Once API results land for the *current* debounced query, prefer them.
+    if (q && debouncedQuery === q && apiResults && apiResults.length > 0) {
+      return apiResults as unknown as ForumTopic[];
+    }
+    return local;
+  }, [allTopics, activeFlairId, search, debouncedQuery, apiResults]);
 
   const handleTopicPress = useCallback((topic: ForumTopic) => {
     navigation.navigate('TopicDetail', { topic, forum: detail });
@@ -206,64 +203,89 @@ export default function ForumThreadScreen() {
           onEndReachedThreshold={0.5}
           ListHeaderComponent={
             <View>
-              {detail.bannerUrl && (
-                <Image source={{ uri: detail.bannerUrl }} style={styles.banner} />
-              )}
+              {/* Banner — real photo OR colored placeholder so layout stays consistent */}
+              <View style={styles.bannerWrap}>
+                {detail.bannerUrl ? (
+                  <Image source={{ uri: detail.bannerUrl }} style={styles.banner} />
+                ) : (
+                  <View style={[styles.banner, { backgroundColor: detail.bg }]} />
+                )}
+                {/* Subtle dark gradient at the bottom for legibility on busy banners */}
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.25)']}
+                  style={styles.bannerOverlay}
+                />
+              </View>
 
-              {/* Forum identity */}
+              {/* Forum identity — modern detail header */}
               <View style={styles.identity}>
-                <View style={[styles.identityAvatar, { backgroundColor: detail.bg }]}>
-                  {detail.thumbnailUrl ? (
-                    <Image source={{ uri: detail.thumbnailUrl }} style={styles.identityAvatarImg} />
-                  ) : (
-                    <Text style={styles.identityEmoji}>{detail.emoji}</Text>
-                  )}
-                </View>
-                <View style={styles.identityInfo}>
-                  <Text style={styles.identityName} numberOfLines={1}>{detail.name}</Text>
-                  {!!detail.description && (
-                    <Text style={styles.identityDesc} numberOfLines={2}>{detail.description}</Text>
-                  )}
-                </View>
-                <Pressable
-                  style={[
-                    styles.followBtn,
-                    isFollowing && styles.followBtnActive,
-                    followBusy && styles.followBtnBusy,
-                  ]}
-                  onPress={handleToggleFollow}
-                  disabled={followBusy}
-                  accessibilityRole="button"
-                  accessibilityLabel={isFollowing ? 'Unfollow forum' : 'Follow forum'}
-                >
-                  {followBusy ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={isFollowing ? colors.primary : colors.onPrimary}
-                    />
-                  ) : (
-                    <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
-                      {isFollowing ? 'Following' : 'Follow'}
-                    </Text>
-                  )}
-                </Pressable>
-                {hasModerationRights && (
-                  <>
+                <View style={[styles.identityTopRow, styles.identityTopRowOverlap]}>
+                  <View
+                    style={[
+                      styles.identityAvatar,
+                      { backgroundColor: detail.bg },
+                      styles.identityAvatarOverlap,
+                    ]}
+                  >
+                    {detail.thumbnailUrl ? (
+                      <Image source={{ uri: detail.thumbnailUrl }} style={styles.identityAvatarImg} />
+                    ) : (
+                      <Text style={styles.identityEmoji}>{detail.emoji}</Text>
+                    )}
+                  </View>
+
+                  <View style={styles.identityActions}>
                     <Pressable
-                      style={styles.gearBtn}
-                      onPress={() => navigation.navigate('ReportsInbox', { forum: detail })}
-                      accessibilityLabel="Reports inbox"
+                      style={[
+                        styles.followBtn,
+                        isFollowing && styles.followBtnActive,
+                        followBusy && styles.followBtnBusy,
+                      ]}
+                      onPress={handleToggleFollow}
+                      disabled={followBusy}
+                      accessibilityRole="button"
+                      accessibilityLabel={isFollowing ? 'Unfollow forum' : 'Follow forum'}
                     >
-                      <Ionicons name="flag-outline" size={16} color={colors.text} />
+                      {followBusy ? (
+                        <ActivityIndicator
+                          size="small"
+                          color={isFollowing ? colors.primary : colors.onPrimary}
+                        />
+                      ) : (
+                        <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
+                          {isFollowing ? 'Following' : 'Follow'}
+                        </Text>
+                      )}
                     </Pressable>
-                    <Pressable style={styles.gearBtn} onPress={() => setSettingsOpen(true)}>
-                      <Ionicons name="settings-outline" size={16} color={colors.text} />
-                    </Pressable>
-                  </>
+                    {hasModerationRights && (
+                      <>
+                        <Pressable
+                          style={styles.iconBtn}
+                          onPress={() => navigation.navigate('ReportsInbox', { forum: detail })}
+                          accessibilityLabel="Reports inbox"
+                        >
+                          <Ionicons name="flag-outline" size={16} color={colors.text} />
+                        </Pressable>
+                        <Pressable
+                          style={styles.iconBtn}
+                          onPress={() => setSettingsOpen(true)}
+                          accessibilityLabel="Forum settings"
+                        >
+                          <Ionicons name="settings-outline" size={16} color={colors.text} />
+                        </Pressable>
+                      </>
+                    )}
+                  </View>
+                </View>
+
+                <Text style={styles.identityName}>{detail.name}</Text>
+                {!!detail.description && (
+                  <Text style={styles.identityDesc}>{detail.description}</Text>
                 )}
               </View>
 
-              {/* Stats bar */}
+              {/* Stats bar — rank gets the marquee accent treatment */}
               <View style={styles.statBar}>
                 <StatCell label="Topics" value={formatCount(detail.topicCount)} styles={styles} />
                 <View style={styles.statDivider} />
@@ -271,7 +293,12 @@ export default function ForumThreadScreen() {
                 <View style={styles.statDivider} />
                 <StatCell label="Followers" value={formatCount(followCount)} styles={styles} />
                 <View style={styles.statDivider} />
-                <StatCell label="Ranked" value={`#${detail.rank || '–'}`} styles={styles} />
+                <StatCell
+                  label="Ranked"
+                  value={detail.rank > 0 ? `#${detail.rank}` : '–'}
+                  accent={detail.rank > 0}
+                  styles={styles}
+                />
               </View>
 
               {/* Search */}
@@ -281,16 +308,16 @@ export default function ForumThreadScreen() {
                 placeholder="Search topics…"
               />
 
-              {/* Flair + count + new */}
+              {/* Flair + count + new — count grouped with filter for visual cohesion */}
               <View style={styles.flairBar}>
-                {flairs.length > 0 ? (
-                  <FlairDropdown
-                    flairs={flairs}
-                    activeId={activeFlairId}
-                    onChange={setActiveFlairId}
-                  />
-                ) : <View />}
-                <View style={styles.flairRight}>
+                <View style={styles.flairLeft}>
+                  {flairs.length > 0 && (
+                    <FlairDropdown
+                      flairs={flairs}
+                      activeId={activeFlairId}
+                      onChange={setActiveFlairId}
+                    />
+                  )}
                   {searchLoading ? (
                     <ActivityIndicator size="small" color={colors.primary} />
                   ) : (
@@ -298,11 +325,11 @@ export default function ForumThreadScreen() {
                       {filteredTopics.length} topic{filteredTopics.length !== 1 ? 's' : ''}
                     </Text>
                   )}
-                  <Pressable style={styles.newBtn} onPress={() => setNewTopicOpen(true)}>
-                    <Ionicons name="add" size={14} color="#FFFFFF" />
-                    <Text style={styles.newBtnText}>New</Text>
-                  </Pressable>
                 </View>
+                <Pressable style={styles.newBtn} onPress={() => setNewTopicOpen(true)}>
+                  <Ionicons name="add" size={16} color="#FFFFFF" />
+                  <Text style={styles.newBtnText}>New</Text>
+                </Pressable>
               </View>
             </View>
           }
@@ -356,10 +383,15 @@ export default function ForumThreadScreen() {
   );
 }
 
-function StatCell({ label, value, styles }: { label: string; value: string; styles: Styles }) {
+function StatCell({ label, value, accent, styles }: {
+  label: string;
+  value: string;
+  accent?: boolean;
+  styles: Styles;
+}) {
   return (
     <View style={styles.statCell}>
-      <Text style={styles.statNum}>{value}</Text>
+      <Text style={[styles.statNum, accent && styles.statNumAccent]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
@@ -374,57 +406,83 @@ function makeStyles(c: ThemeColors) {
     content: {
       paddingBottom: 24,
     },
+    bannerWrap: {
+      position: 'relative',
+    },
     banner: {
       width: '100%',
-      height: 120,
+      height: 140,
       backgroundColor: c.surface,
     },
+    bannerOverlay: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: 80,
+    },
     identity: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
       paddingHorizontal: 14,
-      paddingVertical: 14,
+      paddingTop: 14,
+      paddingBottom: 16,
       backgroundColor: c.card,
       borderBottomWidth: 1,
       borderBottomColor: c.border,
     },
+    identityTopRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    identityTopRowOverlap: {
+      // When a banner is present, the row anchors to where the avatar overlaps
+      marginTop: -36,
+    },
     identityAvatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: 72,
+      height: 72,
+      borderRadius: 36,
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
+    },
+    identityAvatarOverlap: {
+      borderWidth: 4,
+      borderColor: c.card,
     },
     identityAvatarImg: {
       width: '100%',
       height: '100%',
     },
     identityEmoji: {
-      fontSize: 24,
+      fontSize: 32,
     },
-    identityInfo: {
-      flex: 1,
-      minWidth: 0,
+    identityActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 4,
     },
     identityName: {
-      fontSize: 15,
+      fontSize: 20,
       fontWeight: '800',
       color: c.text,
+      letterSpacing: -0.2,
+      lineHeight: 26,
     },
     identityDesc: {
-      fontSize: 11,
+      fontSize: 13,
       color: c.textSecondary,
-      marginTop: 2,
-      lineHeight: 15,
+      marginTop: 6,
+      lineHeight: 19,
     },
     followBtn: {
       backgroundColor: c.primary,
-      paddingVertical: 7,
-      paddingHorizontal: 14,
-      borderRadius: 16,
-      minWidth: 84,
+      paddingVertical: 9,
+      paddingHorizontal: 18,
+      borderRadius: 999,
+      minWidth: 100,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -432,18 +490,26 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.primarySoft,
       borderWidth: 1,
       borderColor: c.primary,
-      paddingVertical: 6,
+      paddingVertical: 8,
     },
     followBtnBusy: {
       opacity: 0.7,
     },
     followBtnText: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '700',
       color: c.onPrimary,
     },
     followBtnTextActive: {
       color: c.primary,
+    },
+    iconBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: c.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     toast: {
       position: 'absolute',
@@ -465,14 +531,6 @@ function makeStyles(c: ThemeColors) {
       fontSize: 12,
       fontWeight: '600',
     },
-    gearBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: c.surface,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
     statBar: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -489,6 +547,9 @@ function makeStyles(c: ThemeColors) {
       fontSize: 14,
       fontWeight: '800',
       color: c.text,
+    },
+    statNumAccent: {
+      color: '#EA580C',
     },
     statLabel: {
       fontSize: 10,
@@ -511,27 +572,29 @@ function makeStyles(c: ThemeColors) {
       paddingTop: 12,
       paddingBottom: 8,
     },
-    flairRight: {
+    flairLeft: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
+      gap: 12,
+      flex: 1,
+      minWidth: 0,
     },
     topicCount: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: c.textTertiary,
+      fontSize: 12,
+      fontWeight: '600',
+      color: c.textSecondary,
     },
     newBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
+      gap: 5,
       backgroundColor: c.primary,
-      paddingVertical: 7,
-      paddingHorizontal: 12,
-      borderRadius: 10,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 999,
     },
     newBtnText: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '700',
       color: c.onPrimary,
     },

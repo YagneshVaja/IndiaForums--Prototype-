@@ -42,8 +42,57 @@ export async function ensureOpPost(topic: ForumTopic): Promise<TopicPost | null>
   }
 }
 
+/**
+ * Seed the OP-post cache + store from data already in hand (e.g. TopicDetailScreen
+ * has the OP in its posts page and shouldn't trigger a redundant fetch via
+ * ensureOpPost). Skips the seed if the store already has an opPost for this topic
+ * — preserves any local reactionJson patch from a prior reaction in this session.
+ */
+export function seedOpPost(topic: ForumTopic, op: TopicPost): void {
+  const existing = useTopicReactionsStore.getState().byTopicId[topic.id];
+  if (existing?.opPost) return;
+  opPostCache.set(topic.id, op);
+  useTopicReactionsStore.getState().set(topic.id, { opPost: op });
+}
+
 // In-flight guard so two rapid taps on the same topic don't race.
 const inFlight = new Set<number>();
+
+/**
+ * Patch the cached OP post's reactionJson so the emoji-stack pill on TopicCard
+ * reflects the user's new reaction without waiting for a fresh server fetch.
+ *
+ * The reactionJson string wraps `{ json: [{ lt: number, ... }, ...] }` — one
+ * entry per liker. We don't have a reliable user identifier inside each entry,
+ * so we splice by `lt` matching the user's last-known reaction. If the user's
+ * previous reaction wasn't in our local state (e.g. carried over from a prior
+ * session), the splice is a no-op — the displayed top-3 may briefly include
+ * both their old and new emoji until the next OP fetch, which is acceptable.
+ */
+function patchOpReactionJson(
+  op: TopicPost,
+  prevReaction: ReactionCode | null,
+  nextReaction: ReactionCode | null,
+): TopicPost {
+  let arr: Array<Record<string, unknown>> = [];
+  if (op.reactionJson) {
+    try {
+      const parsed = JSON.parse(op.reactionJson);
+      if (Array.isArray(parsed?.json)) arr = [...parsed.json];
+    } catch {
+      arr = [];
+    }
+  }
+  if (prevReaction != null) {
+    const idx = arr.findIndex((e) => Number(e?.lt) === prevReaction);
+    if (idx >= 0) arr.splice(idx, 1);
+  }
+  if (nextReaction != null) {
+    arr.unshift({ lt: nextReaction });
+  }
+  const reactionJson = arr.length > 0 ? JSON.stringify({ json: arr }) : null;
+  return { ...op, reactionJson };
+}
 
 /**
  * Apply a reaction to a topic's OP post. Updates the topic-reactions store
@@ -97,10 +146,17 @@ export async function applyTopicReaction(
     return 'error';
   }
 
+  // Mirror the user's pick into opPost.reactionJson so the emoji-stack pill
+  // re-derives — TopicCard memoizes parseTopReactionTypes on this field and
+  // the cached opPost reference is also reused by ReactionsSheet's effect dep.
+  const patchedOp = patchOpReactionJson(op, slot.reaction, next);
+  opPostCache.set(topic.id, patchedOp);
+
   store.set(topic.id, {
     reaction: next,
     threadLikeId: next != null ? res.threadLikeId : null,
     countOverride: res.likeCount ?? optimistic,
+    opPost: patchedOp,
   });
   inFlight.delete(topic.id);
   return 'ok';

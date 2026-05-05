@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, Pressable, ActivityIndicator, StyleSheet,
+  View, Text, Pressable, ActivityIndicator, ScrollView, StyleSheet,
   NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -14,20 +14,22 @@ import { TopNavBack } from '../../../components/layout/TopNavBar';
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
 import PostCard from '../components/PostCard';
-import PostHtml from '../components/PostHtml';
 import ReplyComposerSheet, { type QuotedPost } from '../components/ReplyComposerSheet';
 import ReactionPickerSheet, { type AnchorRect } from '../components/ReactionPickerSheet';
 import ReactionsSheet from '../components/ReactionsSheet';
 import UserMiniCard from '../components/UserMiniCard';
 import PostEditHistoryModal from '../components/PostEditHistoryModal';
 import PollWidget from '../components/PollWidget';
-import SocialEmbed from '../components/SocialEmbed';
 import TopicModActionsSheet, { type ActionKey as ModActionKey } from '../components/TopicModActionsSheet';
 import PostModActionsSheet, { type PostActionKey } from '../components/PostModActionsSheet';
+import SearchBar from '../components/SearchBar';
 import { useTopicPosts } from '../hooks/useTopicPosts';
+import { useTopicTopPosters } from '../hooks/useTopicTopPosters';
+import { applyTopicReaction, seedOpPost } from '../hooks/useTopicLike';
+import { selectTopicReaction, useTopicReactionsStore } from '../store/topicReactionsStore';
+import { useShallow } from 'zustand/react/shallow';
 import { describeFetchError } from '../../../services/fetchError';
 import { stripPostHtml } from '../utils/stripHtml';
-import { extractSocialUrls, stripSocialUrlsFromHtml } from '../utils/socialUrls';
 import { formatCount } from '../utils/format';
 import { useAuthStore } from '../../../store/authStore';
 import { useThemeStore } from '../../../store/themeStore';
@@ -35,6 +37,7 @@ import type { ThemeColors } from '../../../theme/tokens';
 import type { ForumsStackParamList } from '../../../navigation/types';
 import {
   reactToThread, editPost, castPollVote, closeTopic, openTopic,
+  buildUserAvatarUrl,
   type ForumTopic, type ReactionCode, type TopicPost, type TopicPoll,
 } from '../../../services/api';
 
@@ -61,6 +64,11 @@ export default function TopicDetailScreen() {
   const [likeCountMap, setLikeCountMap] = useState<Record<number, number>>({});
   const [pendingSet, setPendingSet]     = useState<Set<number>>(new Set());
 
+  // OP-post reaction state lives in the shared topic-reactions store so that
+  // listing views (MyPostsList / AllTopicsView / etc.) and this screen stay in
+  // sync. Non-OP posts continue to use the local reactionMap above.
+  const opSlot = useTopicReactionsStore(useShallow(selectTopicReaction(topic.id)));
+
   const [pickerFor, setPickerFor] = useState<TopicPost | null>(null);
   const [pickerAnchor, setPickerAnchor] = useState<AnchorRect | null>(null);
   const [reactionsFor, setReactionsFor] = useState<TopicPost | null>(null);
@@ -79,7 +87,14 @@ export default function TopicDetailScreen() {
   const [pollOverrides, setPollOverrides] = useState<Record<number, number>>({});
 
   const [sortBy, setSortBy] = useState<'date' | 'likes'>('date');
+  const [postSearch, setPostSearch] = useState('');
+  const [debouncedPostSearch, setDebouncedPostSearch] = useState('');
   const [stickyVisible, setStickyVisible] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedPostSearch(postSearch.trim()), 100);
+    return () => clearTimeout(t);
+  }, [postSearch]);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [modSheetOpen, setModSheetOpen] = useState(false);
@@ -113,24 +128,86 @@ export default function TopicDetailScreen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useTopicPosts(topic.id);
+  } = useTopicPosts(topic.id, debouncedPostSearch);
 
   const firstPage = data?.pages[0];
   const liveTopic: ForumTopic = firstPage?.topicDetail
     ? { ...topic, ...firstPage.topicDetail }
     : topic;
+  const forumFlairs = firstPage?.flairs ?? [];
 
-  const allPosts = useMemo<TopicPost[]>(
-    () => (data?.pages || []).flatMap(p => p.posts),
-    [data],
+  const { data: topPosters = [] } = useTopicTopPosters(topic.id, 12);
+  const topicFlair = useMemo(
+    () => forumFlairs.find(f => f.id === liveTopic.flairId) ?? null,
+    [forumFlairs, liveTopic.flairId],
   );
 
+  // OP avatar — used to upgrade the colored-letter placeholder once posts arrive.
+  const opAvatarUrl = useMemo<string | null>(() => {
+    for (const page of data?.pages || []) {
+      for (const post of page.posts) {
+        if (post.isOp) return post.avatarUrl ?? null;
+      }
+    }
+    return null;
+  }, [data]);
+
+  // Concatenate pages while deduping by post id and preserving chronological
+  // order — guards against any server-side overlap between page boundaries.
+  const allPosts = useMemo<TopicPost[]>(() => {
+    const seen = new Set<number>();
+    const out: TopicPost[] = [];
+    for (const page of data?.pages || []) {
+      for (const post of page.posts) {
+        if (seen.has(post.id)) continue;
+        seen.add(post.id);
+        out.push(post);
+      }
+    }
+    return out;
+  }, [data]);
+
+  // Once the OP arrives from the server, push it into the shared store so
+  // the LIKE button on this screen and the emoji-stack pill on listing-view
+  // TopicCards read from the same source. Skips if a prior reaction in this
+  // session has already populated the slot (preserves the patched reactionJson).
+  useEffect(() => {
+    const op = allPosts.find(p => p.isOp);
+    if (op) seedOpPost(liveTopic, op);
+  }, [allPosts, liveTopic]);
+
+  // OP rendered separately at the top of the list (right after the title) so
+  // the page sequence matches the live website:
+  //   Title → OP post → Stats → Frequent Posters → Sort/Search → Replies
+  const opPost = useMemo<TopicPost | null>(
+    () => allPosts.find(p => p.isOp) ?? null,
+    [allPosts],
+  );
+
+  // Replies = everything except the OP. Search/sort applies only to replies.
   const sortedPosts = useMemo<TopicPost[]>(() => {
-    if (sortBy !== 'likes') return allPosts;
-    return [...allPosts].sort(
-      (a, b) => (likeCountMap[b.id] ?? b.likes ?? 0) - (likeCountMap[a.id] ?? a.likes ?? 0),
-    );
-  }, [allPosts, sortBy, likeCountMap]);
+    const liveQuery = postSearch.trim().toLowerCase();
+    let replies = allPosts.filter(p => !p.isOp);
+
+    if (liveQuery) {
+      const serverInSync = debouncedPostSearch.toLowerCase() === liveQuery;
+      if (!serverInSync) {
+        replies = replies.filter(p => {
+          const msg = (p.message || '').toLowerCase();
+          const author = (p.author || '').toLowerCase();
+          return msg.includes(liveQuery) || author.includes(liveQuery);
+        });
+      }
+    }
+
+    if (sortBy === 'likes') {
+      replies = [...replies].sort(
+        (a, b) => (likeCountMap[b.id] ?? b.likes ?? 0) - (likeCountMap[a.id] ?? a.likes ?? 0),
+      );
+    }
+
+    return replies;
+  }, [allPosts, sortBy, likeCountMap, postSearch, debouncedPostSearch]);
 
   useEffect(() => {
     if (!jumpToLast || didJumpToLastRef.current) return;
@@ -140,20 +217,6 @@ export default function TopicDetailScreen() {
       listRef.current?.scrollToEnd({ animated: false });
     });
   }, [jumpToLast, sortedPosts.length]);
-
-  const descriptionHtml = useMemo(
-    () => stripSocialUrlsFromHtml(liveTopic.description),
-    [liveTopic.description],
-  );
-
-  const topicSocialUrls = useMemo(() => {
-    const fromDescription = extractSocialUrls(liveTopic.description);
-    const linkValue = liveTopic.linkTypeValue?.trim();
-    if (!linkValue) return fromDescription;
-    const extra = extractSocialUrls(linkValue);
-    const combined = [...fromDescription, ...extra];
-    return Array.from(new Set(combined));
-  }, [liveTopic.description, liveTopic.linkTypeValue]);
 
   const displayPoll = useMemo<TopicPoll | null>(() => {
     if (!liveTopic.poll) return null;
@@ -231,6 +294,26 @@ export default function TopicDetailScreen() {
     async (post: TopicPost, next: ReactionCode | null) => {
       if (pendingSet.has(post.id)) return;
 
+      // OP-post reactions are routed through the shared helper so the topic-
+      // reactions store stays in sync with listing views (MyPostsList etc.).
+      // Optimistic updates, count, and reactionJson patching live there.
+      if (post.isOp) {
+        setPendingSet(s => {
+          const n = new Set(s);
+          n.add(post.id);
+          return n;
+        });
+        const outcome = await applyTopicReaction(liveTopic, next);
+        setPendingSet(s => {
+          const n = new Set(s);
+          n.delete(post.id);
+          return n;
+        });
+        if (outcome === 'auth') showToast('Please sign in to react.');
+        else if (outcome === 'error') showToast('Failed to record reaction.');
+        return;
+      }
+
       const prev       = reactionMap[post.id] ?? null;
       const prevCount  = likeCountMap[post.id] ?? post.likes;
       const hadBefore  = prev != null;
@@ -253,7 +336,7 @@ export default function TopicDetailScreen() {
         setLikeCountMap(m => ({ ...m, [post.id]: prevCount }));
       }
     },
-    [pendingSet, reactionMap, likeCountMap, sendReaction],
+    [pendingSet, reactionMap, likeCountMap, sendReaction, liveTopic, showToast],
   );
 
   const handleOpenReactionPicker = useCallback(
@@ -275,7 +358,9 @@ export default function TopicDetailScreen() {
       setPickerFor(null);
       setPickerAnchor(null);
       if (!target) return;
-      const current = reactionMap[target.id] ?? null;
+      const current = target.isOp
+        ? opSlot.reaction
+        : (reactionMap[target.id] ?? null);
       if (current === code) {
         // Show UNDO alert instead of immediately removing
         showSameReactionAlert(target.id);
@@ -284,7 +369,7 @@ export default function TopicDetailScreen() {
       prevReactionRef.current[target.id] = current;
       applyReaction(target, code);
     },
-    [pickerFor, reactionMap, applyReaction],
+    [pickerFor, reactionMap, opSlot.reaction, applyReaction],
   );
 
   const handleUnreact = useCallback(
@@ -327,22 +412,20 @@ export default function TopicDetailScreen() {
   );
 
   // When the user tapped LIKE / REPLY / QUOTE on a TopicCard in All Topics,
-  // we navigate here with autoAction set. Once posts load, fire the action
-  // against the topic's first (original) post — exactly once per visit.
+  // we navigate here with autoAction set. Once the OP arrives, fire the action
+  // against it — exactly once per visit.
   useEffect(() => {
     if (!autoAction || didAutoActionRef.current) return;
-    if (sortedPosts.length === 0) return;
-    const firstPost = sortedPosts[0];
+    if (!opPost) return;
     didAutoActionRef.current = true;
     if (autoAction === 'like') {
-      const current = reactionMap[firstPost.id] ?? null;
-      if (current == null) applyReaction(firstPost, 1);
+      if (opSlot.reaction == null) applyReaction(opPost, 1);
     } else if (autoAction === 'reply') {
       openReply(null);
     } else if (autoAction === 'quote') {
-      handleQuote(firstPost);
+      handleQuote(opPost);
     }
-  }, [autoAction, sortedPosts, reactionMap, applyReaction, openReply, handleQuote]);
+  }, [autoAction, opPost, opSlot.reaction, applyReaction, openReply, handleQuote]);
 
   const handleEdit = useCallback((post: TopicPost) => {
     setEditingId(post.id);
@@ -439,12 +522,17 @@ export default function TopicDetailScreen() {
   const renderPost = useCallback(
     ({ item, index }: { item: TopicPost; index: number }) => {
       const isEditingThis = editingId === item.id;
+      const isOp = item.isOp;
+      const reaction = isOp ? opSlot.reaction : (reactionMap[item.id] ?? null);
+      const likeCount = isOp
+        ? (opSlot.countOverride != null ? opSlot.countOverride : item.likes)
+        : (likeCountMap[item.id] ?? item.likes);
       return (
         <PostCard
           post={item}
           index={index}
-          reaction={reactionMap[item.id] ?? null}
-          likeCount={likeCountMap[item.id] ?? item.likes}
+          reaction={reaction}
+          likeCount={likeCount}
           pendingReaction={pendingSet.has(item.id)}
           isMine={!!currentUser && currentUser.userId === item.authorId}
           onOpenReactionPicker={handleOpenReactionPicker}
@@ -467,10 +555,19 @@ export default function TopicDetailScreen() {
     },
     [
       reactionMap, likeCountMap, pendingSet, currentUser,
+      opSlot.reaction, opSlot.countOverride,
       handleOpenReactionPicker, handleReply, handleQuote, handleEdit,
       editingId, editText, editSaving, editError,
       handleSaveEdit, handleCancelEdit,
     ],
+  );
+
+  // FlashList items are reply posts; offset their index by +1 so post numbers
+  // continue from the OP (which renders at "#1" in the header).
+  const renderReply = useCallback(
+    (info: { item: TopicPost; index: number }) =>
+      renderPost({ item: info.item, index: info.index + 1 }),
+    [renderPost],
   );
 
   const handleToggleLock = useCallback(async () => {
@@ -540,7 +637,7 @@ export default function TopicDetailScreen() {
           keyExtractor={p => String(p.id)}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          renderItem={renderPost}
+          renderItem={renderReply}
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) fetchNextPage();
           }}
@@ -580,37 +677,56 @@ export default function TopicDetailScreen() {
                   </View>
                 </View>
 
-                <Text style={styles.title}>{liveTopic.title}</Text>
-
-                <View style={styles.authorChip}>
-                  <View style={styles.authorAvatar}>
-                    <Text style={styles.authorLetter}>
-                      {(liveTopic.poster || 'A').charAt(0).toUpperCase()}
+                {topicFlair && (
+                  <View
+                    style={[
+                      styles.flairChip,
+                      { backgroundColor: topicFlair.bgColor },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.flairText, { color: topicFlair.fgColor }]}
+                    >
+                      {topicFlair.name}
                     </Text>
                   </View>
-                  <View style={styles.authorInfo}>
-                    <Text style={styles.authorName}>{liveTopic.poster}</Text>
-                    <Text style={styles.authorTime}>{liveTopic.time}</Text>
-                  </View>
-                </View>
-
-                {!!descriptionHtml && (
-                  <PostHtml html={descriptionHtml} horizontalPadding={28} />
                 )}
 
-                {liveTopic.topicImage && (
-                  <Image
-                    source={{ uri: liveTopic.topicImage }}
-                    style={styles.topicImage}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                    transition={150}
-                  />
+                <Text style={styles.title}>{liveTopic.title}</Text>
+
+                {/*
+                  No "Started by X" author chip — the OP post itself is rendered
+                  immediately below this header card and shows full author info
+                  (avatar, name, group, time, badges). Matches the live website.
+                */}
+
+                {!!liveTopic.lastBy && liveTopic.lastBy !== liveTopic.poster && (
+                  <Pressable
+                    style={styles.lastReplyChip}
+                    onPress={() => listRef.current?.scrollToEnd({ animated: true })}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Jump to last reply by ${liveTopic.lastBy}`}
+                  >
+                    <Ionicons
+                      name="arrow-down-circle-outline"
+                      size={14}
+                      color={colors.textSecondary}
+                    />
+                    <Text style={styles.lastReplyText} numberOfLines={1}>
+                      Last reply by{' '}
+                      <Text style={styles.lastReplyName}>{liveTopic.lastBy}</Text>
+                      {liveTopic.lastTime ? ` · ${liveTopic.lastTime}` : ''}
+                    </Text>
+                  </Pressable>
                 )}
 
-                {topicSocialUrls.map(u => (
-                  <SocialEmbed key={u} url={u} />
-                ))}
+                {/*
+                  Description, topic image, and social embeds were rendered here
+                  but they duplicated the OP post (which is rendered as the first
+                  item of the FlashList below and shows the exact same content).
+                  Polls live only on the topic-level pollDetail payload, so we
+                  still render the poll widget here.
+                */}
 
                 {displayPoll && (
                   <PollWidget
@@ -637,57 +753,125 @@ export default function TopicDetailScreen() {
                 )}
               </View>
 
-              <View style={styles.statsBar}>
-                <StatCell
-                  icon="chatbubble-outline"
-                  value={formatCount(liveTopic.replies ?? 0)}
+              {/* OP post rendered here — directly under the title, matching the */}
+              {/* live website's sequence: Title → OP → Stats → Frequent Posters → Replies. */}
+              {opPost && renderPost({ item: opPost, index: 0 })}
+
+              {/* 6-cell stats grid — matches the live website's "Created /
+                  Last reply / Replies / Views / Users / Likes" row, with the
+                  OP and last-replier avatars rendered inline. */}
+              <View style={styles.statGrid}>
+                <StatBlock
+                  label="Created"
+                  value={liveTopic.time}
+                  avatarUrl={liveTopic.posterId > 0 ? buildUserAvatarUrl(liveTopic.posterId) : null}
+                  styles={styles}
+                />
+                <StatBlock
+                  label="Last reply"
+                  value={liveTopic.lastTime || '—'}
+                  avatarUrl={liveTopic.lastById > 0 ? buildUserAvatarUrl(liveTopic.lastById) : null}
+                  styles={styles}
+                />
+                <StatBlock
                   label="Replies"
+                  value={formatCount(liveTopic.replies ?? 0)}
                   styles={styles}
-                  iconColor={colors.textTertiary}
                 />
-                <View style={styles.statDivider} />
-                <StatCell
-                  icon="eye-outline"
-                  value={formatCount(liveTopic.views ?? 0)}
+                <StatBlock
                   label="Views"
+                  value={formatCount(liveTopic.views ?? 0)}
                   styles={styles}
-                  iconColor={colors.textTertiary}
                 />
-                <View style={styles.statDivider} />
-                <StatCell
-                  icon="heart-outline"
-                  value={formatCount(liveTopic.likes ?? 0)}
-                  label="Likes"
+                <StatBlock
+                  label="Users"
+                  value={formatCount(liveTopic.userCount ?? 0)}
                   styles={styles}
-                  iconColor={colors.textTertiary}
+                />
+                <StatBlock
+                  label="Likes"
+                  value={formatCount(liveTopic.likes ?? 0)}
+                  styles={styles}
                 />
               </View>
 
-              {sortedPosts.length > 0 && (
+              {topPosters.length > 0 && (
+                <View style={styles.postersWrap}>
+                  <Text style={styles.postersTitle}>Frequent Posters</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.postersScroll}
+                  >
+                    {topPosters.map(p => (
+                      <View key={p.userId} style={styles.posterCol}>
+                        <View style={styles.posterAvatarWrap}>
+                          {p.avatarUrl ? (
+                            <Image
+                              source={{ uri: p.avatarUrl }}
+                              style={styles.posterAvatar}
+                              contentFit="cover"
+                              cachePolicy="memory-disk"
+                              transition={150}
+                            />
+                          ) : (
+                            <View style={[styles.posterAvatar, styles.posterAvatarFallback]}>
+                              <Text style={styles.posterInitial}>
+                                {(p.userName || 'U').charAt(0).toUpperCase()}
+                              </Text>
+                            </View>
+                          )}
+                          <View style={styles.posterCountBadge}>
+                            <Text style={styles.posterCountText}>
+                              {formatCount(p.postCount)}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              <SearchBar
+                value={postSearch}
+                onChangeText={setPostSearch}
+                placeholder="Search posts in this topic…"
+              />
+
+              {(sortedPosts.length > 0 || postSearch.trim()) && (
                 <View style={styles.sortRow}>
                   <View style={styles.sectionLabel}>
-                    <Text style={styles.sectionText}>Replies</Text>
+                    <Text style={styles.sectionText}>
+                      {postSearch.trim() ? 'Results' : 'Replies'}
+                    </Text>
                     <View style={styles.sectionCount}>
-                      <Text style={styles.sectionCountText}>{sortedPosts.length}</Text>
+                      <Text style={styles.sectionCountText}>
+                        {sortedPosts.length}
+                      </Text>
                     </View>
                   </View>
                   <View style={styles.sortSpacer} />
-                  <Pressable
-                    style={[styles.sortBtn, sortBy === 'date' && styles.sortBtnActive]}
-                    onPress={() => setSortBy('date')}
-                  >
-                    <Text style={[styles.sortBtnText, sortBy === 'date' && styles.sortBtnTextActive]}>
-                      Latest
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.sortBtn, sortBy === 'likes' && styles.sortBtnActive]}
-                    onPress={() => setSortBy('likes')}
-                  >
-                    <Text style={[styles.sortBtnText, sortBy === 'likes' && styles.sortBtnTextActive]}>
-                      Top
-                    </Text>
-                  </Pressable>
+                  {!postSearch.trim() && (
+                    <>
+                      <Pressable
+                        style={[styles.sortBtn, sortBy === 'date' && styles.sortBtnActive]}
+                        onPress={() => setSortBy('date')}
+                      >
+                        <Text style={[styles.sortBtnText, sortBy === 'date' && styles.sortBtnTextActive]}>
+                          Latest
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.sortBtn, sortBy === 'likes' && styles.sortBtnActive]}
+                        onPress={() => setSortBy('likes')}
+                      >
+                        <Text style={[styles.sortBtnText, sortBy === 'likes' && styles.sortBtnTextActive]}>
+                          Top
+                        </Text>
+                      </Pressable>
+                    </>
+                  )}
                 </View>
               )}
             </>
@@ -737,9 +921,21 @@ export default function TopicDetailScreen() {
         </View>
       ) : (
         <Pressable style={styles.replyBar} onPress={() => openReply(null)}>
-          <View style={styles.replyAvatar}>
-            <Text style={styles.replyAvatarLetter}>?</Text>
-          </View>
+          {currentUser?.userId ? (
+            <Image
+              source={{ uri: buildUserAvatarUrl(currentUser.userId) ?? '' }}
+              style={styles.replyAvatarImg}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
+            />
+          ) : (
+            <View style={styles.replyAvatar}>
+              <Text style={styles.replyAvatarLetter}>
+                {(currentUser?.userName || '?').charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
           <View style={styles.replyInput}>
             <Text style={styles.replyInputPlaceholder}>Reply to this topic…</Text>
           </View>
@@ -764,7 +960,11 @@ export default function TopicDetailScreen() {
       <ReactionPickerSheet
         visible={pickerFor != null}
         anchor={pickerAnchor}
-        current={pickerFor ? (reactionMap[pickerFor.id] ?? null) : null}
+        current={
+          pickerFor
+            ? (pickerFor.isOp ? opSlot.reaction : (reactionMap[pickerFor.id] ?? null))
+            : null
+        }
         onPick={handlePickReaction}
         onClose={handleClosePicker}
       />
@@ -809,6 +1009,46 @@ export default function TopicDetailScreen() {
         onShowHistory={(p) => { setPostSheetFor(null); setEditHistoryFor(p); }}
         onActionComplete={handlePostAction}
       />
+    </View>
+  );
+}
+
+function StatBlock({ label, value, avatarUrl, styles }: {
+  label: string;
+  value: string;
+  avatarUrl?: string | null;
+  styles: Styles;
+}) {
+  return (
+    <View style={styles.statBlock}>
+      <Text style={styles.statBlockLabel}>{label}</Text>
+      <View style={styles.statBlockValueRow}>
+        {avatarUrl ? (
+          <Image
+            source={{ uri: avatarUrl }}
+            style={styles.statBlockAvatar}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        ) : null}
+        <Text style={styles.statBlockValue} numberOfLines={1}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
+function MetaItem({ icon, value, label, styles, color }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  value: string;
+  label: string;
+  styles: Styles;
+  color: string;
+}) {
+  return (
+    <View style={styles.metaItem}>
+      <Ionicons name={icon} size={12} color={color} />
+      <Text style={styles.metaValue}>{value}</Text>
+      <Text style={styles.metaLabel}>{label}</Text>
     </View>
   );
 }
@@ -941,11 +1181,25 @@ function makeStyles(c: ThemeColors) {
       fontWeight: '800',
       color: '#FFFFFF',
     },
+    flairChip: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      marginBottom: 8,
+    },
+    flairText: {
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+    },
     title: {
-      fontSize: 18,
+      fontSize: 21,
       fontWeight: '800',
       color: c.text,
-      lineHeight: 24,
+      lineHeight: 28,
+      letterSpacing: -0.3,
     },
     authorChip: {
       flexDirection: 'row',
@@ -953,10 +1207,16 @@ function makeStyles(c: ThemeColors) {
       gap: 8,
       marginTop: 10,
     },
+    authorAvatarImg: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: c.surface,
+    },
     authorAvatar: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
+      width: 30,
+      height: 30,
+      borderRadius: 15,
       backgroundColor: c.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -978,6 +1238,26 @@ function makeStyles(c: ThemeColors) {
       fontSize: 10,
       color: c.textTertiary,
       marginTop: 1,
+    },
+    lastReplyChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: c.surface,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 999,
+      marginTop: 8,
+      alignSelf: 'flex-start',
+    },
+    lastReplyText: {
+      fontSize: 11,
+      color: c.textSecondary,
+      flexShrink: 1,
+    },
+    lastReplyName: {
+      fontWeight: '700',
+      color: c.text,
     },
     description: {
       fontSize: 14,
@@ -1008,6 +1288,137 @@ function makeStyles(c: ThemeColors) {
       fontSize: 11,
       fontWeight: '700',
       color: c.primary,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      backgroundColor: c.card,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    statGrid: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      paddingHorizontal: 8,
+      paddingVertical: 14,
+      backgroundColor: c.card,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    statBlock: {
+      flex: 1,
+      alignItems: 'center',
+      paddingHorizontal: 4,
+      gap: 4,
+      minWidth: 0,
+    },
+    statBlockLabel: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: c.textTertiary,
+      letterSpacing: 0.2,
+    },
+    statBlockValueRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      flexShrink: 1,
+    },
+    statBlockAvatar: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: c.surface,
+    },
+    statBlockValue: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: c.text,
+      flexShrink: 1,
+    },
+    postersWrap: {
+      backgroundColor: c.card,
+      paddingTop: 14,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    postersTitle: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: c.text,
+      letterSpacing: -0.1,
+      paddingHorizontal: 14,
+      marginBottom: 12,
+    },
+    postersScroll: {
+      paddingHorizontal: 14,
+      gap: 12,
+    },
+    posterCol: {
+      alignItems: 'center',
+    },
+    posterAvatarWrap: {
+      position: 'relative',
+    },
+    posterAvatar: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: c.surface,
+    },
+    posterAvatarFallback: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.primary,
+    },
+    posterInitial: {
+      color: c.onPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    posterCountBadge: {
+      position: 'absolute',
+      right: -3,
+      bottom: -3,
+      paddingHorizontal: 5,
+      minWidth: 20,
+      height: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 999,
+      backgroundColor: c.card,
+      borderWidth: 1.5,
+      borderColor: c.border,
+    },
+    posterCountText: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: c.textSecondary,
+    },
+    metaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    metaValue: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.text,
+    },
+    metaLabel: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: c.textTertiary,
+    },
+    metaDot: {
+      fontSize: 12,
+      color: c.textTertiary,
+      marginHorizontal: 2,
     },
     statsBar: {
       flexDirection: 'row',
@@ -1048,29 +1459,32 @@ function makeStyles(c: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 14,
-      paddingVertical: 10,
+      paddingVertical: 12,
       gap: 8,
+      marginTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: c.border,
+      backgroundColor: c.bg,
     },
     sectionLabel: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 7,
     },
     sectionText: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '800',
       color: c.text,
-      textTransform: 'uppercase',
-      letterSpacing: 0.3,
+      letterSpacing: -0.1,
     },
     sectionCount: {
       backgroundColor: c.surface,
-      paddingHorizontal: 7,
-      paddingVertical: 1,
-      borderRadius: 10,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 999,
     },
     sectionCountText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '800',
       color: c.textSecondary,
     },
@@ -1078,21 +1492,18 @@ function makeStyles(c: ThemeColors) {
       flex: 1,
     },
     sortBtn: {
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 10,
-      backgroundColor: c.card,
-      borderWidth: 1,
-      borderColor: c.border,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: 'transparent',
     },
     sortBtnActive: {
       backgroundColor: c.primary,
-      borderColor: c.primary,
     },
     sortBtnText: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: '700',
-      color: c.textSecondary,
+      color: c.textTertiary,
     },
     sortBtnTextActive: {
       color: c.onPrimary,
@@ -1195,6 +1606,12 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.primary,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    replyAvatarImg: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: c.surface,
     },
     replyAvatarLetter: {
       color: c.onPrimary,

@@ -120,14 +120,20 @@ function PostCardImpl({
         </Pressable>
 
         <View style={styles.info}>
+          {/* Live-site sequence: real name (primary) → @username (secondary) → */}
+          {/* group · level → badges → time. Match the indiaforums.com layout. */}
           <View style={styles.authorRow}>
-            <Text style={styles.author} numberOfLines={1}>{post.author}</Text>
+            <Text style={styles.author} numberOfLines={1}>
+              {post.realName || post.author}
+            </Text>
             {post.isOp && <View style={styles.opBadge}><Text style={styles.opBadgeText}>OP</Text></View>}
             {!!flag && <Text style={styles.flag}>{flag}</Text>}
           </View>
-          {!!post.realName && (
-            <Text style={styles.realName} numberOfLines={1}>{post.realName}</Text>
+
+          {!!post.author && (
+            <Text style={styles.username} numberOfLines={1}>@{post.author}</Text>
           )}
+
           <View style={styles.metaRow}>
             {!!post.rank && (
               <View
@@ -152,6 +158,17 @@ function PostCardImpl({
                 >
                   {post.rank}
                 </Text>
+                {post.userLevel > 0 && !rankKind && (
+                  <Text style={styles.rankLevel}>{post.userLevel}</Text>
+                )}
+              </View>
+            )}
+            {post.visitStreakCount >= 30 && (
+              <View style={styles.streakChip}>
+                <Text style={styles.streakIcon}>🔥</Text>
+                <Text style={styles.streakText}>
+                  {formatCount(post.visitStreakCount)}
+                </Text>
               </View>
             )}
             {post.postCount != null && (
@@ -162,9 +179,10 @@ function PostCardImpl({
             <Text style={styles.metaDot}>·</Text>
             <Text style={styles.metaText}>{post.time}</Text>
           </View>
+
           {post.badges.length > 0 && (
             <View style={styles.badges}>
-              {post.badges.map(b => (
+              {post.badges.slice(0, 4).map(b => (
                 <Image
                   key={b.id}
                   source={{ uri: b.imageUrl }}
@@ -173,6 +191,11 @@ function PostCardImpl({
                   cachePolicy="memory-disk"
                 />
               ))}
+              {post.badges.length > 4 && (
+                <View style={styles.badgeMore}>
+                  <Text style={styles.badgeMoreText}>+{post.badges.length - 4}</Text>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -381,6 +404,11 @@ function makeStyles(c: ThemeColors) {
       color: c.textTertiary,
       marginTop: 1,
     },
+    username: {
+      fontSize: 11,
+      color: c.textTertiary,
+      marginTop: 1,
+    },
     metaRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -411,6 +439,29 @@ function makeStyles(c: ThemeColors) {
     rankTextColored: {
       color: '#FFFFFF',
     },
+    rankLevel: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: c.primary,
+      marginLeft: 2,
+    },
+    streakChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 8,
+      backgroundColor: '#FEF3C7',
+    },
+    streakIcon: {
+      fontSize: 9,
+    },
+    streakText: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: '#92400E',
+    },
     metaText: {
       fontSize: 10,
       fontWeight: '600',
@@ -428,6 +479,19 @@ function makeStyles(c: ThemeColors) {
     badgeImg: {
       width: 18,
       height: 18,
+    },
+    badgeMore: {
+      paddingHorizontal: 6,
+      height: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 9,
+      backgroundColor: c.surface,
+    },
+    badgeMoreText: {
+      fontSize: 9,
+      fontWeight: '700',
+      color: c.textSecondary,
     },
     postNumber: {
       fontSize: 10,

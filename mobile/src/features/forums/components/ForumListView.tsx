@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
@@ -8,6 +9,7 @@ import SearchBar from './SearchBar';
 import CategoryChips, { type ChipItem } from './CategoryChips';
 import ForumCard from './ForumCard';
 import { useForumHome } from '../hooks/useForumHome';
+import { searchResults as apiSearchForums } from '../../../services/searchApi';
 import type { Forum } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
@@ -20,35 +22,83 @@ export default function ForumListView({ onForumPress }: Props) {
   const [activeCat, setActiveCat] = useState('all');
   const [activeSubCat, setActiveSubCat] = useState('all');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const isSearchMode = debouncedSearch.length > 0;
+
   const apiCategoryId = useMemo(() => {
+    if (isSearchMode) return null;
     if (activeSubCat !== 'all') return Number(activeSubCat);
     if (activeCat !== 'all')    return Number(activeCat);
     return null;
-  }, [activeCat, activeSubCat]);
+  }, [activeCat, activeSubCat, isSearchMode]);
 
   const {
     data,
-    isLoading,
-    isError,
-    error,
-    refetch,
+    isLoading: listLoading,
+    isRefetching: listRefetching,
+    isError: listError,
+    error: listErr,
+    refetch: listRefetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useForumHome(apiCategoryId);
 
+  const searchQuery = useQuery({
+    queryKey: ['forum-search', debouncedSearch],
+    queryFn: () => apiSearchForums({ q: debouncedSearch, entityType: 'Forum', pageSize: 50 }),
+    enabled: isSearchMode,
+    staleTime: 60 * 1000,
+  });
+
   const firstPage = data?.pages[0];
   const categories = firstPage?.categories || [];
   const subCatMap = firstPage?.subCatMap || {};
-  const totalCount = firstPage?.totalForumCount ?? 0;
+  const listTotalCount = firstPage?.totalForumCount ?? 0;
 
-  const forums = useMemo<Forum[]>(
+  const listForums = useMemo<Forum[]>(
     () => (data?.pages || []).flatMap(p => p.forums),
     [data],
   );
+
+  const searchForums = useMemo<Forum[]>(() => {
+    if (!isSearchMode || !searchQuery.data?.results) return [];
+    return searchQuery.data.results.map(r => ({
+      id: r.entityId,
+      name: r.title,
+      description: r.summary ?? '',
+      categoryId: 0,
+      slug: r.url ?? '',
+      topicCount: 0,
+      postCount: 0,
+      followCount: 0,
+      rank: 0,
+      prevRank: 0,
+      rankDisplay: '',
+      bg: '',
+      emoji: '',
+      bannerUrl: null,
+      thumbnailUrl: r.imageUrl,
+      locked: false,
+      hot: false,
+      priorityPosts: 0,
+      editPosts: 0,
+      deletePosts: 0,
+    }));
+  }, [isSearchMode, searchQuery.data]);
+
+  const displayForums = isSearchMode ? searchForums : listForums;
+  const totalCount = isSearchMode ? searchForums.length : listTotalCount;
+  const isLoading = isSearchMode ? searchQuery.isLoading : (listLoading && !data);
+  const isError = isSearchMode ? searchQuery.isError : (listError && !data);
 
   const catChips: ChipItem[] = useMemo(() => {
     const chips: ChipItem[] = [{ id: 'all', label: 'All' }];
@@ -63,25 +113,19 @@ export default function ForumListView({ onForumPress }: Props) {
     return [{ id: 'all', label: 'All' }, ...subs.map(s => ({ id: String(s.id), label: s.name }))];
   }, [activeCat, subCatMap]);
 
-  const displayForums = useMemo(() => {
-    if (!search.trim()) return forums;
-    const q = search.toLowerCase();
-    return forums.filter(f =>
-      f.name.toLowerCase().includes(q) ||
-      f.description.toLowerCase().includes(q)
-    );
-  }, [forums, search]);
-
   function selectCat(id: string) {
     setActiveCat(id);
     setActiveSubCat('all');
   }
 
-  if (isLoading && !data) return <LoadingState height={400} />;
-  if (isError && !data) return (
+  if (isLoading) return <LoadingState height={400} />;
+  if (isError) return (
     <ErrorState
-      message={describeFetchError(error, "Couldn't load forums.")}
-      onRetry={() => refetch()}
+      message={describeFetchError(
+        isSearchMode ? searchQuery.error : listErr,
+        isSearchMode ? "Couldn't search forums." : "Couldn't load forums.",
+      )}
+      onRetry={() => isSearchMode ? searchQuery.refetch() : listRefetch()}
     />
   );
 
@@ -90,8 +134,13 @@ export default function ForumListView({ onForumPress }: Props) {
       data={displayForums}
       keyExtractor={f => String(f.id)}
       renderItem={({ item }) => <ForumCard forum={item} onPress={onForumPress} />}
+      refreshControl={
+        !isSearchMode ? (
+          <RefreshControl refreshing={listRefetching} onRefresh={listRefetch} tintColor={colors.primary} />
+        ) : undefined
+      }
       onEndReached={() => {
-        if (hasNextPage && !isFetchingNextPage && !search.trim()) fetchNextPage();
+        if (!isSearchMode && hasNextPage && !isFetchingNextPage) fetchNextPage();
       }}
       onEndReachedThreshold={0.5}
       ListHeaderComponent={
@@ -101,32 +150,40 @@ export default function ForumListView({ onForumPress }: Props) {
             onChangeText={setSearch}
             placeholder="Search forums..."
           />
-          <CategoryChips
-            chips={catChips}
-            activeId={activeCat}
-            onChange={selectCat}
-          />
-          {subCatChips.length > 0 && (
-            <CategoryChips
-              chips={subCatChips}
-              activeId={activeSubCat}
-              onChange={setActiveSubCat}
-              variant="secondary"
-            />
+          {!isSearchMode && (
+            <>
+              <CategoryChips
+                chips={catChips}
+                activeId={activeCat}
+                onChange={selectCat}
+              />
+              {subCatChips.length > 0 && (
+                <CategoryChips
+                  chips={subCatChips}
+                  activeId={activeSubCat}
+                  onChange={setActiveSubCat}
+                  variant="secondary"
+                />
+              )}
+            </>
           )}
           <View style={styles.countRow}>
             <Text style={styles.countText}>
               {totalCount.toLocaleString()} FORUMS
             </Text>
-            {!!search.trim() && <Text style={styles.filteredTag}>filtered</Text>}
+            {isSearchMode && <Text style={styles.filteredTag}>search results</Text>}
           </View>
         </View>
       }
       ListEmptyComponent={
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>🔍</Text>
-          <Text style={styles.emptyTitle}>No forums found</Text>
-          <Text style={styles.emptySubtitle}>Try a different search or category</Text>
+          <Text style={styles.emptyTitle}>
+            {isSearchMode ? 'No forums found' : 'No forums yet'}
+          </Text>
+          {isSearchMode && (
+            <Text style={styles.emptySubtitle}>Try a different search term</Text>
+          )}
         </View>
       }
       ListFooterComponent={

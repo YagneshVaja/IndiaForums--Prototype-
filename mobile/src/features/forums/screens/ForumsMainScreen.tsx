@@ -97,7 +97,7 @@ function HeaderTab({
         <Text
           style={[
             tabStyles.label,
-            { color: active ? colors.primary : colors.textSecondary },
+            { color: active ? colors.text : colors.textTertiary },
             active && tabStyles.labelActive,
           ]}
         >
@@ -118,10 +118,11 @@ const tabStyles = StyleSheet.create({
   tab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingTop: 12,
   },
   labelWrap: {
     alignItems: 'center',
+    gap: 10,
   },
   label: {
     fontSize: 15,
@@ -132,10 +133,9 @@ const tabStyles = StyleSheet.create({
     fontWeight: '700',
   },
   underline: {
-    marginTop: 8,
     height: 3,
-    alignSelf: 'stretch',
-    borderRadius: 2,
+    width: 28,
+    borderRadius: 999,
   },
 });
 

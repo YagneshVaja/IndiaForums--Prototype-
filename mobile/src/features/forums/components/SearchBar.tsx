@@ -16,7 +16,11 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Searchâ€
   const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.wrap}>
-      <Ionicons name={loading ? 'sync' : 'search'} size={14} color={colors.textTertiary} />
+      <Ionicons
+        name={loading ? 'sync' : 'search'}
+        size={16}
+        color={colors.textTertiary}
+      />
       <TextInput
         style={styles.input}
         placeholder={placeholder}
@@ -25,10 +29,11 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Searchâ€
         onChangeText={onChangeText}
         autoCorrect={false}
         autoCapitalize="none"
+        returnKeyType="search"
       />
       {value.length > 0 && (
-        <Pressable onPress={() => onChangeText('')} hitSlop={8}>
-          <Ionicons name="close-circle" size={16} color={colors.textTertiary} />
+        <Pressable onPress={() => onChangeText('')} hitSlop={10}>
+          <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
         </Pressable>
       )}
     </View>
@@ -40,19 +45,22 @@ function makeStyles(c: ThemeColors) {
     wrap: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      backgroundColor: c.surface,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
+      gap: 10,
+      backgroundColor: c.card,
+      borderRadius: 999,
+      paddingHorizontal: 16,
+      paddingVertical: 11,
       marginHorizontal: 14,
-      marginTop: 12,
+      marginTop: 14,
+      borderWidth: 1,
+      borderColor: c.border,
     },
     input: {
       flex: 1,
       fontSize: 14,
       color: c.text,
       padding: 0,
+      fontWeight: '500',
     },
   });
 }

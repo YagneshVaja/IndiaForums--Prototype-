@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, Pressable, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -25,6 +25,7 @@ export default function MyForumsList({ onForumPress }: Props) {
   const {
     data,
     isLoading,
+    isRefetching,
     isError,
     error,
     refetch,
@@ -67,6 +68,9 @@ export default function MyForumsList({ onForumPress }: Props) {
       data={forums}
       keyExtractor={f => String(f.id)}
       renderItem={({ item }) => <ForumCard forum={item} onPress={onForumPress} />}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
+      }
       onEndReached={() => {
         if (hasNextPage && !isFetchingNextPage) fetchNextPage();
       }}

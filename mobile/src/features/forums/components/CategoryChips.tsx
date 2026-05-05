@@ -48,7 +48,7 @@ export default function CategoryChips({ chips, activeId, onChange, variant = 'pr
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     primaryWrap: {
-      marginTop: 12,
+      marginTop: 14,
     },
     secondaryWrap: {
       marginTop: 8,
@@ -60,13 +60,11 @@ function makeStyles(c: ThemeColors) {
     primaryChip: {
       paddingHorizontal: 14,
       paddingVertical: 8,
-      borderRadius: 18,
-      backgroundColor: c.surface,
-      borderWidth: 1,
-      borderColor: 'transparent',
+      borderRadius: 999,
+      backgroundColor: 'transparent',
     },
     primaryChipActive: {
-      backgroundColor: c.primary,
+      backgroundColor: c.primarySoft,
     },
     primaryText: {
       fontSize: 13,
@@ -74,19 +72,17 @@ function makeStyles(c: ThemeColors) {
       color: c.textSecondary,
     },
     primaryTextActive: {
-      color: '#FFFFFF',
+      color: c.primary,
+      fontWeight: '700',
     },
     secondaryChip: {
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 14,
-      backgroundColor: c.card,
-      borderWidth: 1,
-      borderColor: c.border,
+      borderRadius: 999,
+      backgroundColor: 'transparent',
     },
     secondaryChipActive: {
       backgroundColor: c.primarySoft,
-      borderColor: c.primary,
     },
     secondaryText: {
       fontSize: 12,
@@ -95,6 +91,7 @@ function makeStyles(c: ThemeColors) {
     },
     secondaryTextActive: {
       color: c.primary,
+      fontWeight: '700',
     },
   });
 }

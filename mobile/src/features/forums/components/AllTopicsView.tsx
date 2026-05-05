@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, Pressable, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
 import LoadingState from '../../../components/ui/LoadingState';
@@ -131,6 +131,7 @@ export default function AllTopicsView({ onTopicPress }: Props) {
   const {
     data,
     isLoading,
+    isRefetching,
     isError,
     error,
     refetch,
@@ -173,11 +174,13 @@ export default function AllTopicsView({ onTopicPress }: Props) {
             onPress={onTopicPress}
             onReply={handleReply}
             onQuote={handleQuote}
-            onToast={showToast}
             onOpenReactionPicker={handleOpenReactionPicker}
             onOpenReactionsList={handleOpenReactionsList}
           />
         )}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
+        }
         onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) fetchNextPage();
         }}

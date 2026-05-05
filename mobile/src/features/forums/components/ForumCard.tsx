@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import type { Forum } from '../../../services/api';
 import { formatCount } from '../utils/format';
 import { useForumFollowStore } from '../store/forumFollowStore';
+import { useForumStats } from '../hooks/useForumStats';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 
@@ -14,14 +16,52 @@ interface Props {
   onPress: (forum: Forum) => void;
 }
 
+const ACCENT = '#EA580C';
+const ACCENT_SOFT = '#FFEDD5';
+
 function ForumCardImpl({ forum, onPress }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  const { data: stats, isLoading: statsLoading } = useForumStats(forum.id);
   const followOverride = useForumFollowStore((s) => s.byForumId[forum.id]);
-  const followCount = followOverride?.countOverride ?? forum.followCount;
+
+  const followCount = followOverride?.countOverride
+    ?? stats?.followCount
+    ?? forum.followCount;
+  const rank = stats?.rank ?? forum.rank;
+  const prevRank = stats?.prevRank ?? forum.prevRank;
+
+  const hasRank = rank > 0;
+  const hasFollowers = followCount > 0;
+  const rankMove = useMemo(() => {
+    if (!hasRank || !prevRank) return '';
+    const diff = prevRank - rank;
+    if (diff > 0) return '+' + diff;
+    if (diff < 0) return String(diff);
+    return '';
+  }, [rank, prevRank, hasRank]);
+
+  // Skeletons render in the same slots as real data so the layout never shifts.
+  const showRankSkeleton = statsLoading && !hasRank;
+  const showFollowSkeleton = statsLoading && !hasFollowers;
+
+  const a11yLabel = useMemo(() => {
+    const parts: string[] = [forum.name];
+    if (forum.hot) parts.push('trending');
+    if (hasRank) parts.push(`ranked number ${rank}`);
+    if (forum.topicCount > 0) parts.push(`${formatCount(forum.topicCount)} topics`);
+    if (hasFollowers) parts.push(`${formatCount(followCount)} followers`);
+    return parts.join(', ');
+  }, [forum.name, forum.hot, forum.topicCount, hasRank, rank, hasFollowers, followCount]);
 
   return (
-    <Pressable style={styles.card} onPress={() => onPress(forum)}>
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      onPress={() => onPress(forum)}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
+    >
       <View style={[styles.avatar, { backgroundColor: forum.bg }]}>
         {forum.thumbnailUrl ? (
           <Image
@@ -38,18 +78,62 @@ function ForumCardImpl({ forum, onPress }: Props) {
 
       <View style={styles.body}>
         <View style={styles.nameRow}>
-          <Text style={styles.name} numberOfLines={1}>{forum.name}</Text>
-          {forum.hot && <Text style={styles.hot}>🔥</Text>}
+          <Text style={styles.name} numberOfLines={2}>{forum.name}</Text>
+          {forum.hot && (
+            <Ionicons
+              name="flame"
+              size={14}
+              color={ACCENT}
+              style={styles.hotIcon}
+            />
+          )}
         </View>
-        <Text style={styles.desc} numberOfLines={2}>{forum.description}</Text>
-      </View>
 
-      <View style={styles.stats}>
-        <StatCol label="Rank" value={forum.rankDisplay || `#${forum.rank || '–'}`} accent styles={styles} />
-        <View style={styles.divider} />
-        <StatCol label="Topics" value={formatCount(forum.topicCount)} styles={styles} />
-        <View style={styles.divider} />
-        <StatCol label="Flwrs" value={formatCount(followCount)} styles={styles} />
+        <View style={styles.statsRow}>
+          {hasRank && (
+            <View
+              style={styles.rankPill}
+              accessible
+              accessibilityLabel={`ranked number ${rank}${rankMove ? `, ${rankMove.startsWith('+') ? 'up' : 'down'} ${rankMove.replace(/^[+-]/, '')}` : ''}`}
+            >
+              <Ionicons name="trophy" size={11} color={ACCENT} />
+              <Text style={styles.rankText}>#{rank}</Text>
+              {!!rankMove && (
+                <Text
+                  style={[
+                    styles.rankMove,
+                    rankMove.startsWith('+') ? styles.rankMoveUp : styles.rankMoveDown,
+                  ]}
+                >
+                  {rankMove.startsWith('+') ? '▲' : '▼'}
+                  {rankMove.replace(/^[+-]/, '')}
+                </Text>
+              )}
+            </View>
+          )}
+          {showRankSkeleton && <View style={styles.skeletonPill} />}
+
+          {forum.topicCount > 0 && (
+            <Stat
+              icon="chatbubble-ellipses-outline"
+              value={formatCount(forum.topicCount)}
+              a11yLabel={`${formatCount(forum.topicCount)} topics`}
+              styles={styles}
+              colors={colors}
+            />
+          )}
+
+          {hasFollowers && (
+            <Stat
+              icon="people-outline"
+              value={formatCount(followCount)}
+              a11yLabel={`${formatCount(followCount)} followers`}
+              styles={styles}
+              colors={colors}
+            />
+          )}
+          {showFollowSkeleton && <View style={styles.skeletonStat} />}
+        </View>
       </View>
     </Pressable>
   );
@@ -58,11 +142,17 @@ function ForumCardImpl({ forum, onPress }: Props) {
 const ForumCard = React.memo(ForumCardImpl);
 export default ForumCard;
 
-function StatCol({ label, value, accent, styles }: { label: string; value: string; accent?: boolean; styles: Styles }) {
+function Stat({ icon, value, a11yLabel, styles, colors }: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  value: string;
+  a11yLabel: string;
+  styles: Styles;
+  colors: ThemeColors;
+}) {
   return (
-    <View style={styles.statCol}>
-      <Text style={[styles.statNum, accent && styles.statNumAccent]}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+    <View style={styles.stat} accessible accessibilityLabel={a11yLabel}>
+      <Ionicons name={icon} size={13} color={colors.textTertiary} />
+      <Text style={styles.statValue}>{value}</Text>
     </View>
   );
 }
@@ -72,20 +162,27 @@ function makeStyles(c: ThemeColors) {
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      gap: 14,
       backgroundColor: c.card,
-      borderWidth: 1,
-      borderColor: c.border,
-      borderRadius: 14,
-      paddingHorizontal: 12,
-      paddingVertical: 12,
+      borderRadius: 16,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
       marginHorizontal: 14,
       marginBottom: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 6,
+      elevation: 1,
+    },
+    cardPressed: {
+      backgroundColor: c.surface,
+      transform: [{ scale: 0.99 }],
     },
     avatar: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+      width: 54,
+      height: 54,
+      borderRadius: 27,
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
@@ -95,60 +192,83 @@ function makeStyles(c: ThemeColors) {
       height: '100%',
     },
     avatarEmoji: {
-      fontSize: 22,
+      fontSize: 26,
     },
     body: {
       flex: 1,
       minWidth: 0,
+      gap: 6,
     },
     nameRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 6,
+    },
+    name: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.text,
+      lineHeight: 20,
+      letterSpacing: -0.1,
+    },
+    hotIcon: {
+      marginTop: 3,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    rankPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+      backgroundColor: ACCENT_SOFT,
+    },
+    rankText: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: ACCENT,
+      letterSpacing: 0.2,
+    },
+    rankMove: {
+      fontSize: 9,
+      fontWeight: '700',
+      marginLeft: 2,
+    },
+    rankMoveUp: {
+      color: '#16A34A',
+    },
+    rankMoveDown: {
+      color: '#DC2626',
+    },
+    stat: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
     },
-    name: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: c.text,
-      flexShrink: 1,
-    },
-    hot: {
+    statValue: {
       fontSize: 12,
-    },
-    desc: {
-      fontSize: 11,
-      color: c.textSecondary,
-      marginTop: 2,
-      lineHeight: 15,
-    },
-    stats: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    statCol: {
-      alignItems: 'center',
-      minWidth: 34,
-    },
-    statNum: {
-      fontSize: 11,
       fontWeight: '700',
       color: c.text,
     },
-    statNumAccent: {
-      color: '#EA580C',
-    },
-    statLabel: {
-      fontSize: 9,
-      fontWeight: '600',
-      color: c.textTertiary,
-      marginTop: 1,
-      textTransform: 'uppercase',
-    },
-    divider: {
-      width: 1,
+    skeletonPill: {
+      width: 56,
       height: 22,
-      backgroundColor: c.border,
+      borderRadius: 999,
+      backgroundColor: c.surface,
+      opacity: 0.7,
+    },
+    skeletonStat: {
+      width: 44,
+      height: 14,
+      borderRadius: 4,
+      backgroundColor: c.surface,
+      opacity: 0.7,
     },
   });
 }

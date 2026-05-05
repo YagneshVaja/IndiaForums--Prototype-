@@ -3,11 +3,11 @@ import { fetchTopicPosts, type TopicPostsPage } from '../../../services/api';
 
 const PAGE_SIZE = 20;
 
-export function useTopicPosts(topicId: number | null) {
+export function useTopicPosts(topicId: number | null, searchQuery = '') {
   return useInfiniteQuery<TopicPostsPage>({
-    queryKey: ['topic-posts', topicId],
-    queryFn: ({ pageParam = 1 }) =>
-      fetchTopicPosts(topicId!, pageParam as number, PAGE_SIZE),
+    queryKey: ['topic-posts', topicId, searchQuery],
+    queryFn: ({ pageParam = 1, signal }) =>
+      fetchTopicPosts(topicId!, pageParam as number, PAGE_SIZE, searchQuery, signal),
     initialPageParam: 1,
     getNextPageParam: (last) =>
       last.hasNextPage ? last.pageNumber + 1 : undefined,

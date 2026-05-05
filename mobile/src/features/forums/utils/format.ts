@@ -1,6 +1,6 @@
 export function formatCount(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'k';
+  if (n >= 1_000_000) return (Math.floor(n / 100_000) / 10) + 'M';
+  if (n >= 1_000)     return (Math.floor(n / 100) / 10) + 'k';
   return String(n);
 }
 

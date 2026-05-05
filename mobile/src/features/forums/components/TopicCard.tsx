@@ -26,8 +26,6 @@ interface Props {
   onReply?: (topic: ForumTopic) => void;
   /** Open a reply composer pre-quoted with this topic's OP. */
   onQuote?: (topic: ForumTopic) => void;
-  /** Surface a transient message (sign-in prompt, like error). */
-  onToast?: (msg: string) => void;
   /** Open the full reaction picker anchored to the LIKE button. */
   onOpenReactionPicker?: (topic: ForumTopic, anchor: AnchorRect) => void;
   /** Open the bottom-sheet list of users who reacted. */
@@ -46,6 +44,14 @@ function TopicCardImpl({
   const { reaction, opLikeCount, pending, opPost } = useTopicLike(topic);
   const liked = reaction != null;
   const reactionMeta = reaction != null ? REACTION_META[reaction] : null;
+
+  // Topic-aggregate like count for the bottom-row stat. The action bar above
+  // shows the OP-only live count; here we keep the topic prop's aggregate but
+  // apply the same delta the user just contributed so both stay consistent.
+  const opBaseLikes = opPost?.likes ?? null;
+  const likeDelta =
+    opLikeCount != null && opBaseLikes != null ? opLikeCount - opBaseLikes : 0;
+  const displayedTopicLikes = Math.max(0, topic.likes + likeDelta);
 
   // Stacked-emoji breakdown — derived from the OP post's reactionJson once it
   // has been fetched (lazy: first reaction tap or first reactions-list open).
@@ -250,7 +256,7 @@ function TopicCardImpl({
 
       <View style={styles.bottomRow}>
         <View style={styles.statsLeft}>
-          <Stat icon="thumbs-up-outline" value={formatCount(topic.likes)} styles={styles} iconColor={colors.textSecondary} />
+          <Stat icon="thumbs-up-outline" value={formatCount(displayedTopicLikes)} styles={styles} iconColor={colors.textSecondary} />
           <Stat icon="eye-outline" value={formatCount(topic.views)} styles={styles} iconColor={colors.textSecondary} />
           <Stat icon="chatbubble-outline" value={formatCount(topic.replies)} styles={styles} iconColor={colors.textSecondary} />
           <Stat icon="share-social-outline" value="Share" styles={styles} iconColor={colors.textSecondary} />
