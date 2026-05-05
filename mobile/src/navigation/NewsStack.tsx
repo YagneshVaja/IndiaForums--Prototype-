@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NewsStackParamList } from './types';
 import NewsScreen from '../features/news/screens/NewsScreen';
 import ArticleDetailScreen from '../features/news/screens/ArticleDetailScreen';
+import ArticlesFullListScreen from '../features/news/screens/ArticlesFullListScreen';
 import { useThemeStore } from '../store/themeStore';
 
 function PlaceholderScreen({ route }: { route: { name: string } }) {
@@ -23,6 +24,7 @@ export default function NewsStack() {
       <Stack.Screen name="NewsMain" component={NewsScreen} />
       <Stack.Screen name="ArticleDetail" component={ArticleDetailScreen} />
       <Stack.Screen name="CategoryFeed" component={PlaceholderScreen} />
+      <Stack.Screen name="ArticlesFullList" component={ArticlesFullListScreen} />
     </Stack.Navigator>
   );
 }

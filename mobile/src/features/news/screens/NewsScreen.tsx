@@ -4,10 +4,9 @@ import {
   Text,
   Pressable,
   ScrollView,
-  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { NewsStackParamList } from '../../../navigation/types';
 import { TopNavBrand } from '../../../components/layout/TopNavBar';
@@ -30,79 +29,25 @@ import NewsGallerySection from '../components/NewsGallerySection';
 import NewsVisualStoriesSection from '../components/NewsVisualStoriesSection';
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
-import type { Article, Video, Gallery } from '../../../services/api';
+import type { Article } from '../../../services/api';
 
 type Props = NativeStackScreenProps<NewsStackParamList, 'NewsMain'>;
 
-const BATCH_SIZE = 4;
-// Sub-cat scan (e.g. TAMIL, KOREAN) auto-fetches additional pages of /articles/list
-// when the current pages contain no matches. Cap so a sub-cat with zero articles
-// can't loop through the entire archive — show empty state once the cap is hit.
+// Number of articles surfaced in the Latest News preview before the
+// "VIEW ALL NEWS" CTA hands off to the full-list screen. Mirrors the
+// website's 3×4 = 12 tile grid: 1 hero up top + 11 compact rows reads as a
+// curated section on mobile and gives the user a clear stopping point
+// instead of endless mixed scroll.
+const LATEST_NEWS_PREVIEW = 12;
+
+// Sub-cat scan (e.g. TAMIL, KOREAN) auto-fetches additional pages of
+// /articles/list when the current pages contain no matches. Cap so a sub-cat
+// with zero articles can't loop through the entire archive.
 const MAX_AUTO_FETCH_PAGES = 4;
-const SECTION_CYCLE = ['videos', 'quiz', 'photos', 'stories'] as const;
-type SectionType = typeof SECTION_CYCLE[number];
-
-type FeedItem =
-  | { type: 'article_hero';    key: string; data: Article }
-  | { type: 'article_compact'; key: string; data: Article }
-  | { type: 'video_section';   key: string; pageIdx: number }
-  | { type: 'quiz_section';    key: string; quizIdx: number }
-  | { type: 'gallery_section'; key: string; pageIdx: number }
-  | { type: 'story_section';   key: string; pageIdx: number };
-
-function buildFeed(articles: Article[]): FeedItem[] {
-  const items: FeedItem[] = [];
-  const pageCounts: Record<SectionType, number> = { videos: 0, quiz: 0, photos: 0, stories: 0 };
-  let cycleIdx = 0;
-
-  for (let i = 0; i < articles.length; i += BATCH_SIZE) {
-    const batch = articles.slice(i, i + BATCH_SIZE);
-    if (batch.length === 0) break;
-
-    const chunkIdx = Math.floor(i / BATCH_SIZE);
-
-    batch.forEach((a, j) => {
-      // Mirror prototype: first chunk → j=0 is hero; later chunks → j=2 is hero
-      const isHero = (chunkIdx === 0 && j === 0) || (chunkIdx > 0 && j === 2);
-      items.push({
-        type: isHero ? 'article_hero' : 'article_compact',
-        key:  `article-${a.id}-${i + j}`,
-        data: a,
-      });
-    });
-
-    const sType = SECTION_CYCLE[cycleIdx % SECTION_CYCLE.length];
-    const pIdx  = pageCounts[sType];
-    switch (sType) {
-      case 'videos':
-        items.push({ type: 'video_section',   key: `videos-${chunkIdx}`,   pageIdx: pIdx });
-        break;
-      case 'quiz':
-        items.push({ type: 'quiz_section',    key: `quiz-${chunkIdx}`,     quizIdx: pIdx });
-        break;
-      case 'photos':
-        items.push({ type: 'gallery_section', key: `gallery-${chunkIdx}`,  pageIdx: pIdx });
-        break;
-      case 'stories':
-        items.push({ type: 'story_section',   key: `stories-${chunkIdx}`,  pageIdx: pIdx });
-        break;
-    }
-    pageCounts[sType]++;
-    cycleIdx++;
-  }
-
-  return items;
-}
-
-function getItemType(item: FeedItem): string {
-  return item.type;
-}
 
 export default function NewsScreen({ navigation, route }: Props) {
   // Home's "View all" pill passes initialCategory so the News tab opens
-  // pre-filtered to whatever chip was active on Home. We seed state from it
-  // and re-sync via the effect below so a *return* visit (the News stack
-  // preserves state across tab switches) still picks up the new param.
+  // pre-filtered to whatever chip was active on Home.
   const initialCategory = route.params?.initialCategory ?? 'all';
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [selectedSubCat,   setSelectedSubCat]   = useState('all');
@@ -117,13 +62,13 @@ export default function NewsScreen({ navigation, route }: Props) {
     // when the *param* changes, not a feedback loop on local state changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.params?.initialCategory]);
+
   const colors = useThemeStore((s) => s.colors);
-  const styles  = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  // /home/articles filters server-side, so when only a parent category is
-  // active (sub=ALL), we use that endpoint and skip the catId filter below.
+  // /home/articles filters server-side; when only a parent category is
+  // active (sub=ALL), use that endpoint and skip catId filter below.
   const usingHomeApi = selectedCategory !== 'all' && selectedSubCat === 'all';
-
   const isOnline = useIsOnline();
 
   const {
@@ -150,30 +95,50 @@ export default function NewsScreen({ navigation, route }: Props) {
     [selectedCategory],
   );
 
-  // Filter hierarchy matches the web prototype's NewsScreen:
+  // Filter hierarchy:
   //   ALL                → no filter (uses /articles/list, no server filter)
   //   parent, subcat=ALL → server-filtered via /home/articles, no client filter
   //   parent + subcat    → uses /articles/list, filter by catId === subId
   const filteredArticles: Article[] = useMemo(() => {
     if (selectedCategory === 'all') return articles;
     if (usingHomeApi) return articles;
-
     const subId = Number(selectedSubCat);
     return articles.filter((a) => a.catId === subId);
   }, [articles, selectedCategory, selectedSubCat, usingHomeApi]);
 
-  const feedItems: FeedItem[] = useMemo(() => buildFeed(filteredArticles), [filteredArticles]);
+  // Cap the preview so the user always reaches the VIEW ALL CTA on the same
+  // visual rhythm regardless of how many articles the API returned.
+  const previewArticles = useMemo(
+    () => filteredArticles.slice(0, LATEST_NEWS_PREVIEW),
+    [filteredArticles],
+  );
 
-  // True while the auto-fetch effect is hunting through pages for sub-cat
-  // matches. We treat this whole window as "loading" so the user doesn't
-  // briefly see "No articles found" + a footer spinner side-by-side between
-  // page fetches. Goes false once a match is found OR the page cap is hit.
+  // Treat the auto-fetch hunt as full-screen "loading" so the user never
+  // glimpses an empty Latest News section between page fetches.
   const loadedPages = data?.pages?.length ?? 0;
   const isScanning =
     filteredArticles.length === 0 &&
     articles.length > 0 &&
     hasNextPage &&
     loadedPages < MAX_AUTO_FETCH_PAGES;
+
+  // Auto-fetch for rare sub-cats (TAMIL, KOREAN) that may not match anything
+  // on page 1.
+  useEffect(() => {
+    if (
+      !isLoading &&
+      !isFetchingNextPage &&
+      hasNextPage &&
+      articles.length > 0 &&
+      filteredArticles.length === 0 &&
+      loadedPages < MAX_AUTO_FETCH_PAGES
+    ) {
+      fetchNextPage();
+    }
+  }, [
+    isLoading, isFetchingNextPage, hasNextPage,
+    articles.length, filteredArticles.length, loadedPages, fetchNextPage,
+  ]);
 
   const handleCategorySelect = useCallback((id: string) => {
     setSelectedCategory(id);
@@ -189,124 +154,19 @@ export default function NewsScreen({ navigation, route }: Props) {
     [navigation],
   );
 
-  const handleEndReached = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const handleViewAllNews = useCallback(() => {
+    navigation.navigate('ArticlesFullList', {
+      category: selectedCategory,
+      subCat: selectedSubCat,
+    });
+  }, [navigation, selectedCategory, selectedSubCat]);
 
-  // If the current sub-cat filter yields 0 matches but more pages are
-  // available, auto-fetch so a rare sub-chip (e.g. TAMIL, KOREAN) doesn't
-  // strand the user on an empty screen when the first page happens to have
-  // no matches. Capped at MAX_AUTO_FETCH_PAGES so an empty sub-cat can't
-  // chain-fetch the entire archive.
-  useEffect(() => {
-    if (
-      !isLoading &&
-      !isFetchingNextPage &&
-      hasNextPage &&
-      articles.length > 0 &&
-      filteredArticles.length === 0 &&
-      loadedPages < MAX_AUTO_FETCH_PAGES
-    ) {
-      fetchNextPage();
-    }
-  }, [
-    isLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    articles.length,
-    filteredArticles.length,
-    loadedPages,
-    fetchNextPage,
-  ]);
-
-  // Slice videos into pages of 4, cycling
-  const videoPool = videos.length > 0 ? videos : [];
-  function getVideoPage(pageIdx: number): Video[] {
-    if (videoPool.length === 0) return [];
-    const start = (pageIdx * 4) % videoPool.length;
-    const slice = videoPool.slice(start, start + 4);
-    return slice.length === 4 ? slice : [...slice, ...videoPool].slice(0, 4);
-  }
-
-  // Slice galleries into pages of 4, cycling
-  const galleryPool = galleries.length > 0 ? galleries : [];
-  function getGalleryPage(pageIdx: number): Gallery[] {
-    if (galleryPool.length === 0) return [];
-    const start = (pageIdx * 4) % galleryPool.length;
-    const slice = galleryPool.slice(start, start + 4);
-    return slice.length === 4 ? slice : [...galleryPool, ...galleryPool].slice(start, start + 4);
-  }
-
-  const renderItem = useCallback(
-    ({ item }: { item: FeedItem }) => {
-      switch (item.type) {
-        case 'article_hero':
-          return <NewsHeroCard article={item.data} onPress={handleArticlePress} />;
-
-        case 'article_compact':
-          return <ArticleCard article={item.data} onPress={handleArticlePress} />;
-
-        case 'video_section': {
-          const vids = getVideoPage(item.pageIdx);
-          return (
-            <NewsVideoSection
-              videos={vids}
-              onVideoPress={() => {}}
-              onSeeAll={() => {}}
-            />
-          );
-        }
-
-        case 'quiz_section': {
-          const quiz = QUIZZES[item.quizIdx % QUIZZES.length];
-          return <NewsQuizSection quiz={quiz} />;
-        }
-
-        case 'gallery_section': {
-          const gals = getGalleryPage(item.pageIdx);
-          return (
-            <NewsGallerySection
-              galleries={gals}
-              onSeeAll={() => {}}
-            />
-          );
-        }
-
-        case 'story_section': {
-          const batch = VISUAL_STORIES[item.pageIdx % VISUAL_STORIES.length];
-          return <NewsVisualStoriesSection stories={batch} onSeeAll={() => {}} />;
-        }
-
-        default:
-          return null;
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [handleArticlePress, videoPool, galleryPool],
-  );
-
-  // Footer spinner is for user-driven infinite scroll only — when we already
-  // have results and are loading more. Hidden during the sub-cat scan path
-  // (covered by the full-screen LoadingState below) so the user never sees
-  // a spinner pinned under the empty state.
-  const ListFooterComponent =
-    isFetchingNextPage && filteredArticles.length > 0 ? (
-      <View style={styles.footer}>
-        <ActivityIndicator size="small" color={colors.primary} />
-      </View>
-    ) : null;
-
-  // Genuine empty state — no retry button, since retrying won't change a
-  // category that simply has no articles. Offline gets a separate, retryable
-  // message because there *is* something to retry once connectivity returns.
-  const ListEmptyComponent = !isOnline ? (
-    <ErrorState
-      message="You're offline. Check your connection and try again."
-      onRetry={refetch}
-    />
-  ) : (
-    <ErrorState message="No articles found in this category." />
-  );
+  // Take the first 4 of each pool — same volume the old interleaved feed
+  // showed, but as a single horizontal carousel instead of repeated rows.
+  const previewVideos    = useMemo(() => videos.slice(0, 4),    [videos]);
+  const previewGalleries = useMemo(() => galleries.slice(0, 4), [galleries]);
+  const featuredQuiz     = QUIZZES[0];
+  const previewStories   = VISUAL_STORIES[0] ?? [];
 
   return (
     <View style={styles.screen}>
@@ -337,7 +197,7 @@ export default function NewsScreen({ navigation, route }: Props) {
         })}
       </ScrollView>
 
-      {/* Subcategory strip — appears when a category has subcategories */}
+      {/* Subcategory strip */}
       {subCats.length > 1 ? (
         <ScrollView
           horizontal
@@ -364,9 +224,7 @@ export default function NewsScreen({ navigation, route }: Props) {
         </ScrollView>
       ) : null}
 
-      {/* Persistent offline banner — visible whenever the device is offline,
-          even if we're showing cached articles. Tells the user the feed may
-          be stale and gives them a quick retry. */}
+      {/* Persistent offline banner */}
       {!isOnline ? (
         <Pressable style={styles.offlineBanner} onPress={() => refetch()}>
           <Text style={styles.offlineBannerText}>
@@ -375,7 +233,7 @@ export default function NewsScreen({ navigation, route }: Props) {
         </Pressable>
       ) : null}
 
-      {/* Content */}
+      {/* Body */}
       {isLoading || isScanning ? (
         <LoadingState />
       ) : isError ? (
@@ -388,18 +246,109 @@ export default function NewsScreen({ navigation, route }: Props) {
           onRetry={refetch}
         />
       ) : (
-        <FlashList
-          data={feedItems}
-          keyExtractor={(item) => item.key}
-          renderItem={renderItem}
-          getItemType={getItemType}
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={0.3}
-          ListFooterComponent={ListFooterComponent}
-          ListEmptyComponent={ListEmptyComponent}
-          contentContainerStyle={styles.listContent}
-        />
+        <ScrollView
+          style={styles.scrollBody}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── Latest News section ───────────────────────────────────── */}
+          <View style={styles.newsSection}>
+            <SectionHeader title="Latest News" colors={colors} styles={styles} />
+
+            {previewArticles.length === 0 ? (
+              <View style={styles.emptyNews}>
+                <Ionicons name="newspaper-outline" size={28} color={colors.textTertiary} />
+                <Text style={styles.emptyNewsText}>
+                  No articles found in this category.
+                </Text>
+              </View>
+            ) : (
+              <>
+                {previewArticles.map((article, i) =>
+                  i === 0 ? (
+                    <NewsHeroCard
+                      key={article.id}
+                      article={article}
+                      onPress={handleArticlePress}
+                    />
+                  ) : (
+                    <ArticleCard
+                      key={article.id}
+                      article={article}
+                      onPress={handleArticlePress}
+                    />
+                  ),
+                )}
+
+                {/* VIEW ALL CTA — only when there's plausibly more to view.
+                    A sub-cat that returned exactly 6 articles wouldn't grow on
+                    drill-in; hide the pill so the user isn't sent to a screen
+                    that mirrors what they're already looking at. */}
+                {filteredArticles.length >= LATEST_NEWS_PREVIEW &&
+                 (hasNextPage || filteredArticles.length > LATEST_NEWS_PREVIEW) ? (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.viewAllPill,
+                      pressed && styles.viewAllPillPressed,
+                    ]}
+                    onPress={handleViewAllNews}
+                    accessibilityRole="button"
+                    accessibilityLabel="View all news"
+                  >
+                    <Text style={styles.viewAllPillText}>View all news</Text>
+                    <Ionicons name="arrow-forward" size={15} color={colors.primary} />
+                  </Pressable>
+                ) : null}
+              </>
+            )}
+          </View>
+
+          {/* ── Videos ────────────────────────────────────────────────── */}
+          <NewsVideoSection
+            videos={previewVideos}
+            onVideoPress={() => {}}
+            onSeeAll={() => {}}
+          />
+
+          {/* ── Quiz ──────────────────────────────────────────────────── */}
+          {featuredQuiz ? <NewsQuizSection quiz={featuredQuiz} /> : null}
+
+          {/* ── Galleries ─────────────────────────────────────────────── */}
+          <NewsGallerySection
+            galleries={previewGalleries}
+            onSeeAll={() => {}}
+          />
+
+          {/* ── Visual stories ────────────────────────────────────────── */}
+          <NewsVisualStoriesSection
+            stories={previewStories}
+            onSeeAll={() => {}}
+          />
+        </ScrollView>
       )}
+    </View>
+  );
+}
+
+// ─── Section header (title + optional VIEW ALL pill) ─────────────────────────
+
+function SectionHeader({
+  title,
+  colors,
+  styles,
+}: {
+  title: string;
+  colors: ThemeColors;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionAccent} />
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {/* Tiny indicator dot mirrors the website's NEWS · ALL marker so the
+          screen visually tracks back to the live design without lifting the
+          web's three-column grid (which doesn't read well at phone width). */}
+      <View style={[styles.sectionDot, { backgroundColor: colors.primary }]} />
     </View>
   );
 }
@@ -476,13 +425,6 @@ function makeStyles(c: ThemeColors) {
       color: c.primary,
     },
 
-    listContent: {
-      paddingVertical: 10,
-    },
-    footer: {
-      paddingVertical: 16,
-      alignItems: 'center',
-    },
     offlineBanner: {
       backgroundColor: c.dangerSoft,
       borderTopWidth: 1,
@@ -497,6 +439,88 @@ function makeStyles(c: ThemeColors) {
       fontSize: 12.5,
       fontWeight: '600',
       color: c.danger,
+      letterSpacing: 0.2,
+    },
+
+    // Body scroll
+    scrollBody: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingTop: 6,
+      paddingBottom: 24,
+    },
+
+    // Latest News section
+    newsSection: {
+      paddingTop: 8,
+      paddingBottom: 12,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 14,
+      paddingTop: 4,
+      paddingBottom: 10,
+    },
+    sectionAccent: {
+      width: 3.5,
+      height: 16,
+      borderRadius: 2,
+      backgroundColor: c.primary,
+    },
+    sectionTitle: {
+      fontSize: 15,
+      fontWeight: '900',
+      color: c.text,
+      letterSpacing: -0.3,
+      flex: 1,
+    },
+    sectionDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+
+    // Empty state inside the news section (vs. full-screen ErrorState)
+    emptyNews: {
+      paddingVertical: 32,
+      alignItems: 'center',
+      gap: 8,
+    },
+    emptyNewsText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.textTertiary,
+      letterSpacing: 0.2,
+    },
+
+    // VIEW ALL CTA — minimal outlined pill matching HomeScreen so the two
+    // entry points feel like the same control. Soft primary tint, primary
+    // border + text, sized to fit naturally inside the section.
+    viewAllPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      alignSelf: 'center',
+      marginTop: 12,
+      marginBottom: 4,
+      paddingVertical: 10,
+      paddingHorizontal: 22,
+      borderRadius: 999,
+      backgroundColor: c.primarySoft,
+      borderWidth: 1,
+      borderColor: c.primary,
+    },
+    viewAllPillPressed: {
+      opacity: 0.7,
+    },
+    viewAllPillText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: c.primary,
       letterSpacing: 0.2,
     },
   });

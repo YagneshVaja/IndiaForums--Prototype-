@@ -4,7 +4,6 @@ import {
   Text,
   Pressable,
   ScrollView,
-  Linking,
   StyleSheet,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -17,12 +16,37 @@ import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import { useShowForumDetail } from '../hooks/useShowForumDetail';
 import LoadingState from '../../../components/ui/LoadingState';
-import type { Forum, ForumTopic } from '../../../services/api';
+import type {
+  ChannelOverviewShow,
+  Forum,
+  ForumTopic,
+} from '../../../services/api';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'ShowDetail'>;
 
-const SHOW_BASE_URL = 'https://www.indiaforums.com/show/';
 const DESC_PREVIEW_CHARS = 220;
+
+/** Trend tones for the week-over-week rank badge. */
+type TrendTone = 'up' | 'down' | 'flat' | 'new';
+
+interface RankTrend {
+  label: string;
+  tone: TrendTone;
+}
+
+/**
+ * Combine `rankCurrentWeek` + `rankLastWeek` into a single human label. The
+ * API guarantees rankLastWeek=0 when the show wasn't on last week's chart, so
+ * a 0 there with a positive current rank is genuinely new — not missing data.
+ */
+function computeRankTrend(curr: number, prev: number): RankTrend | null {
+  if (curr <= 0) return null;
+  if (prev <= 0) return { label: 'NEW THIS WEEK', tone: 'new' };
+  const delta = prev - curr; // positive = moved up the chart
+  if (delta > 0) return { label: `↑ ${delta} FROM LAST WEEK`, tone: 'up' };
+  if (delta < 0) return { label: `↓ ${Math.abs(delta)} FROM LAST WEEK`, tone: 'down' };
+  return { label: 'SAME AS LAST WEEK', tone: 'flat' };
+}
 
 /** Compact "1,651,745" → "1.6M" for stat chips. */
 function formatStat(n: number): string {
@@ -70,13 +94,11 @@ export default function ShowDetailScreen({ navigation, route }: Props) {
     [navigation, forum],
   );
 
-  const handleVisitWebsite = useCallback(() => {
-    Linking.openURL(`${SHOW_BASE_URL}${show.pageUrl}_${show.titleId}`).catch(
-      () => undefined,
-    );
-  }, [show]);
-
   const isRanked = show.rankCurrentWeek > 0;
+  const trend = useMemo(
+    () => computeRankTrend(show.rankCurrentWeek, show.rankLastWeek),
+    [show.rankCurrentWeek, show.rankLastWeek],
+  );
 
   return (
     <View style={styles.screen}>
@@ -141,6 +163,17 @@ export default function ShowDetailScreen({ navigation, route }: Props) {
                   <Text style={styles.heroBadgeText}>★ #{show.rankCurrentWeek} THIS WEEK</Text>
                 </View>
               ) : null}
+              {trend ? (
+                <View style={[styles.heroBadge, styles[`trend_${trend.tone}`]]}>
+                  <Text style={styles.heroBadgeText}>{trend.label}</Text>
+                </View>
+              ) : null}
+              {show.chaskaMeter ? (
+                <View style={[styles.heroBadge, styles.chaskaBadge]}>
+                  <Ionicons name="flame" size={11} color="#FFFFFF" style={styles.chaskaIcon} />
+                  <Text style={styles.heroBadgeText}>CHASKAMETER</Text>
+                </View>
+              ) : null}
               <View style={[styles.heroBadge, show.archive ? styles.statusOff : styles.statusOn]}>
                 <Text style={[styles.heroBadgeText, show.archive ? styles.statusOffText : styles.statusOnText]}>
                   {show.archive ? 'OFF AIR' : 'ON AIR'}
@@ -179,20 +212,37 @@ export default function ShowDetailScreen({ navigation, route }: Props) {
             <AboutBlock description={forum.description} styles={styles} />
           ) : null}
 
+          {/* Forum status pills — surface API flags (hot, locked) that the
+              old "visit on indiaforums.com" footer hid. Renders only when at
+              least one flag is set; otherwise the section is silent. */}
+          {forum && (forum.hot || forum.locked) ? (
+            <ForumStatusRow forum={forum} brand={brand} styles={styles} />
+          ) : null}
+
           {/* Primary CTA — open the discussion forum */}
           {forum ? (
             <Pressable
               style={({ pressed }) => [
                 styles.discussCta,
-                { backgroundColor: brand },
+                { backgroundColor: forum.locked ? '#3A3F4B' : brand },
                 pressed && styles.discussCtaPressed,
               ]}
               onPress={handleOpenForum}
               accessibilityRole="button"
-              accessibilityLabel={`Open ${show.titleName} discussion forum`}
+              accessibilityLabel={
+                forum.locked
+                  ? `View ${show.titleName} locked discussion forum`
+                  : `Open ${show.titleName} discussion forum`
+              }
             >
-              <Ionicons name="chatbubbles" size={18} color="#FFFFFF" />
-              <Text style={styles.discussCtaText}>OPEN DISCUSSION FORUM</Text>
+              <Ionicons
+                name={forum.locked ? 'lock-closed' : 'chatbubbles'}
+                size={18}
+                color="#FFFFFF"
+              />
+              <Text style={styles.discussCtaText}>
+                {forum.locked ? 'VIEW LOCKED FORUM' : 'OPEN DISCUSSION FORUM'}
+              </Text>
               <Text style={styles.discussCtaArrow}>→</Text>
             </Pressable>
           ) : !isLoading && show.forumId === 0 ? (
@@ -250,21 +300,40 @@ export default function ShowDetailScreen({ navigation, route }: Props) {
             </View>
           ) : null}
 
-          {/* External link footer */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.footerLink,
-              pressed && styles.footerLinkPressed,
-            ]}
-            onPress={handleVisitWebsite}
-            accessibilityRole="link"
-            accessibilityLabel="Visit on indiaforums.com"
-          >
-            <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
-            <Text style={styles.footerLinkText}>Visit show page on indiaforums.com</Text>
-          </Pressable>
         </View>
       </ScrollView>
+    </View>
+  );
+}
+
+// ─── Forum status pills ─────────────────────────────────────────────────────
+
+interface ForumStatusRowProps {
+  forum: Forum;
+  brand: string;
+  styles: ReturnType<typeof makeStyles>;
+}
+
+/**
+ * Compact info pills for the API's `hot` and `locked` flags. Lives just
+ * above the Discuss CTA so the locked state is visible before the user
+ * lands on a read-only thread.
+ */
+function ForumStatusRow({ forum, brand, styles }: ForumStatusRowProps) {
+  return (
+    <View style={styles.forumStatusRow}>
+      {forum.hot ? (
+        <View style={[styles.statusPill, { borderColor: `${brand}55`, backgroundColor: `${brand}14` }]}>
+          <Ionicons name="flame" size={13} color={brand} />
+          <Text style={[styles.statusPillText, { color: brand }]}>TRENDING</Text>
+        </View>
+      ) : null}
+      {forum.locked ? (
+        <View style={styles.statusPillLocked}>
+          <Ionicons name="lock-closed" size={12} color="#FFFFFF" />
+          <Text style={[styles.statusPillText, { color: '#FFFFFF' }]}>LOCKED · READ ONLY</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -273,7 +342,7 @@ export default function ShowDetailScreen({ navigation, route }: Props) {
 
 interface StatsRowProps {
   forum: Forum;
-  show: { rankCurrentWeek: number };
+  show: ChannelOverviewShow;
   styles: ReturnType<typeof makeStyles>;
 }
 
@@ -282,7 +351,14 @@ function StatsRow({ forum, show, styles }: StatsRowProps) {
   if (forum.postCount > 0) stats.push({ label: 'POSTS', value: formatStat(forum.postCount) });
   if (forum.topicCount > 0) stats.push({ label: 'TOPICS', value: formatStat(forum.topicCount) });
   if (forum.followCount > 0) stats.push({ label: 'FANS', value: formatStat(forum.followCount) });
-  if (show.rankCurrentWeek > 0) stats.push({ label: 'RANK', value: `#${show.rankCurrentWeek}` });
+  if (show.rankCurrentWeek > 0) stats.push({ label: 'WEEK', value: `#${show.rankCurrentWeek}` });
+  // Forum-wide rank — the show's standing across *all* IndiaForums forums,
+  // distinct from the weekly ChaskaMeter chart. rankDisplay is pre-formatted
+  // ("1,234") on the API; fall back to the bare integer otherwise.
+  if (forum.rank > 0) {
+    const value = forum.rankDisplay ? `#${forum.rankDisplay}` : `#${forum.rank}`;
+    stats.push({ label: 'FORUM', value });
+  }
   if (stats.length === 0) return null;
   return (
     <View style={styles.statsRow}>
@@ -414,6 +490,31 @@ function makeStyles(c: ThemeColors, _topInset: number, _brand: string) {
     },
     statusOffText: {
       color: '#FFFFFF',
+    },
+    // Trend-tone hero badges. Tones intentionally mirror the website's
+    // up/down/equal arrows for the weekly chart.
+    trend_up: {
+      backgroundColor: 'rgba(67, 194, 129, 0.95)',
+    },
+    trend_down: {
+      backgroundColor: 'rgba(229, 90, 90, 0.95)',
+    },
+    trend_flat: {
+      backgroundColor: 'rgba(255,255,255,0.18)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.5)',
+    },
+    trend_new: {
+      backgroundColor: 'rgba(245, 158, 11, 0.95)',
+    },
+    chaskaBadge: {
+      backgroundColor: 'rgba(214, 51, 132, 0.95)',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    chaskaIcon: {
+      marginRight: 0,
     },
     heroTitle: {
       fontSize: 26,
@@ -638,22 +739,36 @@ function makeStyles(c: ThemeColors, _topInset: number, _brand: string) {
       letterSpacing: 0.8,
     },
 
-    // External link footer
-    footerLink: {
+    // Forum status pill row — TRENDING / LOCKED indicators sourced from the
+    // forum payload. Sits between About and the discuss CTA so users see
+    // forum state before they tap in.
+    forumStatusRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    statusPill: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
       gap: 6,
-      paddingVertical: 14,
-      marginTop: 4,
+      paddingVertical: 7,
+      paddingHorizontal: 11,
+      borderRadius: 999,
+      borderWidth: 1,
     },
-    footerLinkPressed: {
-      opacity: 0.6,
+    statusPillLocked: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 7,
+      paddingHorizontal: 11,
+      borderRadius: 999,
+      backgroundColor: '#3A3F4B',
     },
-    footerLinkText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: c.textSecondary,
+    statusPillText: {
+      fontSize: 10.5,
+      fontWeight: '900',
+      letterSpacing: 1,
     },
   });
 }

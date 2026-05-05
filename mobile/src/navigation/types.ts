@@ -129,6 +129,13 @@ export type NewsStackParamList = {
   NewsMain: { initialCategory?: string } | undefined;
   ArticleDetail: { id: string; thumbnailUrl?: string; title?: string };
   CategoryFeed: { category: string };
+  /**
+   * Pushed from the NewsMain "VIEW ALL NEWS" CTA. Pure article infinite-scroll
+   * for the currently selected category + subcategory — no interleaved video /
+   * quiz / gallery sections. Carries the active filter forward so the destination
+   * matches what the user was just looking at.
+   */
+  ArticlesFullList: { category: string; subCat: string };
 };
 
 export type ForumsStackParamList = {

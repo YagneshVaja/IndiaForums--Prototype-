@@ -37,8 +37,6 @@ const SHOW_TABS: Array<{ id: ChannelArchiveFilter; label: string }> = [
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'ChannelDetail'>;
 
-const CHANNEL_BASE_URL = 'https://www.indiaforums.com/channel/';
-
 // Brand-color accents per channel — drives the gradient hero, sticky tab
 // underline, and rank-pill borders. Same palette as Home channels section.
 const BRAND_COLOR: Record<number, string> = {
@@ -64,6 +62,20 @@ function formatStat(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
   if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
   return String(n);
+}
+
+/** Strip protocol + www + trailing slash so "https://www.starplus.com/" → "starplus.com". */
+function prettyDomain(url: string): string {
+  return url
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/^www\./i, '')
+    .replace(/\/+$/, '');
+}
+
+/** API returns bare hosts on some channels; ensure a scheme before handing to Linking. */
+function withScheme(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
 
 export default function ChannelDetailScreen({ navigation, route }: Props) {
@@ -96,10 +108,9 @@ export default function ChannelDetailScreen({ navigation, route }: Props) {
     [navigation, data?.channel.channelName, brand],
   );
 
-  const handleVisitWebsite = useCallback((channel: ChannelOverviewMeta) => {
-    Linking.openURL(`${CHANNEL_BASE_URL}${channel.pageUrl}_${channel.channelId}`).catch(
-      () => undefined,
-    );
+  const handleVisitWebsite = useCallback((website: string) => {
+    if (!website) return;
+    Linking.openURL(withScheme(website)).catch(() => undefined);
   }, []);
 
   // Sort: on the ON AIR tab, surface ranked shows first (chaska weekly
@@ -195,6 +206,18 @@ export default function ChannelDetailScreen({ navigation, route }: Props) {
                 <AboutBlock description={data.channel.description} styles={styles} />
               ) : null}
 
+              {/* Official website — only when the API gives us one. Replaces
+                  the old "Visit on indiaforums.com" external link so the
+                  channel's *own* site is the destination, not our domain. */}
+              {data.channel.website ? (
+                <WebsiteRow
+                  website={data.channel.website}
+                  brand={brand}
+                  styles={styles}
+                  onPress={handleVisitWebsite}
+                />
+              ) : null}
+
               {/* Shows section header */}
               <View style={styles.showsHeaderRow}>
                 <Text style={styles.showsHeader}>Shows</Text>
@@ -267,26 +290,42 @@ export default function ChannelDetailScreen({ navigation, route }: Props) {
                 </View>
               )}
 
-              {/* External link footer */}
-              <Pressable
-                style={({ pressed }) => [
-                  styles.footerLink,
-                  pressed && styles.footerLinkPressed,
-                ]}
-                onPress={() => handleVisitWebsite(data.channel)}
-                accessibilityRole="link"
-                accessibilityLabel={`Visit ${data.channel.channelName} on indiaforums.com`}
-              >
-                <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
-                <Text style={styles.footerLinkText}>
-                  Visit {data.channel.channelName} on indiaforums.com
-                </Text>
-              </Pressable>
             </>
           ) : null}
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+// ─── Official website row ───────────────────────────────────────────────────
+
+interface WebsiteRowProps {
+  website: string;
+  brand: string;
+  styles: ReturnType<typeof makeStyles>;
+  onPress: (website: string) => void;
+}
+
+function WebsiteRow({ website, brand, styles, onPress }: WebsiteRowProps) {
+  return (
+    <Pressable
+      onPress={() => onPress(website)}
+      style={({ pressed }) => [styles.websiteRow, pressed && styles.websiteRowPressed]}
+      accessibilityRole="link"
+      accessibilityLabel={`Open ${prettyDomain(website)} in browser`}
+    >
+      <View style={[styles.websiteIcon, { backgroundColor: `${brand}1A`, borderColor: `${brand}33` }]}>
+        <Ionicons name="globe-outline" size={18} color={brand} />
+      </View>
+      <View style={styles.websiteText}>
+        <Text style={styles.websiteLabel}>OFFICIAL WEBSITE</Text>
+        <Text style={styles.websiteDomain} numberOfLines={1}>
+          {prettyDomain(website)}
+        </Text>
+      </View>
+      <Ionicons name="open-outline" size={18} color={`${brand}B3`} />
+    </Pressable>
   );
 }
 
@@ -528,7 +567,10 @@ function makeStyles(c: ThemeColors, topInset: number) {
     // Sticky channel switcher
     switcherWrap: {
       backgroundColor: c.bg,
-      paddingTop: 14,
+      // topInset keeps the chips clear of the status bar once this row sticks
+      // to the top of the ScrollView — without it, the active chip is clipped
+      // by the time/battery indicators on notched devices.
+      paddingTop: topInset + 14,
       paddingBottom: 14,
       borderBottomWidth: 1,
       borderBottomColor: c.border,
@@ -801,22 +843,46 @@ function makeStyles(c: ThemeColors, topInset: number) {
       minHeight: 50,
     },
 
-    // External link footer
-    footerLink: {
+    // Official website row — paired with About/Stats; surfaces the channel's
+    // own site (from the API) as a tappable card, not a link to indiaforums.com.
+    websiteRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      gap: 12,
+      backgroundColor: c.cardElevated,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.border,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+    },
+    websiteRowPressed: {
+      opacity: 0.7,
+      transform: [{ scale: 0.99 }],
+    },
+    websiteIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      borderWidth: 1,
+      alignItems: 'center',
       justifyContent: 'center',
-      gap: 6,
-      paddingVertical: 14,
-      marginTop: 8,
     },
-    footerLinkPressed: {
-      opacity: 0.6,
+    websiteText: {
+      flex: 1,
+      gap: 2,
     },
-    footerLinkText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: c.textSecondary,
+    websiteLabel: {
+      fontSize: 9.5,
+      fontWeight: '900',
+      color: c.textTertiary,
+      letterSpacing: 1.2,
+    },
+    websiteDomain: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: c.text,
+      letterSpacing: -0.2,
     },
   });
 }
