@@ -1,11 +1,10 @@
 export type OnboardingStackParamList = {
-  Splash: undefined;
   OnboardingSlides: undefined;
   GetStarted: undefined;
 };
 
 export type RootStackParamList = {
-  /** First-time users — shows Splash → Onboarding → GetStarted */
+  /** First-time users — Onboarding slides → GetStarted */
   Onboarding: undefined;
   /** Unauthenticated browsing (read-only) */
   Guest: undefined;

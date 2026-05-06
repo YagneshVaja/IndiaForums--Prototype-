@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import {
-  View,
   Image,
   Text,
   ActivityIndicator,
@@ -9,14 +8,17 @@ import {
   Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { OnboardingStackParamList } from '../../../navigation/types';
-import { useThemeStore } from '../../../store/themeStore';
-import type { ThemeColors } from '../../../theme/tokens';
+import { useThemeStore } from '../store/themeStore';
+import type { ThemeColors } from '../theme/tokens';
 
-const SPLASH_LOGO = require('../../../../assets/splash-logo.png');
+const SPLASH_LOGO = require('../../assets/splash-logo.png');
 
-type Props = NativeStackScreenProps<OnboardingStackParamList, 'Splash'>;
+interface Props {
+  /** Called once after holdMs has elapsed. The visual keeps animating. */
+  onReady?: () => void;
+  /** Minimum visible duration in ms. Default 2000. */
+  holdMs?: number;
+}
 
 const SPARKS = [
   { color: '#3558F0', size: 14, top: '18%' as const, left: '14%' as const, delay: 0 },
@@ -149,7 +151,7 @@ const sharedStyles = StyleSheet.create({
   },
 });
 
-export default function SplashScreen({ navigation }: Props) {
+export default function BrandSplash({ onReady, holdMs = 2000 }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -204,8 +206,8 @@ export default function SplashScreen({ navigation }: Props) {
     ]).start();
 
     const timer = setTimeout(() => {
-      navigation.replace('OnboardingSlides');
-    }, 2800);
+      onReady?.();
+    }, holdMs);
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -218,7 +220,6 @@ export default function SplashScreen({ navigation }: Props) {
       end={{ x: 0.5, y: 1 }}
       style={styles.container}
     >
-      {/* Floating colored sparks scattered around the screen */}
       {SPARKS.map((s, i) => {
         const { color, size, delay, ...positionStyle } = s;
         return (
@@ -232,12 +233,10 @@ export default function SplashScreen({ navigation }: Props) {
         );
       })}
 
-      {/* Three concentric glow rings — staggered pulse creates a ripple feel */}
       <GlowRing size={380} baseOpacity={0.10} pulseDelay={0} />
       <GlowRing size={300} baseOpacity={0.16} pulseDelay={150} />
       <GlowRing size={220} baseOpacity={0.22} pulseDelay={300} />
 
-      {/* Logo lockup */}
       <Animated.View
         style={[
           styles.logoArea,
@@ -250,7 +249,6 @@ export default function SplashScreen({ navigation }: Props) {
         <Image source={SPLASH_LOGO} style={styles.logo} resizeMode="contain" />
       </Animated.View>
 
-      {/* Tagline below logo, fades in slightly delayed */}
       <Animated.View
         style={[
           styles.taglineWrap,
@@ -263,7 +261,6 @@ export default function SplashScreen({ navigation }: Props) {
         <Text style={styles.tagline}>Your fan community awaits</Text>
       </Animated.View>
 
-      {/* Loader at bottom, fades in last */}
       <Animated.View style={[styles.loader, { opacity: loaderOpacity }]}>
         <ActivityIndicator color="#3558F0" size="small" />
       </Animated.View>
