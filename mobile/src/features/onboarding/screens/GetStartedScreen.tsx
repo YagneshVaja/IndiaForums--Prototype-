@@ -44,7 +44,7 @@ const FEATURES = [
   },
 ] as const;
 
-const CHANNELS = ['Star Plus', 'Zee TV', 'Sony', 'Colors', 'SAB', '& more'] as const;
+const CHANNELS = ['Star Plus', 'Zee TV', 'Sony', 'Colors', 'SAB'] as const;
 
 export default function GetStartedScreen({ navigation }: Props) {
   const colors = useThemeStore((s) => s.colors);
@@ -90,11 +90,9 @@ export default function GetStartedScreen({ navigation }: Props) {
       end={{ x: 0, y: 1 }}
       style={styles.container}
     >
-      {/* Decorative accent dots */}
+      {/* Two symmetric top accent dots — subtle warmth, no visual clutter */}
       <View style={[styles.spark, { top: '10%', left: '14%', width: 14, height: 14, backgroundColor: '#3558F0' }]} />
       <View style={[styles.spark, { top: '16%', right: '18%', width: 10, height: 10, backgroundColor: '#EC4899' }]} />
-      <View style={[styles.spark, { top: '52%', right: '8%',  width: 7,  height: 7,  backgroundColor: '#10B981' }]} />
-      <View style={[styles.spark, { top: '56%', left: '8%',   width: 9,  height: 9,  backgroundColor: '#F59E0B' }]} />
 
       {/* Header — logo + tagline */}
       <Animated.View
