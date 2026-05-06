@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Image,
+  Text,
   ActivityIndicator,
   StyleSheet,
   Animated,
@@ -17,15 +18,145 @@ const SPLASH_LOGO = require('../../../../assets/splash-logo.png');
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Splash'>;
 
+const SPARKS = [
+  { color: '#3558F0', size: 14, top: '18%' as const, left: '14%' as const, delay: 0 },
+  { color: '#EC4899', size: 10, top: '24%' as const, right: '20%' as const, delay: 200 },
+  { color: '#F59E0B', size: 8,  top: '38%' as const, right: '12%' as const, delay: 400 },
+  { color: '#10B981', size: 10, bottom: '32%' as const, left: '16%' as const, delay: 600 },
+  { color: '#8B5CF6', size: 12, bottom: '24%' as const, right: '24%' as const, delay: 300 },
+  { color: '#3558F0', size: 6,  top: '54%' as const, left: '10%' as const, delay: 500 },
+] as const;
+
+function FloatingSpark({
+  color,
+  size,
+  delay,
+  style,
+}: {
+  color: string;
+  size: number;
+  delay: number;
+  style: object;
+}) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(400 + delay),
+      Animated.timing(opacity, {
+        toValue: 0.7,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    const float = Animated.loop(
+      Animated.sequence([
+        Animated.timing(translateY, {
+          toValue: -4,
+          duration: 1800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 1800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    float.start();
+    return () => float.stop();
+  }, [delay, opacity, translateY]);
+
+  return (
+    <Animated.View
+      style={[
+        sharedStyles.spark,
+        style,
+        {
+          width: size,
+          height: size,
+          backgroundColor: color,
+          opacity,
+          transform: [{ translateY }],
+        },
+      ]}
+    />
+  );
+}
+
+function GlowRing({ size, baseOpacity, pulseDelay }: { size: number; baseOpacity: number; pulseDelay: number }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.85)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(150 + pulseDelay),
+      Animated.timing(opacity, {
+        toValue: baseOpacity,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, {
+          toValue: 1.06,
+          duration: 1600 + pulseDelay,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 0.94,
+          duration: 1600 + pulseDelay,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [baseOpacity, pulseDelay, opacity, scale]);
+
+  return (
+    <Animated.View
+      style={[
+        sharedStyles.glowRing,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          opacity,
+          transform: [{ scale }],
+        },
+      ]}
+    />
+  );
+}
+
+const sharedStyles = StyleSheet.create({
+  glowRing: {
+    position: 'absolute',
+    backgroundColor: 'rgba(53,88,240,0.18)',
+  },
+  spark: {
+    position: 'absolute',
+    borderRadius: 999,
+  },
+});
+
 export default function SplashScreen({ navigation }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0.88)).current;
-  const logoY = useRef(new Animated.Value(16)).current;
-  const glowOpacity = useRef(new Animated.Value(0)).current;
-  const glowPulse = useRef(new Animated.Value(1)).current;
-  const sparkOpacity = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.86)).current;
+  const logoY = useRef(new Animated.Value(20)).current;
+  const taglineOpacity = useRef(new Animated.Value(0)).current;
+  const taglineY = useRef(new Animated.Value(8)).current;
   const loaderOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -37,34 +168,33 @@ export default function SplashScreen({ navigation }: Props) {
       }),
       Animated.spring(logoScale, {
         toValue: 1,
-        damping: 14,
+        damping: 13,
         stiffness: 100,
         useNativeDriver: true,
       }),
       Animated.spring(logoY, {
         toValue: 0,
-        damping: 14,
+        damping: 13,
         stiffness: 100,
         useNativeDriver: true,
       }),
       Animated.sequence([
-        Animated.delay(200),
-        Animated.timing(glowOpacity, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
+        Animated.delay(700),
+        Animated.parallel([
+          Animated.timing(taglineOpacity, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(taglineY, {
+            toValue: 0,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ]),
       ]),
       Animated.sequence([
-        Animated.delay(500),
-        Animated.timing(sparkOpacity, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.sequence([
-        Animated.delay(800),
+        Animated.delay(1100),
         Animated.timing(loaderOpacity, {
           toValue: 1,
           duration: 400,
@@ -73,74 +203,41 @@ export default function SplashScreen({ navigation }: Props) {
       ]),
     ]).start();
 
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowPulse, {
-          toValue: 1.08,
-          duration: 1400,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowPulse, {
-          toValue: 1,
-          duration: 1400,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    pulse.start();
-
     const timer = setTimeout(() => {
       navigation.replace('OnboardingSlides');
-    }, 2400);
+    }, 2800);
 
-    return () => {
-      clearTimeout(timer);
-      pulse.stop();
-    };
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <LinearGradient
-      colors={['#FFFFFF', '#F0F4FF', '#C9D6FF']}
+      colors={['#FFFFFF', '#EEF2FF', '#C9D6FF']}
       start={{ x: 0.5, y: 0 }}
       end={{ x: 0.5, y: 1 }}
       style={styles.container}
     >
-      <Animated.View
-        style={[
-          styles.spark,
-          styles.sparkTopLeft,
-          { opacity: sparkOpacity },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.spark,
-          styles.sparkBottomRight,
-          { opacity: sparkOpacity },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.spark,
-          styles.sparkSide,
-          { opacity: sparkOpacity },
-        ]}
-      />
+      {/* Floating colored sparks scattered around the screen */}
+      {SPARKS.map((s, i) => {
+        const { color, size, delay, ...positionStyle } = s;
+        return (
+          <FloatingSpark
+            key={i}
+            color={color}
+            size={size}
+            delay={delay}
+            style={positionStyle}
+          />
+        );
+      })}
 
-      <Animated.View
-        style={[
-          styles.glow,
-          {
-            opacity: glowOpacity,
-            transform: [{ scale: glowPulse }],
-          },
-        ]}
-      />
+      {/* Three concentric glow rings — staggered pulse creates a ripple feel */}
+      <GlowRing size={380} baseOpacity={0.10} pulseDelay={0} />
+      <GlowRing size={300} baseOpacity={0.16} pulseDelay={150} />
+      <GlowRing size={220} baseOpacity={0.22} pulseDelay={300} />
 
+      {/* Logo lockup */}
       <Animated.View
         style={[
           styles.logoArea,
@@ -153,8 +250,22 @@ export default function SplashScreen({ navigation }: Props) {
         <Image source={SPLASH_LOGO} style={styles.logo} resizeMode="contain" />
       </Animated.View>
 
+      {/* Tagline below logo, fades in slightly delayed */}
+      <Animated.View
+        style={[
+          styles.taglineWrap,
+          {
+            opacity: taglineOpacity,
+            transform: [{ translateY: taglineY }],
+          },
+        ]}
+      >
+        <Text style={styles.tagline}>Your fan community awaits</Text>
+      </Animated.View>
+
+      {/* Loader at bottom, fades in last */}
       <Animated.View style={[styles.loader, { opacity: loaderOpacity }]}>
-        <ActivityIndicator color={colors.primary} size="small" />
+        <ActivityIndicator color="#3558F0" size="small" />
       </Animated.View>
     </LinearGradient>
   );
@@ -167,13 +278,6 @@ function makeStyles(_c: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    glow: {
-      position: 'absolute',
-      width: 320,
-      height: 320,
-      borderRadius: 999,
-      backgroundColor: 'rgba(53,88,240,0.16)',
-    },
     logoArea: {
       alignItems: 'center',
     },
@@ -181,37 +285,20 @@ function makeStyles(_c: ThemeColors) {
       width: 280,
       height: 204,
     },
+    taglineWrap: {
+      position: 'absolute',
+      bottom: '28%',
+      alignItems: 'center',
+    },
+    tagline: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#475569',
+      letterSpacing: 0.4,
+    },
     loader: {
       position: 'absolute',
       bottom: 64,
-    },
-    spark: {
-      position: 'absolute',
-      borderRadius: 999,
-    },
-    sparkTopLeft: {
-      width: 12,
-      height: 12,
-      top: '22%',
-      left: '18%',
-      backgroundColor: '#3558F0',
-      opacity: 0.5,
-    },
-    sparkBottomRight: {
-      width: 8,
-      height: 8,
-      bottom: '28%',
-      right: '20%',
-      backgroundColor: '#EC4899',
-      opacity: 0.5,
-    },
-    sparkSide: {
-      width: 6,
-      height: 6,
-      top: '36%',
-      right: '14%',
-      backgroundColor: '#F59E0B',
-      opacity: 0.5,
     },
   });
 }
