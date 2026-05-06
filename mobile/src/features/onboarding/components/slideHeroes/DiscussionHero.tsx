@@ -1,41 +1,24 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, Animated, Easing } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-const LOGO_ICON = require('../../../../../assets/icon.png');
 
 // Static onboarding marketing content — NOT live data.
 //
-// Show names + activity labels were sourced from indiaforums.com's
-// homepage trending shows section on 2026-05-06. Onboarding runs before
-// login and needs to work offline, so we don't fetch this at runtime;
-// these are sample/illustrative values that show what the app offers.
+// Show names + content-type labels are sourced from indiaforums.com's
+// homepage trending shows section. Onboarding runs before login and
+// needs to work offline, so nothing here implies real-time signals
+// (no "Live now", no pulsing dots, no broadcast badges). Each row is
+// purely a sample card showing what type of forum the user will find.
 //
-// Refresh cadence: review every 3-4 months. Top shows on indian TV churn
-// faster than the rest of the brand content. If a show here goes off air
-// or stops trending, swap it for the current top show on the live site.
+// Refresh cadence: review every 3-4 months. Top shows on Indian TV churn
+// faster than the rest of the brand content.
 //
 // Last refreshed: 2026-05-06.
 const SHOWS = [
-  { name: 'Anupamaa',       channel: 'Star Plus', activity: 'Live now',     icon: 'chatbubbles' as const, tint: '#3558F0', isLive: true  },
-  { name: 'Bhagya Lakshmi', channel: 'Zee TV',    activity: 'Fan fiction',  icon: 'book'        as const, tint: '#10B981', isLive: false },
-  { name: 'Udne Ki Aasha',  channel: 'Star Plus', activity: 'New replies',  icon: 'chatbubble'  as const, tint: '#F59E0B', isLive: false },
+  { name: 'Anupamaa',       channel: 'Star Plus', kind: 'Show forum',   icon: 'chatbubbles' as const, tint: '#3558F0' },
+  { name: 'Bhagya Lakshmi', channel: 'Zee TV',    kind: 'Fan fiction',  icon: 'book'        as const, tint: '#10B981' },
+  { name: 'Udne Ki Aasha',  channel: 'Star Plus', kind: 'Show forum',   icon: 'chatbubble'  as const, tint: '#F59E0B' },
 ];
-
-function LiveDot() {
-  const opacity = useRef(new Animated.Value(0.3)).current;
-  useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, { toValue: 1,   duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.3, duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ]),
-    );
-    pulse.start();
-    return () => pulse.stop();
-  }, [opacity]);
-  return <Animated.View style={[styles.liveDot, { opacity }]} />;
-}
 
 export default function DiscussionHero() {
   return (
@@ -47,16 +30,8 @@ export default function DiscussionHero() {
           </View>
           <View style={styles.rowText}>
             <Text style={styles.showName}>{s.name}</Text>
-            <Text style={styles.channelName}>{s.channel} · {s.activity}</Text>
+            <Text style={styles.channelName}>{s.channel} · {s.kind}</Text>
           </View>
-          {s.isLive ? (
-            <View style={styles.liveBadge}>
-              <LiveDot />
-              <Text style={styles.liveText}>LIVE</Text>
-            </View>
-          ) : (
-            <Image source={LOGO_ICON} style={styles.brandIcon} resizeMode="contain" />
-          )}
         </View>
       ))}
     </View>
@@ -105,30 +80,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#64748B',
     letterSpacing: 0.1,
-  },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#10B981',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-  },
-  liveText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.6,
-  },
-  brandIcon: {
-    width: 28,
-    height: 28,
   },
 });
