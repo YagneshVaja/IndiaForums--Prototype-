@@ -58,11 +58,17 @@ export default function GetStartedScreen({ navigation }: Props) {
 
   return (
     <LinearGradient
-      colors={['#FFF7ED', '#FFFFFF']}
+      colors={['#FFF7ED', '#FED7AA', '#FFFFFF']}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.container}
     >
+      {/* Decorative accent dots */}
+      <View style={[styles.spark, { top: '14%', left: '18%', width: 14, height: 14, backgroundColor: '#3558F0' }]} />
+      <View style={[styles.spark, { top: '22%', right: '20%', width: 10, height: 10, backgroundColor: '#EC4899' }]} />
+      <View style={[styles.spark, { top: '36%', right: '14%', width: 7,  height: 7,  backgroundColor: '#10B981' }]} />
+      <View style={[styles.spark, { top: '40%', left: '10%', width: 9,  height: 9,  backgroundColor: '#F59E0B' }]} />
+
       <Animated.View style={[styles.header, {
         opacity: headerOpacity,
         transform: [{ translateY: headerY }],
@@ -180,6 +186,11 @@ function makeStyles(c: ThemeColors) {
       fontSize: 15,
       fontWeight: '600',
       color: c.textSecondary,
+    },
+    spark: {
+      position: 'absolute',
+      borderRadius: 999,
+      opacity: 0.55,
     },
   });
 }

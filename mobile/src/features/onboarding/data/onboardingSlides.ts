@@ -6,7 +6,7 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     title: "India's Biggest\nFan Community",
     description:
       'Millions of fans discussing movies, shows, and celebrities — all in one place.',
-    gradientStops: ['#F0F4FF', '#C9D6FF'],
+    gradientStops: ['#FFFFFF', '#A7B8FF'],
     accent: '#3558F0',
   },
   {
@@ -14,7 +14,7 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     title: 'Forums & Fan\nFiction',
     description:
       'Join thousands of active discussions or write your own fan stories.',
-    gradientStops: ['#EEFAF6', '#B8EBDB'],
+    gradientStops: ['#FFFFFF', '#86EFAC'],
     accent: '#10B981',
   },
   {
@@ -22,7 +22,7 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     title: 'Breaking News,\nEvery Hour',
     description:
       'Stay updated with the latest in Bollywood, OTT, and Indian entertainment.',
-    gradientStops: ['#FFF7ED', '#FFD9A8'],
+    gradientStops: ['#FFFFFF', '#FCD34D'],
     accent: '#F59E0B',
   },
 ];

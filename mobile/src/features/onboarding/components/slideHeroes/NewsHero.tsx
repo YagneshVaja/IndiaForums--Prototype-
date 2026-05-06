@@ -1,47 +1,59 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const HERO_SIZE = 300;
+const LOGO_ICON = require('../../../../../assets/icon.png');
 
-const CHIP_DOT_COLORS = ['#3558F0', '#EC4899', '#10B981'] as const;
+const HERO_SIZE = 320;
 
-function FloatingChip({
-  delay,
-  dotColor,
-  style,
-}: {
-  delay: number;
-  dotColor: string;
-  style: object;
-}) {
-  const translateY = useRef(new Animated.Value(0)).current;
+function PulsingBadge() {
+  const pulse = useRef(new Animated.Value(1)).current;
+  const dotOpacity = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
-    const loop = Animated.loop(
+    const badgePulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(translateY, {
-          toValue: -3,
-          duration: 1250,
-          delay,
+        Animated.timing(pulse, {
+          toValue: 1.06,
+          duration: 700,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 1250,
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 700,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ]),
     );
-    loop.start();
-    return () => loop.stop();
-  }, [delay, translateY]);
+    const dotPulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(dotOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dotOpacity, {
+          toValue: 0.3,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    badgePulse.start();
+    dotPulse.start();
+    return () => {
+      badgePulse.stop();
+      dotPulse.stop();
+    };
+  }, [pulse, dotOpacity]);
 
   return (
-    <Animated.View style={[styles.chip, style, { transform: [{ translateY }] }]}>
-      <View style={[styles.chipDot, { backgroundColor: dotColor }]} />
-      <View style={[styles.bar, { width: 70, height: 5, opacity: 0.6 }]} />
+    <Animated.View style={[styles.badge, { transform: [{ scale: pulse }] }]}>
+      <Animated.View style={[styles.badgeDot, { opacity: dotOpacity }]} />
+      <Text style={styles.badgeText}>BREAKING</Text>
     </Animated.View>
   );
 }
@@ -51,32 +63,26 @@ export default function NewsHero() {
     <View style={styles.wrapper}>
       <View style={styles.glowDisc} />
 
-      <FloatingChip delay={0}    dotColor={CHIP_DOT_COLORS[0]} style={{ top: 4,  left: 24 }} />
-      <FloatingChip delay={400}  dotColor={CHIP_DOT_COLORS[1]} style={{ top: 28, right: 16 }} />
-      <FloatingChip delay={800}  dotColor={CHIP_DOT_COLORS[2]} style={{ top: 56, left: 44 }} />
+      {/* Main news headline card with newspaper icon */}
+      <LinearGradient
+        colors={['#F59E0B', '#D97706']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headlineCard}
+      >
+        <Ionicons name="newspaper" size={64} color="#FFFFFF" style={{ opacity: 0.95 }} />
+        <Text style={styles.cardTitle}>Headlines</Text>
+        <Text style={styles.cardSubtitle}>Updated every hour</Text>
+      </LinearGradient>
 
-      <View style={styles.card}>
-        <LinearGradient
-          colors={['#FFE4B5', '#F59E0B']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.cardImage}
-        >
-          <Ionicons name="newspaper-outline" size={24} color="#FFFFFF" style={styles.cardImageIcon} />
-          <View style={styles.breakingBadge}>
-            <Text style={styles.breakingBadgeText}>BREAKING</Text>
-          </View>
-        </LinearGradient>
-        <View style={styles.cardBody}>
-          <View style={[styles.bar, { width: '85%', height: 11, backgroundColor: '#1F2937', opacity: 0.85 }]} />
-          <View style={[styles.bar, { width: '95%', height: 6, backgroundColor: '#9CA3AF', marginTop: 8 }]} />
-          <View style={[styles.bar, { width: '70%', height: 6, backgroundColor: '#9CA3AF', marginTop: 5 }]} />
-          <View style={styles.cardFooter}>
-            <View style={[styles.dotTiny, { backgroundColor: '#9CA3AF' }]} />
-            <View style={[styles.bar, { width: 50, height: 5, backgroundColor: '#9CA3AF', opacity: 0.7 }]} />
-            <Ionicons name="heart-outline" size={12} color="#9CA3AF" style={{ marginLeft: 'auto' }} />
-          </View>
-        </View>
+      {/* Pulsing BREAKING badge */}
+      <View style={styles.badgeWrap}>
+        <PulsingBadge />
+      </View>
+
+      {/* Brand mark anchored bottom-right */}
+      <View style={styles.brandMark}>
+        <Image source={LOGO_ICON} style={styles.brandIcon} resizeMode="contain" />
       </View>
     </View>
   );
@@ -94,81 +100,84 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 999,
-    backgroundColor: 'rgba(245,158,11,0.12)',
+    backgroundColor: 'rgba(245,158,11,0.18)',
   },
-  card: {
-    width: 270,
-    height: 210,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    elevation: 6,
-    marginTop: 40,
+  headlineCard: {
+    width: 220,
+    height: 220,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 20,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.40,
+    shadowRadius: 24,
+    elevation: 12,
   },
-  cardImage: {
-    height: 86,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-  },
-  cardImageIcon: {
-    opacity: 0.9,
-  },
-  breakingBadge: {
-    backgroundColor: '#F59E0B',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  breakingBadgeText: {
-    fontSize: 9,
+  cardTitle: {
+    fontSize: 22,
     fontWeight: '800',
     color: '#FFFFFF',
-    letterSpacing: 1,
+    letterSpacing: -0.4,
+    marginTop: 6,
   },
-  cardBody: {
-    padding: 14,
+  cardSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.85)',
+    letterSpacing: 0.4,
   },
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 12,
-  },
-  bar: {
-    backgroundColor: '#E5E7EB',
-    borderRadius: 4,
-  },
-  dotTiny: {
-    width: 4,
-    height: 4,
-    borderRadius: 999,
-  },
-  chip: {
+  badgeWrap: {
     position: 'absolute',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 17,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    top: 36,
+    right: 24,
+  },
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.18,
     shadowRadius: 10,
-    elevation: 4,
-    zIndex: 2,
+    elevation: 6,
   },
-  chipDot: {
-    width: 6,
-    height: 6,
+  badgeDot: {
+    width: 7,
+    height: 7,
     borderRadius: 999,
+    backgroundColor: '#EF4444',
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1F2937',
+    letterSpacing: 1,
+  },
+  brandMark: {
+    position: 'absolute',
+    bottom: 24,
+    right: 28,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  brandIcon: {
+    width: 38,
+    height: 38,
   },
 });

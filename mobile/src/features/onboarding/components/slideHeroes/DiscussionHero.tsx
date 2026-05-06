@@ -1,54 +1,79 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Image, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const LOGO_ICON = require('../../../../../assets/icon.png');
 
-const HERO_SIZE = 300;
+const HERO_SIZE = 320;
+
+function TypingDots() {
+  const dot1 = useRef(new Animated.Value(0.3)).current;
+  const dot2 = useRef(new Animated.Value(0.3)).current;
+  const dot3 = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const animate = (val: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(val, {
+            toValue: 1,
+            duration: 400,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(val, {
+            toValue: 0.3,
+            duration: 400,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.delay(800 - delay),
+        ]),
+      );
+    const a = animate(dot1, 0);
+    const b = animate(dot2, 200);
+    const c = animate(dot3, 400);
+    a.start();
+    b.start();
+    c.start();
+    return () => {
+      a.stop();
+      b.stop();
+      c.stop();
+    };
+  }, [dot1, dot2, dot3]);
+
+  return (
+    <View style={styles.typingRow}>
+      <Animated.View style={[styles.typingDot, { opacity: dot1 }]} />
+      <Animated.View style={[styles.typingDot, { opacity: dot2 }]} />
+      <Animated.View style={[styles.typingDot, { opacity: dot3 }]} />
+    </View>
+  );
+}
 
 export default function DiscussionHero() {
   return (
     <View style={styles.wrapper}>
       <View style={styles.glowDisc} />
 
-      <View style={[styles.card, styles.cardBottom]}>
-        <View style={styles.iconRow}>
-          <Ionicons name="book-outline" size={16} color="#10B981" />
-          <View style={[styles.bar, { width: 60, height: 6, opacity: 0.55 }]} />
-        </View>
-        <View style={[styles.bar, styles.bodyBar, { width: '95%' }]} />
-        <View style={[styles.bar, styles.bodyBar, { width: '88%' }]} />
-        <View style={[styles.bar, styles.bodyBar, { width: '70%' }]} />
-        <View style={[styles.bar, styles.bodyBar, { width: '40%' }]} />
+      {/* Bubble 1 — bottom left, large, white */}
+      <View style={[styles.bubble, styles.bubbleBottomLeft]}>
+        <Ionicons name="book" size={20} color="#10B981" />
+        <Text style={styles.bubbleLabel}>Fan Fiction</Text>
       </View>
 
-      <View style={[styles.card, styles.cardMiddle]}>
-        <View style={styles.iconRow}>
-          <Image source={LOGO_ICON} style={styles.cardAvatar} resizeMode="contain" />
-          <View style={styles.headerBars}>
-            <View style={[styles.bar, { width: 70, height: 7 }]} />
-            <View style={[styles.bar, { width: 40, height: 5, opacity: 0.5 }]} />
-          </View>
-        </View>
-        <View style={[styles.bar, styles.bodyBar, { width: '90%' }]} />
-        <View style={[styles.bar, styles.bodyBar, { width: '75%' }]} />
-        <View style={styles.miniFooter}>
-          <Ionicons name="heart" size={12} color="#EC4899" />
-          <View style={[styles.bar, { width: 14, height: 5, opacity: 0.5 }]} />
-        </View>
+      {/* Bubble 2 — top right, emerald, with brand icon */}
+      <View style={[styles.bubble, styles.bubbleTopRight]}>
+        <Image source={LOGO_ICON} style={styles.bubbleAvatar} resizeMode="contain" />
+        <Text style={styles.bubbleLabel}>Forum</Text>
       </View>
 
-      <View style={[styles.card, styles.cardTop]}>
-        <View style={styles.iconRow}>
-          <Ionicons name="chatbubble-ellipses" size={16} color="#10B981" />
-          <View style={[styles.bar, { width: 50, height: 6, opacity: 0.55 }]} />
-        </View>
-        <View style={[styles.bar, styles.bodyBar, { width: '85%' }]} />
-        <View style={styles.replyRow}>
-          <View style={styles.replyBadge}>
-            <Text style={styles.replyBadgeText}>REPLY</Text>
-          </View>
-        </View>
+      {/* Bubble 3 — center, smaller, with typing dots */}
+      <View style={[styles.bubble, styles.bubbleCenter]}>
+        <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
+        <TypingDots />
       </View>
     </View>
   );
@@ -63,86 +88,64 @@ const styles = StyleSheet.create({
   },
   glowDisc: {
     position: 'absolute',
-    width: 300,
-    height: 300,
+    width: 280,
+    height: 280,
     borderRadius: 999,
-    backgroundColor: 'rgba(16,185,129,0.10)',
+    backgroundColor: 'rgba(16,185,129,0.16)',
   },
-  card: {
+  bubble: {
     position: 'absolute',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 22,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.14,
     shadowRadius: 14,
     elevation: 5,
   },
-  cardBottom: {
-    width: 220,
-    height: 130,
-    bottom: 30,
-    left: 18,
-    transform: [{ rotate: '-8deg' }],
+  bubbleBottomLeft: {
+    backgroundColor: '#FFFFFF',
+    bottom: 60,
+    left: 12,
+    borderBottomLeftRadius: 6,
+    transform: [{ rotate: '-4deg' }],
   },
-  cardMiddle: {
-    width: 230,
-    height: 130,
-    top: 80,
-    transform: [{ rotate: '4deg' }],
-    zIndex: 2,
+  bubbleTopRight: {
+    backgroundColor: '#FFFFFF',
+    top: 50,
+    right: 8,
+    borderTopRightRadius: 6,
+    transform: [{ rotate: '3deg' }],
   },
-  cardTop: {
-    width: 210,
-    height: 100,
-    top: 24,
-    right: 12,
-    transform: [{ rotate: '-3deg' }],
-    zIndex: 1,
+  bubbleCenter: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
   },
-  iconRow: {
+  bubbleAvatar: {
+    width: 28,
+    height: 28,
+  },
+  bubbleLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: -0.2,
+  },
+  typingRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  cardAvatar: {
-    width: 26,
-    height: 26,
-  },
-  headerBars: {
-    flex: 1,
-    gap: 3,
-  },
-  bar: {
-    backgroundColor: '#E5E7EB',
-    borderRadius: 4,
-  },
-  bodyBar: {
-    height: 6,
-    marginBottom: 6,
-  },
-  miniFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 4,
-    marginTop: 2,
+    alignItems: 'center',
+    paddingHorizontal: 4,
   },
-  replyRow: {
-    flexDirection: 'row',
-    marginTop: 4,
-  },
-  replyBadge: {
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  replyBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#065F46',
-    letterSpacing: 1,
+  typingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
   },
 });
