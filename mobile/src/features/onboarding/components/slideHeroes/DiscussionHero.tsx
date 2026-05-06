@@ -4,7 +4,18 @@ import { Ionicons } from '@expo/vector-icons';
 
 const LOGO_ICON = require('../../../../../assets/icon.png');
 
-// Real top-discussed shows sourced from indiaforums.com homepage.
+// Static onboarding marketing content — NOT live data.
+//
+// Show names + activity labels were sourced from indiaforums.com's
+// homepage trending shows section on 2026-05-06. Onboarding runs before
+// login and needs to work offline, so we don't fetch this at runtime;
+// these are sample/illustrative values that show what the app offers.
+//
+// Refresh cadence: review every 3-4 months. Top shows on indian TV churn
+// faster than the rest of the brand content. If a show here goes off air
+// or stops trending, swap it for the current top show on the live site.
+//
+// Last refreshed: 2026-05-06.
 const SHOWS = [
   { name: 'Anupamaa',       channel: 'Star Plus', activity: 'Live now',     icon: 'chatbubbles' as const, tint: '#3558F0', isLive: true  },
   { name: 'Bhagya Lakshmi', channel: 'Zee TV',    activity: 'Fan fiction',  icon: 'book'        as const, tint: '#10B981', isLive: false },
