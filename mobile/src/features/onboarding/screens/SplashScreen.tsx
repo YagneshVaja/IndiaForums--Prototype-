@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import {
   View,
-  Text,
+  Image,
   ActivityIndicator,
   StyleSheet,
   Animated,
@@ -44,11 +44,11 @@ export default function SplashScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.logoArea, { opacity, transform: [{ scale }] }]}>
-        <View style={styles.logoMark}>
-          <Text style={styles.logoInitial}>IF</Text>
-        </View>
-        <Text style={styles.brandName}>IndiaForums</Text>
-        <Text style={styles.tagline}>India's Premier Fan Community</Text>
+        <Image
+          source={require('../../../../assets/splash-logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </Animated.View>
 
       <ActivityIndicator style={styles.loader} color={colors.primary} size="small" />
@@ -66,38 +66,10 @@ function makeStyles(c: ThemeColors) {
     },
     logoArea: {
       alignItems: 'center',
-      gap: 12,
     },
-    logoMark: {
-      width: 80,
-      height: 80,
-      borderRadius: 22,
-      backgroundColor: c.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 4,
-      shadowColor: c.primary,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.35,
-      shadowRadius: 20,
-      elevation: 12,
-    },
-    logoInitial: {
-      fontSize: 32,
-      fontWeight: '800',
-      color: c.onPrimary,
-      letterSpacing: -1,
-    },
-    brandName: {
-      fontSize: 28,
-      fontWeight: '700',
-      color: c.text,
-      letterSpacing: -0.5,
-    },
-    tagline: {
-      fontSize: 14,
-      color: c.textTertiary,
-      letterSpacing: 0.2,
+    logo: {
+      width: 240,
+      height: 240,
     },
     loader: {
       position: 'absolute',
