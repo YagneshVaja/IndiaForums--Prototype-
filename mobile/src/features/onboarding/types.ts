@@ -2,6 +2,6 @@ export interface OnboardingSlide {
   id: string;
   title: string;
   description: string;
-  emoji: string;
-  accentColor: string;
+  gradientStops: readonly [string, string];
+  accent: string;
 }

@@ -8,13 +8,14 @@ import {
   Animated,
   Image,
 } from 'react-native';
-
-const LOGO_ICON = require('../../../../assets/icon.png');
+import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '../../../navigation/types';
 import { markOnboardingComplete } from '../../../store/onboardingStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
+
+const SPLASH_LOGO = require('../../../../assets/splash-logo.png');
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'GetStarted'>;
 
@@ -29,16 +30,16 @@ export default function GetStartedScreen({ navigation }: Props) {
   useEffect(() => {
     Animated.parallel([
       Animated.timing(headerOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(headerY, { toValue: 0, duration: 600, useNativeDriver: true }),
+      Animated.timing(headerY,       { toValue: 0, duration: 600, useNativeDriver: true }),
     ]).start();
 
     setTimeout(() => {
       Animated.parallel([
         Animated.timing(buttonsOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(buttonsY, { toValue: 0, duration: 600, useNativeDriver: true }),
+        Animated.timing(buttonsY,       { toValue: 0, duration: 600, useNativeDriver: true }),
       ]).start();
     }, 200);
-  }, []);
+  }, [headerOpacity, headerY, buttonsOpacity, buttonsY]);
 
   const handleCreateAccount = () => {
     markOnboardingComplete();
@@ -56,13 +57,17 @@ export default function GetStartedScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={['#FFF7ED', '#FFFFFF']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.container}
+    >
       <Animated.View style={[styles.header, {
         opacity: headerOpacity,
         transform: [{ translateY: headerY }],
       }]}>
-        <Image source={LOGO_ICON} style={styles.logoMark} resizeMode="contain" />
-        <Text style={styles.brandName}>IndiaForums</Text>
+        <Image source={SPLASH_LOGO} style={styles.lockup} resizeMode="contain" />
         <Text style={styles.tagline}>
           {'Join millions of fans.\nYour community awaits.'}
         </Text>
@@ -90,42 +95,39 @@ export default function GetStartedScreen({ navigation }: Props) {
           <Text style={styles.ghostButtonText}>Continue as Guest</Text>
         </Pressable>
       </Animated.View>
-    </View>
+    </LinearGradient>
   );
 }
+
+const PRIMARY_BLUE = '#3558F0';
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: c.primary,
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingTop: Platform.OS === 'ios' ? 100 : 80,
       paddingBottom: Platform.OS === 'ios' ? 52 : 36,
-      paddingHorizontal: 32,
+      paddingHorizontal: 24,
     },
     header: {
       alignItems: 'center',
-      gap: 16,
+      gap: 18,
+      width: '100%',
     },
-    logoMark: {
-      width: 96,
-      height: 96,
-      marginBottom: 4,
-    },
-    brandName: {
-      fontSize: 32,
-      fontWeight: '800',
-      color: '#FFFFFF',
-      letterSpacing: -0.5,
+    lockup: {
+      width: 240,
+      height: 175,
     },
     tagline: {
-      fontSize: 16,
-      color: 'rgba(255,255,255,0.72)',
+      fontSize: 22,
+      fontWeight: '700',
+      color: c.text,
       textAlign: 'center',
-      lineHeight: 24,
-      marginTop: 4,
+      lineHeight: 30,
+      letterSpacing: -0.4,
+      maxWidth: 320,
     },
     actions: {
       width: '100%',
@@ -134,44 +136,50 @@ function makeStyles(c: ThemeColors) {
     },
     primaryButton: {
       width: '100%',
-      backgroundColor: '#FFFFFF',
-      paddingVertical: 16,
-      borderRadius: 14,
+      backgroundColor: PRIMARY_BLUE,
+      paddingVertical: 18,
+      borderRadius: 16,
       alignItems: 'center',
+      shadowColor: PRIMARY_BLUE,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.18,
+      shadowRadius: 12,
+      elevation: 4,
     },
     primaryButtonPressed: {
       opacity: 0.9,
+      transform: [{ scale: 0.98 }],
     },
     primaryButtonText: {
       fontSize: 16,
       fontWeight: '700',
-      color: c.primary,
+      color: '#FFFFFF',
     },
     outlineButton: {
       width: '100%',
-      paddingVertical: 15,
-      borderRadius: 14,
+      paddingVertical: 16.5,
+      borderRadius: 16,
       borderWidth: 1.5,
-      borderColor: 'rgba(255,255,255,0.5)',
+      borderColor: PRIMARY_BLUE,
       alignItems: 'center',
+      backgroundColor: '#FFFFFF',
     },
     outlineButtonPressed: {
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: 'rgba(53,88,240,0.06)',
     },
     outlineButtonText: {
       fontSize: 16,
-      fontWeight: '600',
-      color: '#FFFFFF',
+      fontWeight: '700',
+      color: PRIMARY_BLUE,
     },
     ghostButton: {
-      paddingVertical: 10,
+      paddingVertical: 8,
       alignItems: 'center',
     },
     ghostButtonText: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: 'rgba(255,255,255,0.6)',
-      textDecorationLine: 'underline',
+      fontSize: 15,
+      fontWeight: '600',
+      color: c.textSecondary,
     },
   });
 }

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Dimensions,
   ViewToken,
   Image,
+  Animated,
 } from 'react-native';
 
 const LOGO_ICON = require('../../../../assets/icon.png');
@@ -32,6 +33,15 @@ export default function OnboardingScreen({ navigation }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList<SlideType>>(null);
   const isLastSlide = currentIndex === ONBOARDING_SLIDES.length - 1;
+  const skipOpacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.timing(skipOpacity, {
+      toValue: isLastSlide ? 0 : 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [isLastSlide, skipOpacity]);
 
   // Must live in a ref — passing an inline function causes a RN crash on Android
   const onViewableItemsChanged = useRef(
@@ -71,11 +81,11 @@ export default function OnboardingScreen({ navigation }: Props) {
       {/* Top row: brand mark + skip */}
       <View style={styles.topRow}>
         <Image source={LOGO_ICON} style={styles.brandMark} resizeMode="contain" />
-        {!isLastSlide && (
+        <Animated.View style={{ opacity: skipOpacity }} pointerEvents={isLastSlide ? 'none' : 'auto'}>
           <Pressable style={styles.skipButton} onPress={handleSkip} hitSlop={12}>
             <Text style={styles.skipText}>Skip</Text>
           </Pressable>
-        )}
+        </Animated.View>
       </View>
 
       {/* Slide carousel */}
@@ -101,11 +111,16 @@ export default function OnboardingScreen({ navigation }: Props) {
 
       {/* Bottom bar: dots + next */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
-        <PaginationDots count={ONBOARDING_SLIDES.length} activeIndex={currentIndex} />
+        <PaginationDots
+          count={ONBOARDING_SLIDES.length}
+          activeIndex={currentIndex}
+          activeColor={ONBOARDING_SLIDES[currentIndex].accent}
+        />
 
         <Pressable
           style={({ pressed }) => [
             styles.nextButton,
+            { backgroundColor: ONBOARDING_SLIDES[currentIndex].accent, shadowColor: ONBOARDING_SLIDES[currentIndex].accent },
             isLastSlide && styles.nextButtonWide,
             pressed && styles.nextButtonPressed,
           ]}

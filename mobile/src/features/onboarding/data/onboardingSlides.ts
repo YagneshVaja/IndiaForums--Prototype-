@@ -6,23 +6,23 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     title: "India's Biggest\nFan Community",
     description:
       'Millions of fans discussing movies, shows, and celebrities — all in one place.',
-    emoji: '🎬',
-    accentColor: '#EBF0FF',
+    gradientStops: ['#F0F4FF', '#C9D6FF'],
+    accent: '#3558F0',
   },
   {
     id: '2',
     title: 'Forums & Fan\nFiction',
     description:
       'Join thousands of active discussions or write your own fan stories.',
-    emoji: '💬',
-    accentColor: '#F0FFF4',
+    gradientStops: ['#EEFAF6', '#B8EBDB'],
+    accent: '#10B981',
   },
   {
     id: '3',
     title: 'Breaking News,\nEvery Hour',
     description:
       'Stay updated with the latest in Bollywood, OTT, and Indian entertainment.',
-    emoji: '📰',
-    accentColor: '#FFF7ED',
+    gradientStops: ['#FFF7ED', '#FFD9A8'],
+    accent: '#F59E0B',
   },
 ];
