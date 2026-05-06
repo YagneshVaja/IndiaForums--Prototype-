@@ -49,33 +49,24 @@ const CHANNELS = ['Star Plus', 'Zee TV', 'Sony', 'Colors', 'SAB', '& more'] as c
 export default function GetStartedScreen({ navigation }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const headerOpacity = useRef(new Animated.Value(0)).current;
-  const headerY = useRef(new Animated.Value(20)).current;
-  const featuresOpacity = useRef(new Animated.Value(0)).current;
-  const featuresY = useRef(new Animated.Value(20)).current;
-  const buttonsOpacity = useRef(new Animated.Value(0)).current;
-  const buttonsY = useRef(new Animated.Value(24)).current;
+  // Start at full opacity so content is always visible even if the
+  // animation doesn't fire (e.g. unmount before useEffect completes).
+  // Only animate translateY from a small offset to 0 for a subtle settle.
+  const headerY = useRef(new Animated.Value(12)).current;
+  const featuresY = useRef(new Animated.Value(12)).current;
+  const buttonsY = useRef(new Animated.Value(14)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(headerOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(headerY,       { toValue: 0, duration: 600, useNativeDriver: true }),
+    Animated.timing(headerY, { toValue: 0, duration: 500, useNativeDriver: true }).start();
+    Animated.sequence([
+      Animated.delay(120),
+      Animated.timing(featuresY, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-
-    setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(featuresOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(featuresY,       { toValue: 0, duration: 600, useNativeDriver: true }),
-      ]).start();
-    }, 150);
-
-    setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(buttonsOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(buttonsY,       { toValue: 0, duration: 600, useNativeDriver: true }),
-      ]).start();
-    }, 350);
-  }, [headerOpacity, headerY, featuresOpacity, featuresY, buttonsOpacity, buttonsY]);
+    Animated.sequence([
+      Animated.delay(280),
+      Animated.timing(buttonsY, { toValue: 0, duration: 500, useNativeDriver: true }),
+    ]).start();
+  }, [headerY, featuresY, buttonsY]);
 
   const handleCreateAccount = () => {
     markOnboardingComplete();
@@ -110,7 +101,6 @@ export default function GetStartedScreen({ navigation }: Props) {
         style={[
           styles.header,
           {
-            opacity: headerOpacity,
             transform: [{ translateY: headerY }],
           },
         ]}
@@ -126,7 +116,6 @@ export default function GetStartedScreen({ navigation }: Props) {
         style={[
           styles.featuresWrap,
           {
-            opacity: featuresOpacity,
             transform: [{ translateY: featuresY }],
           },
         ]}
@@ -161,7 +150,6 @@ export default function GetStartedScreen({ navigation }: Props) {
         style={[
           styles.actions,
           {
-            opacity: buttonsOpacity,
             transform: [{ translateY: buttonsY }],
           },
         ]}
