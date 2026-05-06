@@ -22,24 +22,24 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'GetStarted'>;
 
 const FEATURES = [
   {
-    icon: 'people' as const,
+    icon: 'chatbubbles' as const,
     tint: '#3558F0',
     bg: '#EEF2FF',
-    label: 'Active Forums',
+    label: 'Forums',
     desc: 'Live discussions',
   },
   {
     icon: 'newspaper' as const,
     tint: '#F59E0B',
     bg: '#FFF7ED',
-    label: 'Breaking News',
-    desc: 'Hourly updates',
+    label: 'Latest News',
+    desc: 'TV · Movies · OTT',
   },
   {
-    icon: 'star' as const,
+    icon: 'book' as const,
     tint: '#10B981',
     bg: '#ECFDF5',
-    label: 'Fan Stories',
+    label: 'Fan Fictions',
     desc: 'Read & write',
   },
 ] as const;
@@ -115,7 +115,7 @@ export default function GetStartedScreen({ navigation }: Props) {
       >
         <Image source={SPLASH_LOGO} style={styles.lockup} resizeMode="contain" />
         <Text style={styles.tagline}>
-          {'Join millions of fans.\nYour community awaits.'}
+          {"Your entertainment hub.\nJoin the conversation."}
         </Text>
       </Animated.View>
 

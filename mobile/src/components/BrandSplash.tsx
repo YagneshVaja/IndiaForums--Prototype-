@@ -258,7 +258,7 @@ export default function BrandSplash({ onReady, holdMs = 2000 }: Props) {
           },
         ]}
       >
-        <Text style={styles.tagline}>Your fan community awaits</Text>
+        <Text style={styles.tagline}>Your entertainment hub</Text>
       </Animated.View>
 
       <Animated.View style={[styles.loader, { opacity: loaderOpacity }]}>
