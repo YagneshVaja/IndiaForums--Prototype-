@@ -8,7 +8,10 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
+
+const LOGO_ICON = require('../../../../assets/icon.png');
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -121,9 +124,7 @@ export default function LoginScreen({ navigation }: Props) {
 
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.logoMark}>
-            <Text style={styles.logoText}>IF</Text>
-          </View>
+          <Image source={LOGO_ICON} style={styles.logoMark} resizeMode="contain" />
           <Text style={styles.title}>Welcome back</Text>
           <Text style={styles.subtitle}>Sign in to continue your IndiaForums journey</Text>
         </View>
@@ -280,24 +281,9 @@ function makeStyles(c: ThemeColors) {
       gap: 8,
     },
     logoMark: {
-      width: 56,
-      height: 56,
-      borderRadius: 12,
-      backgroundColor: c.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
+      width: 64,
+      height: 64,
       marginBottom: 4,
-      shadowColor: c.primary,
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.25,
-      shadowRadius: 12,
-      elevation: 6,
-    },
-    logoText: {
-      fontSize: 22,
-      fontWeight: '800',
-      color: c.onPrimary,
-      letterSpacing: -0.3,
     },
     title: {
       fontSize: 22,

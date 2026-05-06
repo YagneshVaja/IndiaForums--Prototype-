@@ -1,17 +1,15 @@
 import React, { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../store/themeStore';
 import type { ThemeColors } from '../../theme/tokens';
 
+const LOGO_ICON = require('../../../assets/icon.png');
+
 // ── Gem logo mark ─────────────────────────────────────────────────────────────
 function LogoGem({ styles }: { styles: ReturnType<typeof makeStyles> }) {
-  return (
-    <View style={styles.gem}>
-      <Text style={styles.gemText}>IF</Text>
-    </View>
-  );
+  return <Image source={LOGO_ICON} style={styles.gem} resizeMode="contain" />;
 }
 
 // ── Brand mode ─────────────────────────────────────────────────────────────────
@@ -136,16 +134,6 @@ function makeStyles(c: ThemeColors) {
     gem: {
       width: 24,
       height: 24,
-      borderRadius: 6,
-      backgroundColor: c.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    gemText: {
-      fontSize: 10,
-      fontWeight: '800',
-      color: c.onPrimary,
-      letterSpacing: -0.3,
     },
     logoRow: {
       flex: 1,

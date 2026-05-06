@@ -6,7 +6,10 @@ import {
   StyleSheet,
   Platform,
   Animated,
+  Image,
 } from 'react-native';
+
+const LOGO_ICON = require('../../../../assets/icon.png');
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '../../../navigation/types';
 import { markOnboardingComplete } from '../../../store/onboardingStore';
@@ -58,9 +61,7 @@ export default function GetStartedScreen({ navigation }: Props) {
         opacity: headerOpacity,
         transform: [{ translateY: headerY }],
       }]}>
-        <View style={styles.logoMark}>
-          <Text style={styles.logoInitial}>IF</Text>
-        </View>
+        <Image source={LOGO_ICON} style={styles.logoMark} resizeMode="contain" />
         <Text style={styles.brandName}>IndiaForums</Text>
         <Text style={styles.tagline}>
           {'Join millions of fans.\nYour community awaits.'}
@@ -109,21 +110,9 @@ function makeStyles(c: ThemeColors) {
       gap: 16,
     },
     logoMark: {
-      width: 80,
-      height: 80,
-      borderRadius: 22,
-      backgroundColor: 'rgba(255,255,255,0.18)',
-      borderWidth: 1.5,
-      borderColor: 'rgba(255,255,255,0.3)',
-      alignItems: 'center',
-      justifyContent: 'center',
+      width: 96,
+      height: 96,
       marginBottom: 4,
-    },
-    logoInitial: {
-      fontSize: 32,
-      fontWeight: '800',
-      color: '#FFFFFF',
-      letterSpacing: -1,
     },
     brandName: {
       fontSize: 32,

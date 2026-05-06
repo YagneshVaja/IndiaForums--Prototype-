@@ -9,7 +9,10 @@ import {
   Modal,
   Animated,
   Easing,
+  Image,
 } from 'react-native';
+
+const LOGO_ICON = require('../../../assets/icon.png');
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -263,9 +266,7 @@ export default function SideMenu() {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerLogo}>
-              <View style={styles.gem}>
-                <Text style={styles.gemText}>IF</Text>
-              </View>
+              <Image source={LOGO_ICON} style={styles.gem} resizeMode="contain" />
               <Text style={styles.wordmark}>indiaforums</Text>
             </View>
             <Pressable onPress={close} hitSlop={8} style={styles.closeBtn} accessibilityLabel="Close menu">
@@ -410,16 +411,6 @@ function makeStyles(c: ThemeColors) {
     gem: {
       width: 22,
       height: 22,
-      borderRadius: 5,
-      backgroundColor: c.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    gemText: {
-      fontSize: 9,
-      fontWeight: '800',
-      color: c.onPrimary,
-      letterSpacing: -0.3,
     },
     wordmark: {
       fontSize: 16,

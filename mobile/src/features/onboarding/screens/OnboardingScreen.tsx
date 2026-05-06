@@ -7,7 +7,10 @@ import {
   StyleSheet,
   Dimensions,
   ViewToken,
+  Image,
 } from 'react-native';
+
+const LOGO_ICON = require('../../../../assets/icon.png');
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingSlide } from '../components/OnboardingSlide';
@@ -67,9 +70,7 @@ export default function OnboardingScreen({ navigation }: Props) {
     <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
       {/* Top row: brand mark + skip */}
       <View style={styles.topRow}>
-        <View style={styles.brandMark}>
-          <Text style={styles.brandMarkText}>IF</Text>
-        </View>
+        <Image source={LOGO_ICON} style={styles.brandMark} resizeMode="contain" />
         {!isLastSlide && (
           <Pressable style={styles.skipButton} onPress={handleSkip} hitSlop={12}>
             <Text style={styles.skipText}>Skip</Text>
@@ -135,16 +136,6 @@ function makeStyles(c: ThemeColors) {
     brandMark: {
       width: 38,
       height: 38,
-      borderRadius: 10,
-      backgroundColor: c.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    brandMarkText: {
-      fontSize: 15,
-      fontWeight: '800',
-      color: c.onPrimary,
-      letterSpacing: -0.3,
     },
     skipButton: {
       paddingHorizontal: 14,

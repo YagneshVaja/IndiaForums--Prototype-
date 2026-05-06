@@ -8,7 +8,10 @@ import {
   Linking,
   StatusBar,
   Alert,
+  Image,
 } from 'react-native';
+
+const LOGO_ICON = require('../../../../assets/icon.png');
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
@@ -66,9 +69,7 @@ export default function AboutScreen({ navigation }: Props) {
       >
         {/* Hero */}
         <View style={styles.hero}>
-          <View style={styles.logo}>
-            <Text style={styles.logoText}>IF</Text>
-          </View>
+          <Image source={LOGO_ICON} style={styles.logo} resizeMode="contain" />
           <Text style={styles.title}>IndiaForums</Text>
           <Text style={styles.tagline}>India's biggest entertainment community</Text>
           <View style={styles.versionPill}>
@@ -129,24 +130,9 @@ function makeStyles(c: ThemeColors) {
       gap: 10,
     },
     logo: {
-      width: 80,
-      height: 80,
-      borderRadius: 20,
-      backgroundColor: c.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
+      width: 96,
+      height: 96,
       marginBottom: 4,
-      shadowColor: c.primary,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      elevation: 6,
-    },
-    logoText: {
-      fontSize: 28,
-      fontWeight: '900',
-      color: c.onPrimary,
-      letterSpacing: -0.5,
     },
     title: {
       fontSize: 24,
