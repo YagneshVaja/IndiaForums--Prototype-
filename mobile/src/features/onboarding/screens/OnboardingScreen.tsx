@@ -166,8 +166,11 @@ function makeStyles(c: ThemeColors) {
     flatList: {
       flex: 1,
     },
+    // alignItems on a horizontal FlatList contentContainer collapses items
+    // to their intrinsic height. The slides need to stretch to the FlatList's
+    // full height so heroArea (flex: 1) gets real space to fill.
     flatListContent: {
-      alignItems: 'center',
+      alignItems: 'stretch',
     },
     bottomBar: {
       flexDirection: 'row',
