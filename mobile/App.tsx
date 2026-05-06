@@ -8,10 +8,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RootNavigator from './src/navigation/RootNavigator';
 import { useThemeStore } from './src/store/themeStore';
 import * as SplashScreen from 'expo-splash-screen';
+import Constants from 'expo-constants';
 
 // preventAutoHideAsync rejects on web (no native splash). Swallow.
 SplashScreen.preventAutoHideAsync().catch(() => {});
-SplashScreen.setOptions({ duration: 400, fade: true });
+// setOptions is unsupported in Expo Go (warns to console). Only call it
+// in standalone / dev builds where the native splash module is wired up.
+if (Constants.appOwnership !== 'expo') {
+  SplashScreen.setOptions({ duration: 400, fade: true });
+}
 
 // Queries should fail fast when the user is offline — don't sit through 3
 // automatic retries × 15s axios timeout. Retry only for transient 5xx/timeouts.
