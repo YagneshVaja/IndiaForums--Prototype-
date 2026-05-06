@@ -1,4 +1,4 @@
-# Generates mobile/assets/{icon,adaptive-icon,splash-logo,favicon}.png from
+﻿# Generates mobile/assets/{icon,adaptive-icon,splash-logo,favicon}.png from
 # the brand source PNG via pixel-bbox detection. Re-runnable.
 #
 # Usage (from repo root):
