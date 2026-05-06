@@ -1,79 +1,44 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Image, Animated, Easing } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const LOGO_ICON = require('../../../../../assets/icon.png');
 
-const HERO_SIZE = 320;
-const ORBIT_RADIUS = 120;
-
-const ORBIT_AVATARS = [
-  { angle:   0, color: '#3558F0', icon: 'person' as const },
-  { angle:  60, color: '#EC4899', icon: 'heart'  as const },
-  { angle: 120, color: '#10B981', icon: 'person' as const },
-  { angle: 180, color: '#F59E0B', icon: 'star'   as const },
-  { angle: 240, color: '#8B5CF6', icon: 'person' as const },
-  { angle: 300, color: '#06B6D4', icon: 'flame'  as const },
+// Real channel names sourced from indiaforums.com homepage.
+const CHANNELS = [
+  { name: 'Star Plus', tint: '#3558F0', bg: '#EEF2FF' },
+  { name: 'Zee TV',    tint: '#EC4899', bg: '#FCE7F3' },
+  { name: 'Sony',      tint: '#10B981', bg: '#D1FAE5' },
+  { name: 'Colors',    tint: '#F59E0B', bg: '#FEF3C7' },
+  { name: 'SAB TV',    tint: '#8B5CF6', bg: '#EDE9FE' },
 ] as const;
 
-function polarToXY(angleDeg: number, radius: number) {
-  const rad = (angleDeg * Math.PI) / 180;
-  return {
-    x: Math.cos(rad) * radius,
-    y: Math.sin(rad) * radius,
-  };
-}
-
 export default function CommunityHero() {
-  const pulse = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, {
-          toValue: 1.05,
-          duration: 1400,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulse, {
-          toValue: 1,
-          duration: 1400,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
-
   return (
     <View style={styles.wrapper}>
-      <Animated.View style={[styles.outerHalo, { transform: [{ scale: pulse }] }]} />
-      <View style={styles.innerHalo} />
+      <View style={styles.glow} />
 
-      {ORBIT_AVATARS.map((a, i) => {
-        const { x, y } = polarToXY(a.angle, ORBIT_RADIUS);
-        return (
-          <View
-            key={i}
-            style={[
-              styles.avatar,
-              {
-                backgroundColor: '#FFFFFF',
-                borderColor: a.color,
-                transform: [{ translateX: x }, { translateY: y }],
-              },
-            ]}
-          >
-            <Ionicons name={a.icon} size={22} color={a.color} />
+      <View style={styles.brandBadge}>
+        <Image source={LOGO_ICON} style={styles.brandIcon} resizeMode="contain" />
+      </View>
+
+      <Text style={styles.label}>FANS OF</Text>
+
+      <View style={styles.pillsRow}>
+        {CHANNELS.map((c) => (
+          <View key={c.name} style={[styles.pill, { backgroundColor: c.bg }]}>
+            <View style={[styles.pillDot, { backgroundColor: c.tint }]} />
+            <Text style={[styles.pillText, { color: c.tint }]}>{c.name}</Text>
           </View>
-        );
-      })}
+        ))}
+      </View>
 
-      <View style={styles.logoBadge}>
-        <Image source={LOGO_ICON} style={styles.logoIcon} resizeMode="contain" />
+      <View style={styles.iconRow}>
+        <Ionicons name="people"     size={18} color="#3558F0" />
+        <Ionicons name="heart"      size={18} color="#EC4899" />
+        <Ionicons name="star"       size={18} color="#F59E0B" />
+        <Ionicons name="chatbubbles" size={18} color="#10B981" />
+        <Ionicons name="flame"      size={18} color="#8B5CF6" />
       </View>
     </View>
   );
@@ -81,54 +46,71 @@ export default function CommunityHero() {
 
 const styles = StyleSheet.create({
   wrapper: {
-    width: HERO_SIZE,
-    height: HERO_SIZE,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 14,
   },
-  outerHalo: {
+  glow: {
     position: 'absolute',
-    width: 280,
-    height: 280,
+    width: 220,
+    height: 220,
     borderRadius: 999,
-    backgroundColor: 'rgba(53,88,240,0.10)',
+    backgroundColor: 'rgba(53,88,240,0.12)',
+    top: -10,
   },
-  innerHalo: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 999,
-    backgroundColor: 'rgba(53,88,240,0.18)',
-  },
-  avatar: {
-    position: 'absolute',
-    width: 44,
-    height: 44,
-    borderRadius: 999,
-    borderWidth: 2.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  logoBadge: {
+  brandBadge: {
     width: 110,
     height: 110,
-    borderRadius: 30,
+    borderRadius: 28,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#3558F0',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.30,
     shadowRadius: 22,
     elevation: 10,
   },
-  logoIcon: {
-    width: 80,
-    height: 80,
+  brandIcon: {
+    width: 78,
+    height: 78,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 1.6,
+    marginTop: 4,
+  },
+  pillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  pillDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+  },
+  pillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: -0.1,
+  },
+  iconRow: {
+    flexDirection: 'row',
+    gap: 18,
+    marginTop: 4,
   },
 });

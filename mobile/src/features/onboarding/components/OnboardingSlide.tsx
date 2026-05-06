@@ -24,15 +24,14 @@ export function OnboardingSlide({ slide }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const Hero = HEROES[slide.id];
-  const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.92)).current;
+  // Start fully visible so heroes always render even if animation is
+  // interrupted by FlatList virtualisation. Animation just adds a subtle
+  // settle from 0.96 -> 1.
+  const scale = useRef(new Animated.Value(0.96)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.timing(scale,   { toValue: 1, duration: 500, useNativeDriver: true }),
-    ]).start();
-  }, [opacity, scale]);
+    Animated.timing(scale, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+  }, [scale]);
 
   return (
     <LinearGradient
@@ -41,7 +40,7 @@ export function OnboardingSlide({ slide }: Props) {
       end={{ x: 1, y: 1 }}
       style={[styles.container, { width: SCREEN_WIDTH }]}
     >
-      <Animated.View style={[styles.heroArea, { opacity, transform: [{ scale }] }]}>
+      <Animated.View style={[styles.heroArea, { transform: [{ scale }] }]}>
         {Hero ? <Hero /> : null}
       </Animated.View>
 
