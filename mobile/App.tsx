@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import axios from 'axios';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -7,6 +7,11 @@ import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RootNavigator from './src/navigation/RootNavigator';
 import { useThemeStore } from './src/store/themeStore';
+import * as SplashScreen from 'expo-splash-screen';
+
+// preventAutoHideAsync rejects on web (no native splash). Swallow.
+SplashScreen.preventAutoHideAsync().catch(() => {});
+SplashScreen.setOptions({ duration: 400, fade: true });
 
 // Queries should fail fast when the user is offline — don't sit through 3
 // automatic retries × 15s axios timeout. Retry only for transient 5xx/timeouts.
@@ -57,8 +62,12 @@ function ThemedNavigation() {
 }
 
 export default function App() {
+  const onLayoutReady = useCallback(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
   return (
-    <GestureHandlerRootView style={styles.root}>
+    <GestureHandlerRootView style={styles.root} onLayout={onLayoutReady}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <ThemedNavigation />
