@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, Pressable, Image, ActivityIndicator, StyleSheet,
+  type NativeSyntheticEvent, type NativeScrollEvent,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,9 +19,13 @@ import FlairDropdown from '../components/FlairDropdown';
 import ThreadCard from '../components/ThreadCard';
 import NewTopicComposerSheet from '../components/NewTopicComposerSheet';
 import ForumTopicSettingsSheet from '../components/ForumTopicSettingsSheet';
-import { useForumTopics } from '../hooks/useForumTopics';
+import JumpToPageSheet from '../components/JumpToPageSheet';
+import ForumPaginationBar from '../components/ForumPaginationBar';
+import { useForumTopics, FORUM_TOPICS_PAGE_SIZE } from '../hooks/useForumTopics';
+import { useHideOnScroll } from '../hooks/useHideOnScroll';
 import { useMyFavouriteForums } from '../hooks/useMyFavouriteForums';
 import { useForumFollowStore, selectForumFollow } from '../store/forumFollowStore';
+import { useForumPaginationStore, selectForumPage } from '../store/forumPaginationStore';
 import { formatCount } from '../utils/format';
 import type { ForumsStackParamList } from '../../../navigation/types';
 import { searchTopics, setForumFollow, type Forum, type ForumTopic } from '../../../services/api';
@@ -44,6 +49,11 @@ export default function ForumThreadScreen() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // Restore the page the user was last viewing in this forum (across navigation cycles).
+  const persistedPage = useForumPaginationStore(selectForumPage(forum.id));
+  const [currentPage, setCurrentPage] = useState(persistedPage);
+  const [jumpSheetOpen, setJumpSheetOpen] = useState(false);
+  const listRef = useRef<React.ElementRef<typeof FlashList<ForumTopic>> | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
 
@@ -62,13 +72,11 @@ export default function ForumThreadScreen() {
   const {
     data,
     isLoading,
+    isFetching,
     isError,
     error,
     refetch,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useForumTopics(forum.id);
+  } = useForumTopics(forum.id, currentPage);
 
   const firstPage = data?.pages[0];
   const detail: Forum = firstPage?.forumDetail || forum;
@@ -78,9 +86,10 @@ export default function ForumThreadScreen() {
     (detail.editPosts ?? 0) > 0 ||
     (detail.deletePosts ?? 0) > 0;
 
+  // Page-by-page pagination: only the current page's topics are displayed.
   const allTopics = useMemo<ForumTopic[]>(
-    () => (data?.pages || []).flatMap(p => p.topics),
-    [data],
+    () => firstPage?.topics ?? [],
+    [firstPage],
   );
 
   // Bootstrap follow state from the cached "My Forums" list — if this forum
@@ -181,6 +190,60 @@ export default function ForumThreadScreen() {
     [detail, flairs, handleTopicPress],
   );
 
+  // Total page count is derived from the forum's topic count — the
+  // /forums/:id/topics endpoint only signals `hasMore`, not totals.
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil((detail.topicCount ?? 0) / FORUM_TOPICS_PAGE_SIZE)),
+    [detail.topicCount],
+  );
+
+  // While searching or filtering by flair, the result set isn't paginated; we
+  // hide the bar so the UI doesn't lie about which page the user is on.
+  const isFiltering = activeFlairId !== null || search.trim().length > 0;
+
+  const { hidden: barHidden, onScroll: handleListScroll } = useHideOnScroll();
+
+  // Throttle scroll-position writes to the persistence store so we don't
+  // thrash setState on every frame. 250ms is responsive enough that a quick
+  // tap-to-topic-and-back lands within a few px of where you were.
+  const lastSavedRef = useRef(0);
+  const handleScrollWithSave = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      handleListScroll(e);
+      const now = Date.now();
+      if (now - lastSavedRef.current < 250) return;
+      lastSavedRef.current = now;
+      const y = e.nativeEvent.contentOffset.y;
+      useForumPaginationStore.getState().setForumScroll(forum.id, currentPage, y);
+    },
+    [forum.id, currentPage, handleListScroll],
+  );
+
+  const handleJumpToPage = useCallback((page: number) => {
+    setJumpSheetOpen(false);
+    setCurrentPage(page);
+    useForumPaginationStore.getState().setForumPage(forum.id, page);
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    });
+  }, [forum.id]);
+
+  // Restore the user's scroll position on this page once data has loaded.
+  // Only fires on (forumId, currentPage) change — not on every scroll.
+  const restoreKey = `${forum.id}:${currentPage}`;
+  useEffect(() => {
+    if (!firstPage) return;
+    const y = useForumPaginationStore.getState().getForumScroll(forum.id, currentPage) ?? 0;
+    if (y > 0) {
+      requestAnimationFrame(() => {
+        listRef.current?.scrollToOffset({ offset: y, animated: false });
+      });
+    }
+    // Re-evaluate when the user jumps pages or the data first lands. The
+    // restoreKey covers both forumId and page in a single dep.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoreKey, !!firstPage]);
+
   return (
     <View style={styles.screen}>
       <TopNavBack title={detail.name} onBack={() => navigation.goBack()} />
@@ -194,13 +257,12 @@ export default function ForumThreadScreen() {
         />
       ) : (
         <FlashList
+          ref={listRef}
           data={filteredTopics}
           keyExtractor={t => String(t.id)}
           renderItem={renderTopicItem}
-          onEndReached={() => {
-            if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-          }}
-          onEndReachedThreshold={0.5}
+          onScroll={!isFiltering ? handleScrollWithSave : undefined}
+          scrollEventThrottle={16}
           ListHeaderComponent={
             <View>
               {/* Banner — real photo OR colored placeholder so layout stays consistent */}
@@ -345,14 +407,29 @@ export default function ForumThreadScreen() {
             </View>
           }
           ListFooterComponent={
-            isFetchingNextPage ? (
-              <View style={styles.footer}>
+            isFetching ? (
+              <View style={styles.footerLoading}>
                 <ActivityIndicator color={colors.primary} />
               </View>
             ) : null
           }
           contentContainerStyle={styles.content}
         />
+      )}
+
+      {!isFiltering && (
+        <View style={styles.paginationDock} pointerEvents="box-none">
+          <ForumPaginationBar
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={FORUM_TOPICS_PAGE_SIZE}
+            totalItems={detail.topicCount ?? 0}
+            itemLabel="topics"
+            hidden={barHidden}
+            onPageChange={handleJumpToPage}
+            onOpenJumpSheet={() => setJumpSheetOpen(true)}
+          />
+        </View>
       )}
 
       <NewTopicComposerSheet
@@ -372,6 +449,15 @@ export default function ForumThreadScreen() {
         topics={allTopics}
         onClose={() => setSettingsOpen(false)}
         onActionComplete={() => refetch()}
+      />
+
+      <JumpToPageSheet
+        visible={jumpSheetOpen}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        label="topics"
+        onClose={() => setJumpSheetOpen(false)}
+        onJump={handleJumpToPage}
       />
 
       {toast && (
@@ -404,7 +490,13 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.bg,
     },
     content: {
-      paddingBottom: 24,
+      paddingBottom: 80,
+    },
+    paginationDock: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
     },
     bannerWrap: {
       position: 'relative',
@@ -617,7 +709,10 @@ function makeStyles(c: ThemeColors) {
       textAlign: 'center',
     },
     footer: {
-      paddingVertical: 16,
+      paddingVertical: 8,
+    },
+    footerLoading: {
+      paddingVertical: 12,
     },
   });
 }

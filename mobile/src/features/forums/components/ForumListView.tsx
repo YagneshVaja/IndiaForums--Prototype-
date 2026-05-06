@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 
@@ -8,7 +8,10 @@ import { describeFetchError } from '../../../services/fetchError';
 import SearchBar from './SearchBar';
 import CategoryChips, { type ChipItem } from './CategoryChips';
 import ForumCard from './ForumCard';
-import { useForumHome } from '../hooks/useForumHome';
+import JumpToPageSheet from './JumpToPageSheet';
+import ForumPaginationBar from './ForumPaginationBar';
+import { useForumHome, FORUM_HOME_PAGE_SIZE } from '../hooks/useForumHome';
+import { useHideOnScroll } from '../hooks/useHideOnScroll';
 import { searchResults as apiSearchForums } from '../../../services/searchApi';
 import type { Forum } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
@@ -23,6 +26,9 @@ export default function ForumListView({ onForumPress }: Props) {
   const [activeSubCat, setActiveSubCat] = useState('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [jumpSheetOpen, setJumpSheetOpen] = useState(false);
+  const listRef = useRef<FlatList<Forum> | null>(null);
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -43,14 +49,12 @@ export default function ForumListView({ onForumPress }: Props) {
   const {
     data,
     isLoading: listLoading,
+    isFetching: listFetching,
     isRefetching: listRefetching,
     isError: listError,
     error: listErr,
     refetch: listRefetch,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useForumHome(apiCategoryId);
+  } = useForumHome(apiCategoryId, currentPage);
 
   const searchQuery = useQuery({
     queryKey: ['forum-search', debouncedSearch],
@@ -64,9 +68,11 @@ export default function ForumListView({ onForumPress }: Props) {
   const subCatMap = firstPage?.subCatMap || {};
   const listTotalCount = firstPage?.totalForumCount ?? 0;
 
+  // Page-by-page pagination: show only the current page's items, not all
+  // accumulated pages. Matches the live website's behavior.
   const listForums = useMemo<Forum[]>(
-    () => (data?.pages || []).flatMap(p => p.forums),
-    [data],
+    () => firstPage?.forums ?? [],
+    [firstPage],
   );
 
   const searchForums = useMemo<Forum[]>(() => {
@@ -116,7 +122,24 @@ export default function ForumListView({ onForumPress }: Props) {
   function selectCat(id: string) {
     setActiveCat(id);
     setActiveSubCat('all');
+    setCurrentPage(1);
   }
+
+  function selectSubCat(id: string) {
+    setActiveSubCat(id);
+    setCurrentPage(1);
+  }
+
+  const totalPages = firstPage?.totalPages ?? 1;
+  const { hidden: barHidden, onScroll: handleListScroll } = useHideOnScroll();
+
+  const handleJumpToPage = useCallback((page: number) => {
+    setJumpSheetOpen(false);
+    setCurrentPage(page);
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    });
+  }, []);
 
   if (isLoading) return <LoadingState height={400} />;
   if (isError) return (
@@ -130,19 +153,20 @@ export default function ForumListView({ onForumPress }: Props) {
   );
 
   return (
+    <View style={styles.flexFill}>
     <FlatList
+      ref={listRef}
+      style={styles.flexFill}
       data={displayForums}
       keyExtractor={f => String(f.id)}
       renderItem={({ item }) => <ForumCard forum={item} onPress={onForumPress} />}
+      onScroll={!isSearchMode ? handleListScroll : undefined}
+      scrollEventThrottle={16}
       refreshControl={
         !isSearchMode ? (
           <RefreshControl refreshing={listRefetching} onRefresh={listRefetch} tintColor={colors.primary} />
         ) : undefined
       }
-      onEndReached={() => {
-        if (!isSearchMode && hasNextPage && !isFetchingNextPage) fetchNextPage();
-      }}
-      onEndReachedThreshold={0.5}
       ListHeaderComponent={
         <View>
           <SearchBar
@@ -161,7 +185,7 @@ export default function ForumListView({ onForumPress }: Props) {
                 <CategoryChips
                   chips={subCatChips}
                   activeId={activeSubCat}
-                  onChange={setActiveSubCat}
+                  onChange={selectSubCat}
                   variant="secondary"
                 />
               )}
@@ -187,14 +211,37 @@ export default function ForumListView({ onForumPress }: Props) {
         </View>
       }
       ListFooterComponent={
-        isFetchingNextPage ? (
-          <View style={styles.footer}>
+        !isSearchMode && listFetching && !listRefetching ? (
+          <View style={styles.footerLoading}>
             <ActivityIndicator color={colors.primary} />
           </View>
         ) : null
       }
       contentContainerStyle={styles.content}
     />
+    {!isSearchMode && (
+      <View style={styles.paginationDock} pointerEvents="box-none">
+        <ForumPaginationBar
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={FORUM_HOME_PAGE_SIZE}
+          totalItems={totalCount}
+          itemLabel="forums"
+          hidden={barHidden}
+          onPageChange={handleJumpToPage}
+          onOpenJumpSheet={() => setJumpSheetOpen(true)}
+        />
+      </View>
+    )}
+    <JumpToPageSheet
+      visible={jumpSheetOpen}
+      currentPage={currentPage}
+      totalPages={totalPages}
+      label="forums"
+      onClose={() => setJumpSheetOpen(false)}
+      onJump={handleJumpToPage}
+    />
+    </View>
   );
 }
 
@@ -202,7 +249,13 @@ function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     content: {
       paddingTop: 0,
-      paddingBottom: 24,
+      paddingBottom: 80,
+    },
+    paginationDock: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
     },
     countRow: {
       flexDirection: 'row',
@@ -246,7 +299,13 @@ function makeStyles(c: ThemeColors) {
       textAlign: 'center',
     },
     footer: {
-      paddingVertical: 16,
+      paddingVertical: 8,
+    },
+    footerLoading: {
+      paddingVertical: 12,
+    },
+    flexFill: {
+      flex: 1,
     },
   });
 }

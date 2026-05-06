@@ -797,6 +797,8 @@ export interface TopicPostsPage {
   topicDetail: ForumTopic | null;
   flairs: ForumFlair[];
   pageNumber: number;
+  pageSize: number;
+  totalCount: number;
   hasNextPage: boolean;
 }
 
@@ -3158,6 +3160,8 @@ export async function fetchTopicPosts(
     topicDetail: detailWithPoll ? transformTopic(detailWithPoll) : null,
     flairs,
     pageNumber: apiPageNumber,
+    pageSize: apiPageSize,
+    totalCount,
     hasNextPage: apiPageNumber * apiPageSize < totalCount,
   };
 }

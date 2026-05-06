@@ -23,7 +23,11 @@ import PollWidget from '../components/PollWidget';
 import TopicModActionsSheet, { type ActionKey as ModActionKey } from '../components/TopicModActionsSheet';
 import PostModActionsSheet, { type PostActionKey } from '../components/PostModActionsSheet';
 import SearchBar from '../components/SearchBar';
-import { useTopicPosts } from '../hooks/useTopicPosts';
+import JumpToPageSheet from '../components/JumpToPageSheet';
+import ForumPaginationBar from '../components/ForumPaginationBar';
+import { useTopicPosts, TOPIC_POSTS_PAGE_SIZE } from '../hooks/useTopicPosts';
+import { useHideOnScroll } from '../hooks/useHideOnScroll';
+import { useForumPaginationStore, selectTopicPage } from '../store/forumPaginationStore';
 import { useTopicTopPosters } from '../hooks/useTopicTopPosters';
 import { applyTopicReaction, seedOpPost } from '../hooks/useTopicLike';
 import { selectTopicReaction, useTopicReactionsStore } from '../store/topicReactionsStore';
@@ -90,6 +94,10 @@ export default function TopicDetailScreen() {
   const [postSearch, setPostSearch] = useState('');
   const [debouncedPostSearch, setDebouncedPostSearch] = useState('');
   const [stickyVisible, setStickyVisible] = useState(false);
+  const persistedTopicPage = useForumPaginationStore(selectTopicPage(topic.id));
+  const [currentPage, setCurrentPage] = useState(persistedTopicPage);
+  const [jumpSheetOpen, setJumpSheetOpen] = useState(false);
+  const lastSavedScrollRef = useRef(0);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedPostSearch(postSearch.trim()), 100);
@@ -122,13 +130,11 @@ export default function TopicDetailScreen() {
   const {
     data,
     isLoading,
+    isFetching,
     isError,
     error,
     refetch,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useTopicPosts(topic.id, debouncedPostSearch);
+  } = useTopicPosts(topic.id, debouncedPostSearch, currentPage);
 
   const firstPage = data?.pages[0];
   const liveTopic: ForumTopic = firstPage?.topicDetail
@@ -152,20 +158,11 @@ export default function TopicDetailScreen() {
     return null;
   }, [data]);
 
-  // Concatenate pages while deduping by post id and preserving chronological
-  // order — guards against any server-side overlap between page boundaries.
-  const allPosts = useMemo<TopicPost[]>(() => {
-    const seen = new Set<number>();
-    const out: TopicPost[] = [];
-    for (const page of data?.pages || []) {
-      for (const post of page.posts) {
-        if (seen.has(post.id)) continue;
-        seen.add(post.id);
-        out.push(post);
-      }
-    }
-    return out;
-  }, [data]);
+  // Page-by-page pagination: only the current page's posts are displayed.
+  const allPosts = useMemo<TopicPost[]>(
+    () => firstPage?.posts ?? [],
+    [firstPage],
+  );
 
   // Once the OP arrives from the server, push it into the shared store so
   // the LIKE button on this screen and the emoji-stack pill on listing-view
@@ -218,6 +215,36 @@ export default function TopicDetailScreen() {
     });
   }, [jumpToLast, sortedPosts.length]);
 
+  // Pagination — derive total pages from server-reported totalCount.
+  const totalPostCount = firstPage?.totalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalPostCount / TOPIC_POSTS_PAGE_SIZE));
+
+  const isFilteringPosts = sortBy === 'likes' || postSearch.trim().length > 0;
+
+  const { hidden: barHidden, onScroll: handlePagOnScroll } = useHideOnScroll();
+
+  const handleJumpToPage = useCallback((page: number) => {
+    setJumpSheetOpen(false);
+    setCurrentPage(page);
+    useForumPaginationStore.getState().setTopicPage(topic.id, page);
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    });
+  }, [topic.id]);
+
+  // Restore scroll position once posts arrive for the current page.
+  const restoreKey = `${topic.id}:${currentPage}`;
+  useEffect(() => {
+    if (!firstPage) return;
+    const y = useForumPaginationStore.getState().getTopicScroll(topic.id, currentPage) ?? 0;
+    if (y > 0) {
+      requestAnimationFrame(() => {
+        listRef.current?.scrollToOffset({ offset: y, animated: false });
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoreKey, !!firstPage]);
+
   const displayPoll = useMemo<TopicPoll | null>(() => {
     if (!liveTopic.poll) return null;
     const bump = Object.values(pollOverrides).reduce((a, b) => a + b, 0);
@@ -251,6 +278,14 @@ export default function TopicDetailScreen() {
     const y = e.nativeEvent.contentOffset.y;
     const shouldShow = y > STICKY_THRESHOLD;
     if (shouldShow !== stickyVisible) setStickyVisible(shouldShow);
+    if (!isFilteringPosts) {
+      handlePagOnScroll(e);
+      const now = Date.now();
+      if (now - lastSavedScrollRef.current >= 250) {
+        lastSavedScrollRef.current = now;
+        useForumPaginationStore.getState().setTopicScroll(topic.id, currentPage, y);
+      }
+    }
   }
 
   const sendReaction = useCallback(
@@ -638,10 +673,6 @@ export default function TopicDetailScreen() {
           onScroll={handleScroll}
           scrollEventThrottle={16}
           renderItem={renderReply}
-          onEndReached={() => {
-            if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-          }}
-          onEndReachedThreshold={0.5}
           ListHeaderComponent={
             <>
               <View style={styles.topicCard}>
@@ -874,6 +905,7 @@ export default function TopicDetailScreen() {
                   )}
                 </View>
               )}
+
             </>
           }
           ListEmptyComponent={
@@ -886,7 +918,7 @@ export default function TopicDetailScreen() {
             </View>
           }
           ListFooterComponent={
-            isFetchingNextPage ? (
+            isFetching ? (
               <View style={styles.footerSpinner}>
                 <ActivityIndicator color={colors.primary} />
               </View>
@@ -911,6 +943,21 @@ export default function TopicDetailScreen() {
           <Pressable hitSlop={8} onPress={() => setSameReactionPostId(null)}>
             <Ionicons name="close" size={14} color={colors.textSecondary} />
           </Pressable>
+        </View>
+      )}
+
+      {!isFilteringPosts && (
+        <View style={styles.paginationDock} pointerEvents="box-none">
+          <ForumPaginationBar
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={TOPIC_POSTS_PAGE_SIZE}
+            totalItems={totalPostCount}
+            itemLabel="posts"
+            hidden={barHidden}
+            onPageChange={handleJumpToPage}
+            onOpenJumpSheet={() => setJumpSheetOpen(true)}
+          />
         </View>
       )}
 
@@ -1009,6 +1056,15 @@ export default function TopicDetailScreen() {
         onShowHistory={(p) => { setPostSheetFor(null); setEditHistoryFor(p); }}
         onActionComplete={handlePostAction}
       />
+
+      <JumpToPageSheet
+        visible={jumpSheetOpen}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        label="posts"
+        onClose={() => setJumpSheetOpen(false)}
+        onJump={handleJumpToPage}
+      />
     </View>
   );
 }
@@ -1078,7 +1134,13 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.bg,
     },
     content: {
-      paddingBottom: 90,
+      paddingBottom: 150,
+    },
+    paginationDock: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 56,
     },
     sticky: {
       position: 'absolute',
@@ -1526,7 +1588,7 @@ function makeStyles(c: ThemeColors) {
       color: c.textTertiary,
     },
     footerSpinner: {
-      paddingVertical: 16,
+      paddingVertical: 12,
     },
     toast: {
       position: 'absolute',
