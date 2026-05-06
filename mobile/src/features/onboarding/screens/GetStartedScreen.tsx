@@ -44,6 +44,8 @@ const FEATURES = [
   },
 ] as const;
 
+const CHANNELS = ['Star Plus', 'Zee TV', 'Sony', 'Colors', 'SAB', '& more'] as const;
+
 export default function GetStartedScreen({ navigation }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -142,6 +144,16 @@ export default function GetStartedScreen({ navigation }: Props) {
           ))}
         </View>
         <View style={styles.divider} />
+        <View style={styles.coverageWrap}>
+          <Text style={styles.coverageLabel}>COVERING</Text>
+          <View style={styles.pillsRow}>
+            {CHANNELS.map((name) => (
+              <View key={name} style={styles.pill}>
+                <Text style={styles.pillText}>{name}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
       </Animated.View>
 
       {/* CTAs */}
@@ -208,12 +220,42 @@ function makeStyles(c: ThemeColors) {
     },
     featuresWrap: {
       width: '100%',
-      gap: 18,
+      gap: 16,
     },
     divider: {
       height: 1,
       backgroundColor: 'rgba(15,23,42,0.08)',
       width: '100%',
+    },
+    coverageWrap: {
+      alignItems: 'center',
+      gap: 8,
+    },
+    coverageLabel: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: c.textTertiary,
+      letterSpacing: 1.4,
+    },
+    pillsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      justifyContent: 'center',
+    },
+    pill: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999,
+      backgroundColor: 'rgba(53,88,240,0.08)',
+      borderWidth: 1,
+      borderColor: 'rgba(53,88,240,0.18)',
+    },
+    pillText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: PRIMARY_BLUE,
+      letterSpacing: 0.2,
     },
     featuresRow: {
       flexDirection: 'row',
