@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { OnboardingSlide as SlideType } from '../types';
 import { useThemeStore } from '../../../store/themeStore';
@@ -7,8 +7,6 @@ import type { ThemeColors } from '../../../theme/tokens';
 import CommunityHero from './slideHeroes/CommunityHero';
 import DiscussionHero from './slideHeroes/DiscussionHero';
 import NewsHero from './slideHeroes/NewsHero';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const HEROES: Record<string, React.ComponentType> = {
   '1': CommunityHero,
@@ -21,24 +19,27 @@ interface Props {
 }
 
 export function OnboardingSlide({ slide }: Props) {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const Hero = HEROES[slide.id];
-  // Start fully visible so heroes always render even if animation is
-  // interrupted by FlatList virtualisation. Animation just adds a subtle
-  // settle from 0.96 -> 1.
   const scale = useRef(new Animated.Value(0.96)).current;
 
   useEffect(() => {
     Animated.timing(scale, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, [scale]);
 
+  // Approximate vertical chrome (top row + bottom bar + safe areas) so each
+  // slide fills the FlatList's full height. Explicit pixels — bulletproof
+  // against alignItems-center collapse on horizontal FlatLists.
+  const slideHeight = screenHeight - 220;
+
   return (
     <LinearGradient
       colors={slide.gradientStops}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={[styles.container, { width: SCREEN_WIDTH }]}
+      style={[styles.container, { width: screenWidth, height: slideHeight }]}
     >
       <Animated.View style={[styles.heroArea, { transform: [{ scale }] }]}>
         {Hero ? <Hero /> : null}
@@ -56,7 +57,6 @@ export function OnboardingSlide({ slide }: Props) {
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: {
-      flex: 1,
       paddingHorizontal: 28,
       paddingTop: 16,
       paddingBottom: 24,
