@@ -63,15 +63,19 @@ export default function NewsHero() {
     <View style={styles.wrapper}>
       <View style={styles.glowDisc} />
 
-      {/* Main news headline card with newspaper icon */}
+      {/* Main news headline card with newspaper icon + real category labels */}
       <LinearGradient
         colors={['#F59E0B', '#D97706']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headlineCard}
       >
-        <Ionicons name="newspaper" size={64} color="#FFFFFF" style={{ opacity: 0.95 }} />
-        <Text style={styles.cardTitle}>Headlines</Text>
+        <Ionicons name="newspaper" size={56} color="#FFFFFF" style={{ opacity: 0.95 }} />
+        <View style={styles.categoryRow}>
+          <View style={styles.categoryPill}><Text style={styles.categoryPillText}>TV</Text></View>
+          <View style={styles.categoryPill}><Text style={styles.categoryPillText}>MOVIES</Text></View>
+          <View style={styles.categoryPill}><Text style={styles.categoryPillText}>DIGITAL</Text></View>
+        </View>
         <Text style={styles.cardSubtitle}>Updated every hour</Text>
       </LinearGradient>
 
@@ -116,18 +120,33 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 12,
   },
-  cardTitle: {
-    fontSize: 22,
+  categoryRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 10,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  categoryPill: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.45)',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  categoryPillText: {
+    fontSize: 10,
     fontWeight: '800',
     color: '#FFFFFF',
-    letterSpacing: -0.4,
-    marginTop: 6,
+    letterSpacing: 0.8,
   },
   cardSubtitle: {
     fontSize: 12,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.85)',
+    color: 'rgba(255,255,255,0.9)',
     letterSpacing: 0.4,
+    marginTop: 8,
   },
   badgeWrap: {
     position: 'absolute',

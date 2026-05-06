@@ -58,21 +58,25 @@ export default function DiscussionHero() {
     <View style={styles.wrapper}>
       <View style={styles.glowDisc} />
 
-      {/* Bubble 1 — bottom left, large, white */}
+      {/* Bubble 1 — bottom left, real show forum thread */}
       <View style={[styles.bubble, styles.bubbleBottomLeft]}>
         <Ionicons name="book" size={20} color="#10B981" />
-        <Text style={styles.bubbleLabel}>Fan Fiction</Text>
+        <Text style={styles.bubbleLabel}>Bhagya Lakshmi</Text>
       </View>
 
-      {/* Bubble 2 — top right, emerald, with brand icon */}
+      {/* Bubble 2 — top right, real show with REPLY badge */}
       <View style={[styles.bubble, styles.bubbleTopRight]}>
-        <Image source={LOGO_ICON} style={styles.bubbleAvatar} resizeMode="contain" />
-        <Text style={styles.bubbleLabel}>Forum</Text>
+        <Ionicons name="chatbubbles" size={18} color="#10B981" />
+        <Text style={styles.bubbleLabel}>Udne Ki Aasha</Text>
+        <View style={styles.replyBadge}>
+          <Text style={styles.replyBadgeText}>REPLY</Text>
+        </View>
       </View>
 
-      {/* Bubble 3 — center, smaller, with typing dots */}
+      {/* Bubble 3 — center, brand icon + currently-trending show + typing dots */}
       <View style={[styles.bubble, styles.bubbleCenter]}>
-        <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
+        <Image source={LOGO_ICON} style={styles.bubbleAvatar} resizeMode="contain" />
+        <Text style={styles.bubbleCenterLabel}>Anupamaa</Text>
         <TypingDots />
       </View>
     </View>
@@ -131,10 +135,28 @@ const styles = StyleSheet.create({
     height: 28,
   },
   bubbleLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#1F2937',
     letterSpacing: -0.2,
+  },
+  bubbleCenterLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+  replyBadge: {
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  replyBadgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#065F46',
+    letterSpacing: 0.8,
   },
   typingRow: {
     flexDirection: 'row',
