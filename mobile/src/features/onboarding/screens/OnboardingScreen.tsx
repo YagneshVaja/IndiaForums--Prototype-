@@ -13,6 +13,7 @@ import {
 
 const LOGO_ICON = require('../../../../assets/icon.png');
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingSlide } from '../components/OnboardingSlide';
 import { PaginationDots } from '../components/PaginationDots';
@@ -77,7 +78,12 @@ export default function OnboardingScreen({ navigation }: Props) {
   }, [navigation]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
+    <LinearGradient
+      colors={ONBOARDING_SLIDES[currentIndex].gradientStops}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.container, { paddingTop: insets.top + 8 }]}
+    >
       {/* Top row: brand mark + skip */}
       <View style={styles.topRow}>
         <Image source={LOGO_ICON} style={styles.brandMark} resizeMode="contain" />
@@ -131,7 +137,7 @@ export default function OnboardingScreen({ navigation }: Props) {
           </Text>
         </Pressable>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -139,7 +145,9 @@ function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: c.bg,
+      // Background painted by the LinearGradient wrapper using the
+      // current slide's gradient stops, so the top row + bottom bar
+      // sit on the same color as the slide content.
     },
     topRow: {
       flexDirection: 'row',

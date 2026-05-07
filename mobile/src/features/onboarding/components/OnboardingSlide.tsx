@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, useWindowDimensions, Animated } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { OnboardingSlide as SlideType } from '../types';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
@@ -35,12 +34,7 @@ export function OnboardingSlide({ slide }: Props) {
   const slideHeight = screenHeight - 220;
 
   return (
-    <LinearGradient
-      colors={slide.gradientStops}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.container, { width: screenWidth, height: slideHeight }]}
-    >
+    <View style={[styles.container, { width: screenWidth, height: slideHeight }]}>
       <Animated.View style={[styles.heroArea, { transform: [{ scale }] }]}>
         {Hero ? <Hero /> : null}
       </Animated.View>
@@ -50,7 +44,7 @@ export function OnboardingSlide({ slide }: Props) {
         <Text style={styles.title}>{slide.title}</Text>
         <Text style={styles.description}>{slide.description}</Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
