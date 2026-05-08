@@ -135,9 +135,26 @@ export default function ForumsSection({ onTopicPress }: Props) {
         {isLoading && topics.length === 0 ? (
           <LoadingState height={260} />
         ) : visibleTopics.length === 0 ? (
-          <Text style={styles.empty}>
-            {isFetching ? 'Loading…' : 'No topics yet.'}
-          </Text>
+          isFetching ? (
+            <Text style={styles.empty}>Loading…</Text>
+          ) : (
+            <Pressable
+              onPress={handleSeeAll}
+              style={({ pressed }) => [
+                styles.emptyState,
+                pressed && styles.emptyStatePressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="No discussions in this view yet — open Forums tab"
+            >
+              <Text style={styles.emptyEmoji}>💬</Text>
+              <Text style={styles.emptyTitle}>No discussions in this view yet</Text>
+              <View style={styles.emptyCtaRow}>
+                <Text style={styles.emptyCta}>Open Forums</Text>
+                <Ionicons name="arrow-forward" size={13} color={colors.primary} />
+              </View>
+            </Pressable>
+          )
         ) : (
           visibleTopics.map((t) => (
             <TopicRow
@@ -396,6 +413,37 @@ function makeStyles(c: ThemeColors) {
       color: c.textTertiary,
       textAlign: 'center',
       paddingVertical: 24,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: 28,
+      paddingHorizontal: 24,
+      gap: 8,
+    },
+    emptyStatePressed: {
+      opacity: 0.7,
+    },
+    emptyEmoji: {
+      fontSize: 28,
+      opacity: 0.6,
+    },
+    emptyTitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.textSecondary,
+      textAlign: 'center',
+    },
+    emptyCtaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginTop: 4,
+    },
+    emptyCta: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: c.primary,
+      letterSpacing: 0.2,
     },
   });
 }

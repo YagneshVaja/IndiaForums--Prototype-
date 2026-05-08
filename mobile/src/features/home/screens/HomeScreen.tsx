@@ -234,6 +234,11 @@ export default function HomeScreen() {
   const ListFooter = useMemo(
     () => (
       <View>
+        {/* End-of-news divider — visually attributes the pill (or empty
+            spacer) to the Latest News block above so it doesn't read as
+            floating between sections. */}
+        <View style={styles.newsListDivider} />
+
         {/* VIEW ALL NEWS pill — sits directly under the 12-article preview so
             the user always reaches a clear stopping point and can drill into
             the dedicated News tab for the active category filter. When the
@@ -355,14 +360,21 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.card,
     },
     sectionGap: {
-      marginTop: 8,
+      marginTop: 12,
     },
     spacer: { height: 32 },
     // Filler when the news list isn't capped — keeps a minimum gap between
     // the last ArticleCard and the next section's borderTop so the seam
     // isn't visually tight.
     newsListGap: {
-      height: 12,
+      height: 16,
+    },
+    // Subtle 1-px line that closes off the news block before the pill or
+    // the empty-state spacer below it.
+    newsListDivider: {
+      height: 1,
+      backgroundColor: c.border,
+      marginHorizontal: 14,
     },
 
     // Shared Home section header — used by Trending Now and Latest News
