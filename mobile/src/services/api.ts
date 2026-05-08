@@ -1121,7 +1121,11 @@ function transformBiography(data: any): CelebrityBiography | null {
     facebook:      person.facebook || '',
     twitter:       person.twitter || '',
     instagram:     person.instagram || '',
-    forumId:       Number(person.forumId ?? person.alternateForumId ?? 0),
+    // forumId / alternateForumId live at the response root, NOT inside `person`.
+    // Verified against /api/v1/celebrities/3/biography — Salman Khan has root
+    // forumId=0, alternateForumId=9 (the Bollywood forum). The detail screen's
+    // Discussion tab is gated on this being > 0.
+    forumId:       Number(data?.forumId || data?.alternateForumId || 0),
   };
 }
 
