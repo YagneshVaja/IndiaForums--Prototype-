@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import type { CelebrityBiography } from '../../../services/api';
-import { parseBioHtml, joinList, formatDateString, type BioImage } from '../utils/parseBioHtml';
+import { parseBioHtml, joinList, formatDateString, computeAge, type BioImage } from '../utils/parseBioHtml';
 import StatsBar from './StatsBar';
 import AboutCard from './AboutCard';
 import BioSection from './BioSection';
@@ -53,7 +53,14 @@ export default function BiographyTab({ biography, isLoading, isError, onRetry }:
               items={[
                 biography.profession.length > 0 ? { label: 'Profession', value: joinList(biography.profession) } : null,
                 biography.nicknames.length > 0  ? { label: 'Nicknames',  value: joinList(biography.nicknames)  } : null,
-                biography.birthDate    ? { label: 'Date of Birth', value: formatDateString(biography.birthDate) } : null,
+                biography.birthDate ? {
+                  label: 'Date of Birth',
+                  value: (() => {
+                    const dob = formatDateString(biography.birthDate);
+                    const age = computeAge(biography.birthDate);
+                    return age != null ? `${dob} · Age ${age}` : dob;
+                  })(),
+                } : null,
                 biography.birthPlace   ? { label: 'Birthplace',    value: biography.birthPlace   } : null,
                 biography.zodiacSign   ? { label: 'Zodiac Sign',   value: biography.zodiacSign   } : null,
                 biography.nationality  ? { label: 'Nationality',   value: biography.nationality  } : null,
@@ -65,8 +72,13 @@ export default function BiographyTab({ biography, isLoading, isError, onRetry }:
               title="Physical"
               icon="📏"
               items={[
-                biography.height ? { label: 'Height', value: biography.height } : null,
-                biography.weight ? { label: 'Weight', value: biography.weight } : null,
+                biography.height    ? { label: 'Height',     value: biography.height }    : null,
+                biography.weight    ? { label: 'Weight',     value: biography.weight }    : null,
+                biography.chest     ? { label: 'Chest',      value: biography.chest }     : null,
+                biography.waist     ? { label: 'Waist',      value: biography.waist }     : null,
+                biography.biceps    ? { label: 'Biceps',     value: biography.biceps }    : null,
+                biography.eyeColor  ? { label: 'Eye Color',  value: biography.eyeColor }  : null,
+                biography.hairColor ? { label: 'Hair Color', value: biography.hairColor } : null,
               ]}
             />
             <FactsCard

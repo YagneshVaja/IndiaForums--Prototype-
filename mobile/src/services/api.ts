@@ -495,6 +495,11 @@ export interface CelebrityBiography {
   nationality: string;
   height: string;
   weight: string;
+  chest: string;
+  waist: string;
+  biceps: string;
+  eyeColor: string;
+  hairColor: string;
   debut: string[];
   hometown: string;
   education: string;
@@ -514,6 +519,7 @@ export interface CelebrityBiography {
   facebook: string;
   twitter: string;
   instagram: string;
+  forumId: number;
 }
 
 export interface CelebrityFan {
@@ -1092,6 +1098,11 @@ function transformBiography(data: any): CelebrityBiography | null {
     nationality:   (infoMap['Nationality'] || [])[0] || '',
     height:        (infoMap['Height (approx.)'] || [])[0] || '',
     weight:        (infoMap['Weight (approx.)'] || [])[0] || '',
+    chest:         (infoMap['Chest (approx.)']  || [])[0] || '',
+    waist:         (infoMap['Waist (approx.)']  || [])[0] || '',
+    biceps:        (infoMap['Biceps (approx.)'] || [])[0] || '',
+    eyeColor:      (infoMap['Eye Color']  || [])[0] || '',
+    hairColor:     (infoMap['Hair Color'] || [])[0] || '',
     debut:         infoMap['Debut'] || [],
     hometown:      (infoMap['Hometown'] || [])[0] || '',
     education:     (infoMap['Educational Qualification'] || [])[0] || '',
@@ -1110,6 +1121,7 @@ function transformBiography(data: any): CelebrityBiography | null {
     facebook:      person.facebook || '',
     twitter:       person.twitter || '',
     instagram:     person.instagram || '',
+    forumId:       Number(person.forumId ?? person.alternateForumId ?? 0),
   };
 }
 
@@ -1272,6 +1284,54 @@ export async function fetchCelebrityBiography(personId: string): Promise<Celebri
     const e = err as { response?: { status: number; data: unknown }; message?: string };
     console.error('[API] fetchCelebrityBiography failed:', e?.response?.status, e?.response?.data ?? e?.message);
     return getMockBiography(personId);
+  }
+}
+
+/**
+ * Movies associated with a celebrity, all roles.
+ * Backend route: GET /movies/by-mode?mode=3&id={personId}
+ * Mode 3 = "movies for a person, any role". Confirmed working against real
+ * personIds; reuses the same Movie shape returned by /movies.
+ */
+export async function fetchCelebrityFilmography(
+  personId: string,
+  page = 1,
+  pageSize = 24,
+): Promise<MoviesPage> {
+  try {
+    const { data } = await apiClient.get('/movies/by-mode', {
+      params: { mode: 3, id: personId, page, pageSize },
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any = data ?? {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const movies: Movie[] = (raw.movies || []).map((m: any) => ({
+      titleId:             Number(m.titleId),
+      titleName:           String(m.titleName ?? ''),
+      startYear:           m.startYear ?? null,
+      pageUrl:             String(m.pageUrl ?? ''),
+      posterUrl:           m.posterUrl ?? null,
+      hasThumbnail:        !!m.hasThumbnail,
+      releaseDate:         m.releaseDate ?? null,
+      titleShortDesc:      m.titleShortDesc ?? null,
+      titleTypeId:         Number(m.titleTypeId ?? 0),
+      audienceRating:      Number(m.audienceRating ?? 0),
+      criticRating:        Number(m.criticRating ?? 0),
+      audienceRatingCount: Number(m.audienceRatingCount ?? 0),
+      criticRatingCount:   Number(m.criticRatingCount ?? 0),
+      averageRating:       Number(m.averageRating ?? 0),
+    }));
+    return {
+      movies,
+      totalCount: Number(raw.totalCount ?? movies.length),
+      pageNumber: Number(raw.pageNumber ?? page),
+      pageSize:   Number(raw.pageSize ?? pageSize),
+      totalPages: Number(raw.totalPages ?? 1),
+    };
+  } catch (err: unknown) {
+    const e = err as { response?: { status: number; data: unknown }; message?: string };
+    console.error('[API] fetchCelebrityFilmography failed:', e?.response?.status, e?.response?.data ?? e?.message);
+    return { movies: [], totalCount: 0, pageNumber: page, pageSize, totalPages: 1 };
   }
 }
 
@@ -1557,6 +1617,11 @@ function getMockBiography(personId: string): CelebrityBiography {
     nationality:   'Indian',
     height:        '5\'8" (173 cm)',
     weight:        '75 kg',
+    chest:         '40"',
+    waist:         '32"',
+    biceps:        '15"',
+    eyeColor:      'Brown',
+    hairColor:     'Black',
     debut:         ['Deewana (1992)'],
     hometown:      'Mumbai, Maharashtra',
     education:     'Hansraj College, University of Delhi',
@@ -1575,6 +1640,7 @@ function getMockBiography(personId: string): CelebrityBiography {
     facebook:      '',
     twitter:       'iamsrk',
     instagram:     'iamsrk',
+    forumId:       0,
   };
 }
 
@@ -3089,9 +3155,15 @@ export async function fetchTopicPosts(
   pageSize = 20,
   searchQuery = '',
   signal?: AbortSignal,
+  /** Server-side sort. 'date' (chronological, default) or 'likes' (top). */
+  sort: 'date' | 'likes' = 'date',
 ): Promise<TopicPostsPage> {
   const params: Record<string, string | number> = { pageNumber, pageSize };
   if (searchQuery.trim()) params.searchQuery = searchQuery.trim();
+  // Only include the sort param when we want non-default ordering — keeps
+  // the request shape unchanged for the common case and avoids tripping
+  // any backend that expects the param to be absent.
+  if (sort === 'likes') params.sort = 'likes';
 
   const { data } = await apiClient.get(`/forums/topics/${topicId}/posts`, {
     params,

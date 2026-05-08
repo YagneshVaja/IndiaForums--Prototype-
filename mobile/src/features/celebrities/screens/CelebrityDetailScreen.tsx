@@ -5,14 +5,18 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import type { HomeStackParamList } from '../../../navigation/types';
-import type { CelebrityFan } from '../../../services/api';
+import type { CelebrityFan, Movie, ForumTopic } from '../../../services/api';
 
 import TrendBadge from '../components/TrendBadge';
 import Initials from '../components/Initials';
 import BiographyTab from '../components/BiographyTab';
 import FansTab from '../components/FansTab';
+import FilmographyTab from '../components/FilmographyTab';
+import DiscussionTab from '../components/DiscussionTab';
 import { useCelebrityBiography } from '../hooks/useCelebrityBiography';
 import { useCelebrityFans } from '../hooks/useCelebrityFans';
+import { useCelebrityFilmography } from '../hooks/useCelebrityFilmography';
+import { useCelebrityDiscussion } from '../hooks/useCelebrityDiscussion';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 
@@ -20,21 +24,56 @@ type Route = RouteProp<HomeStackParamList, 'CelebrityProfile'>;
 type Nav   = NativeStackNavigationProp<HomeStackParamList, 'CelebrityProfile'>;
 type Styles = ReturnType<typeof makeStyles>;
 
-const TABS: { id: 'biography' | 'fans'; label: string }[] = [
-  { id: 'biography', label: 'Biography' },
-  { id: 'fans',      label: 'Fans' },
+type TabId = 'biography' | 'filmography' | 'discussion' | 'fans';
+const TABS: { id: TabId; label: string }[] = [
+  { id: 'biography',   label: 'Biography' },
+  { id: 'filmography', label: 'Filmography' },
+  { id: 'discussion',  label: 'Discussion' },
+  { id: 'fans',        label: 'Fans' },
 ];
 
 export default function CelebrityDetailScreen() {
   const route = useRoute<Route>();
   const navigation = useNavigation<Nav>();
   const { celebrity } = route.params;
-  const [tab, setTab] = useState<'biography' | 'fans'>('biography');
+  const [tab, setTab] = useState<TabId>('biography');
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const bioQuery = useCelebrityBiography(celebrity.id);
   const fansQuery = useCelebrityFans(celebrity.id);
+
+  const filmQuery       = useCelebrityFilmography(celebrity.id);
+  const forumId         = bioQuery.data?.forumId ?? null;
+  const discussionQuery = useCelebrityDiscussion(forumId);
+
+  const movies = useMemo(() => {
+    const seen = new Set<number>();
+    const list: Movie[] = [];
+    for (const page of filmQuery.data?.pages ?? []) {
+      for (const m of page.movies) {
+        if (!seen.has(m.titleId)) {
+          seen.add(m.titleId);
+          list.push(m);
+        }
+      }
+    }
+    return list;
+  }, [filmQuery.data]);
+
+  const topics = useMemo(() => {
+    const seen = new Set<number>();
+    const list: ForumTopic[] = [];
+    for (const page of discussionQuery.data?.pages ?? []) {
+      for (const t of page.topics) {
+        if (!seen.has(t.id)) {
+          seen.add(t.id);
+          list.push(t);
+        }
+      }
+    }
+    return list;
+  }, [discussionQuery.data]);
 
   const fans = useMemo(() => {
     const seen = new Set<string>();
@@ -92,6 +131,28 @@ export default function CelebrityDetailScreen() {
             isLoading={bioQuery.isLoading}
             isError={bioQuery.isError}
             onRetry={() => bioQuery.refetch()}
+          />
+        ) : tab === 'filmography' ? (
+          <FilmographyTab
+            movies={movies}
+            isLoading={filmQuery.isLoading}
+            isError={filmQuery.isError}
+            hasNextPage={!!filmQuery.hasNextPage}
+            isFetchingNextPage={filmQuery.isFetchingNextPage}
+            onLoadMore={() => filmQuery.fetchNextPage()}
+            onRetry={() => filmQuery.refetch()}
+          />
+        ) : tab === 'discussion' ? (
+          <DiscussionTab
+            forumId={forumId}
+            bioLoading={bioQuery.isLoading}
+            topics={topics}
+            isLoading={discussionQuery.isLoading}
+            isError={discussionQuery.isError}
+            hasNextPage={!!discussionQuery.hasNextPage}
+            isFetchingNextPage={discussionQuery.isFetchingNextPage}
+            onLoadMore={() => discussionQuery.fetchNextPage()}
+            onRetry={() => discussionQuery.refetch()}
           />
         ) : (
           <FansTab

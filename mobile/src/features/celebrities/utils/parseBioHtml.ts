@@ -128,3 +128,16 @@ export function joinList(arr: string[] | undefined): string {
   if (!arr || arr.length === 0) return '';
   return arr.join(', ');
 }
+
+export function computeAge(birthDate: string): number | null {
+  if (!birthDate) return null;
+  const d = new Date(birthDate);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const beforeBirthdayThisYear =
+    now.getMonth() < d.getMonth() ||
+    (now.getMonth() === d.getMonth() && now.getDate() < d.getDate());
+  if (beforeBirthdayThisYear) age -= 1;
+  return age >= 0 && age < 130 ? age : null;
+}
