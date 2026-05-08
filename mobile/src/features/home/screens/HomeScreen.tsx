@@ -18,6 +18,7 @@ import StoriesStrip from '../components/StoriesStrip';
 import PhotoGallerySection from '../components/PhotoGallerySection';
 import WebStoriesHomeSection from '../components/WebStoriesHomeSection';
 import LatestMoviesHomeSection from '../components/LatestMoviesHomeSection';
+import CelebrityRankingHomeSection from '../components/CelebrityRankingHomeSection';
 import ForumsSection from '../components/ForumsSection';
 import ChannelsSection from '../components/ChannelsSection';
 import VideosHomeSection from '../components/VideosHomeSection';
@@ -85,6 +86,7 @@ export default function HomeScreen() {
         queryClient.invalidateQueries({ queryKey: ['quizzes'] }),
         queryClient.invalidateQueries({ queryKey: ['webstories'] }),
         queryClient.invalidateQueries({ queryKey: ['movies'] }),
+        queryClient.invalidateQueries({ queryKey: ['celebrities'] }),
       ]);
     } finally {
       setRefreshing(false);
@@ -254,6 +256,10 @@ export default function HomeScreen() {
 
         <View style={styles.sectionGap}>
           <LatestMoviesHomeSection />
+        </View>
+
+        <View style={styles.sectionGap}>
+          <CelebrityRankingHomeSection />
         </View>
 
         <View style={styles.spacer} />
