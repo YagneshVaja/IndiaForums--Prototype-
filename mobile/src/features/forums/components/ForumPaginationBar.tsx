@@ -1,5 +1,13 @@
-import React, { useEffect, useMemo } from 'react';
-import { Pressable, Text, View, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Pressable,
+  Text,
+  TextInput,
+  View,
+  StyleSheet,
+  Platform,
+  Keyboard,
+} from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -11,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
+import PageScrubber from './PageScrubber';
 
 interface Props {
   currentPage: number;
@@ -18,23 +27,29 @@ interface Props {
   pageSize: number;
   totalItems: number;
   itemLabel: string;
-  /** True while the user is scrolling down, hides the bar to maximise content. */
+  /** True while the user is scrolling down — hides the bar to free up space. */
   hidden?: boolean;
+  /**
+   * Distance in px between the bar's natural bottom edge and the screen bottom
+   * (i.e. the `bottom: N` value of the parent dock). Used to compute how far
+   * to lift the bar above the keyboard so it sits flush with the keyboard top.
+   */
+  bottomInset?: number;
   onPageChange: (page: number) => void;
-  onOpenJumpSheet?: () => void;
 }
 
 /**
- * Sticky bottom pagination bar — modern mobile pattern.
+ * Sticky pagination bar with a directly-editable page input.
  *
  *   ┌──────────────────────────────────────────────────┐
  *   │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │  ← progress
- *   │  ‹ Prev      Page 4 / 75 ▾       Next ›          │
+ *   │  ‹ Prev      Page  [ 4 ] / 75     Next ›          │
  *   │           Showing 61–80 of 1,500 topics          │
  *   └──────────────────────────────────────────────────┘
  *
- * Auto-hides on scroll down (à la Twitter/Reddit), reappears on scroll up.
- * Tap the central pill to open a jump sheet for arbitrary navigation.
+ * Tap the input → numeric keyboard pops up → type any page → submit (Go).
+ * While editing, the bar lifts itself above the keyboard so the user can
+ * see what they're typing. Auto-hides on scroll-down (Twitter/Reddit style).
  */
 export default function ForumPaginationBar({
   currentPage,
@@ -43,33 +58,84 @@ export default function ForumPaginationBar({
   totalItems,
   itemLabel,
   hidden,
+  bottomInset = 0,
   onPageChange,
-  onOpenJumpSheet,
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const translateY = useSharedValue(0);
+  // Local draft synced from `currentPage` while idle. While editing we leave
+  // it alone so the user can type without their input getting overwritten.
+  const [draft, setDraft] = useState(String(currentPage));
+  const [editing, setEditing] = useState(false);
+  const editingRef = useRef(false);
+  const inputRef = useRef<TextInput | null>(null);
+
   useEffect(() => {
+    if (!editing) setDraft(String(currentPage));
+  }, [currentPage, editing]);
+
+  const translateY = useSharedValue(0);
+
+  // Hide-on-scroll behavior — only kicks in when not editing. While editing
+  // the keyboard listeners control the position.
+  useEffect(() => {
+    if (editing) return;
     translateY.value = withTiming(hidden ? 100 : 0, {
       duration: 220,
       easing: Easing.out(Easing.cubic),
     });
-  }, [hidden, translateY]);
+  }, [hidden, editing, translateY]);
+
+  // Lift the bar above the keyboard while the input is focused. We subtract
+  // `bottomInset` because the dock may already sit above other UI (e.g. the
+  // reply bar on TopicDetailScreen), so the absolute lift needed is smaller.
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvt, (e) => {
+      if (!editingRef.current) return;
+      const targetY = bottomInset - e.endCoordinates.height;
+      translateY.value = withTiming(targetY, {
+        duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 250,
+      });
+    });
+    const hideSub = Keyboard.addListener(hideEvt, (e) => {
+      if (!editingRef.current) return;
+      translateY.value = withTiming(0, {
+        duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 250,
+      });
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [bottomInset, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
-    opacity: 1 - translateY.value / 100,
+    // Only fade out when sliding off the bottom (positive Y). When lifted
+    // above the keyboard (negative Y), keep full opacity.
+    opacity: translateY.value > 0 ? Math.max(0, 1 - translateY.value / 100) : 1,
   }));
 
   if (totalPages <= 1) return null;
 
   const canPrev = currentPage > 1;
   const canNext = currentPage < totalPages;
-  const progress = Math.min(1, Math.max(0, currentPage / totalPages));
 
-  // Item range for the current page — the most concrete thing we can tell the
-  // user about *what they're looking at* (vs. "page 4 of 75" which is abstract).
+  // Validate the in-progress draft so the user gets feedback while typing
+  // a number that's out of range (we still clamp on submit, but they can
+  // see it'll be clamped before they hit Go).
+  const draftNum = draft.length > 0 ? parseInt(draft, 10) : NaN;
+  const isOutOfRange =
+    editing && Number.isFinite(draftNum) && (draftNum < 1 || draftNum > totalPages);
+
+  // Auto-size the input so 4-digit forums (e.g. 8,238 pages on the live
+  // site) don't squeeze digits together. Falls back to a sane minimum.
+  const totalDigits = String(totalPages).length;
+  const inputMinWidth = Math.max(48, totalDigits * 14 + 16);
+
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(totalItems, currentPage * pageSize);
 
@@ -90,16 +156,31 @@ export default function ForumPaginationBar({
     onPageChange(currentPage + 1);
   };
 
-  const openJump = () => {
-    haptic(Haptics.ImpactFeedbackStyle.Medium);
-    onOpenJumpSheet?.();
+  const commitDraft = () => {
+    const parsed = parseInt(draft.trim(), 10);
+    editingRef.current = false;
+    setEditing(false);
+    Keyboard.dismiss();
+    if (!Number.isFinite(parsed)) {
+      setDraft(String(currentPage));
+      return;
+    }
+    const target = Math.min(Math.max(parsed, 1), totalPages);
+    if (target !== currentPage) {
+      haptic(Haptics.ImpactFeedbackStyle.Medium);
+      onPageChange(target);
+    } else {
+      setDraft(String(currentPage));
+    }
   };
 
   return (
     <Animated.View style={[styles.wrap, animatedStyle]}>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-      </View>
+      <PageScrubber
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+      />
 
       <View style={styles.row}>
         <Pressable
@@ -125,17 +206,33 @@ export default function ForumPaginationBar({
         </Pressable>
 
         <Pressable
-          onPress={openJump}
-          style={({ pressed }) => [styles.center, pressed && styles.centerPressed]}
-          accessibilityRole="button"
-          accessibilityLabel={`Page ${currentPage} of ${totalPages}. Tap to jump.`}
+          onPress={() => inputRef.current?.focus()}
+          style={[styles.center, editing && styles.centerEditing]}
+          accessibilityRole="none"
         >
-          <Text style={styles.centerText}>
-            <Text style={styles.centerNum}>{currentPage}</Text>
-            <Text style={styles.centerOf}> / </Text>
-            <Text style={styles.centerTotal}>{totalPages}</Text>
-          </Text>
-          <Ionicons name="chevron-down" size={11} color={colors.primary} />
+          <Text style={styles.centerLabel}>Page</Text>
+          <TextInput
+            ref={inputRef}
+            value={draft}
+            onChangeText={(t) => setDraft(t.replace(/[^0-9]/g, '').slice(0, 6))}
+            onFocus={() => {
+              editingRef.current = true;
+              setEditing(true);
+            }}
+            onBlur={commitDraft}
+            onSubmitEditing={commitDraft}
+            keyboardType="number-pad"
+            returnKeyType="go"
+            maxLength={6}
+            selectTextOnFocus
+            style={[
+              styles.input,
+              { minWidth: inputMinWidth },
+              isOutOfRange && styles.inputError,
+            ]}
+            accessibilityLabel={`Page number — type to jump. 1 to ${totalPages}.`}
+          />
+          <Text style={styles.centerOf}>/ {totalPages}</Text>
         </Pressable>
 
         <Pressable
@@ -162,15 +259,22 @@ export default function ForumPaginationBar({
         </Pressable>
       </View>
 
-      <Text style={styles.rangeText} numberOfLines={1}>
-        Showing{' '}
-        <Text style={styles.rangeNum}>
-          {startItem.toLocaleString()}–{endItem.toLocaleString()}
+      {isOutOfRange ? (
+        <Text style={styles.errorText} numberOfLines={1}>
+          Enter a page between <Text style={styles.errorNum}>1</Text> and{' '}
+          <Text style={styles.errorNum}>{totalPages.toLocaleString()}</Text>
         </Text>
-        <Text style={styles.rangeMuted}> of </Text>
-        <Text style={styles.rangeNum}>{totalItems.toLocaleString()}</Text>
-        {' '}{itemLabel}
-      </Text>
+      ) : (
+        <Text style={styles.rangeText} numberOfLines={1}>
+          Showing{' '}
+          <Text style={styles.rangeNum}>
+            {startItem.toLocaleString()}–{endItem.toLocaleString()}
+          </Text>
+          <Text style={styles.rangeMuted}> of </Text>
+          <Text style={styles.rangeNum}>{totalItems.toLocaleString()}</Text>
+          {' '}{itemLabel}
+        </Text>
+      )}
     </Animated.View>
   );
 }
@@ -183,25 +287,11 @@ function makeStyles(c: ThemeColors) {
       borderTopColor: c.border,
       paddingTop: 6,
       paddingBottom: 10,
-      // Slight elevation so it floats above the list cleanly
       shadowColor: '#000',
       shadowOffset: { width: 0, height: -2 },
       shadowOpacity: 0.06,
       shadowRadius: 8,
       elevation: 6,
-    },
-    progressTrack: {
-      height: 2,
-      backgroundColor: c.border,
-      marginHorizontal: 14,
-      borderRadius: 1,
-      overflow: 'hidden',
-      marginBottom: 7,
-    },
-    progressFill: {
-      height: '100%',
-      backgroundColor: c.primary,
-      borderRadius: 1,
     },
     row: {
       flexDirection: 'row',
@@ -213,9 +303,9 @@ function makeStyles(c: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 2,
-      minWidth: 78,
+      minWidth: 64,
       height: 36,
-      paddingHorizontal: 10,
+      paddingHorizontal: 8,
       borderRadius: 10,
     },
     sideBtnRight: {
@@ -238,31 +328,47 @@ function makeStyles(c: ThemeColors) {
     center: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 5,
-      paddingHorizontal: 14,
-      paddingVertical: 7,
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
       borderRadius: 999,
       backgroundColor: c.primarySoft,
       borderWidth: 1,
       borderColor: c.primarySoft,
     },
-    centerPressed: {
-      opacity: 0.85,
+    centerEditing: {
+      backgroundColor: c.card,
+      borderColor: c.primary,
     },
-    centerText: {
-      fontSize: 13,
-      letterSpacing: 0.1,
+    centerLabel: {
+      fontSize: 12,
+      fontWeight: '600',
       color: c.primary,
+      letterSpacing: 0.2,
     },
-    centerNum: {
+    input: {
+      paddingHorizontal: 8,
+      paddingVertical: 0,
+      height: 28,
+      borderRadius: 6,
+      backgroundColor: c.card,
+      textAlign: 'center',
+      fontSize: 15,
       fontWeight: '800',
+      color: c.text,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    inputError: {
+      borderColor: c.danger,
+      backgroundColor: c.dangerSoft,
+      color: c.danger,
     },
     centerOf: {
-      fontWeight: '500',
-      opacity: 0.7,
-    },
-    centerTotal: {
+      fontSize: 12,
       fontWeight: '700',
+      color: c.primary,
+      opacity: 0.85,
     },
     rangeText: {
       textAlign: 'center',
@@ -278,6 +384,18 @@ function makeStyles(c: ThemeColors) {
     },
     rangeMuted: {
       fontWeight: '500',
+    },
+    errorText: {
+      textAlign: 'center',
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.danger,
+      marginTop: 4,
+      paddingHorizontal: 14,
+      letterSpacing: 0.1,
+    },
+    errorNum: {
+      fontWeight: '800',
     },
   });
 }

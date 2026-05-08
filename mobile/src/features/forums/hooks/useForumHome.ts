@@ -18,14 +18,14 @@ export function useForumHome(categoryId: number | null, startPage = 1) {
     placeholderData: keepPreviousData,
   });
 
-  // Prefetch adjacent pages for instant Prev/Next.
+  // Prefetch adjacent pages — primitive deps only.
+  const totalPages = query.data?.pages[0]?.totalPages ?? 0;
   useEffect(() => {
-    const current = query.data?.pages[0];
-    if (!current) return;
+    if (!totalPages) return;
     const key = categoryId ?? 'all';
 
-    if (current.pageNumber < current.totalPages) {
-      const nextPage = current.pageNumber + 1;
+    if (startPage < totalPages) {
+      const nextPage = startPage + 1;
       queryClient.prefetchInfiniteQuery({
         queryKey: ['forums-home', key, nextPage],
         queryFn: ({ pageParam }) =>
@@ -42,7 +42,7 @@ export function useForumHome(categoryId: number | null, startPage = 1) {
         initialPageParam: prevPage,
       });
     }
-  }, [categoryId, startPage, query.data, queryClient]);
+  }, [categoryId, startPage, totalPages, queryClient]);
 
   return query;
 }

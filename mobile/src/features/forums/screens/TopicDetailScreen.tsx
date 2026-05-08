@@ -1,16 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, Pressable, ActivityIndicator, ScrollView, StyleSheet,
+  View, Text, Pressable, ActivityIndicator, ScrollView, StyleSheet, FlatList,
   NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import Animated, {
+  useAnimatedStyle, useSharedValue, withTiming, Easing,
+} from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 
-import { TopNavBack } from '../../../components/layout/TopNavBar';
+import { TopNavBack, type TopNavAction } from '../../../components/layout/TopNavBar';
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
 import PostCard from '../components/PostCard';
@@ -25,8 +27,9 @@ import PostModActionsSheet, { type PostActionKey } from '../components/PostModAc
 import SearchBar from '../components/SearchBar';
 import JumpToPageSheet from '../components/JumpToPageSheet';
 import ForumPaginationBar from '../components/ForumPaginationBar';
+import FrequentPostersSheet from '../components/FrequentPostersSheet';
+import AvatarCluster from '../components/AvatarCluster';
 import { useTopicPosts, TOPIC_POSTS_PAGE_SIZE } from '../hooks/useTopicPosts';
-import { useHideOnScroll } from '../hooks/useHideOnScroll';
 import { useForumPaginationStore, selectTopicPage } from '../store/forumPaginationStore';
 import { useTopicTopPosters } from '../hooks/useTopicTopPosters';
 import { applyTopicReaction, seedOpPost } from '../hooks/useTopicLike';
@@ -45,12 +48,8 @@ import {
   type ForumTopic, type ReactionCode, type TopicPost, type TopicPoll,
 } from '../../../services/api';
 
-type Styles = ReturnType<typeof makeStyles>;
-
 type Nav = NativeStackNavigationProp<ForumsStackParamList, 'TopicDetail'>;
 type Rt  = RouteProp<ForumsStackParamList, 'TopicDetail'>;
-
-const STICKY_THRESHOLD = 110;
 
 export default function TopicDetailScreen() {
   const navigation = useNavigation<Nav>();
@@ -93,10 +92,10 @@ export default function TopicDetailScreen() {
   const [sortBy, setSortBy] = useState<'date' | 'likes'>('date');
   const [postSearch, setPostSearch] = useState('');
   const [debouncedPostSearch, setDebouncedPostSearch] = useState('');
-  const [stickyVisible, setStickyVisible] = useState(false);
   const persistedTopicPage = useForumPaginationStore(selectTopicPage(topic.id));
   const [currentPage, setCurrentPage] = useState(persistedTopicPage);
   const [jumpSheetOpen, setJumpSheetOpen] = useState(false);
+  const [contributorsOpen, setContributorsOpen] = useState(false);
   const lastSavedScrollRef = useRef(0);
 
   useEffect(() => {
@@ -108,7 +107,7 @@ export default function TopicDetailScreen() {
   const [modSheetOpen, setModSheetOpen] = useState(false);
   const [postSheetFor, setPostSheetFor] = useState<TopicPost | null>(null);
 
-  const listRef = useRef<React.ElementRef<typeof FlashList<TopicPost>>>(null);
+  const listRef = useRef<FlatList<TopicPost>>(null);
   const didJumpToLastRef = useRef(false);
   const didAutoActionRef = useRef(false);
 
@@ -173,23 +172,32 @@ export default function TopicDetailScreen() {
     if (op) seedOpPost(liveTopic, op);
   }, [allPosts, liveTopic]);
 
-  // OP rendered separately at the top of the list (right after the title) so
-  // the page sequence matches the live website:
-  //   Title → OP post → Stats → Frequent Posters → Sort/Search → Replies
+  // OP reference — kept for the auto-action effect below (a navigation can
+  // arrive with `autoAction='like'/'reply'/'quote'` targeting the OP). The
+  // OP is rendered as part of `sortedPosts`, not in a separate header slot.
   const opPost = useMemo<TopicPost | null>(
     () => allPosts.find(p => p.isOp) ?? null,
     [allPosts],
   );
 
-  // Replies = everything except the OP. Search/sort applies only to replies.
+  // OP is always included in the displayed list — the previous version
+  // rendered OP in a separate "header" slot only for Latest mode, which made
+  // the ListHeaderComponent's height change when you toggled to Top (because
+  // the OP card disappeared). FlashList preserves scroll Y, so a header
+  // height change shifted all items below by ~OP-card-height. THAT was the
+  // "slide" the user kept seeing on Latest ↔ Top toggles.
+  //
+  // With OP always in `sortedPosts`, the header is always the same size and
+  // OP simply takes its rightful position: index 0 in chronological order
+  // (Latest), or wherever its likes rank in Top.
   const sortedPosts = useMemo<TopicPost[]>(() => {
     const liveQuery = postSearch.trim().toLowerCase();
-    let replies = allPosts.filter(p => !p.isOp);
+    let posts = allPosts;
 
     if (liveQuery) {
       const serverInSync = debouncedPostSearch.toLowerCase() === liveQuery;
       if (!serverInSync) {
-        replies = replies.filter(p => {
+        posts = posts.filter(p => {
           const msg = (p.message || '').toLowerCase();
           const author = (p.author || '').toLowerCase();
           return msg.includes(liveQuery) || author.includes(liveQuery);
@@ -198,13 +206,22 @@ export default function TopicDetailScreen() {
     }
 
     if (sortBy === 'likes') {
-      replies = [...replies].sort(
+      posts = [...posts].sort(
         (a, b) => (likeCountMap[b.id] ?? b.likes ?? 0) - (likeCountMap[a.id] ?? a.likes ?? 0),
       );
     }
 
-    return replies;
+    return posts;
   }, [allPosts, sortBy, likeCountMap, postSearch, debouncedPostSearch]);
+
+  // Maps each post's id back to its chronological position in the loaded
+  // page, so the post number labels (#1, #2, …) reflect the *posting order*
+  // even when the visible order has been re-sorted by Top.
+  const postIndexMap = useMemo(() => {
+    const map = new Map<number, number>();
+    allPosts.forEach((p, i) => map.set(p.id, i));
+    return map;
+  }, [allPosts]);
 
   useEffect(() => {
     if (!jumpToLast || didJumpToLastRef.current) return;
@@ -219,18 +236,60 @@ export default function TopicDetailScreen() {
   const totalPostCount = firstPage?.totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalPostCount / TOPIC_POSTS_PAGE_SIZE));
 
-  const isFilteringPosts = sortBy === 'likes' || postSearch.trim().length > 0;
+  // Only the search box bypasses pagination — sorting by Top still operates
+  // on the same paginated set, so the pagination bar stays visible. (The
+  // earlier behavior of hiding the bar on sort caused a jarring "slide up"
+  // when toggling Latest ↔ Top.)
+  const isFilteringPosts = postSearch.trim().length > 0;
 
-  const { hidden: barHidden, onScroll: handlePagOnScroll } = useHideOnScroll();
+  // Auto-hide is intentionally disabled on this detail screen — modern
+  // detail screens (Apple Mail, Messages, Notes) keep their bottom bar
+  // pinned. Auto-hide on a paginated detail caused the pagination bar to
+  // visually slide whenever sort/filter actions caused FlashList re-layout
+  // and emitted phantom scroll events.
+
+  // Sort-transition fade. Modeled on the App Store / YouTube pattern: fade
+  // the list out, swap the data + scroll to top, fade back in. This masks
+  // the inherent layout movement of items reordering, so the user perceives
+  // a deliberate transition rather than an unexpected "slide".
+  const listOpacity = useSharedValue(1);
+  const animatedListStyle = useAnimatedStyle(() => ({
+    opacity: listOpacity.value,
+  }));
+
+  const toggleSort = useCallback(() => {
+    // Near-instant flash. Total transition ≈ 100ms — fast enough to feel
+    // immediate while still masking the items reordering underneath.
+    listOpacity.value = withTiming(0.55, {
+      duration: 30,
+      easing: Easing.out(Easing.cubic),
+    });
+    setTimeout(() => {
+      setSortBy((prev) => (prev === 'date' ? 'likes' : 'date'));
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+      requestAnimationFrame(() => {
+        listOpacity.value = withTiming(1, {
+          duration: 70,
+          easing: Easing.out(Easing.cubic),
+        });
+      });
+    }, 35);
+  }, [listOpacity]);
+
+  // Suppress scroll-save writes briefly after a page change, so the
+  // scroll-to-0 we trigger on jump doesn't overwrite the persisted offset.
+  const pageChangedAtRef = useRef(0);
 
   const handleJumpToPage = useCallback((page: number) => {
+    if (page === currentPage) return;
     setJumpSheetOpen(false);
+    pageChangedAtRef.current = Date.now();
     setCurrentPage(page);
     useForumPaginationStore.getState().setTopicPage(topic.id, page);
     requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({ offset: 0, animated: false });
     });
-  }, [topic.id]);
+  }, [topic.id, currentPage]);
 
   // Restore scroll position once posts arrive for the current page.
   const restoreKey = `${topic.id}:${currentPage}`;
@@ -275,16 +334,15 @@ export default function TopicDetailScreen() {
   }, []);
 
   function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    if (isFilteringPosts) return;
     const y = e.nativeEvent.contentOffset.y;
-    const shouldShow = y > STICKY_THRESHOLD;
-    if (shouldShow !== stickyVisible) setStickyVisible(shouldShow);
-    if (!isFilteringPosts) {
-      handlePagOnScroll(e);
-      const now = Date.now();
-      if (now - lastSavedScrollRef.current >= 250) {
-        lastSavedScrollRef.current = now;
-        useForumPaginationStore.getState().setTopicScroll(topic.id, currentPage, y);
-      }
+    const now = Date.now();
+    // Skip saves during the 600ms after a page change to avoid clobbering
+    // the offset we just persisted with the auto scroll-to-0.
+    if (now - pageChangedAtRef.current < 600) return;
+    if (now - lastSavedScrollRef.current >= 250) {
+      lastSavedScrollRef.current = now;
+      useForumPaginationStore.getState().setTopicScroll(topic.id, currentPage, y);
     }
   }
 
@@ -597,12 +655,15 @@ export default function TopicDetailScreen() {
     ],
   );
 
-  // FlashList items are reply posts; offset their index by +1 so post numbers
-  // continue from the OP (which renders at "#1" in the header).
+  // Use each post's CHRONOLOGICAL position for its #N label so a post sorted
+  // to the top by likes still shows the right thread number (#7 stays #7).
+  // PostCard renders `#{index + 1}`, so we pass a 0-based chronological index.
   const renderReply = useCallback(
-    (info: { item: TopicPost; index: number }) =>
-      renderPost({ item: info.item, index: info.index + 1 }),
-    [renderPost],
+    (info: { item: TopicPost; index: number }) => {
+      const chrono = postIndexMap.get(info.item.id);
+      return renderPost({ item: info.item, index: chrono ?? info.index });
+    },
+    [renderPost, postIndexMap],
   );
 
   const handleToggleLock = useCallback(async () => {
@@ -626,37 +687,33 @@ export default function TopicDetailScreen() {
   return (
     <View style={styles.screen}>
       <TopNavBack
-        title={liveTopic.forumName || 'Topic'}
+        title={liveTopic.title}
+        subtitle={liveTopic.forumName || undefined}
+        onSubtitlePress={() => navigation.goBack()}
         onBack={() => navigation.goBack()}
-        rightIcon={hasMod ? 'ellipsis-horizontal' : undefined}
-        onRightPress={hasMod ? () => setModSheetOpen(true) : undefined}
-        rightAccessibilityLabel="Moderator actions"
+        rightActions={[
+          replyDisabled
+            ? {
+                icon: 'lock-closed',
+                onPress: () => {},
+                label: 'Topic locked',
+                disabled: true,
+              }
+            : {
+                icon: 'create',
+                onPress: () => openReply(null),
+                label: 'Reply to this topic',
+                primary: true,
+              },
+          ...(hasMod
+            ? [{
+                icon: 'ellipsis-horizontal' as const,
+                onPress: () => setModSheetOpen(true),
+                label: 'Moderator actions',
+              }]
+            : []),
+        ] as TopNavAction[]}
       />
-
-      {stickyVisible && (
-        <View style={styles.sticky}>
-          {liveTopic.forumThumbnail ? (
-            <Image
-              source={{ uri: liveTopic.forumThumbnail }}
-              style={styles.stickyThumb}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <View style={[styles.stickyThumbFallback, { backgroundColor: forumBg }]}>
-              <Text style={styles.stickyEmoji}>{forumEmoji}</Text>
-            </View>
-          )}
-          <View style={styles.stickyText}>
-            <Text style={styles.stickyForum} numberOfLines={1}>
-              {liveTopic.forumName || 'Forum'}
-            </Text>
-            <Text style={styles.stickyTitle} numberOfLines={1}>
-              {liveTopic.title}
-            </Text>
-          </View>
-        </View>
-      )}
 
       {isLoading && !data ? (
         <LoadingState height={400} />
@@ -666,13 +723,20 @@ export default function TopicDetailScreen() {
           onRetry={() => refetch()}
         />
       ) : (
-        <FlashList
+        <Animated.View style={[styles.listFade, animatedListStyle]}>
+        <FlatList
           ref={listRef}
           data={sortedPosts}
+          extraData={sortBy}
           keyExtractor={p => String(p.id)}
           onScroll={handleScroll}
           scrollEventThrottle={16}
           renderItem={renderReply}
+          // Standard FlatList — predictable layout, no recycler animations.
+          // Page size is small (20 items) so virtualization isn't critical.
+          windowSize={5}
+          removeClippedSubviews={false}
+          initialNumToRender={20}
           ListHeaderComponent={
             <>
               <View style={styles.topicCard}>
@@ -784,85 +848,48 @@ export default function TopicDetailScreen() {
                 )}
               </View>
 
-              {/* OP post rendered here — directly under the title, matching the */}
-              {/* live website's sequence: Title → OP → Stats → Frequent Posters → Replies. */}
-              {opPost && renderPost({ item: opPost, index: 0 })}
 
-              {/* 6-cell stats grid — matches the live website's "Created /
-                  Last reply / Replies / Views / Users / Likes" row, with the
-                  OP and last-replier avatars rendered inline. */}
-              <View style={styles.statGrid}>
-                <StatBlock
-                  label="Created"
-                  value={liveTopic.time}
-                  avatarUrl={liveTopic.posterId > 0 ? buildUserAvatarUrl(liveTopic.posterId) : null}
-                  styles={styles}
-                />
-                <StatBlock
-                  label="Last reply"
-                  value={liveTopic.lastTime || '—'}
-                  avatarUrl={liveTopic.lastById > 0 ? buildUserAvatarUrl(liveTopic.lastById) : null}
-                  styles={styles}
-                />
-                <StatBlock
-                  label="Replies"
-                  value={formatCount(liveTopic.replies ?? 0)}
-                  styles={styles}
-                />
-                <StatBlock
-                  label="Views"
-                  value={formatCount(liveTopic.views ?? 0)}
-                  styles={styles}
-                />
-                <StatBlock
-                  label="Users"
-                  value={formatCount(liveTopic.userCount ?? 0)}
-                  styles={styles}
-                />
-                <StatBlock
-                  label="Likes"
-                  value={formatCount(liveTopic.likes ?? 0)}
-                  styles={styles}
-                />
-              </View>
-
-              {topPosters.length > 0 && (
-                <View style={styles.postersWrap}>
-                  <Text style={styles.postersTitle}>Frequent Posters</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.postersScroll}
-                  >
-                    {topPosters.map(p => (
-                      <View key={p.userId} style={styles.posterCol}>
-                        <View style={styles.posterAvatarWrap}>
-                          {p.avatarUrl ? (
-                            <Image
-                              source={{ uri: p.avatarUrl }}
-                              style={styles.posterAvatar}
-                              contentFit="cover"
-                              cachePolicy="memory-disk"
-                              transition={150}
-                            />
-                          ) : (
-                            <View style={[styles.posterAvatar, styles.posterAvatarFallback]}>
-                              <Text style={styles.posterInitial}>
-                                {(p.userName || 'U').charAt(0).toUpperCase()}
-                              </Text>
-                            </View>
-                          )}
-                          <View style={styles.posterCountBadge}>
-                            <Text style={styles.posterCountText}>
-                              {formatCount(p.postCount)}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </ScrollView>
+              {/* Compact inline metadata. Numbers on top; an avatar cluster
+                  visualizes the "X people in this thread" data the modern way
+                  — Slack / Apple Mail / Instagram pattern. */}
+              <View style={styles.metaSection}>
+                <View style={styles.metaLine}>
+                  <Text style={styles.metaItemText}>
+                    <Text style={styles.metaItemNum}>{formatCount(liveTopic.replies ?? 0)}</Text>
+                    {' '}replies
+                  </Text>
+                  <Text style={styles.metaSep}>·</Text>
+                  <Text style={styles.metaItemText}>
+                    <Text style={styles.metaItemNum}>{formatCount(liveTopic.views ?? 0)}</Text>
+                    {' '}views
+                  </Text>
+                  <Text style={styles.metaSep}>·</Text>
+                  <Text style={styles.metaItemText}>
+                    <Text style={styles.metaItemNum}>{formatCount(liveTopic.likes ?? 0)}</Text>
+                    {' '}likes
+                  </Text>
                 </View>
-              )}
+                {topPosters.length > 0 && (
+                  <Pressable
+                    style={styles.contributorsRow}
+                    onPress={() => setContributorsOpen(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${topPosters.length} contributors. Tap to view all.`}
+                  >
+                    <AvatarCluster
+                      posters={topPosters}
+                      maxVisible={5}
+                    />
+                    <Text style={styles.contributorsLabel}>
+                      <Text style={styles.contributorsLabelNum}>
+                        {formatCount(topPosters.length)}
+                      </Text>
+                      {' '}contributors
+                      <Text style={styles.contributorsChevron}> ›</Text>
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
 
               <SearchBar
                 value={postSearch}
@@ -872,36 +899,32 @@ export default function TopicDetailScreen() {
 
               {(sortedPosts.length > 0 || postSearch.trim()) && (
                 <View style={styles.sortRow}>
-                  <View style={styles.sectionLabel}>
-                    <Text style={styles.sectionText}>
-                      {postSearch.trim() ? 'Results' : 'Replies'}
-                    </Text>
-                    <View style={styles.sectionCount}>
-                      <Text style={styles.sectionCountText}>
-                        {sortedPosts.length}
-                      </Text>
-                    </View>
-                  </View>
+                  <Text style={styles.sortRowLabel}>
+                    {postSearch.trim() ? 'Results' : 'Replies'}
+                    <Text style={styles.sortRowCount}> · {sortedPosts.length}</Text>
+                  </Text>
                   <View style={styles.sortSpacer} />
                   {!postSearch.trim() && (
-                    <>
-                      <Pressable
-                        style={[styles.sortBtn, sortBy === 'date' && styles.sortBtnActive]}
-                        onPress={() => setSortBy('date')}
-                      >
-                        <Text style={[styles.sortBtnText, sortBy === 'date' && styles.sortBtnTextActive]}>
-                          Latest
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        style={[styles.sortBtn, sortBy === 'likes' && styles.sortBtnActive]}
-                        onPress={() => setSortBy('likes')}
-                      >
-                        <Text style={[styles.sortBtnText, sortBy === 'likes' && styles.sortBtnTextActive]}>
-                          Top
-                        </Text>
-                      </Pressable>
-                    </>
+                    <Pressable
+                      onPress={toggleSort}
+                      hitSlop={6}
+                      style={({ pressed }) => [
+                        styles.sortChip,
+                        pressed && styles.sortChipPressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Sort: ${sortBy === 'date' ? 'Latest' : 'Top'}. Tap to switch.`}
+                    >
+                      <Ionicons
+                        name={sortBy === 'date' ? 'time-outline' : 'trending-up-outline'}
+                        size={13}
+                        color={colors.primary}
+                      />
+                      <Text style={styles.sortChipText}>
+                        {sortBy === 'date' ? 'Latest' : 'Top'}
+                      </Text>
+                      <Ionicons name="swap-vertical" size={11} color={colors.primary} />
+                    </Pressable>
                   )}
                 </View>
               )}
@@ -926,6 +949,7 @@ export default function TopicDetailScreen() {
           }
           contentContainerStyle={styles.content}
         />
+        </Animated.View>
       )}
 
       {toast && (
@@ -954,42 +978,9 @@ export default function TopicDetailScreen() {
             pageSize={TOPIC_POSTS_PAGE_SIZE}
             totalItems={totalPostCount}
             itemLabel="posts"
-            hidden={barHidden}
             onPageChange={handleJumpToPage}
-            onOpenJumpSheet={() => setJumpSheetOpen(true)}
           />
         </View>
-      )}
-
-      {replyDisabled ? (
-        <View style={styles.lockedBar}>
-          <Ionicons name="lock-closed" size={13} color={colors.textTertiary} />
-          <Text style={styles.lockedBarText}>This topic is locked</Text>
-        </View>
-      ) : (
-        <Pressable style={styles.replyBar} onPress={() => openReply(null)}>
-          {currentUser?.userId ? (
-            <Image
-              source={{ uri: buildUserAvatarUrl(currentUser.userId) ?? '' }}
-              style={styles.replyAvatarImg}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={150}
-            />
-          ) : (
-            <View style={styles.replyAvatar}>
-              <Text style={styles.replyAvatarLetter}>
-                {(currentUser?.userName || '?').charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          )}
-          <View style={styles.replyInput}>
-            <Text style={styles.replyInputPlaceholder}>Reply to this topic…</Text>
-          </View>
-          <View style={styles.sendBtn}>
-            <Ionicons name="send" size={14} color="#FFFFFF" />
-          </View>
-        </Pressable>
       )}
 
       <ReplyComposerSheet
@@ -1057,6 +1048,12 @@ export default function TopicDetailScreen() {
         onActionComplete={handlePostAction}
       />
 
+      <FrequentPostersSheet
+        visible={contributorsOpen}
+        posters={topPosters}
+        onClose={() => setContributorsOpen(false)}
+      />
+
       <JumpToPageSheet
         visible={jumpSheetOpen}
         currentPage={currentPage}
@@ -1069,64 +1066,6 @@ export default function TopicDetailScreen() {
   );
 }
 
-function StatBlock({ label, value, avatarUrl, styles }: {
-  label: string;
-  value: string;
-  avatarUrl?: string | null;
-  styles: Styles;
-}) {
-  return (
-    <View style={styles.statBlock}>
-      <Text style={styles.statBlockLabel}>{label}</Text>
-      <View style={styles.statBlockValueRow}>
-        {avatarUrl ? (
-          <Image
-            source={{ uri: avatarUrl }}
-            style={styles.statBlockAvatar}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-          />
-        ) : null}
-        <Text style={styles.statBlockValue} numberOfLines={1}>{value}</Text>
-      </View>
-    </View>
-  );
-}
-
-function MetaItem({ icon, value, label, styles, color }: {
-  icon: keyof typeof Ionicons.glyphMap;
-  value: string;
-  label: string;
-  styles: Styles;
-  color: string;
-}) {
-  return (
-    <View style={styles.metaItem}>
-      <Ionicons name={icon} size={12} color={color} />
-      <Text style={styles.metaValue}>{value}</Text>
-      <Text style={styles.metaLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function StatCell({ icon, value, label, styles, iconColor }: {
-  icon: keyof typeof Ionicons.glyphMap;
-  value: string;
-  label: string;
-  styles: Styles;
-  iconColor: string;
-}) {
-  return (
-    <View style={styles.statCell}>
-      <View style={styles.statRow}>
-        <Ionicons name={icon} size={13} color={iconColor} />
-        <Text style={styles.statValue}>{value}</Text>
-      </View>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     screen: {
@@ -1134,57 +1073,16 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.bg,
     },
     content: {
-      paddingBottom: 150,
+      paddingBottom: 110,
+    },
+    listFade: {
+      flex: 1,
     },
     paginationDock: {
       position: 'absolute',
       left: 0,
       right: 0,
-      bottom: 56,
-    },
-    sticky: {
-      position: 'absolute',
-      top: 44,
-      left: 0,
-      right: 0,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      backgroundColor: c.card,
-      borderBottomWidth: 1,
-      borderBottomColor: c.border,
-      zIndex: 10,
-    },
-    stickyThumb: {
-      width: 22,
-      height: 22,
-      borderRadius: 11,
-    },
-    stickyThumbFallback: {
-      width: 22,
-      height: 22,
-      borderRadius: 11,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    stickyEmoji: {
-      fontSize: 11,
-    },
-    stickyText: {
-      flex: 1,
-      minWidth: 0,
-    },
-    stickyForum: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: c.primary,
-    },
-    stickyTitle: {
-      fontSize: 12,
-      fontWeight: '800',
-      color: c.text,
+      bottom: 0,
     },
     topicCard: {
       backgroundColor: c.card,
@@ -1351,224 +1249,97 @@ function makeStyles(c: ThemeColors) {
       fontWeight: '700',
       color: c.primary,
     },
-    metaRow: {
+    metaSection: {
+      backgroundColor: c.card,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      gap: 10,
+    },
+    metaLine: {
       flexDirection: 'row',
       alignItems: 'center',
       flexWrap: 'wrap',
       gap: 6,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      backgroundColor: c.card,
-      borderBottomWidth: 1,
-      borderBottomColor: c.border,
     },
-    statGrid: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      paddingHorizontal: 8,
-      paddingVertical: 14,
-      backgroundColor: c.card,
-      borderBottomWidth: 1,
-      borderBottomColor: c.border,
-    },
-    statBlock: {
-      flex: 1,
-      alignItems: 'center',
-      paddingHorizontal: 4,
-      gap: 4,
-      minWidth: 0,
-    },
-    statBlockLabel: {
-      fontSize: 10,
-      fontWeight: '600',
-      color: c.textTertiary,
-      letterSpacing: 0.2,
-    },
-    statBlockValueRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      flexShrink: 1,
-    },
-    statBlockAvatar: {
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-      backgroundColor: c.surface,
-    },
-    statBlockValue: {
-      fontSize: 14,
-      fontWeight: '800',
-      color: c.text,
-      flexShrink: 1,
-    },
-    postersWrap: {
-      backgroundColor: c.card,
-      paddingTop: 14,
-      paddingBottom: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: c.border,
-    },
-    postersTitle: {
-      fontSize: 13,
-      fontWeight: '800',
-      color: c.text,
-      letterSpacing: -0.1,
-      paddingHorizontal: 14,
-      marginBottom: 12,
-    },
-    postersScroll: {
-      paddingHorizontal: 14,
-      gap: 12,
-    },
-    posterCol: {
-      alignItems: 'center',
-    },
-    posterAvatarWrap: {
-      position: 'relative',
-    },
-    posterAvatar: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
-      backgroundColor: c.surface,
-    },
-    posterAvatarFallback: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: c.primary,
-    },
-    posterInitial: {
-      color: c.onPrimary,
-      fontSize: 14,
-      fontWeight: '800',
-    },
-    posterCountBadge: {
-      position: 'absolute',
-      right: -3,
-      bottom: -3,
-      paddingHorizontal: 5,
-      minWidth: 20,
-      height: 16,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 999,
-      backgroundColor: c.card,
-      borderWidth: 1.5,
-      borderColor: c.border,
-    },
-    posterCountText: {
-      fontSize: 9,
-      fontWeight: '800',
+    metaItemText: {
+      fontSize: 12,
       color: c.textSecondary,
-    },
-    metaItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    metaValue: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: c.text,
-    },
-    metaLabel: {
-      fontSize: 12,
       fontWeight: '500',
-      color: c.textTertiary,
     },
-    metaDot: {
+    metaItemNum: {
+      fontSize: 12,
+      color: c.text,
+      fontWeight: '800',
+    },
+    metaSep: {
       fontSize: 12,
       color: c.textTertiary,
-      marginHorizontal: 2,
-    },
-    statsBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: c.card,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: c.border,
-    },
-    statCell: {
-      flex: 1,
-      alignItems: 'center',
-      gap: 2,
-    },
-    statRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    statValue: {
-      fontSize: 13,
-      fontWeight: '800',
-      color: c.text,
-    },
-    statLabel: {
-      fontSize: 9,
       fontWeight: '700',
-      color: c.textTertiary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.3,
+      paddingHorizontal: 1,
     },
-    statDivider: {
-      width: 1,
-      height: 22,
-      backgroundColor: c.border,
+    contributorsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    contributorsLabel: {
+      fontSize: 12,
+      color: c.textSecondary,
+      fontWeight: '500',
+    },
+    contributorsLabelNum: {
+      fontSize: 12,
+      color: c.text,
+      fontWeight: '800',
+    },
+    contributorsChevron: {
+      color: c.primary,
+      fontWeight: '700',
     },
     sortRow: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 14,
-      paddingVertical: 12,
+      paddingVertical: 10,
       gap: 8,
-      marginTop: 8,
+      marginTop: 4,
       borderTopWidth: 1,
       borderTopColor: c.border,
       backgroundColor: c.bg,
     },
-    sectionLabel: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 7,
-    },
-    sectionText: {
+    sortRowLabel: {
       fontSize: 13,
       fontWeight: '800',
       color: c.text,
       letterSpacing: -0.1,
     },
-    sectionCount: {
-      backgroundColor: c.surface,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 999,
-    },
-    sectionCountText: {
-      fontSize: 11,
-      fontWeight: '800',
-      color: c.textSecondary,
+    sortRowCount: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: c.textTertiary,
     },
     sortSpacer: {
       flex: 1,
     },
-    sortBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
+    sortChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
       borderRadius: 999,
-      backgroundColor: 'transparent',
+      backgroundColor: c.primarySoft,
     },
-    sortBtnActive: {
-      backgroundColor: c.primary,
+    sortChipPressed: {
+      opacity: 0.8,
     },
-    sortBtnText: {
+    sortChipText: {
       fontSize: 12,
       fontWeight: '700',
-      color: c.textTertiary,
-    },
-    sortBtnTextActive: {
-      color: c.onPrimary,
+      color: c.primary,
+      letterSpacing: 0.1,
     },
     empty: {
       alignItems: 'center',
@@ -1646,77 +1417,6 @@ function makeStyles(c: ThemeColors) {
       fontSize: 11,
       fontWeight: '800',
       color: c.onPrimary,
-    },
-    replyBar: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      backgroundColor: c.card,
-      borderTopWidth: 1,
-      borderTopColor: c.border,
-    },
-    replyAvatar: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: c.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    replyAvatarImg: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: c.surface,
-    },
-    replyAvatarLetter: {
-      color: c.onPrimary,
-      fontSize: 13,
-      fontWeight: '800',
-    },
-    replyInput: {
-      flex: 1,
-      backgroundColor: c.bg,
-      borderRadius: 20,
-      paddingHorizontal: 14,
-      paddingVertical: 9,
-    },
-    replyInputPlaceholder: {
-      fontSize: 13,
-      color: c.textTertiary,
-    },
-    sendBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: c.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    lockedBar: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      paddingVertical: 14,
-      backgroundColor: c.card,
-      borderTopWidth: 1,
-      borderTopColor: c.border,
-    },
-    lockedBarText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: c.textTertiary,
     },
   });
 }

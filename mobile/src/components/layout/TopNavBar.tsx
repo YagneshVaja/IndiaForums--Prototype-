@@ -74,20 +74,50 @@ export function TopNavBrand({
 }
 
 // ── Back mode ──────────────────────────────────────────────────────────────────
+export interface TopNavAction {
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  label: string;
+  /** Render with primary fill — used for the main action (e.g. Reply). */
+  primary?: boolean;
+  /** Render disabled (greyed out, non-interactive) — used for locked states. */
+  disabled?: boolean;
+}
+
 interface BackProps {
   title?: string;
+  /** Optional small line below the title — typically a parent breadcrumb. */
+  subtitle?: string;
+  /** Tap handler for the subtitle line. Defaults to `onBack` when omitted. */
+  onSubtitlePress?: () => void;
   onBack: () => void;
+  /** Multiple right-side actions, rendered left-to-right. */
+  rightActions?: TopNavAction[];
+  /** Backward-compat — single right action. Ignored when `rightActions` is set. */
   rightIcon?: keyof typeof Ionicons.glyphMap;
   onRightPress?: () => void;
   rightAccessibilityLabel?: string;
 }
 
 export function TopNavBack({
-  title, onBack, rightIcon, onRightPress, rightAccessibilityLabel,
+  title, subtitle, onSubtitlePress, onBack, rightActions, rightIcon, onRightPress, rightAccessibilityLabel,
 }: BackProps) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  // Resolve final action list — prefer the array form, fall back to the
+  // legacy single-icon props so existing callers don't have to change.
+  const actions: TopNavAction[] = rightActions
+    ? rightActions
+    : rightIcon && onRightPress
+      ? [{
+          icon: rightIcon,
+          onPress: onRightPress,
+          label: rightAccessibilityLabel || 'Action',
+        }]
+      : [];
+
   return (
     <View style={[styles.safeWrap, { paddingTop: insets.top }]}>
       <View style={styles.bar}>
@@ -95,19 +125,59 @@ export function TopNavBack({
           <Ionicons name="chevron-back" size={18} color={colors.text} />
         </Pressable>
         {title ? (
-          <Text style={styles.screenTitle} numberOfLines={1}>{title}</Text>
+          <View style={styles.titleStack}>
+            <Text
+              style={[styles.screenTitle, subtitle ? styles.screenTitleWithSub : null]}
+              numberOfLines={1}
+            >
+              {title}
+            </Text>
+            {subtitle ? (
+              <Pressable
+                onPress={onSubtitlePress ?? onBack}
+                hitSlop={4}
+                accessibilityRole="link"
+                accessibilityLabel={`In ${subtitle}. Tap to go back.`}
+              >
+                <Text style={styles.subtitleText} numberOfLines={1}>
+                  in {subtitle}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
         ) : (
           <View style={styles.flex1} />
         )}
-        {rightIcon && onRightPress ? (
-          <Pressable
-            style={styles.backBtn}
-            onPress={onRightPress}
-            hitSlop={8}
-            accessibilityLabel={rightAccessibilityLabel || 'Action'}
-          >
-            <Ionicons name={rightIcon} size={18} color={colors.text} />
-          </Pressable>
+        {actions.length > 0 ? (
+          <View style={styles.actionRow}>
+            {actions.map((a, i) => (
+              <Pressable
+                key={`${a.icon}-${i}`}
+                onPress={a.disabled ? undefined : a.onPress}
+                disabled={a.disabled}
+                hitSlop={6}
+                style={({ pressed }) => [
+                  a.primary ? styles.actionBtnPrimary : styles.backBtn,
+                  a.disabled && styles.actionBtnDisabled,
+                  pressed && !a.disabled && styles.actionBtnPressed,
+                ]}
+                accessibilityLabel={a.label}
+                accessibilityRole="button"
+              >
+                <Ionicons
+                  name={a.icon}
+                  size={18}
+                  color={
+                    a.disabled
+                      ? colors.textTertiary
+                      : a.primary
+                        ? colors.onPrimary
+                        : colors.text
+                  }
+                />
+              </Pressable>
+            ))}
+          </View>
         ) : (
           <View style={styles.backSpacer} />
         )}
@@ -213,13 +283,52 @@ function makeStyles(c: ThemeColors) {
       justifyContent: 'center',
       flexShrink: 0,
     },
-    screenTitle: {
+    actionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexShrink: 0,
+    },
+    actionBtnPrimary: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    actionBtnPressed: {
+      opacity: 0.85,
+    },
+    actionBtnDisabled: {
+      backgroundColor: c.surface,
+      opacity: 0.6,
+    },
+    titleStack: {
       flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 4,
+    },
+    screenTitle: {
       fontSize: 16,
       fontWeight: '800',
       color: c.text,
       letterSpacing: -0.2,
       textAlign: 'center',
+    },
+    screenTitleWithSub: {
+      fontSize: 14,
+      lineHeight: 18,
+    },
+    subtitleText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.primary,
+      letterSpacing: 0.1,
+      textAlign: 'center',
+      marginTop: 1,
     },
     flex1: { flex: 1 },
     backSpacer: { width: 36, flexShrink: 0 },

@@ -19,14 +19,15 @@ export function useForumTopics(forumId: number | null, startPage = 1) {
     placeholderData: keepPreviousData,
   });
 
-  // Prefetch adjacent pages so Prev/Next taps feel instant.
+  // Prefetch adjacent pages so Prev/Next render instantly. Deps are
+  // primitives only — `query.data` reference changes per fetch state and
+  // would re-fire this effect dozens of times per page transition.
+  const hasNext = query.data?.pages[0]?.hasNextPage ?? false;
   useEffect(() => {
-    if (!forumId || !query.data) return;
-    const current = query.data.pages[0];
-    if (!current) return;
+    if (!forumId) return;
 
-    if (current.hasNextPage) {
-      const nextPage = current.pageNumber + 1;
+    if (hasNext) {
+      const nextPage = startPage + 1;
       queryClient.prefetchInfiniteQuery({
         queryKey: ['forum-topics', forumId, nextPage],
         queryFn: ({ pageParam }) =>
@@ -44,7 +45,7 @@ export function useForumTopics(forumId: number | null, startPage = 1) {
         initialPageParam: prevPage,
       });
     }
-  }, [forumId, startPage, query.data, queryClient]);
+  }, [forumId, startPage, hasNext, queryClient]);
 
   return query;
 }

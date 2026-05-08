@@ -203,14 +203,16 @@ export default function ForumThreadScreen() {
 
   const { hidden: barHidden, onScroll: handleListScroll } = useHideOnScroll();
 
-  // Throttle scroll-position writes to the persistence store so we don't
-  // thrash setState on every frame. 250ms is responsive enough that a quick
-  // tap-to-topic-and-back lands within a few px of where you were.
+  // Throttle scroll-position writes to the persistence store. 250ms is
+  // responsive enough that a quick tap-to-topic-and-back lands within a few
+  // px of where you were. Skip writes for 600ms after a page change so the
+  // auto-scroll-to-0 doesn't overwrite the offset we want to remember.
   const lastSavedRef = useRef(0);
   const handleScrollWithSave = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       handleListScroll(e);
       const now = Date.now();
+      if (now - pageChangedAtRef.current < 600) return;
       if (now - lastSavedRef.current < 250) return;
       lastSavedRef.current = now;
       const y = e.nativeEvent.contentOffset.y;
@@ -219,14 +221,21 @@ export default function ForumThreadScreen() {
     [forum.id, currentPage, handleListScroll],
   );
 
+  // Tracks when the current page changed — we suppress scroll-save writes for
+  // a short window after, so the auto-scroll-to-0 on page change doesn't
+  // clobber the offset we just persisted (or are about to restore).
+  const pageChangedAtRef = useRef(0);
+
   const handleJumpToPage = useCallback((page: number) => {
+    if (page === currentPage) return;
     setJumpSheetOpen(false);
+    pageChangedAtRef.current = Date.now();
     setCurrentPage(page);
     useForumPaginationStore.getState().setForumPage(forum.id, page);
     requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({ offset: 0, animated: false });
     });
-  }, [forum.id]);
+  }, [forum.id, currentPage]);
 
   // Restore the user's scroll position on this page once data has loaded.
   // Only fires on (forumId, currentPage) change — not on every scroll.
@@ -427,7 +436,6 @@ export default function ForumThreadScreen() {
             itemLabel="topics"
             hidden={barHidden}
             onPageChange={handleJumpToPage}
-            onOpenJumpSheet={() => setJumpSheetOpen(true)}
           />
         </View>
       )}

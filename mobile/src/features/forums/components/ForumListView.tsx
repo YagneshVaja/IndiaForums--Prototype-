@@ -229,7 +229,6 @@ export default function ForumListView({ onForumPress }: Props) {
           itemLabel="forums"
           hidden={barHidden}
           onPageChange={handleJumpToPage}
-          onOpenJumpSheet={() => setJumpSheetOpen(true)}
         />
       </View>
     )}

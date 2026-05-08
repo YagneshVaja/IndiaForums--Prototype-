@@ -23,14 +23,13 @@ export function useTopicPosts(
     placeholderData: keepPreviousData,
   });
 
-  // Prefetch adjacent pages for instant navigation.
+  // Prefetch adjacent pages — primitive deps only.
+  const hasNext = query.data?.pages[0]?.hasNextPage ?? false;
   useEffect(() => {
-    if (!topicId || searchQuery) return; // skip while searching
-    const current = query.data?.pages[0];
-    if (!current) return;
+    if (!topicId || searchQuery) return;
 
-    if (current.hasNextPage) {
-      const nextPage = current.pageNumber + 1;
+    if (hasNext) {
+      const nextPage = startPage + 1;
       queryClient.prefetchInfiniteQuery({
         queryKey: ['topic-posts', topicId, searchQuery, nextPage],
         queryFn: ({ pageParam }) =>
@@ -47,7 +46,7 @@ export function useTopicPosts(
         initialPageParam: prevPage,
       });
     }
-  }, [topicId, searchQuery, startPage, query.data, queryClient]);
+  }, [topicId, searchQuery, startPage, hasNext, queryClient]);
 
   return query;
 }

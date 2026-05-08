@@ -44,5 +44,9 @@ export function useHideOnScroll(threshold = 8) {
     [hidden, threshold],
   );
 
-  return { hidden, onScroll };
+  /** Force-reveals the bar — used when an action (e.g. sort toggle) shouldn't
+   * leave the bar in whatever scroll-derived state it had before. */
+  const show = useCallback(() => setHidden(false), []);
+
+  return { hidden, onScroll, show };
 }
