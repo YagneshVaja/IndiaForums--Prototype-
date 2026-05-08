@@ -20,6 +20,7 @@ import WebStoriesStrip from '../components/WebStoriesStrip';
 import ForumsSection from '../components/ForumsSection';
 import ChannelsSection from '../components/ChannelsSection';
 import VideosHomeSection from '../components/VideosHomeSection';
+import QuizzesHomeSection from '../components/QuizzesHomeSection';
 import { useFeaturedBanners, useHomeArticles } from '../hooks/useHomeData';
 import type { HomeStackParamList } from '../../../navigation/types';
 import type { Banner, Article, ForumTopic, Gallery } from '../../../services/api';
@@ -82,6 +83,7 @@ export default function HomeScreen() {
         queryClient.invalidateQueries({ queryKey: ['home-forum-topics'] }),
         queryClient.invalidateQueries({ queryKey: ['home-media-galleries'] }),
         queryClient.invalidateQueries({ queryKey: ['videos'] }),
+        queryClient.invalidateQueries({ queryKey: ['quizzes'] }),
       ]);
     } finally {
       setRefreshing(false);
@@ -239,6 +241,10 @@ export default function HomeScreen() {
 
         <View style={styles.sectionGap}>
           <VideosHomeSection />
+        </View>
+
+        <View style={styles.sectionGap}>
+          <QuizzesHomeSection />
         </View>
 
         <View style={styles.sectionGap}>
