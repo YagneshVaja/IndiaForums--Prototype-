@@ -16,7 +16,7 @@ import CategoryChips from '../components/CategoryChips';
 import ArticleCard from '../components/ArticleCard';
 import StoriesStrip from '../components/StoriesStrip';
 import PhotoGallerySection from '../components/PhotoGallerySection';
-import WebStoriesStrip from '../components/WebStoriesStrip';
+import WebStoriesHomeSection from '../components/WebStoriesHomeSection';
 import ForumsSection from '../components/ForumsSection';
 import ChannelsSection from '../components/ChannelsSection';
 import VideosHomeSection from '../components/VideosHomeSection';
@@ -24,10 +24,8 @@ import QuizzesHomeSection from '../components/QuizzesHomeSection';
 import { useFeaturedBanners, useHomeArticles } from '../hooks/useHomeData';
 import type { HomeStackParamList } from '../../../navigation/types';
 import type { Banner, Article, ForumTopic, Gallery } from '../../../services/api';
-import { WEB_STORIES } from '../data/webStories';
 
 const CATEGORIES = ['All', 'Television', 'Movies', 'Digital', 'Lifestyle', 'Sports'];
-const PREVIEW_WEB_STORIES = WEB_STORIES.slice(0, 8);
 
 // Cap the homepage's Latest News list at 12 articles before handing off to the
 // News tab via the bottom VIEW ALL CTA. Mirrors the website's 3×4 = 12 tile
@@ -84,6 +82,7 @@ export default function HomeScreen() {
         queryClient.invalidateQueries({ queryKey: ['home-media-galleries'] }),
         queryClient.invalidateQueries({ queryKey: ['videos'] }),
         queryClient.invalidateQueries({ queryKey: ['quizzes'] }),
+        queryClient.invalidateQueries({ queryKey: ['webstories'] }),
       ]);
     } finally {
       setRefreshing(false);
@@ -248,7 +247,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.sectionGap}>
-          <WebStoriesStrip stories={PREVIEW_WEB_STORIES} onSeeAll={() => {}} />
+          <WebStoriesHomeSection />
         </View>
 
         <View style={styles.spacer} />
