@@ -7,21 +7,34 @@ interface Props {
   count?: number;
 }
 
-export default function QuizListSkeleton({ count = 5 }: Props) {
+export default function QuizListSkeleton({ count = 6 }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
+  // Render featured + a 2-col grid of placeholders.
+  const gridCount = Math.max(0, count - 1);
+  const rows: number[][] = [];
+  for (let i = 0; i < gridCount; i += 2) {
+    rows.push([i, i + 1].filter((n) => n < gridCount));
+  }
+
   return (
     <View>
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={styles.card}>
-          <View style={styles.thumb} />
-          <View style={styles.info}>
-            <View style={[styles.line, { width: 80, height: 12 }]} />
-            <View style={[styles.line, { width: '100%', height: 14, marginTop: 6 }]} />
-            <View style={[styles.line, { width: '70%', height: 14, marginTop: 4 }]} />
-            <View style={[styles.line, { width: 100, height: 11, marginTop: 10 }]} />
-          </View>
+      <View style={styles.featured} />
+
+      {rows.map((row, idx) => (
+        <View key={idx} style={styles.gridRow}>
+          {row.map((n) => (
+            <View key={n} style={styles.card}>
+              <View style={styles.thumb} />
+              <View style={styles.info}>
+                <View style={[styles.line, { width: 60, height: 9 }]} />
+                <View style={[styles.line, { width: '95%', height: 12, marginTop: 6 }]} />
+                <View style={[styles.line, { width: '70%', height: 12, marginTop: 4 }]} />
+              </View>
+            </View>
+          ))}
+          {row.length === 1 ? <View style={styles.card} /> : null}
         </View>
       ))}
     </View>
@@ -30,27 +43,38 @@ export default function QuizListSkeleton({ count = 5 }: Props) {
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
-    card: {
-      flexDirection: 'row',
-      gap: 12,
-      padding: 12,
+    featured: {
       marginHorizontal: 12,
-      marginVertical: 5,
+      marginTop: 14,
+      marginBottom: 6,
+      aspectRatio: 16 / 10,
+      borderRadius: 18,
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    gridRow: {
+      flexDirection: 'row',
+      gap: 10,
+      paddingHorizontal: 12,
+      marginTop: 10,
+    },
+    card: {
+      flex: 1,
       backgroundColor: c.card,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: c.border,
+      overflow: 'hidden',
     },
     thumb: {
-      width: 92,
-      height: 92,
-      borderRadius: 12,
+      width: '100%',
+      aspectRatio: 1,
       backgroundColor: c.surface,
     },
     info: {
-      flex: 1,
-      minHeight: 92,
-      justifyContent: 'center',
+      padding: 10,
+      minHeight: 90,
     },
     line: {
       backgroundColor: c.surface,

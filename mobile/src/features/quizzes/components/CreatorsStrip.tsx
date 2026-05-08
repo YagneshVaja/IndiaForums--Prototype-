@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { QuizCreator } from '../../../services/api';
+import MemberAvatar from './MemberAvatar';
 
 interface Props {
   creators: QuizCreator[];
@@ -27,14 +27,12 @@ export default function CreatorsStrip({ creators }: Props) {
       >
         {creators.map((c) => (
           <View key={c.id} style={styles.item}>
-            <LinearGradient
-              colors={[c.avatarGradient[0], c.avatarGradient[1]]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.avatar}
-            >
-              <Text style={styles.initials}>{c.initials}</Text>
-            </LinearGradient>
+            <MemberAvatar
+              thumbnail={c.thumbnail}
+              initials={c.initials}
+              gradient={c.avatarGradient}
+              size={50}
+            />
             <Text style={styles.name} numberOfLines={1}>
               {c.name.length > 10 ? `${c.name.slice(0, 9)}…` : c.name}
             </Text>
@@ -77,19 +75,6 @@ function makeStyles(c: ThemeColors) {
       alignItems: 'center',
       width: 68,
       gap: 4,
-    },
-    avatar: {
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    initials: {
-      fontSize: 16,
-      fontWeight: '800',
-      color: '#FFFFFF',
-      letterSpacing: -0.3,
     },
     name: {
       fontSize: 11,

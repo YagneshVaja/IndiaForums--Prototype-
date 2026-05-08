@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { QuizPlayer } from '../../../services/api';
+import MemberAvatar from './MemberAvatar';
 
 interface Props {
   player: QuizPlayer;
@@ -27,14 +27,12 @@ export default function LeaderboardRow({ player, totalQuestions }: Props) {
           {MEDAL[player.rank] ?? `#${player.rank}`}
         </Text>
       </View>
-      <LinearGradient
-        colors={[player.avatarGradient[0], player.avatarGradient[1]]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.avatar}
-      >
-        <Text style={styles.initials}>{player.initials}</Text>
-      </LinearGradient>
+      <MemberAvatar
+        thumbnail={player.thumbnail}
+        initials={player.initials}
+        gradient={player.avatarGradient}
+        size={36}
+      />
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{player.name}</Text>
         <Text style={styles.score} numberOfLines={1}>{scoreLabel}</Text>
@@ -63,18 +61,6 @@ function makeStyles(c: ThemeColors) {
       fontSize: 14,
       fontWeight: '800',
       color: c.textSecondary,
-    },
-    avatar: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    initials: {
-      fontSize: 12,
-      fontWeight: '800',
-      color: '#FFFFFF',
     },
     info: {
       flex: 1,

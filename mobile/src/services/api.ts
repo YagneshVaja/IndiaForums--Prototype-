@@ -4817,7 +4817,26 @@ export interface QuizPlayer {
   score: number;
   rank: number;
   avatarGradient: readonly [string, string];
+  /** CDN avatar URL (null when the user has no uploaded photo). */
+  thumbnail: string | null;
   isPrivate: boolean;
+}
+
+/**
+ * Build a member-avatar CDN URL from API fields. Mirrors the pattern used by
+ * the forum/profile endpoints. Gated on `avatarType > 0` — without that the
+ * URL almost certainly 404s, so we'd rather render initials cleanly than
+ * fetch a broken image.
+ */
+export function buildMemberAvatarUrl(
+  userId: number | null | undefined,
+  updateChecksum: string | null | undefined,
+  avatarType: number | null | undefined,
+): string | null {
+  if (!userId || !updateChecksum) return null;
+  if (!avatarType || avatarType === 0) return null;
+  const bucket = Math.floor(Number(userId) / 10000);
+  return `https://img.indiaforums.com/member/100x100/${bucket}/${userId}.webp?uc=${updateChecksum}`;
 }
 
 export interface QuizCreator {
@@ -4993,6 +5012,9 @@ function transformQuizPlayer(raw: any, index: number): QuizPlayer {
   const displayName = isPrivate
     ? 'Anonymous'
     : ((raw.realName || raw.userName || '').trim() || `Player ${index + 1}`);
+  const thumbnail = isPrivate
+    ? null
+    : (raw.thumbnailUrl || buildMemberAvatarUrl(raw.userId, raw.updateChecksum, raw.avatarType) || null);
   return {
     id:       Number(raw.userId) || index,
     name:     displayName,
@@ -5000,6 +5022,7 @@ function transformQuizPlayer(raw: any, index: number): QuizPlayer {
     score:    raw.totalScore ?? 0,
     rank:     raw.totalRank  ?? index + 1,
     avatarGradient: pickQuizAvatarGradient(index),
+    thumbnail,
     isPrivate,
   };
 }
@@ -5010,13 +5033,16 @@ function transformQuizCreator(raw: any, index: number): QuizCreator {
   const displayName = isPrivate
     ? 'Anonymous'
     : ((raw.realName || raw.userName || '').trim() || `Creator ${index + 1}`);
+  const thumbnail = isPrivate
+    ? null
+    : (raw.thumbnailUrl || buildMemberAvatarUrl(raw.userId, raw.updateChecksum, raw.avatarType) || null);
   return {
     id:        Number(raw.userId) || index,
     name:      displayName,
     initials:  isPrivate ? '?' : getQuizInitials(raw.realName, raw.userName),
     quizCount: raw.quizCount || 0,
     avatarGradient: pickQuizAvatarGradient(index),
-    thumbnail: raw.thumbnailUrl || null,
+    thumbnail,
     isPrivate,
   };
 }

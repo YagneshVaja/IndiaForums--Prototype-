@@ -20,6 +20,7 @@ import Animated, {
   withSequence,
   withSpring,
   Easing,
+  FadeInDown,
 } from 'react-native-reanimated';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,6 +33,7 @@ import type { HomeStackParamList } from '../../../navigation/types';
 import { extractApiError, submitQuizResponse } from '../../../services/api';
 import { useQuizDetails } from '../hooks/useQuizzes';
 import CircularTimer from '../components/CircularTimer';
+import ConfettiBurst from '../components/ConfettiBurst';
 
 // ── Inline haptic helpers ─────────────────────────────────────────────────
 // Kept inline to avoid creating a new module folder (Metro on Windows
@@ -85,6 +87,8 @@ export default function QuizPlayerScreen() {
   const [showReveal, setShowReveal] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(timerDuration);
   const [submitting, setSubmitting] = useState(false);
+  // Bumped on each correct trivia answer so ConfettiBurst re-mounts and replays.
+  const [confettiKey, setConfettiKey] = useState(0);
 
   const answeredRef = useRef<Record<number, AnsweredEntry>>({});
   const qIdxRef = useRef(0);
@@ -219,8 +223,12 @@ export default function QuizPlayerScreen() {
 
     // Haptics: strong feedback for trivia result, light tap for personality
     if (currentQ.isTrivia) {
-      if (isCorrect) hapticCorrect();
-      else hapticWrong();
+      if (isCorrect) {
+        hapticCorrect();
+        setConfettiKey((k) => k + 1);
+      } else {
+        hapticWrong();
+      }
     } else {
       hapticTap();
     }
@@ -298,13 +306,20 @@ export default function QuizPlayerScreen() {
         <View style={[styles.progressFill, { width: `${progress}%` }]} />
       </View>
 
-      {/* Gradient header with question */}
+      {/* Gradient header with question. Decorative emoji watermark fills the
+          empty visual space when the question has no GIF/image. */}
       <LinearGradient
         colors={[gradient[0], gradient[1]]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.header}
+        style={[styles.header, !currentQ.questionImageUrl && styles.headerTall]}
       >
+        {!currentQ.questionImageUrl ? (
+          <Text style={styles.heroEmoji} pointerEvents="none">
+            {quiz.emoji}
+          </Text>
+        ) : null}
+
         <View style={styles.headerTopRow}>
           <Pressable onPress={handleExit} hitSlop={10} style={styles.closeBtn}>
             <Ionicons name="close" size={18} color="#FFFFFF" />
@@ -325,6 +340,19 @@ export default function QuizPlayerScreen() {
           )}
         </View>
 
+        {quiz.categoryLabel ? (
+          <View style={styles.heroCatRow}>
+            <View style={styles.heroCatBadge}>
+              <Text style={styles.heroCatBadgeText}>{quiz.categoryLabel.toUpperCase()}</Text>
+            </View>
+            <View style={styles.heroTypeBadge}>
+              <Text style={styles.heroTypeBadgeText}>
+                {isTrivia ? '🧠 TRIVIA' : '✨ PERSONALITY'}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         <Text style={styles.question}>{currentQ.question}</Text>
 
         {/* Feedback badge */}
@@ -338,6 +366,12 @@ export default function QuizPlayerScreen() {
             <Text style={styles.feedbackText}>
               {currentAnswer!.correct ? '✓ Correct!' : '✗ Wrong'}
             </Text>
+          </View>
+        ) : null}
+
+        {confettiKey > 0 ? (
+          <View style={styles.confettiOverlay} pointerEvents="none">
+            <ConfettiBurst key={confettiKey} count={18} durationMs={1800} />
           </View>
         ) : null}
       </LinearGradient>
@@ -419,8 +453,12 @@ export default function QuizPlayerScreen() {
                   const showTick  = isTrivia && isAnswered && v.isCorrect;
                   const showCross = isTrivia && isAnswered && v.isSelected && !v.isCorrect;
                   return (
-                    <Pressable
+                    <Animated.View
                       key={`${currentQ.questionId}-${i}`}
+                      entering={FadeInDown.delay(i * 70).duration(260)}
+                      style={styles.gridCardWrap}
+                    >
+                    <Pressable
                       style={({ pressed }) => [
                         styles.gridCard,
                         v.border,
@@ -464,6 +502,7 @@ export default function QuizPlayerScreen() {
                         </View>
                       </View>
                     </Pressable>
+                    </Animated.View>
                   );
                 })}
               </View>
@@ -477,8 +516,11 @@ export default function QuizPlayerScreen() {
             const showTick  = isTrivia && isAnswered && v.isCorrect;
             const showCross = isTrivia && isAnswered && v.isSelected && !v.isCorrect;
             return (
-              <Pressable
+              <Animated.View
                 key={`${currentQ.questionId}-${i}`}
+                entering={FadeInDown.delay(i * 70).duration(260)}
+              >
+              <Pressable
                 style={({ pressed }) => [
                   styles.option,
                   v.bg,
@@ -510,6 +552,7 @@ export default function QuizPlayerScreen() {
                 {showTick  ? <Text style={styles.tick}>✓</Text>  : null}
                 {showCross ? <Text style={styles.cross}>✗</Text> : null}
               </Pressable>
+              </Animated.View>
             );
           });
         })()}
@@ -578,6 +621,56 @@ function makeStyles(c: ThemeColors) {
       paddingTop: 14,
       paddingBottom: 18,
       gap: 10,
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    headerTall: {
+      paddingTop: 14,
+      paddingBottom: 26,
+      minHeight: 240,
+      justifyContent: 'space-between',
+    },
+    heroEmoji: {
+      position: 'absolute',
+      top: -14,
+      right: -22,
+      fontSize: 200,
+      opacity: 0.16,
+    },
+    heroCatRow: {
+      flexDirection: 'row',
+      gap: 6,
+      flexWrap: 'wrap',
+      alignItems: 'center',
+    },
+    heroCatBadge: {
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      borderRadius: 999,
+      backgroundColor: 'rgba(255,255,255,0.92)',
+    },
+    heroCatBadgeText: {
+      fontSize: 10,
+      fontWeight: '900',
+      color: '#1A1A1A',
+      letterSpacing: 0.6,
+    },
+    heroTypeBadge: {
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      borderRadius: 999,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.35)',
+    },
+    heroTypeBadgeText: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: 0.4,
+    },
+    confettiOverlay: {
+      ...StyleSheet.absoluteFillObject,
     },
     headerTopRow: {
       flexDirection: 'row',
@@ -728,8 +821,11 @@ function makeStyles(c: ThemeColors) {
       flexWrap: 'wrap',
       gap: 10,
     },
-    gridCard: {
+    gridCardWrap: {
       width: '48.5%',
+    },
+    gridCard: {
+      width: '100%',
       borderRadius: 12,
       borderWidth: 1.5,
       backgroundColor: c.card,
