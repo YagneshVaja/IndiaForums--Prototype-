@@ -175,7 +175,7 @@ function makeStyles(c: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 14,
-      paddingBottom: 12,
+      paddingBottom: 14,
       gap: 10,
     },
     titleRow: {

@@ -87,7 +87,7 @@ function makeStyles(c: ThemeColors) {
       paddingTop: 4,
     },
     contentContainer: {
-      paddingHorizontal: 16,
+      paddingHorizontal: 14,
       paddingVertical: 10,
       flexDirection: 'row',
       alignItems: 'center',

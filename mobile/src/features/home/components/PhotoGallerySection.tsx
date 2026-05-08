@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import { useHomeMediaGalleries } from '../hooks/useHomeMediaGalleries';
@@ -58,11 +59,10 @@ export default function PhotoGallerySection({ onSeeAll, onGalleryPress }: Props)
       <GalleryCard
         gallery={item}
         styles={styles}
-        colors={colors}
         onPress={onGalleryPress}
       />
     ),
-    [styles, colors, onGalleryPress],
+    [styles, onGalleryPress],
   );
 
   const keyExtractor = useCallback((g: Gallery) => String(g.id), []);
@@ -72,17 +72,24 @@ export default function PhotoGallerySection({ onSeeAll, onGalleryPress }: Props)
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View style={styles.accentBar} />
-          <Text style={styles.title}>Photo Gallery</Text>
+          <View style={styles.titleCol}>
+            <Text style={styles.title}>PHOTO GALLERY</Text>
+            <Text style={styles.subtitle}>From premieres &amp; events</Text>
+          </View>
         </View>
         {onSeeAll ? (
           <Pressable
-            style={({ pressed }) => [styles.viewAllPill, pressed && styles.viewAllPillPressed]}
             onPress={onSeeAll}
+            style={({ pressed }) => [
+              styles.seeAll,
+              pressed && styles.seeAllPressed,
+            ]}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="View all photo galleries"
           >
-            <Text style={styles.viewAllText}>VIEW ALL</Text>
+            <Text style={styles.seeAllText}>See All</Text>
+            <Ionicons name="chevron-forward" size={13} color={colors.primary} />
           </Pressable>
         ) : null}
       </View>
@@ -134,11 +141,10 @@ export default function PhotoGallerySection({ onSeeAll, onGalleryPress }: Props)
 interface CardProps {
   gallery: Gallery;
   styles: ReturnType<typeof makeStyles>;
-  colors: ThemeColors;
   onPress?: (gallery: Gallery) => void;
 }
 
-function GalleryCard({ gallery, styles, colors, onPress }: CardProps) {
+function GalleryCard({ gallery, styles, onPress }: CardProps) {
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
@@ -146,68 +152,53 @@ function GalleryCard({ gallery, styles, colors, onPress }: CardProps) {
       accessibilityRole="button"
       accessibilityLabel={gallery.title}
     >
-      <View style={styles.thumbWrap}>
-        {gallery.thumbnail ? (
-          <Image
-            source={{ uri: gallery.thumbnail }}
-            style={styles.thumb}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={150}
-          />
-        ) : (
-          <View style={[styles.thumb, styles.thumbFallback]}>
-            <Text style={styles.thumbEmoji}>{gallery.emoji}</Text>
-          </View>
-        )}
-
-        {/* Soft scrim — keeps the count badge readable on light/varied images. */}
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.55)']}
-          style={styles.thumbScrim}
-          pointerEvents="none"
+      {gallery.thumbnail ? (
+        <Image
+          source={{ uri: gallery.thumbnail }}
+          style={styles.thumb}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={150}
         />
-
-        {gallery.featured ? (
-          <View style={styles.featuredBadge}>
-            <Text style={styles.featuredDot}>★</Text>
-            <Text style={styles.featuredText}>FEATURED</Text>
-          </View>
-        ) : null}
-
-        {gallery.count > 0 ? (
-          <View style={styles.countBadge}>
-            <View style={styles.cameraIcon}>
-              <View style={styles.cameraBody} />
-              <View style={styles.cameraLens} />
-            </View>
-            <Text style={styles.countText}>{gallery.count}</Text>
-          </View>
-        ) : null}
-      </View>
-
-      <View style={styles.cardBody}>
-        <Text style={styles.cardTitle} numberOfLines={3}>{gallery.title}</Text>
-
-        <View style={styles.metaRow}>
-          {gallery.time ? (
-            <View style={styles.timeRow}>
-              <View style={styles.clockIcon}>
-                <View style={[styles.clockOuter, { borderColor: colors.textTertiary }]} />
-                <View style={[styles.clockHand, { backgroundColor: colors.textTertiary }]} />
-              </View>
-              <Text style={styles.cardTime}>{gallery.time}</Text>
-            </View>
-          ) : (
-            <View />
-          )}
-          {gallery.views ? (
-            <View style={styles.viewsRow}>
-              <View style={[styles.eyeIcon, { borderColor: colors.textTertiary }]} />
-              <Text style={styles.viewsText}>{gallery.views}</Text>
-            </View>
-          ) : null}
+      ) : (
+        <View style={[styles.thumb, styles.thumbFallback]}>
+          <Text style={styles.thumbEmoji}>{gallery.emoji}</Text>
         </View>
+      )}
+
+      {/* Bottom scrim covers ~55% of the card so title + time stay legible
+          on bright thumbnails. */}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.78)']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.thumbScrim}
+        pointerEvents="none"
+      />
+
+      {gallery.featured ? (
+        <View style={styles.featuredBadge}>
+          <Text style={styles.featuredDot}>★</Text>
+          <Text style={styles.featuredText}>FEATURED</Text>
+        </View>
+      ) : null}
+
+      {gallery.count > 0 ? (
+        <View style={styles.countBadge}>
+          <Ionicons name="images" size={11} color="#FFFFFF" />
+          <Text style={styles.countText}>{gallery.count}</Text>
+        </View>
+      ) : null}
+
+      <View style={styles.captionWrap} pointerEvents="none">
+        <Text style={styles.captionTitle} numberOfLines={2}>
+          {gallery.title}
+        </Text>
+        {gallery.time ? (
+          <Text style={styles.captionTime} numberOfLines={1}>
+            {gallery.time}
+          </Text>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -224,20 +215,24 @@ function makeStyles(c: ThemeColors) {
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
       paddingHorizontal: SECTION_PAD_H,
       paddingBottom: 14,
+      gap: 10,
     },
     titleRow: {
+      flex: 1,
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'stretch',
       gap: 10,
     },
     accentBar: {
       width: 3.5,
-      height: 18,
       borderRadius: 2,
       backgroundColor: c.primary,
+    },
+    titleCol: {
+      flex: 1,
+      justifyContent: 'center',
     },
     title: {
       fontSize: 13,
@@ -246,20 +241,28 @@ function makeStyles(c: ThemeColors) {
       letterSpacing: 1.5,
       textTransform: 'uppercase',
     },
-    viewAllPill: {
-      backgroundColor: c.primary,
-      borderRadius: 999,
-      paddingHorizontal: 14,
-      paddingVertical: 7,
-    },
-    viewAllPillPressed: {
-      opacity: 0.85,
-    },
-    viewAllText: {
+    subtitle: {
       fontSize: 11,
-      fontWeight: '900',
-      color: c.onPrimary,
-      letterSpacing: 1,
+      fontWeight: '600',
+      color: c.textTertiary,
+      marginTop: 2,
+      letterSpacing: 0.2,
+    },
+    seeAll: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      paddingVertical: 4,
+      paddingHorizontal: 6,
+    },
+    seeAllPressed: {
+      opacity: 0.6,
+    },
+    seeAllText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.primary,
+      letterSpacing: 0.2,
     },
     loadingWrap: {
       paddingHorizontal: SECTION_PAD_H,
@@ -270,30 +273,24 @@ function makeStyles(c: ThemeColors) {
 
     card: {
       width: CARD_WIDTH,
+      height: THUMB_HEIGHT,
       backgroundColor: c.cardElevated,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: c.border,
       overflow: 'hidden',
       shadowColor: '#000',
-      shadowOpacity: 0.08,
-      shadowOffset: { width: 0, height: 2 },
-      shadowRadius: 6,
-      elevation: 2,
+      shadowOpacity: 0.1,
+      shadowOffset: { width: 0, height: 3 },
+      shadowRadius: 8,
+      elevation: 3,
     },
     cardPressed: {
       transform: [{ scale: 0.97 }],
       opacity: 0.92,
     },
-    thumbWrap: {
-      width: '100%',
-      height: THUMB_HEIGHT,
-      backgroundColor: c.surface,
-      position: 'relative',
-    },
     thumb: {
-      width: '100%',
-      height: '100%',
+      ...StyleSheet.absoluteFillObject,
     },
     thumbFallback: {
       backgroundColor: c.primarySoft,
@@ -308,51 +305,26 @@ function makeStyles(c: ThemeColors) {
       left: 0,
       right: 0,
       bottom: 0,
-      height: 70,
+      height: '55%',
     },
 
     countBadge: {
       position: 'absolute',
-      bottom: 8,
+      top: 8,
       right: 8,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      backgroundColor: c.primary,
+      backgroundColor: 'rgba(0,0,0,0.65)',
       borderRadius: 999,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      shadowColor: '#000',
-      shadowOpacity: 0.35,
-      shadowOffset: { width: 0, height: 2 },
-      shadowRadius: 4,
-      elevation: 3,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
     },
     countText: {
       fontSize: 11,
-      fontWeight: '900',
-      color: c.onPrimary,
+      fontWeight: '800',
+      color: '#FFFFFF',
       letterSpacing: 0.2,
-    },
-    cameraIcon: {
-      width: 11,
-      height: 9,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    cameraBody: {
-      position: 'absolute',
-      width: 11,
-      height: 8,
-      borderRadius: 1.5,
-      backgroundColor: c.onPrimary,
-    },
-    cameraLens: {
-      position: 'absolute',
-      width: 4,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: c.primary,
     },
 
     featuredBadge: {
@@ -366,11 +338,6 @@ function makeStyles(c: ThemeColors) {
       borderRadius: 4,
       paddingHorizontal: 6,
       paddingVertical: 3,
-      shadowColor: '#000',
-      shadowOpacity: 0.25,
-      shadowOffset: { width: 0, height: 1 },
-      shadowRadius: 2,
-      elevation: 2,
     },
     featuredDot: {
       fontSize: 9,
@@ -385,71 +352,28 @@ function makeStyles(c: ThemeColors) {
       letterSpacing: 0.8,
     },
 
-    cardBody: {
-      paddingHorizontal: 12,
-      paddingTop: 10,
-      paddingBottom: 12,
-      gap: 8,
-      minHeight: 70,
-    },
-    cardTitle: {
-      fontSize: 12.5,
-      fontWeight: '700',
-      color: c.text,
-      lineHeight: 17,
-      letterSpacing: -0.1,
-    },
-    metaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    timeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    clockIcon: {
-      width: 11,
-      height: 11,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    clockOuter: {
+    captionWrap: {
       position: 'absolute',
-      width: 9,
-      height: 9,
-      borderRadius: 5,
-      borderWidth: 1.1,
+      left: 10,
+      right: 10,
+      bottom: 10,
+      gap: 3,
     },
-    clockHand: {
-      position: 'absolute',
-      width: 1.1,
-      height: 3,
-      top: 2,
-      left: 4.5,
-      borderRadius: 1,
+    captionTitle: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      lineHeight: 16,
+      letterSpacing: -0.2,
+      textShadowColor: 'rgba(0,0,0,0.45)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
     },
-    cardTime: {
-      fontSize: 10,
+    captionTime: {
+      fontSize: 10.5,
       fontWeight: '600',
-      color: c.textTertiary,
-    },
-    viewsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    eyeIcon: {
-      width: 10,
-      height: 6,
-      borderWidth: 1.1,
-      borderRadius: 4,
-    },
-    viewsText: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: c.textTertiary,
+      color: 'rgba(255,255,255,0.85)',
+      letterSpacing: 0.2,
     },
 
     dotsRow: {

@@ -9,7 +9,6 @@ import { TopNavBrand } from '../../../components/layout/TopNavBar';
 import { useSideMenuStore } from '../../../store/sideMenuStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
-import SectionHeader from '../../../components/ui/SectionHeader';
 import LoadingState from '../../../components/ui/LoadingState';
 import FeaturedBannerCarousel from '../components/FeaturedBannerCarousel';
 import CategoryChips from '../components/CategoryChips';
@@ -162,7 +161,18 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.carouselWrap}>
-          <SectionHeader title="Trending Now" />
+          {/* Trending Now header — same accent-bar pattern as every other
+              section so the screen reads as a single designed surface. No
+              See All; banners aren't a list with a destination. */}
+          <View style={styles.sectionHeader}>
+            <View style={styles.titleRow}>
+              <View style={styles.accentBar} />
+              <View style={styles.titleCol}>
+                <Text style={styles.sectionTitle}>TRENDING NOW</Text>
+                <Text style={styles.sectionSubtitle}>Top stories of the day</Text>
+              </View>
+            </View>
+          </View>
           {bannersLoading ? (
             <LoadingState height={180} />
           ) : (
@@ -171,14 +181,29 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.articlesTop}>
-          {/* Custom Latest News header — accent bar + title + headline count.
-              Replaces the plain shared SectionHeader so this block reads as a
-              richer "magazine" section instead of an inline title. The single
-              VIEW ALL CTA lives at the *bottom* of the article list as a
-              prominent pill (matches the website's news pattern). */}
-          <View style={styles.newsHeader}>
-            <View style={styles.newsAccent} />
-            <Text style={styles.newsTitle}>Latest News</Text>
+          {/* Latest News header — same accent-bar pattern as every other
+              section. The bottom VIEW ALL pill remains as a stronger CTA
+              after the user has scanned the 12-headline preview. */}
+          <View style={styles.sectionHeader}>
+            <View style={styles.titleRow}>
+              <View style={styles.accentBar} />
+              <View style={styles.titleCol}>
+                <Text style={styles.sectionTitle}>LATEST NEWS</Text>
+                <Text style={styles.sectionSubtitle}>Headlines · tap to read</Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={handleNewsViewAll}
+              style={({ pressed }) => [
+                styles.seeAll,
+                pressed && styles.seeAllPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="See all news"
+            >
+              <Text style={styles.seeAllText}>See All</Text>
+              <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+            </Pressable>
           </View>
 
           {/* Category chips belong *inside* the Latest News section — they
@@ -211,7 +236,9 @@ export default function HomeScreen() {
       <View>
         {/* VIEW ALL NEWS pill — sits directly under the 12-article preview so
             the user always reaches a clear stopping point and can drill into
-            the dedicated News tab for the active category filter. */}
+            the dedicated News tab for the active category filter. When the
+            list isn't capped we render a small spacer instead so the article
+            list doesn't slam into the next section. */}
         {hasMoreNews ? (
           <Pressable
             style={({ pressed }) => [
@@ -225,7 +252,9 @@ export default function HomeScreen() {
             <Text style={styles.viewAllPillText}>View all news</Text>
             <Ionicons name="arrow-forward" size={15} color={colors.primary} />
           </Pressable>
-        ) : null}
+        ) : (
+          <View style={styles.newsListGap} />
+        )}
 
         <View style={styles.sectionGap}>
           <ForumsSection onTopicPress={handleTopicPress} />
@@ -329,28 +358,68 @@ function makeStyles(c: ThemeColors) {
       marginTop: 8,
     },
     spacer: { height: 32 },
+    // Filler when the news list isn't capped — keeps a minimum gap between
+    // the last ArticleCard and the next section's borderTop so the seam
+    // isn't visually tight.
+    newsListGap: {
+      height: 12,
+    },
 
-    // Latest News custom header — accent bar + title + count badge.
-    newsHeader: {
+    // Shared Home section header — used by Trending Now and Latest News
+    // inline blocks. Mirrors the accent-bar pattern in every other Home
+    // section so the screen reads as one designed surface.
+    sectionHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
       paddingHorizontal: 14,
-      paddingTop: 18,
-      paddingBottom: 10,
+      paddingTop: 16,
+      paddingBottom: 14,
+      gap: 10,
     },
-    newsAccent: {
-      width: 4,
-      height: 20,
+    titleRow: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      gap: 10,
+    },
+    accentBar: {
+      width: 3.5,
       borderRadius: 2,
       backgroundColor: c.primary,
     },
-    newsTitle: {
-      fontSize: 19,
+    titleCol: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    sectionTitle: {
+      fontSize: 13,
       fontWeight: '900',
       color: c.text,
-      letterSpacing: -0.5,
-      flex: 1,
+      letterSpacing: 1.5,
+      textTransform: 'uppercase',
+    },
+    sectionSubtitle: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.textTertiary,
+      marginTop: 2,
+      letterSpacing: 0.2,
+    },
+    seeAll: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      paddingVertical: 4,
+      paddingHorizontal: 6,
+    },
+    seeAllPressed: {
+      opacity: 0.6,
+    },
+    seeAllText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.primary,
+      letterSpacing: 0.2,
     },
 
     // VIEW ALL NEWS — minimal outlined pill. Centered text + arrow against

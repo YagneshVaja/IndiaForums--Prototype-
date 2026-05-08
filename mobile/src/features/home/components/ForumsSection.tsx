@@ -1,6 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import { useHomeForumTopics } from '../hooks/useHomeForumTopics';
@@ -73,16 +75,40 @@ export default function ForumsSection({ onTopicPress }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>('announcements');
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const navigation = useNavigation();
 
   const topicType = TABS.find((t) => t.id === activeTab)!.topicType;
   const { data: topics = [], isLoading, isFetching } = useHomeForumTopics(topicType);
 
   const visibleTopics = useMemo(() => topics.slice(0, PREVIEW_COUNT), [topics]);
 
+  const handleSeeAll = useCallback(() => {
+    // Cross-tab jump from HomeStack → MainTab parent → Forums tab.
+    navigation.getParent()?.navigate('Forums' as never);
+  }, [navigation]);
+
   return (
     <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Forums</Text>
+      <View style={styles.header}>
+        <View style={styles.titleRow}>
+          <View style={styles.accentBar} />
+          <View style={styles.titleCol}>
+            <Text style={styles.title}>FORUMS</Text>
+            <Text style={styles.subtitle}>Latest community discussions</Text>
+          </View>
+        </View>
+        <Pressable
+          onPress={handleSeeAll}
+          style={({ pressed }) => [
+            styles.seeAll,
+            pressed && styles.seeAllPressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Open Forums tab"
+        >
+          <Text style={styles.seeAllText}>See All</Text>
+          <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+        </Pressable>
       </View>
 
       <View style={styles.tabRow}>
@@ -194,17 +220,59 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.card,
       borderTopWidth: 1,
       borderTopColor: c.border,
-    },
-    sectionHeader: {
-      paddingHorizontal: 14,
       paddingTop: 16,
-      paddingBottom: 4,
     },
-    sectionTitle: {
-      fontSize: 17,
-      fontWeight: '800',
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingBottom: 14,
+      gap: 10,
+    },
+    titleRow: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      gap: 10,
+    },
+    accentBar: {
+      width: 3.5,
+      borderRadius: 2,
+      backgroundColor: c.primary,
+    },
+    titleCol: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    title: {
+      fontSize: 13,
+      fontWeight: '900',
       color: c.text,
-      letterSpacing: -0.5,
+      letterSpacing: 1.5,
+      textTransform: 'uppercase',
+    },
+    subtitle: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.textTertiary,
+      marginTop: 2,
+      letterSpacing: 0.2,
+    },
+    seeAll: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      paddingVertical: 4,
+      paddingHorizontal: 6,
+    },
+    seeAllPressed: {
+      opacity: 0.6,
+    },
+    seeAllText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.primary,
+      letterSpacing: 0.2,
     },
     tabRow: {
       flexDirection: 'row',
