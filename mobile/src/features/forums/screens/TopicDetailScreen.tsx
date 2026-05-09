@@ -33,6 +33,12 @@ import { useTopicPosts, TOPIC_POSTS_PAGE_SIZE } from '../hooks/useTopicPosts';
 import { useForumPaginationStore, selectTopicPage } from '../store/forumPaginationStore';
 import { useTopicTopPosters } from '../hooks/useTopicTopPosters';
 import { applyTopicReaction, seedOpPost } from '../hooks/useTopicLike';
+import {
+  loadReactionState,
+  persistReaction,
+  readUserReactionFromJson,
+} from '../data/reactionPersist';
+import { patchReactionJson } from '../utils/patchReactionJson';
 import { selectTopicReaction, useTopicReactionsStore } from '../store/topicReactionsStore';
 import { useShallow } from 'zustand/react/shallow';
 import { describeFetchError } from '../../../services/fetchError';
@@ -65,6 +71,12 @@ export default function TopicDetailScreen() {
   const [likeIdMap, setLikeIdMap]       = useState<Record<number, number>>({});
   const [likeCountMap, setLikeCountMap] = useState<Record<number, number>>({});
   const [pendingSet, setPendingSet]     = useState<Set<number>>(new Set());
+  // Live-patched `reactionJson` per post, keyed by postId. Surfaces the
+  // user's freshly-added emoji in the aggregate pill on the left of each
+  // post card without waiting for the next /posts fetch. OP uses
+  // opSlot.opPost.reactionJson (patched in useTopicLike) — this map is
+  // the parallel mechanism for non-OP replies.
+  const [reactionJsonMap, setReactionJsonMap] = useState<Record<number, string | null>>({});
 
   // OP-post reaction state lives in the shared topic-reactions store so that
   // listing views (MyPostsList / AllTopicsView / etc.) and this screen stay in
@@ -177,6 +189,53 @@ export default function TopicDetailScreen() {
     const op = allPosts.find(p => p.isOp);
     if (op) seedOpPost(liveTopic, op);
   }, [allPosts, liveTopic]);
+
+  // Seed per-post reaction state from (a) the server's reactionJson when
+  // the current user is in the top-N reactors, and (b) MMKV for everyone
+  // below that cutoff plus the threadLikeId (which the posts endpoint
+  // never returns). Without this, the user's prior reactions don't show
+  // as highlighted on load and the optimistic delta on the next tap is
+  // wrong (`prev = null`, count off by one), and removing/switching a
+  // reaction silently sends `threadLikeId: null` to the API which
+  // breaks the toggle-off flow.
+  //
+  // Only fills GAPS — any post the user has already acted on in this
+  // session keeps its in-memory state, so a fast tap right after a load
+  // doesn't get clobbered by stale persisted data.
+  useEffect(() => {
+    const uid = currentUser?.userId;
+    if (!uid || allPosts.length === 0) return;
+    const persisted = loadReactionState(uid);
+
+    setReactionMap((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const post of allPosts) {
+        if (next[post.id] != null) continue;
+        const fromServer = readUserReactionFromJson(post.reactionJson, uid);
+        const code = fromServer ?? persisted.reactions[post.id] ?? null;
+        if (code != null) {
+          next[post.id] = code as ReactionCode;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+
+    setLikeIdMap((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const post of allPosts) {
+        if (next[post.id] != null) continue;
+        const id = persisted.likeIds[post.id];
+        if (id != null) {
+          next[post.id] = id;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [allPosts, currentUser?.userId]);
 
   // OP reference — kept for the auto-action effect below (a navigation can
   // arrive with `autoAction='like'/'reply'/'quote'` targeting the OP). The
@@ -412,9 +471,23 @@ export default function TopicDetailScreen() {
       if (res.likeCount != null) {
         setLikeCountMap(m => ({ ...m, [post.id]: res.likeCount! }));
       }
+
+      // Mirror the new reaction state to MMKV so it survives remount and
+      // app launches — the posts endpoint won't tell us about it on the
+      // next load, so persisting here is the only way subsequent toggles
+      // can pass the correct threadLikeId back to the server.
+      const uid = currentUser?.userId;
+      if (uid) {
+        persistReaction(
+          uid,
+          post.id,
+          code === 0 ? null : code,
+          code === 0 ? null : (res.threadLikeId ?? null),
+        );
+      }
       return true;
     },
-    [liveTopic.forumId, likeIdMap, showToast],
+    [liveTopic.forumId, likeIdMap, showToast, currentUser?.userId],
   );
 
   const applyReaction = useCallback(
@@ -461,6 +534,16 @@ export default function TopicDetailScreen() {
       if (!ok) {
         setReactionMap(m => ({ ...m, [post.id]: prev }));
         setLikeCountMap(m => ({ ...m, [post.id]: prevCount }));
+      } else {
+        // Patch the post's reactionJson so the aggregate emoji pill on
+        // the left of the action row picks up the user's freshly-added
+        // emoji immediately. parseTopReactionTypes counts entries by
+        // type, so adding a new entry surfaces a new emoji in the pill
+        // without a server round-trip.
+        setReactionJsonMap((m) => {
+          const baseJson = m[post.id] ?? post.reactionJson;
+          return { ...m, [post.id]: patchReactionJson(baseJson, prev, next) };
+        });
       }
     },
     [pendingSet, reactionMap, likeCountMap, sendReaction, liveTopic, showToast],
@@ -654,9 +737,23 @@ export default function TopicDetailScreen() {
       const likeCount = isOp
         ? (opSlot.countOverride != null ? opSlot.countOverride : item.likes)
         : (likeCountMap[item.id] ?? item.likes);
+
+      // Live-patched reactionJson — opSlot.opPost is the patched OP from
+      // useTopicLike's applyTopicReaction; reactionJsonMap is the parallel
+      // for non-OP. Falls back to the server-fetched item.reactionJson when
+      // there's no local patch, and we only build a new post object when
+      // the JSON actually differs so React.memo on PostCard can short-
+      // circuit unchanged renders.
+      const patchedJson = isOp
+        ? (opSlot.opPost?.reactionJson ?? item.reactionJson)
+        : (reactionJsonMap[item.id] ?? item.reactionJson);
+      const postForCard = patchedJson === item.reactionJson
+        ? item
+        : { ...item, reactionJson: patchedJson };
+
       return (
         <PostCard
-          post={item}
+          post={postForCard}
           index={index}
           reaction={reaction}
           likeCount={likeCount}
@@ -682,7 +779,8 @@ export default function TopicDetailScreen() {
     },
     [
       reactionMap, likeCountMap, pendingSet, currentUser,
-      opSlot.reaction, opSlot.countOverride,
+      opSlot.reaction, opSlot.countOverride, opSlot.opPost,
+      reactionJsonMap,
       handleOpenReactionPicker, handleReply, handleQuote, handleEdit,
       editingId, editText, editSaving, editError,
       handleSaveEdit, handleCancelEdit,

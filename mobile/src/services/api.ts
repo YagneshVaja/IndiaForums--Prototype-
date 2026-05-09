@@ -3297,10 +3297,6 @@ export interface ReplyResult {
 
 export type ReactionCode = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
-const REACTION_STRING: Record<number, string> = {
-  0: 'None', 1: 'Like', 2: 'Love', 3: 'Wow', 4: 'Lol', 5: 'Shock', 6: 'Sad', 7: 'Angry',
-};
-
 export const REACTION_META: Record<number, { emoji: string; label: string }> = {
   1: { emoji: '👍', label: 'Like'  },
   2: { emoji: '❤️', label: 'Love'  },
@@ -3347,6 +3343,16 @@ export interface ReactionResult {
 /**
  * Send a reaction to a post. Use 0 to remove. Pass threadLikeId when
  * toggling off or switching type — backend requires it to locate the row.
+ *
+ * Wire format: integer reactionType for emojis (1-7), string `"None"` for
+ * removal. The OpenAPI spec at /openapi/v1.json lists the EmojiReaction
+ * enum as string names, but the live backend's integer mapping ([1=Like,
+ * 2=Love, 3=Wow, 4=Lol, 5=Shock, 6=Sad, 7=Angry]) is what actually
+ * dispatches correctly — confirmed by parity with the web prototype's
+ * forumsApi.js which has the same comment ("confirmed from live API
+ * testing"). Sending the spec's string names (e.g. "Like") was the
+ * earlier mobile path and produced server-side `isSuccess: false`
+ * responses with no visible reaction change.
  */
 export async function reactToThread(args: {
   threadId: number;
@@ -3358,16 +3364,44 @@ export async function reactToThread(args: {
   const body: Record<string, unknown> = {
     threadId,
     forumId,
-    reactionType: reactionType === 0 ? 'None' : REACTION_STRING[reactionType],
+    reactionType: reactionType === 0 ? 'None' : reactionType,
   };
   if (threadLikeId != null) body.threadLikeId = threadLikeId;
 
   try {
     const { data } = await apiClient.post('/forums/threads/react', body);
+
+    const respLikeId = Number(data?.threadLikeId ?? data?.data?.threadLikeId ?? 0) || null;
+    const respCount  = Number(data?.likeCount    ?? data?.data?.likeCount    ?? 0) || 0;
+
+    // The endpoint returns HTTP 200 with `isSuccess: false` in two
+    // distinct scenarios:
+    //   1. The user already has the same reaction registered (or some
+    //      similar idempotency guard). Backend still includes the
+    //      authoritative `likeCount` and `threadLikeId` so the client
+    //      can sync to the truth — treat as a soft success and keep
+    //      the user's chosen reaction in local state.
+    //   2. A real validation error (e.g. trashed post, locked topic).
+    //      Backend returns no count / id payload.
+    // We branch on whether usable data came back. Without this, the
+    // first-time-from-mobile scenario (user reacted via the web) would
+    // forever revert the optimistic update because `isSuccess: false`
+    // was treated as a hard failure even when the server confirmed our
+    // intended state.
+    if (data?.isSuccess === false) {
+      const hasUsableState = respLikeId != null || respCount > 0;
+      if (!hasUsableState) {
+        const msg = data?.message || 'Failed to record reaction.';
+        console.warn('[API] reactToThread hard-failed:', msg, data);
+        return { ok: false, threadLikeId: null, likeCount: null, error: msg };
+      }
+      console.info('[API] reactToThread soft-success (isSuccess=false but data present):', data?.message);
+    }
+
     return {
       ok: true,
-      threadLikeId: Number(data?.threadLikeId ?? data?.data?.threadLikeId ?? 0) || null,
-      likeCount:    Number(data?.likeCount    ?? data?.data?.likeCount    ?? 0) || 0,
+      threadLikeId: respLikeId,
+      likeCount:    respCount,
     };
   } catch (err: unknown) {
     const e = err as {

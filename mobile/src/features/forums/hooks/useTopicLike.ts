@@ -14,6 +14,12 @@ import {
   useTopicReactionsStore,
   type TopicReactionState,
 } from '../store/topicReactionsStore';
+import {
+  loadReactionState,
+  persistReaction,
+  readUserReactionFromJson,
+} from '../data/reactionPersist';
+import { patchReactionJson } from '../utils/patchReactionJson';
 
 export type LikeOutcome = 'ok' | 'auth' | 'error';
 
@@ -47,51 +53,49 @@ export async function ensureOpPost(topic: ForumTopic): Promise<TopicPost | null>
  * has the OP in its posts page and shouldn't trigger a redundant fetch via
  * ensureOpPost). Skips the seed if the store already has an opPost for this topic
  * — preserves any local reactionJson patch from a prior reaction in this session.
+ *
+ * Also seeds the user's prior reaction + threadLikeId on the OP from
+ * (a) op.reactionJson if their uid is in the top-N reactors and
+ * (b) MMKV for everyone below that cutoff. The posts endpoint never
+ * returns threadLikeId, so MMKV is the only way to recover it across
+ * sessions for OP toggle-off / switch-reaction to work.
  */
 export function seedOpPost(topic: ForumTopic, op: TopicPost): void {
   const existing = useTopicReactionsStore.getState().byTopicId[topic.id];
   if (existing?.opPost) return;
   opPostCache.set(topic.id, op);
-  useTopicReactionsStore.getState().set(topic.id, { opPost: op });
+
+  const userId = useAuthStore.getState().user?.userId ?? 0;
+  let seededReaction: ReactionCode | null = null;
+  let seededLikeId: number | null = null;
+  if (userId) {
+    const fromServer = readUserReactionFromJson(op.reactionJson, userId);
+    const persisted  = loadReactionState(userId);
+    const code = fromServer ?? persisted.reactions[op.id] ?? null;
+    if (code != null) seededReaction = code as ReactionCode;
+    if (persisted.likeIds[op.id] != null) seededLikeId = persisted.likeIds[op.id];
+  }
+
+  useTopicReactionsStore.getState().set(topic.id, {
+    opPost: op,
+    reaction: seededReaction,
+    threadLikeId: seededLikeId,
+  });
 }
 
 // In-flight guard so two rapid taps on the same topic don't race.
 const inFlight = new Set<number>();
 
-/**
- * Patch the cached OP post's reactionJson so the emoji-stack pill on TopicCard
- * reflects the user's new reaction without waiting for a fresh server fetch.
- *
- * The reactionJson string wraps `{ json: [{ lt: number, ... }, ...] }` — one
- * entry per liker. We don't have a reliable user identifier inside each entry,
- * so we splice by `lt` matching the user's last-known reaction. If the user's
- * previous reaction wasn't in our local state (e.g. carried over from a prior
- * session), the splice is a no-op — the displayed top-3 may briefly include
- * both their old and new emoji until the next OP fetch, which is acceptable.
- */
+/** Patches OP's reactionJson via the shared `patchReactionJson` helper. */
 function patchOpReactionJson(
   op: TopicPost,
   prevReaction: ReactionCode | null,
   nextReaction: ReactionCode | null,
 ): TopicPost {
-  let arr: Array<Record<string, unknown>> = [];
-  if (op.reactionJson) {
-    try {
-      const parsed = JSON.parse(op.reactionJson);
-      if (Array.isArray(parsed?.json)) arr = [...parsed.json];
-    } catch {
-      arr = [];
-    }
-  }
-  if (prevReaction != null) {
-    const idx = arr.findIndex((e) => Number(e?.lt) === prevReaction);
-    if (idx >= 0) arr.splice(idx, 1);
-  }
-  if (nextReaction != null) {
-    arr.unshift({ lt: nextReaction });
-  }
-  const reactionJson = arr.length > 0 ? JSON.stringify({ json: arr }) : null;
-  return { ...op, reactionJson };
+  return {
+    ...op,
+    reactionJson: patchReactionJson(op.reactionJson, prevReaction, nextReaction),
+  };
 }
 
 /**
@@ -152,12 +156,20 @@ export async function applyTopicReaction(
   const patchedOp = patchOpReactionJson(op, slot.reaction, next);
   opPostCache.set(topic.id, patchedOp);
 
+  const newThreadLikeId = next != null ? res.threadLikeId : null;
   store.set(topic.id, {
     reaction: next,
-    threadLikeId: next != null ? res.threadLikeId : null,
+    threadLikeId: newThreadLikeId,
     countOverride: res.likeCount ?? optimistic,
     opPost: patchedOp,
   });
+
+  // Persist so subsequent topic opens (or app restarts) see the user's OP
+  // reaction highlighted and pass the threadLikeId back on toggle-off.
+  if (auth.user?.userId) {
+    persistReaction(auth.user.userId, op.id, next, newThreadLikeId);
+  }
+
   inFlight.delete(topic.id);
   return 'ok';
 }
