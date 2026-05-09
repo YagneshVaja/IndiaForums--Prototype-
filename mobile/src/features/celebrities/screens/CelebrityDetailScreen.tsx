@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, ImageBackground, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ImageBackground, Linking, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import type { HomeStackParamList } from '../../../navigation/types';
-import type { CelebrityFan, ForumTopic } from '../../../services/api';
+import type { CelebrityBiography, CelebrityFan, ForumTopic } from '../../../services/api';
 
 import TrendBadge from '../components/TrendBadge';
 import Initials from '../components/Initials';
@@ -88,13 +89,13 @@ export default function CelebrityDetailScreen() {
             resizeMode="cover"
           >
             <View style={styles.heroScrim} />
-            <HeroContent celebrity={celebrity} styles={styles} />
+            <HeroContent celebrity={celebrity} biography={bioQuery.data} styles={styles} />
           </ImageBackground>
         ) : (
           <View style={[styles.heroImg, styles.heroFallback]}>
             <Initials name={celebrity.name} size={96} />
             <View style={styles.heroScrim} />
-            <HeroContent celebrity={celebrity} styles={styles} />
+            <HeroContent celebrity={celebrity} biography={bioQuery.data} styles={styles} />
           </View>
         )}
       </View>
@@ -147,7 +148,19 @@ export default function CelebrityDetailScreen() {
   );
 }
 
-function HeroContent({ celebrity, styles }: { celebrity: HomeStackParamList['CelebrityProfile']['celebrity']; styles: Styles }) {
+interface HeroContentProps {
+  celebrity: HomeStackParamList['CelebrityProfile']['celebrity'];
+  biography: CelebrityBiography | null | undefined;
+  styles: Styles;
+}
+
+function HeroContent({ celebrity, biography, styles }: HeroContentProps) {
+  const profession = biography?.profession?.[0] || '';
+  const socials: { key: string; icon: 'logo-instagram' | 'logo-twitter' | 'logo-facebook'; url: string }[] = [];
+  if (biography?.instagram) socials.push({ key: 'instagram', icon: 'logo-instagram', url: `https://instagram.com/${biography.instagram}` });
+  if (biography?.twitter)   socials.push({ key: 'twitter',   icon: 'logo-twitter',   url: `https://twitter.com/${biography.twitter}` });
+  if (biography?.facebook)  socials.push({ key: 'facebook',  icon: 'logo-facebook',  url: `https://facebook.com/${biography.facebook}` });
+
   return (
     <View style={styles.heroContent}>
       <View style={styles.heroTop}>
@@ -160,8 +173,25 @@ function HeroContent({ celebrity, styles }: { celebrity: HomeStackParamList['Cel
       </View>
       <View style={styles.heroBottom}>
         <Text style={styles.heroName} numberOfLines={2}>{celebrity.name}</Text>
+        {!!profession && <Text style={styles.heroProfession}>{profession}</Text>}
         {!!celebrity.shortDesc && (
           <Text style={styles.heroDesc} numberOfLines={2}>{celebrity.shortDesc}</Text>
+        )}
+        {socials.length > 0 && (
+          <View style={styles.heroSocials}>
+            {socials.map((s) => (
+              <Pressable
+                key={s.key}
+                onPress={() => Linking.openURL(s.url)}
+                style={styles.heroSocialBtn}
+                accessibilityRole="link"
+                accessibilityLabel={`${s.key} profile`}
+                hitSlop={6}
+              >
+                <Ionicons name={s.icon} size={16} color="#FFFFFF" />
+              </Pressable>
+            ))}
+          </View>
         )}
       </View>
     </View>
@@ -186,7 +216,15 @@ function makeStyles(c: ThemeColors) {
     },
     rankPillText: { fontSize: 12, fontWeight: '700', color: '#1A1A1A' },
     heroName:     { fontSize: 22, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 },
+    heroProfession: { fontSize: 12, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.6, textTransform: 'uppercase', opacity: 0.9 },
     heroDesc:     { fontSize: 13, color: 'rgba(255,255,255,0.92)' },
+    heroSocials:  { flexDirection: 'row', gap: 8, marginTop: 8 },
+    heroSocialBtn: {
+      width: 30, height: 30, borderRadius: 15,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: 'rgba(255,255,255,0.18)',
+      borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+    },
     tabs: {
       flexDirection: 'row',
       backgroundColor: c.card,
