@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ScrollView,
   StatusBar,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +16,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { MySpaceStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
+import { usePushStore } from '../../../store/pushStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import ErrorState from '../../../components/ui/ErrorState';
@@ -48,6 +50,10 @@ export default function NotificationsScreen({ navigation }: Props) {
   const unread = useUnreadCount();
   const markRead = useMarkAsRead();
 
+  const pushStatus = usePushStore((s) => s.permissionStatus);
+  const bannerDismissed = usePushStore((s) => s.bannerDismissed);
+  const dismissBanner = usePushStore((s) => s.dismissBanner);
+
   const data = list.data;
   const all = data?.notifications ?? [];
   const templates = data?.notificationTemplates ?? [];
@@ -78,6 +84,27 @@ export default function NotificationsScreen({ navigation }: Props) {
         onRightPress={unreadCount > 0 ? markAll : undefined}
         rightAccessibilityLabel="Mark all read"
       />
+
+      {pushStatus === 'denied' && !bannerDismissed ? (
+        <Pressable
+          onPress={() => Linking.openSettings()}
+          style={styles.permBanner}
+        >
+          <Ionicons name="notifications-off-outline" size={16} color={colors.warning} />
+          <Text style={styles.permBannerText} numberOfLines={2}>
+            Turn on push notifications to get replies and mentions in real time.
+          </Text>
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              dismissBanner();
+            }}
+            hitSlop={10}
+          >
+            <Ionicons name="close" size={16} color={colors.textSecondary} />
+          </Pressable>
+        </Pressable>
+      ) : null}
 
       {/* Filter bar */}
       <View style={styles.filterBar}>
@@ -476,6 +503,26 @@ function makeStyles(c: ThemeColors) {
       borderRadius: 4,
       backgroundColor: c.primary,
       alignSelf: 'center',
+    },
+    permBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginHorizontal: 14,
+      marginTop: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 10,
+      backgroundColor: c.warningSoft,
+      borderWidth: 1,
+      borderColor: c.warningSoftBorder,
+    },
+    permBannerText: {
+      flex: 1,
+      fontSize: 12,
+      color: c.warning,
+      fontWeight: '600',
+      lineHeight: 16,
     },
   });
 }
