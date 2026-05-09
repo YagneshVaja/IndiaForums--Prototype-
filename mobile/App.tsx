@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RootNavigator from './src/navigation/RootNavigator';
+import { navigationRef } from './src/navigation/navigationRef';
 import { useThemeStore } from './src/store/themeStore';
 import * as SplashScreen from 'expo-splash-screen';
 import Constants from 'expo-constants';
@@ -60,7 +61,7 @@ function ThemedNavigation() {
     };
   }, [mode, colors]);
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer ref={navigationRef} theme={navTheme}>
       <RootNavigator />
     </NavigationContainer>
   );
