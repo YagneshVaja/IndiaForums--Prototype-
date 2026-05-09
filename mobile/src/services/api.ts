@@ -3166,10 +3166,17 @@ export async function fetchTopicPosts(
 ): Promise<TopicPostsPage> {
   const params: Record<string, string | number> = { pageNumber, pageSize };
   if (searchQuery.trim()) params.searchQuery = searchQuery.trim();
-  // Only include the sort param when we want non-default ordering — keeps
-  // the request shape unchanged for the common case and avoids tripping
-  // any backend that expects the param to be absent.
-  if (sort === 'likes') params.sort = 'likes';
+  // Backend param name is `sortBy` (per the OpenAPI spec at
+  // api2.indiaforums.com/openapi/v1.json). Accepted values were not
+  // enumerated in the spec — verified empirically against the live API:
+  //   - `date` → chronological (default; same as omitting the param)
+  //   - `vote` → highest likes first (this is what the website's "By Likes"
+  //              option sends; tested against topic 5089183 / 470 posts).
+  // The web URL exposes a short form `?sb=v` which the live web app maps
+  // to `sortBy=vote` server-side; we just call the API directly with the
+  // long-form value. We omit the param entirely for the default case so
+  // the request shape stays unchanged in the common path.
+  if (sort === 'likes') params.sortBy = 'vote';
 
   const { data } = await apiClient.get(`/forums/topics/${topicId}/posts`, {
     params,

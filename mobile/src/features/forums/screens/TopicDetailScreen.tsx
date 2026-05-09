@@ -24,7 +24,7 @@ import PostEditHistoryModal from '../components/PostEditHistoryModal';
 import PollWidget from '../components/PollWidget';
 import TopicModActionsSheet, { type ActionKey as ModActionKey } from '../components/TopicModActionsSheet';
 import PostModActionsSheet, { type PostActionKey } from '../components/PostModActionsSheet';
-import SearchBar from '../components/SearchBar';
+import SearchBar, { type SearchBarHandle } from '../components/SearchBar';
 import JumpToPageSheet from '../components/JumpToPageSheet';
 import ForumPaginationBar from '../components/ForumPaginationBar';
 import FrequentPostersSheet from '../components/FrequentPostersSheet';
@@ -44,7 +44,6 @@ import type { ThemeColors } from '../../../theme/tokens';
 import type { ForumsStackParamList } from '../../../navigation/types';
 import {
   reactToThread, editPost, castPollVote, closeTopic, openTopic,
-  buildUserAvatarUrl,
   type ForumTopic, type ReactionCode, type TopicPost, type TopicPoll,
 } from '../../../services/api';
 
@@ -97,6 +96,13 @@ export default function TopicDetailScreen() {
   const [jumpSheetOpen, setJumpSheetOpen] = useState(false);
   const [contributorsOpen, setContributorsOpen] = useState(false);
   const lastSavedScrollRef = useRef(0);
+  // Hide-on-scroll for the bottom pagination dock — Safari / Twitter / iMessage
+  // pattern. We track the previous scroll Y to detect direction; a small
+  // threshold prevents jitter at rest, and a guard timestamp around sort/page
+  // changes ignores the synthetic scroll events those actions emit.
+  const [paginationHidden, setPaginationHidden] = useState(false);
+  const lastScrollYRef = useRef(0);
+  const sortChangedAtRef = useRef(0);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedPostSearch(postSearch.trim()), 100);
@@ -133,7 +139,7 @@ export default function TopicDetailScreen() {
     isError,
     error,
     refetch,
-  } = useTopicPosts(topic.id, debouncedPostSearch, currentPage);
+  } = useTopicPosts(topic.id, debouncedPostSearch, currentPage, sortBy);
 
   const firstPage = data?.pages[0];
   const liveTopic: ForumTopic = firstPage?.topicDetail
@@ -180,19 +186,20 @@ export default function TopicDetailScreen() {
     [allPosts],
   );
 
-  // OP is always included in the displayed list — the previous version
-  // rendered OP in a separate "header" slot only for Latest mode, which made
-  // the ListHeaderComponent's height change when you toggled to Top (because
-  // the OP card disappeared). FlashList preserves scroll Y, so a header
-  // height change shifted all items below by ~OP-card-height. THAT was the
-  // "slide" the user kept seeing on Latest ↔ Top toggles.
-  //
-  // With OP always in `sortedPosts`, the header is always the same size and
-  // OP simply takes its rightful position: index 0 in chronological order
-  // (Latest), or wherever its likes rank in Top.
+  // OP is rendered directly in the ListHeaderComponent (above the topic
+  // metadata block) so the screen reads top-to-bottom: forum strip → OP →
+  // title/stats/contributors → search → sort → replies. The list data only
+  // contains replies, so toggling Latest ↔ Top sorts replies in place
+  // without disturbing the OP's position. Header height stays constant
+  // across sort toggles, avoiding the scroll-Y "slide" issue.
   const sortedPosts = useMemo<TopicPost[]>(() => {
+    // Server now owns the ordering — `sortBy` flows through useTopicPosts
+    // into the request, so `allPosts` arrives already in the right order
+    // (chronological for `date`, likes-desc for `likes`). We only filter
+    // out the OP (rendered separately in the header) and apply the live
+    // local search filter while the debounced server query catches up.
     const liveQuery = postSearch.trim().toLowerCase();
-    let posts = allPosts;
+    let posts = allPosts.filter(p => !p.isOp);
 
     if (liveQuery) {
       const serverInSync = debouncedPostSearch.toLowerCase() === liveQuery;
@@ -205,14 +212,8 @@ export default function TopicDetailScreen() {
       }
     }
 
-    if (sortBy === 'likes') {
-      posts = [...posts].sort(
-        (a, b) => (likeCountMap[b.id] ?? b.likes ?? 0) - (likeCountMap[a.id] ?? a.likes ?? 0),
-      );
-    }
-
     return posts;
-  }, [allPosts, sortBy, likeCountMap, postSearch, debouncedPostSearch]);
+  }, [allPosts, postSearch, debouncedPostSearch]);
 
   // Maps each post's id back to its chronological position in the loaded
   // page, so the post number labels (#1, #2, …) reflect the *posting order*
@@ -258,15 +259,22 @@ export default function TopicDetailScreen() {
   }));
 
   const toggleSort = useCallback(() => {
+    sortChangedAtRef.current = Date.now();
+    // Force the pagination dock back into view as the list re-orders — the
+    // user just hit the sort chip in the dock, so it should still be reachable.
+    setPaginationHidden(false);
     // Near-instant flash. Total transition ≈ 100ms — fast enough to feel
     // immediate while still masking the items reordering underneath.
+    // The list intentionally stays at the user's current scroll position;
+    // scrolling to the top on sort toggle felt jarring, and React Query's
+    // `keepPreviousData` keeps the visible items in place while the fresh
+    // server-sorted page is fetched.
     listOpacity.value = withTiming(0.55, {
       duration: 30,
       easing: Easing.out(Easing.cubic),
     });
     setTimeout(() => {
       setSortBy((prev) => (prev === 'date' ? 'likes' : 'date'));
-      listRef.current?.scrollToOffset({ offset: 0, animated: false });
       requestAnimationFrame(() => {
         listOpacity.value = withTiming(1, {
           duration: 70,
@@ -284,6 +292,9 @@ export default function TopicDetailScreen() {
     if (page === currentPage) return;
     setJumpSheetOpen(false);
     pageChangedAtRef.current = Date.now();
+    // Pagination dock should be visible after a page change — the user just
+    // landed on a fresh page, surfacing the controls is the right default.
+    setPaginationHidden(false);
     setCurrentPage(page);
     useForumPaginationStore.getState().setTopicPage(topic.id, page);
     requestAnimationFrame(() => {
@@ -334,15 +345,38 @@ export default function TopicDetailScreen() {
   }, []);
 
   function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    if (isFilteringPosts) return;
+    if (isFilteringPosts) {
+      // Always show the pagination dock while the user is searching — but
+      // it's already hidden upstream (we don't render the dock when
+      // isFilteringPosts), so we just bail out here.
+      return;
+    }
     const y = e.nativeEvent.contentOffset.y;
     const now = Date.now();
+    const lastY = lastScrollYRef.current;
+    lastScrollYRef.current = y;
+
     // Skip saves during the 600ms after a page change to avoid clobbering
-    // the offset we just persisted with the auto scroll-to-0.
+    // the offset we just persisted with the auto scroll-to-0. Same window
+    // also gates the hide-on-scroll direction detection so the page-jump
+    // scroll-to-top doesn't read as "scrolling up" and force the dock open
+    // unnecessarily.
     if (now - pageChangedAtRef.current < 600) return;
+    if (now - sortChangedAtRef.current < 600) return;
+
     if (now - lastSavedScrollRef.current >= 250) {
       lastSavedScrollRef.current = now;
       useForumPaginationStore.getState().setTopicScroll(topic.id, currentPage, y);
+    }
+
+    // Direction-based hide/show. Threshold of 8px filters out micro-scrolls
+    // and inertial settling. Always keep the dock visible near the very
+    // top (y < 80) so the first impression of the screen includes it.
+    const delta = y - lastY;
+    if (delta > 8 && y > 80) {
+      setPaginationHidden(true);
+    } else if (delta < -8) {
+      setPaginationHidden(false);
     }
   }
 
@@ -684,12 +718,27 @@ export default function TopicDetailScreen() {
 
   const replyDisabled = liveTopic.locked;
 
+  const searchBarRef = useRef<SearchBarHandle>(null);
+  const searchBarYRef = useRef(0);
+
+  const handleSearchPress = useCallback(() => {
+    const y = searchBarYRef.current;
+    if (y > 0) {
+      // Scroll so the search bar sits a bit below the nav rather than flush
+      // against it — gives the input some breathing room when it gains focus.
+      listRef.current?.scrollToOffset({
+        offset: Math.max(0, y - 8),
+        animated: true,
+      });
+    }
+    // Slight delay so focus fires after the scroll begins — keyboard rises
+    // with the bar visible rather than over a still-scrolling viewport.
+    setTimeout(() => searchBarRef.current?.focus(), 250);
+  }, []);
+
   return (
     <View style={styles.screen}>
       <TopNavBack
-        title={liveTopic.title}
-        subtitle={liveTopic.forumName || undefined}
-        onSubtitlePress={() => navigation.goBack()}
         onBack={() => navigation.goBack()}
         rightActions={[
           replyDisabled
@@ -705,6 +754,11 @@ export default function TopicDetailScreen() {
                 label: 'Reply to this topic',
                 primary: true,
               },
+          {
+            icon: 'search-outline' as const,
+            onPress: handleSearchPress,
+            label: 'Search posts in this topic',
+          },
           ...(hasMod
             ? [{
                 icon: 'ellipsis-horizontal' as const,
@@ -739,39 +793,48 @@ export default function TopicDetailScreen() {
           initialNumToRender={20}
           ListHeaderComponent={
             <>
-              <View style={styles.topicCard}>
-                <View style={styles.forumRow}>
-                  {liveTopic.forumThumbnail ? (
-                    <Image
-                      source={{ uri: liveTopic.forumThumbnail }}
-                      style={styles.forumThumb}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                    />
-                  ) : (
-                    <View style={[styles.forumBadge, { backgroundColor: forumBg }]}>
-                      <Text style={styles.forumEmoji}>{forumEmoji}</Text>
+              {/* Compact forum strip — replaces the title/breadcrumb that
+                  used to live in the nav bar. Slim, single-line, gives the
+                  user instant context (which forum + pinned/locked state)
+                  without competing with the OP for attention. */}
+              <View style={styles.forumStrip}>
+                {liveTopic.forumThumbnail ? (
+                  <Image
+                    source={{ uri: liveTopic.forumThumbnail }}
+                    style={styles.forumThumb}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                ) : (
+                  <View style={[styles.forumBadge, { backgroundColor: forumBg }]}>
+                    <Text style={styles.forumEmoji}>{forumEmoji}</Text>
+                  </View>
+                )}
+                <Text style={styles.forumName} numberOfLines={1}>
+                  {liveTopic.forumName || 'Forum'}
+                </Text>
+                <View style={styles.badgeRow}>
+                  {liveTopic.pinned && (
+                    <View style={[styles.topicFlag, styles.topicFlagPinned]}>
+                      <Ionicons name="pin" size={10} color="#f59e0b" />
+                      <Text style={styles.topicFlagText}>Pinned</Text>
                     </View>
                   )}
-                  <Text style={styles.forumName} numberOfLines={1}>
-                    {liveTopic.forumName || 'Forum'}
-                  </Text>
-                  <View style={styles.badgeRow}>
-                    {liveTopic.pinned && (
-                      <View style={[styles.topicFlag, styles.topicFlagPinned]}>
-                        <Ionicons name="pin" size={10} color="#FFFFFF" />
-                        <Text style={styles.topicFlagText}>Pinned</Text>
-                      </View>
-                    )}
-                    {liveTopic.locked && (
-                      <View style={[styles.topicFlag, styles.topicFlagLocked]}>
-                        <Ionicons name="lock-closed" size={10} color="#FFFFFF" />
-                        <Text style={styles.topicFlagText}>Locked</Text>
-                      </View>
-                    )}
-                  </View>
+                  {liveTopic.locked && (
+                    <View style={[styles.topicFlag, styles.topicFlagLocked]}>
+                      <Ionicons name="lock-closed" size={10} color="#dc2626" />
+                      <Text style={styles.topicFlagText}>Locked</Text>
+                    </View>
+                  )}
                 </View>
+              </View>
 
+              {/* Topic header — title + last-reply chip + poll + tags. Sits
+                  above the OP so the screen reads as: forum context →
+                  topic identity → starter post → engagement metrics →
+                  replies. Reddit / Quora layout: title is the first thing
+                  the user anchors on after entering the thread. */}
+              <View style={styles.topicCard}>
                 {topicFlair && (
                   <View
                     style={[
@@ -788,12 +851,6 @@ export default function TopicDetailScreen() {
                 )}
 
                 <Text style={styles.title}>{liveTopic.title}</Text>
-
-                {/*
-                  No "Started by X" author chip — the OP post itself is rendered
-                  immediately below this header card and shows full author info
-                  (avatar, name, group, time, badges). Matches the live website.
-                */}
 
                 {!!liveTopic.lastBy && liveTopic.lastBy !== liveTopic.poster && (
                   <Pressable
@@ -814,14 +871,6 @@ export default function TopicDetailScreen() {
                     </Text>
                   </Pressable>
                 )}
-
-                {/*
-                  Description, topic image, and social embeds were rendered here
-                  but they duplicated the OP post (which is rendered as the first
-                  item of the FlashList below and shows the exact same content).
-                  Polls live only on the topic-level pollDetail payload, so we
-                  still render the poll widget here.
-                */}
 
                 {displayPoll && (
                   <PollWidget
@@ -848,63 +897,67 @@ export default function TopicDetailScreen() {
                 )}
               </View>
 
+              {/* OP rendered immediately after the topic header — the
+                  starter post is a discussion entry-point, sized as a
+                  regular reply card so it doesn't dominate the screen. */}
+              {opPost ? renderPost({ item: opPost, index: 0 }) : null}
 
-              {/* Compact inline metadata. Numbers on top; an avatar cluster
-                  visualizes the "X people in this thread" data the modern way
-                  — Slack / Apple Mail / Instagram pattern. */}
+              {/* Combined meta + sort row — avatars · stats · sort all in
+                  one strip. Saves ~50px vs the previous two-row stack while
+                  keeping the same information density. When the user is
+                  searching, the cluster collapses to a "Results · N" label
+                  so the row keeps a stable height. */}
               <View style={styles.metaSection}>
-                <View style={styles.metaLine}>
-                  <Text style={styles.metaItemText}>
-                    <Text style={styles.metaItemNum}>{formatCount(liveTopic.replies ?? 0)}</Text>
-                    {' '}replies
+                {postSearch.trim() ? (
+                  <Text style={styles.metaResultsLabel}>
+                    Results
+                    <Text style={styles.metaResultsCount}> · {sortedPosts.length}</Text>
                   </Text>
-                  <Text style={styles.metaSep}>·</Text>
-                  <Text style={styles.metaItemText}>
-                    <Text style={styles.metaItemNum}>{formatCount(liveTopic.views ?? 0)}</Text>
-                    {' '}views
-                  </Text>
-                  <Text style={styles.metaSep}>·</Text>
-                  <Text style={styles.metaItemText}>
-                    <Text style={styles.metaItemNum}>{formatCount(liveTopic.likes ?? 0)}</Text>
-                    {' '}likes
-                  </Text>
-                </View>
-                {topPosters.length > 0 && (
-                  <Pressable
-                    style={styles.contributorsRow}
-                    onPress={() => setContributorsOpen(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${topPosters.length} contributors. Tap to view all.`}
-                  >
-                    <AvatarCluster
-                      posters={topPosters}
-                      maxVisible={5}
-                    />
-                    <Text style={styles.contributorsLabel}>
-                      <Text style={styles.contributorsLabelNum}>
-                        {formatCount(topPosters.length)}
-                      </Text>
-                      {' '}contributors
-                      <Text style={styles.contributorsChevron}> ›</Text>
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-
-              <SearchBar
-                value={postSearch}
-                onChangeText={setPostSearch}
-                placeholder="Search posts in this topic…"
-              />
-
-              {(sortedPosts.length > 0 || postSearch.trim()) && (
-                <View style={styles.sortRow}>
-                  <Text style={styles.sortRowLabel}>
-                    {postSearch.trim() ? 'Results' : 'Replies'}
-                    <Text style={styles.sortRowCount}> · {sortedPosts.length}</Text>
-                  </Text>
-                  <View style={styles.sortSpacer} />
-                  {!postSearch.trim() && (
+                ) : (
+                  <>
+                    {topPosters.length > 0 && (
+                      <Pressable
+                        style={styles.contributorsCluster}
+                        onPress={() => setContributorsOpen(true)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${topPosters.length} contributors. Tap to view all.`}
+                      >
+                        <AvatarCluster posters={topPosters} maxVisible={3} />
+                      </Pressable>
+                    )}
+                    <View style={styles.metaStatsCluster}>
+                      <View style={styles.metaStat}>
+                        <Ionicons
+                          name="chatbubbles-outline"
+                          size={13}
+                          color={colors.textSecondary}
+                        />
+                        <Text style={styles.metaStatValue}>
+                          {formatCount(liveTopic.replies ?? 0)}
+                        </Text>
+                      </View>
+                      <View style={styles.metaStat}>
+                        <Ionicons
+                          name="eye-outline"
+                          size={13}
+                          color={colors.textSecondary}
+                        />
+                        <Text style={styles.metaStatValue}>
+                          {formatCount(liveTopic.views ?? 0)}
+                        </Text>
+                      </View>
+                      <View style={styles.metaStat}>
+                        <Ionicons
+                          name="heart-outline"
+                          size={13}
+                          color={colors.textSecondary}
+                        />
+                        <Text style={styles.metaStatValue}>
+                          {formatCount(liveTopic.likes ?? 0)}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.metaSpacer} />
                     <Pressable
                       onPress={toggleSort}
                       hitSlop={6}
@@ -923,11 +976,23 @@ export default function TopicDetailScreen() {
                       <Text style={styles.sortChipText}>
                         {sortBy === 'date' ? 'Latest' : 'Top'}
                       </Text>
-                      <Ionicons name="swap-vertical" size={11} color={colors.primary} />
                     </Pressable>
-                  )}
-                </View>
-              )}
+                  </>
+                )}
+              </View>
+
+              <View
+                onLayout={(e) => {
+                  searchBarYRef.current = e.nativeEvent.layout.y;
+                }}
+              >
+                <SearchBar
+                  ref={searchBarRef}
+                  value={postSearch}
+                  onChangeText={setPostSearch}
+                  placeholder="Search posts in this topic…"
+                />
+              </View>
 
             </>
           }
@@ -978,6 +1043,7 @@ export default function TopicDetailScreen() {
             pageSize={TOPIC_POSTS_PAGE_SIZE}
             totalItems={totalPostCount}
             itemLabel="posts"
+            hidden={paginationHidden}
             onPageChange={handleJumpToPage}
           />
         </View>
@@ -1084,17 +1150,23 @@ function makeStyles(c: ThemeColors) {
       right: 0,
       bottom: 0,
     },
-    topicCard: {
-      backgroundColor: c.card,
-      padding: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: c.border,
-    },
-    forumRow: {
+    forumStrip: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      marginBottom: 10,
+      backgroundColor: c.card,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    topicCard: {
+      backgroundColor: c.card,
+      paddingHorizontal: 14,
+      paddingTop: 12,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
     },
     forumThumb: {
       width: 24,
@@ -1128,18 +1200,20 @@ function makeStyles(c: ThemeColors) {
       gap: 3,
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: 8,
+      borderRadius: 6,
+      backgroundColor: c.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
     },
-    topicFlagPinned: {
-      backgroundColor: '#f59e0b',
-    },
-    topicFlagLocked: {
-      backgroundColor: '#dc2626',
-    },
+    // Tonal accent dropped from the original filled badges — kept for any
+    // legacy callers but unused on this screen now.
+    topicFlagPinned: {},
+    topicFlagLocked: {},
     topicFlagText: {
       fontSize: 9,
-      fontWeight: '800',
-      color: '#FFFFFF',
+      fontWeight: '700',
+      color: c.textSecondary,
+      letterSpacing: 0.2,
     },
     flairChip: {
       alignSelf: 'flex-start',
@@ -1155,11 +1229,11 @@ function makeStyles(c: ThemeColors) {
       textTransform: 'uppercase',
     },
     title: {
-      fontSize: 21,
+      fontSize: 18,
       fontWeight: '800',
       color: c.text,
-      lineHeight: 28,
-      letterSpacing: -0.3,
+      lineHeight: 24,
+      letterSpacing: -0.2,
     },
     authorChip: {
       flexDirection: 'row',
@@ -1202,12 +1276,8 @@ function makeStyles(c: ThemeColors) {
     lastReplyChip: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      backgroundColor: c.surface,
-      paddingHorizontal: 10,
-      paddingVertical: 7,
-      borderRadius: 999,
-      marginTop: 8,
+      gap: 5,
+      marginTop: 6,
       alignSelf: 'flex-start',
     },
     lastReplyText: {
@@ -1250,78 +1320,53 @@ function makeStyles(c: ThemeColors) {
       color: c.primary,
     },
     metaSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
       backgroundColor: c.card,
+      borderTopWidth: 1,
+      borderTopColor: c.border,
       borderBottomWidth: 1,
       borderBottomColor: c.border,
       paddingHorizontal: 14,
-      paddingVertical: 12,
+      paddingVertical: 9,
       gap: 10,
+      minHeight: 42,
     },
-    metaLine: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: 6,
+    metaSpacer: {
+      flex: 1,
     },
-    metaItemText: {
-      fontSize: 12,
-      color: c.textSecondary,
-      fontWeight: '500',
-    },
-    metaItemNum: {
-      fontSize: 12,
-      color: c.text,
-      fontWeight: '800',
-    },
-    metaSep: {
-      fontSize: 12,
-      color: c.textTertiary,
-      fontWeight: '700',
-      paddingHorizontal: 1,
-    },
-    contributorsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    contributorsLabel: {
-      fontSize: 12,
-      color: c.textSecondary,
-      fontWeight: '500',
-    },
-    contributorsLabelNum: {
-      fontSize: 12,
-      color: c.text,
-      fontWeight: '800',
-    },
-    contributorsChevron: {
-      color: c.primary,
-      fontWeight: '700',
-    },
-    sortRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      gap: 8,
-      marginTop: 4,
-      borderTopWidth: 1,
-      borderTopColor: c.border,
-      backgroundColor: c.bg,
-    },
-    sortRowLabel: {
+    metaResultsLabel: {
       fontSize: 13,
       fontWeight: '800',
       color: c.text,
       letterSpacing: -0.1,
     },
-    sortRowCount: {
+    metaResultsCount: {
       fontSize: 12,
       fontWeight: '600',
       color: c.textTertiary,
     },
-    sortSpacer: {
-      flex: 1,
+    contributorsCluster: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexShrink: 0,
+    },
+    metaStatsCluster: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      flexShrink: 1,
+    },
+    metaStat: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+    },
+    metaStatValue: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.text,
+      letterSpacing: -0.1,
     },
     sortChip: {
       flexDirection: 'row',

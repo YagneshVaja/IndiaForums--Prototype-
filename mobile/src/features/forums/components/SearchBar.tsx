@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
@@ -11,9 +11,22 @@ interface Props {
   loading?: boolean;
 }
 
-export default function SearchBar({ value, onChangeText, placeholder = 'Searchâ€¦', loading }: Props) {
+export interface SearchBarHandle {
+  focus: () => void;
+}
+
+const SearchBar = forwardRef<SearchBarHandle, Props>(function SearchBar(
+  { value, onChangeText, placeholder = 'Searchâ€¦', loading },
+  ref,
+) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const inputRef = useRef<TextInput>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => inputRef.current?.focus(),
+  }), []);
+
   return (
     <View style={styles.wrap}>
       <Ionicons
@@ -22,6 +35,7 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Searchâ€
         color={colors.textTertiary}
       />
       <TextInput
+        ref={inputRef}
         style={styles.input}
         placeholder={placeholder}
         placeholderTextColor={colors.textTertiary}
@@ -38,7 +52,9 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Searchâ€
       )}
     </View>
   );
-}
+});
+
+export default SearchBar;
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({

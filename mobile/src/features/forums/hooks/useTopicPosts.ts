@@ -4,17 +4,20 @@ import { fetchTopicPosts, type TopicPostsPage } from '../../../services/api';
 
 export const TOPIC_POSTS_PAGE_SIZE = 20;
 
+export type TopicPostsSort = 'date' | 'likes';
+
 export function useTopicPosts(
   topicId: number | null,
   searchQuery = '',
   startPage = 1,
+  sort: TopicPostsSort = 'date',
 ) {
   const queryClient = useQueryClient();
 
   const query = useInfiniteQuery<TopicPostsPage>({
-    queryKey: ['topic-posts', topicId, searchQuery, startPage],
+    queryKey: ['topic-posts', topicId, searchQuery, startPage, sort],
     queryFn: ({ pageParam, signal }) =>
-      fetchTopicPosts(topicId!, pageParam as number, TOPIC_POSTS_PAGE_SIZE, searchQuery, signal),
+      fetchTopicPosts(topicId!, pageParam as number, TOPIC_POSTS_PAGE_SIZE, searchQuery, signal, sort),
     initialPageParam: startPage,
     getNextPageParam: (last) =>
       last.hasNextPage ? last.pageNumber + 1 : undefined,
@@ -31,22 +34,22 @@ export function useTopicPosts(
     if (hasNext) {
       const nextPage = startPage + 1;
       queryClient.prefetchInfiniteQuery({
-        queryKey: ['topic-posts', topicId, searchQuery, nextPage],
+        queryKey: ['topic-posts', topicId, searchQuery, nextPage, sort],
         queryFn: ({ pageParam }) =>
-          fetchTopicPosts(topicId, pageParam as number, TOPIC_POSTS_PAGE_SIZE, searchQuery),
+          fetchTopicPosts(topicId, pageParam as number, TOPIC_POSTS_PAGE_SIZE, searchQuery, undefined, sort),
         initialPageParam: nextPage,
       });
     }
     if (startPage > 1) {
       const prevPage = startPage - 1;
       queryClient.prefetchInfiniteQuery({
-        queryKey: ['topic-posts', topicId, searchQuery, prevPage],
+        queryKey: ['topic-posts', topicId, searchQuery, prevPage, sort],
         queryFn: ({ pageParam }) =>
-          fetchTopicPosts(topicId, pageParam as number, TOPIC_POSTS_PAGE_SIZE, searchQuery),
+          fetchTopicPosts(topicId, pageParam as number, TOPIC_POSTS_PAGE_SIZE, searchQuery, undefined, sort),
         initialPageParam: prevPage,
       });
     }
-  }, [topicId, searchQuery, startPage, hasNext, queryClient]);
+  }, [topicId, searchQuery, startPage, sort, hasNext, queryClient]);
 
   return query;
 }

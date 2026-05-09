@@ -343,6 +343,15 @@ function makeStyles(c: ThemeColors) {
     },
     cardOp: {
       backgroundColor: c.primarySoft,
+      // Left accent rail — Reddit / Slack pattern for "highlighted" or
+      // starter posts. Combined with the existing tinted background, OP
+      // pill, and avatar border, the OP now reads as the post that
+      // started the discussion at a single glance rather than just
+      // "reply #1". `paddingLeft` is reduced by the border width so the
+      // inner content stays visually aligned with non-OP cards.
+      borderLeftWidth: 3,
+      borderLeftColor: c.primary,
+      paddingLeft: 9,
     },
     header: {
       flexDirection: 'row',
