@@ -1121,11 +1121,13 @@ function transformBiography(data: any): CelebrityBiography | null {
     facebook:      person.facebook || '',
     twitter:       person.twitter || '',
     instagram:     person.instagram || '',
-    // forumId / alternateForumId live at the response root, NOT inside `person`.
-    // Verified against /api/v1/celebrities/3/biography — Salman Khan has root
-    // forumId=0, alternateForumId=9 (the Bollywood forum). The detail screen's
-    // Discussion tab is gated on this being > 0.
-    forumId:       Number(data?.forumId || data?.alternateForumId || 0),
+    // person.forumId is often 0 for Bollywood celebrities (no dedicated forum)
+    // and the discussion surface is the shared "Bollywood" forum at
+    // alternateForumId=9. Use `||` not `??` — `??` only falls through on
+    // null/undefined, so `person.forumId === 0` would short-circuit and the
+    // Discussion tab would stay disabled. Verified live: Salman/Deepika/Katrina
+    // all have person.forumId=0, person.alternateForumId=9.
+    forumId:       Number(person.forumId || person.alternateForumId || 0),
   };
 }
 
