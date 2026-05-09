@@ -711,7 +711,7 @@ export interface UserDevicesResponseDto {
 
 export interface RegisterDeviceRequestDto {
   deviceToken: string;
-  platform: string;
+  platform: 'ios' | 'android';
   deviceName?: string | null;
   deviceModel?: string | null;
   osVersion?: string | null;
@@ -721,7 +721,7 @@ export interface RegisterDeviceRequestDto {
 export interface RegisterDeviceResponseDto {
   success: boolean;
   message: string;
-  deviceTokenId: number | string | null;
+  deviceTokenId: string | number | null;
   isNewDevice: boolean;
 }
 
