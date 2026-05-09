@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   StatusBar,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,8 @@ import type {
 } from '../../../navigation/types';
 import { useAuthStore } from '../../../store/authStore';
 import { useThemeStore } from '../../../store/themeStore';
+import { usePushStore } from '../../../store/pushStore';
+import { registerForPush } from '../../../services/pushNotifications';
 import type { ThemeColors } from '../../../theme/tokens';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import ReportsForumPickerSheet from '../../forums/components/ReportsForumPickerSheet';
@@ -91,6 +94,7 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
   const user = useAuthStore((s) => s.user);
   const isModerator = useAuthStore((s) => s.isModerator);
   const logout = useAuthStore((s) => s.logout);
+  const pushStatus = usePushStore((s) => s.permissionStatus);
   const [reportsPickerOpen, setReportsPickerOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -154,6 +158,31 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
             label="Devices"
             subtitle="Manage connected devices"
             onPress={() => navigation.navigate('Devices')}
+            styles={styles}
+            chevronColor={colors.textTertiary}
+            rippleColor={colors.surface}
+            tints={tints}
+          />
+          <Row
+            icon="notifications-outline"
+            tint="green"
+            label="Push notifications"
+            subtitle={
+              pushStatus === 'granted'
+                ? 'On'
+                : pushStatus === 'denied'
+                  ? 'System permission denied — tap to open settings'
+                  : pushStatus === 'unavailable'
+                    ? 'Not supported on this device'
+                    : 'Off — tap to enable'
+            }
+            onPress={() => {
+              if (pushStatus === 'denied') {
+                void Linking.openSettings();
+              } else if (pushStatus !== 'unavailable') {
+                void registerForPush();
+              }
+            }}
             last
             styles={styles}
             chevronColor={colors.textTertiary}
