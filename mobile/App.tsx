@@ -9,6 +9,8 @@ import RootNavigator from './src/navigation/RootNavigator';
 import PushBootstrap from './src/components/PushBootstrap';
 import { navigationRef } from './src/navigation/navigationRef';
 import { useThemeStore } from './src/store/themeStore';
+import { handleColdStartTap } from './src/services/pushNotifications';
+import { useAuthStore } from './src/store/authStore';
 import * as SplashScreen from 'expo-splash-screen';
 import Constants from 'expo-constants';
 
@@ -62,7 +64,13 @@ function ThemedNavigation() {
     };
   }, [mode, colors]);
   return (
-    <NavigationContainer ref={navigationRef} theme={navTheme}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navTheme}
+      onReady={() => {
+        void handleColdStartTap(() => useAuthStore.getState().isAuthenticated);
+      }}
+    >
       <RootNavigator />
     </NavigationContainer>
   );

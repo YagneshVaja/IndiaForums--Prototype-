@@ -8,7 +8,6 @@ import {
   deregisterFromPush,
   installPushListeners,
   teardownPushListeners,
-  handleColdStartTap,
 } from '../services/pushNotifications';
 
 export default function PushBootstrap(): null {
@@ -24,7 +23,6 @@ export default function PushBootstrap(): null {
       isAuthenticated: () => authRef.current,
       queryClient,
     });
-    void handleColdStartTap(() => authRef.current);
     return () => {
       teardownPushListeners();
     };

@@ -165,6 +165,9 @@ function navigateToTarget(target: NavTarget): void {
     });
     return;
   }
+  // All other NavTarget variants currently target MySpace; if a new stack is
+  // added to NavTarget, add an explicit branch here so it isn't silently
+  // routed to MySpace.
   // MySpace stack
   nav('Main', {
     screen: 'MySpace',
