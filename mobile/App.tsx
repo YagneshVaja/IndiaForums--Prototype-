@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RootNavigator from './src/navigation/RootNavigator';
+import PushBootstrap from './src/components/PushBootstrap';
 import { navigationRef } from './src/navigation/navigationRef';
 import { useThemeStore } from './src/store/themeStore';
 import * as SplashScreen from 'expo-splash-screen';
@@ -76,6 +77,7 @@ export default function App() {
     <GestureHandlerRootView style={styles.root} onLayout={onLayoutReady}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
+          <PushBootstrap />
           <ThemedNavigation />
         </QueryClientProvider>
       </SafeAreaProvider>
