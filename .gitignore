@@ -1,3 +1,4 @@
 .vercel
 .code-review-graph/
 .worktrees/
+.claude/settings.local.json

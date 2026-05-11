@@ -1,16 +1,16 @@
 # 📱 IndiaForums Mobile — Development Progress
 
 <!-- BEGIN_AUTO_UPDATE -->
-> ⚡ Auto-updated by hook on every mobile file save · Last updated: 2026-04-17
+> ⚡ Auto-updated by hook on every mobile file save · Last updated: 2026-05-09
 
 ## 📊 Overall Progress
 
 ```
-Total     █▒▒░░░░░░░░░░░░░░░░░ 9/58 screens touched
+Total     █▒▒▒▒▒▒▒▒░░░░░░░░░░░ 25/58 screens touched
 Done   ✅ █                    3/58 (5%)
-WIP    🔄 ▒▒                   6/58 (10%)
-Todo   ❌ ░░░░░░░░░░░░░░░░░    49/58 (84%)
-Overall   [10%]
+WIP    🔄 ▒▒▒▒▒▒▒▒             22/58 (38%)
+Todo   ❌ ░░░░░░░░░░░          33/58 (57%)
+Overall   [24%]
 ```
 
 ## 🗺️ Section Breakdown
@@ -21,17 +21,17 @@ Overall   [10%]
 | Auth             |    0 |    3 |    2 | ███░░░░░░░ 30% |
 | Home             |    0 |    1 |    1 | ███░░░░░░░ 25% |
 | News             |    0 |    2 |    0 | █████░░░░░ 50% |
-| Forums           |    0 |    0 |    5 | ░░░░░░░░░░ 0% |
+| Forums           |    0 |    2 |    3 | ██░░░░░░░░ 20% |
 | Search           |    0 |    0 |    2 | ░░░░░░░░░░ 0% |
 | Gallery          |    0 |    0 |    2 | ░░░░░░░░░░ 0% |
-| Video/Shorts     |    0 |    0 |    3 | ░░░░░░░░░░ 0% |
-| Web Stories      |    0 |    0 |    2 | ░░░░░░░░░░ 0% |
-| Celebrities      |    2 |    0 |    0 | ██████████ 100% |
-| Fan Fiction      |    0 |    0 |    5 | ░░░░░░░░░░ 0% |
-| Quizzes          |    0 |    0 |    4 | ░░░░░░░░░░ 0% |
+| Video/Shorts     |    0 |    1 |    2 | ██░░░░░░░░ 17% |
+| Web Stories      |    0 |    2 |    0 | █████░░░░░ 50% |
+| Celebrities      |    0 |    2 |    0 | █████░░░░░ 50% |
+| Fan Fiction      |    0 |    3 |    2 | ███░░░░░░░ 30% |
+| Quizzes          |    0 |    4 |    0 | █████░░░░░ 50% |
 | My Space         |    0 |    0 |    9 | ░░░░░░░░░░ 0% |
-| Notifications    |    0 |    0 |    1 | ░░░░░░░░░░ 0% |
-| Messages         |    0 |    0 |    4 | ░░░░░░░░░░ 0% |
+| Notifications    |    0 |    1 |    0 | █████░░░░░ 50% |
+| Messages         |    0 |    1 |    3 | █░░░░░░░░░ 13% |
 | Settings         |    0 |    0 |    6 | ░░░░░░░░░░ 0% |
 | Help             |    0 |    0 |    1 | ░░░░░░░░░░ 0% |
 
@@ -42,17 +42,17 @@ Overall   [10%]
 🔐 Auth           🔄🔄🔄❌❌
 🏠 Home           🔄❌
 📰 News           🔄🔄
-💬 Forums         ❌❌❌❌❌
+💬 Forums         🔄🔄❌❌❌
 🔍 Search         ❌❌
 🖼️ Gallery        ❌❌
-🎬 Video/Shorts   ❌❌❌
-📖 Web Stories    ❌❌
-⭐ Celebrities    ✅✅
-📚 Fan Fiction    ❌❌❌❌❌
-🧩 Quizzes        ❌❌❌❌
+🎬 Video/Shorts   🔄❌❌
+📖 Web Stories    🔄🔄
+⭐ Celebrities    🔄🔄
+📚 Fan Fiction    🔄🔄🔄❌❌
+🧩 Quizzes        🔄🔄🔄🔄
 👤 My Space       ❌❌❌❌❌❌❌❌❌
-🔔 Notifications  ❌
-✉️ Messages       ❌❌❌❌
+🔔 Notifications  🔄
+✉️ Messages       🔄❌❌❌
 ⚙️ Settings       ❌❌❌❌❌❌
 ❓ Help           ❌
 ```

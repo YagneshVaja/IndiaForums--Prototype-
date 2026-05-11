@@ -4,17 +4,15 @@
     "last_updated": "2026-04-17",
     "total_screens": 58,
     "completed": 3,
-    "in_progress": 6,
-    "not_started": 49,
-    "completion_pct": 8
+    "in_progress": 22,
+    "not_started": 33,
+    "completion_pct": 24
   },
-
   "onboarding": {
     "SplashScreen": "COMPLETED",
     "OnboardingSlides": "COMPLETED",
     "GetStarted": "COMPLETED"
   },
-
   "auth": {
     "Login": "IN_PROGRESS",
     "Register": "IN_PROGRESS",
@@ -22,66 +20,55 @@
     "ResetPassword": "NOT_STARTED",
     "VerifyEmail": "NOT_STARTED"
   },
-
   "home": {
     "HomeScreen": "IN_PROGRESS",
     "CategoryFeed": "NOT_STARTED"
   },
-
   "news": {
     "NewsScreen": "IN_PROGRESS",
     "ArticleDetail": "IN_PROGRESS"
   },
-
   "forums": {
     "ForumsMain": "NOT_STARTED",
     "ForumList": "NOT_STARTED",
     "AllTopicsView": "NOT_STARTED",
-    "TopicDetail": "NOT_STARTED",
-    "ReportsInbox": "NOT_STARTED"
+    "TopicDetail": "IN_PROGRESS",
+    "ReportsInbox": "IN_PROGRESS"
   },
-
   "search": {
     "SearchScreen": "NOT_STARTED",
     "TagDetail": "NOT_STARTED"
   },
-
   "gallery": {
     "GalleryScreen": "NOT_STARTED",
     "GalleryDetail": "NOT_STARTED"
   },
-
   "video_shorts": {
     "VideoScreen": "NOT_STARTED",
     "VideoDetail": "NOT_STARTED",
-    "ShortsScreen": "NOT_STARTED"
+    "ShortsScreen": "IN_PROGRESS"
   },
-
   "web_stories": {
-    "WebStoriesList": "NOT_STARTED",
-    "WebStoryPlayer": "NOT_STARTED"
+    "WebStoriesList": "IN_PROGRESS",
+    "WebStoryPlayer": "IN_PROGRESS"
   },
-
   "celebrities": {
-    "CelebritiesScreen": "NOT_STARTED",
-    "CelebrityDetail": "NOT_STARTED"
+    "CelebritiesScreen": "IN_PROGRESS",
+    "CelebrityDetail": "IN_PROGRESS"
   },
-
   "fan_fiction": {
-    "FanFictionMain": "NOT_STARTED",
-    "FanFictionDetail": "NOT_STARTED",
-    "ChapterReader": "NOT_STARTED",
+    "FanFictionMain": "IN_PROGRESS",
+    "FanFictionDetail": "IN_PROGRESS",
+    "ChapterReader": "IN_PROGRESS",
     "FanFictionAuthors": "NOT_STARTED",
     "AuthorFollowers": "NOT_STARTED"
   },
-
   "quizzes": {
-    "QuizzesScreen": "NOT_STARTED",
-    "QuizPlayer": "NOT_STARTED",
-    "QuizResult": "NOT_STARTED",
-    "QuizLeaderboard": "NOT_STARTED"
+    "QuizzesScreen": "IN_PROGRESS",
+    "QuizPlayer": "IN_PROGRESS",
+    "QuizResult": "IN_PROGRESS",
+    "QuizLeaderboard": "IN_PROGRESS"
   },
-
   "my_space": {
     "MySpaceDashboard": "NOT_STARTED",
     "UserProfile": "NOT_STARTED",
@@ -93,18 +80,15 @@
     "FollowingList": "NOT_STARTED",
     "Buddies": "NOT_STARTED"
   },
-
   "notifications": {
-    "NotificationsScreen": "NOT_STARTED"
+    "NotificationsScreen": "IN_PROGRESS"
   },
-
   "messages": {
     "MessagesInbox": "NOT_STARTED",
-    "MessageThread": "NOT_STARTED",
+    "MessageThread": "IN_PROGRESS",
     "ComposeMessage": "NOT_STARTED",
     "MessageFolders": "NOT_STARTED"
   },
-
   "account_settings": {
     "AccountSettings": "NOT_STARTED",
     "Activities": "NOT_STARTED",
@@ -113,7 +97,6 @@
     "Status": "NOT_STARTED",
     "UsernameEdit": "NOT_STARTED"
   },
-
   "help": {
     "HelpCenter": "NOT_STARTED"
   }

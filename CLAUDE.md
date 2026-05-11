@@ -1,3 +1,31 @@
+# Repository Layout
+
+This repo is a monorepo containing two apps and shared docs:
+
+| Path | What | Stack |
+|---|---|---|
+| `indiaforums/` | Web prototype (iPhone-shell single-page app) | React 19, Vite 8, plain JS, CSS Modules |
+| `mobile/` | Production-track mobile app | Expo 55, React Native 0.83, TypeScript, NativeWind, Zustand, React Query |
+| `docs/tracking/` | Living progress trackers (`mobile-development-progress.md`, `screen-checklist.json`) | — |
+| `docs/superpowers/` | Plans + specs created via the superpowers skills | — |
+
+Each app has its own `CLAUDE.md` — read it before touching that subtree. `AGENTS.md` and `GEMINI.md` mirror this file for other tools.
+
+---
+
+## Working in this repo
+
+There is **no root `package.json`** — each app installs and runs independently.
+
+```bash
+cd indiaforums && npm install && npm run dev      # web prototype on Vite
+cd mobile      && npm install && npm run start    # mobile app on Expo
+```
+
+The web prototype (`indiaforums/`) and the mobile app (`mobile/`) are separate codebases — features are reimplemented, not shared. Treat the prototype as a design/UX reference for mobile work.
+
+---
+
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph
 
@@ -21,8 +49,8 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 
 | Tool | Use when |
 |------|----------|
-| `detect_changes` | Reviewing code changes � gives risk-scored analysis |
-| `get_review_context` | Need source snippets for review � token-efficient |
+| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
+| `get_review_context` | Need source snippets for review — token-efficient |
 | `get_impact_radius` | Understanding blast radius of a change |
 | `get_affected_flows` | Finding which execution paths are impacted |
 | `query_graph` | Tracing callers, callees, imports, tests, dependencies |

@@ -25,21 +25,21 @@ No test runner is configured.
 
 ### Navigation Model
 
-Navigation is entirely state-driven in `App.jsx` using `useState`. There is no React Router. The render tree uses a priority-based conditional rendering pattern:
+Navigation is state-driven via a `useReducer` hook in [src/hooks/useAppNavigation.js](src/hooks/useAppNavigation.js). There is no React Router. `App.jsx` calls `const nav = useAppNavigation()` and renders screens in a priority order — detail/overlay screens take precedence over tab screens.
 
 ```
-GalleryDetailScreen (highest priority)
-  → GalleryScreen
-    → Story screens (CelebritiesScreen | VideoScreen | FanFictionScreen | QuizzesScreen)
+Overlay/detail screens (NotificationsScreen, WebStoryPlayer, ComposeScreen, …)
+  → Drilled detail screens (GalleryDetailScreen, CelebrityDetailScreen,
+    VideoDetailScreen, TopicDetailScreen, TagDetailScreen, ProfileScreen,
+    fanfiction/* sub-screens, quiz sub-screens, …)
+    → Story-type screens (CelebritiesScreen, VideoScreen, FanFictionScreen,
+      ShortsScreen, WebStoriesScreen, quizzes/QuizzesScreen, GalleryScreen)
       → ArticleScreen
-        → Bottom tab screens (ExploreScreen | NewsScreen | ForumScreen | SearchScreen | MySpaceScreen)
+        → Bottom tab screens (ExploreScreen, NewsScreen, ForumScreen,
+          SearchScreen, MySpaceScreen)
 ```
 
-State variables controlling navigation:
-- `activeTab` — which bottom nav tab is selected
-- `selectedArticle` — triggers ArticleScreen detail view
-- `showGalleries` / `selectedGallery` — gallery listing and detail views
-- `activeStory` — which story-type screen to show (`'celebrities'`, `'videos'`, `'fanFictions'`, `'quizzes'`, `'galleries'`)
+The reducer in `useAppNavigation` owns all navigation state (~20 fields: `activeTab`, `selectedArticle`, `selectedVideo`, `selectedGallery`, `activeStory`, `selectedTopic`, `selectedCeleb`, `selectedTag`, `drilledForum`, fan-fiction selection set, `selectedWebStory`, `showNotifications`, `composeReply`, `drawerOpen`, …). Read the reducer for the full list before adding a new screen — prefer adding a new action there over a new local `useState` in `App.jsx`.
 
 ### Component Structure
 
@@ -52,7 +52,16 @@ src/components/
   ui/        — SectionHeader, CarouselDots, StoryItem
 ```
 
-All screens live in `src/screens/`. All mock data lives in `src/data/` (no backend — everything is static JS objects).
+All screens live in `src/screens/`. Static seed/fixture data lives in `src/data/`.
+
+### Data Layer
+
+The app talks to a real backend (`api2.indiaforums.com`). Data fetching is split across:
+
+- `src/services/` — axios-backed API wrappers (`api.js`, `searchApi.js`, `webStoriesApi.js`, `fanFictionsApi.js`, `commentsApi.js`)
+- `src/hooks/` — query-style hooks (`useApiQuery`, `useWebStories`, `useFanFictions`)
+- `src/contexts/` — cross-screen providers
+- `src/components/ui/RateLimitNotice` — surfaces 429s; respect rate limits when adding new fetches
 
 ### Styling
 
@@ -64,7 +73,7 @@ All screens live in `src/screens/`. All mock data lives in `src/data/` (no backe
 
 ### Project Context
 
-This is a **web prototype** that renders inside a `PhoneShell` component mimicking an iPhone. It is a community + entertainment platform combining news, forums, fan fiction, galleries, videos, quizzes, and celebrity content. All data is mocked — no API calls, no persistence.
+This is a **web prototype** that renders inside a `PhoneShell` component mimicking an iPhone. It is a community + entertainment platform combining news, forums, fan fiction, galleries, videos, quizzes, and celebrity content. Some screens still use static data in `src/data/`; newer screens hit the live backend via `src/services/`.
 
 ---
 
@@ -192,7 +201,7 @@ Never introduce any of the following:
 | Hardcoded hex colors or pixel values | Use design tokens |
 | Raw heading tags (`<h2>`, `<h3>`) as section titles | Use `SectionHeader` component |
 | `100vw` / `100vh` inside screen components | Use shell-relative sizing |
-| New navigation state variables without updating `App.jsx` | All nav state lives in `App.jsx` |
+| New navigation state without extending `useAppNavigation` | All nav state lives in [src/hooks/useAppNavigation.js](src/hooks/useAppNavigation.js) |
 
 ### 10. Workflow for New Screens and Components
 
