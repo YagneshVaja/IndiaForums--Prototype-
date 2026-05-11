@@ -222,6 +222,27 @@ export default function NotificationsScreen({ navigation }: Props) {
         </ScrollView>
       ) : null}
 
+      {/* DEBUG STRIP — remove after diagnosing empty-chip bug */}
+      <View
+        style={{
+          backgroundColor: '#FFF3B0',
+          borderColor: '#E0A800',
+          borderWidth: 1,
+          padding: 8,
+          marginHorizontal: 14,
+          marginTop: 4,
+        }}
+      >
+        <Text style={{ fontSize: 11, fontWeight: '800', color: '#664D00' }}>
+          DEBUG · filter={filter} · templates={templates.length} · totalRecord=
+          {String(data?.totalRecordCount ?? 'n/a')} · unread={unreadCount} · all={all.length} ·
+          visible={visible.length} · page={page} · totalPages={String(data?.totalPages ?? 'n/a')}
+        </Text>
+        <Text style={{ fontSize: 10, color: '#664D00', marginTop: 4 }} selectable>
+          templates JSON: {JSON.stringify(templates)}
+        </Text>
+      </View>
+
       <ScrollView
         contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 40 }}
         refreshControl={
