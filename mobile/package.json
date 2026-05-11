@@ -31,6 +31,7 @@
     "expo-auth-session": "~55.0.15",
     "expo-clipboard": "~55.0.13",
     "expo-constants": "~55.0.14",
+    "expo-device": "~55.0.16",
     "expo-font": "~55.0.6",
     "expo-haptics": "~55.0.14",
     "expo-image": "~55.0.10",
@@ -66,6 +67,7 @@
   },
   "devDependencies": {
     "@babel/core": "~7.29.0",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.2.0",
     "@typescript-eslint/eslint-plugin": "~8.0.0",
     "@typescript-eslint/parser": "~8.0.0",

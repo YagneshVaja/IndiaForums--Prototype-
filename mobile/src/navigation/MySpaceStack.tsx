@@ -10,6 +10,7 @@ import DevicesScreen from '../features/profile/screens/DevicesScreen';
 import BuddiesScreen from '../features/profile/screens/BuddiesScreen';
 import VerifyEmailScreen from '../features/profile/screens/VerifyEmailScreen';
 import NotificationsScreen from '../features/notifications/screens/NotificationsScreen';
+import NotificationDispatchScreen from '../features/notifications/screens/NotificationDispatchScreen';
 import MyActivitiesScreen from '../features/activities/screens/MyActivitiesScreen';
 import HelpCenterScreen from '../features/helpcenter/screens/HelpCenterScreen';
 import AboutScreen from '../features/myspace/screens/AboutScreen';
@@ -46,6 +47,7 @@ export default function MySpaceStack() {
       <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="NotificationDispatch" component={NotificationDispatchScreen} />
       <Stack.Screen name="Messages" component={MessagesInboxScreen} />
       <Stack.Screen name="MessageThread" component={MessageThreadScreen} />
       <Stack.Screen name="MessageFolders" component={MessageFoldersScreen} />

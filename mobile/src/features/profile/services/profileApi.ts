@@ -36,6 +36,8 @@ import type {
   UpdateStatusRequestDto,
   UpdateStatusResponseDto,
   UserDevicesResponseDto,
+  RegisterDeviceRequestDto,
+  RegisterDeviceResponseDto,
   UpdateDevicePreferencesRequestDto,
   UpdateDevicePreferencesResponseDto,
   UnregisterDeviceResponseDto,
@@ -367,6 +369,12 @@ export function updateMyStatus(body: UpdateStatusRequestDto) {
 
 export function getDevices() {
   return apiClient.get<UserDevicesResponseDto>('/devices').then((r) => r.data);
+}
+
+export function registerDevice(body: RegisterDeviceRequestDto) {
+  return apiClient
+    .post<RegisterDeviceResponseDto>('/devices/register', body)
+    .then((r) => r.data);
 }
 
 export function removeDevice(deviceId: Id) {

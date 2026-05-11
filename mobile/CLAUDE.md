@@ -85,6 +85,7 @@ const styles = useMemo(() => makeStyles(colors), [colors]);
 - **Jest is configured but there are no test files.** Adding tests is welcome, not blocked.
 - **Do not commit `.bak` files** — use git for rollback.
 - **Static data in `features/*/data/`** (e.g. `galleries.ts`, `webStories.ts`) is intentional for now; flag if you replace it with API calls so callers can be migrated together.
+- **Push notifications** — registration runs from `<PushBootstrap/>` mounted in `App.tsx`. Token is acquired via `services/pushNotifications.ts` (Expo push tokens). Tap routing is a pure mapping in `services/notificationRouter.ts`. Logout calls `DELETE /devices/{id}`.
 
 ---
 

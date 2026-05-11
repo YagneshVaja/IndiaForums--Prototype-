@@ -186,6 +186,7 @@ export type MySpaceStackParamList = {
   About: undefined;
   Buddies: undefined;
   Notifications: undefined;
+  NotificationDispatch: { topicId: string; focusPostId?: string };
   Messages: undefined;
   MessageThread: { threadId: string };
   MessageFolders: undefined;
