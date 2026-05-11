@@ -31,6 +31,7 @@ import {
   useUnreadCount,
 } from '../hooks/useNotifications';
 import type { NotificationDto } from '../types';
+import { routeFromNotification, type NavTarget } from '../../../services/notificationRouter';
 
 type Props = NativeStackScreenProps<MySpaceStackParamList, 'Notifications'>;
 
@@ -71,6 +72,39 @@ export default function NotificationsScreen({ navigation }: Props) {
     if (unreadCount === 0) return;
     markRead.mutate({ ids: '' });
   }, [markRead, unreadCount]);
+
+  const goTo = useCallback(
+    (target: NavTarget) => {
+      if (target.stack === 'News') {
+        // Cross-stack: bubble up to Main tab navigator, then News stack
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (navigation.getParent()?.getParent() as any)?.navigate('Main', {
+          screen: 'News',
+          params: { screen: target.screen, params: target.params },
+        });
+        return;
+      }
+      // MySpaceStack — same navigator the screen is mounted in
+      if (target.screen === 'Notifications') return; // already here, noop
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (navigation as any).navigate(target.screen, 'params' in target ? target.params : undefined);
+    },
+    [navigation],
+  );
+
+  const handleOpen = useCallback(
+    (n: NotificationDto) => {
+      const target = routeFromNotification(n);
+      if (target) {
+        goTo(target);
+      }
+      // Always mark read on tap (matches popular-app behavior: tapping is engagement)
+      if (!isRead(n)) {
+        markRead.mutate({ ids: String(n.notificationId) });
+      }
+    },
+    [goTo, markRead],
+  );
 
   const statusBarStyle = mode === 'dark' ? 'light-content' : 'dark-content';
 
@@ -196,7 +230,7 @@ export default function NotificationsScreen({ navigation }: Props) {
               <NotificationRow
                 key={String(n.notificationId)}
                 n={n}
-                onMarkRead={markOne}
+                onOpen={handleOpen}
                 styles={styles}
                 colors={colors}
               />
@@ -299,20 +333,20 @@ function TemplateChip({
 
 interface NotificationRowProps {
   n: NotificationDto;
-  onMarkRead: (id: number | string) => void;
+  onOpen: (n: NotificationDto) => void;
   styles: ReturnType<typeof makeStyles>;
   colors: ThemeColors;
 }
 
 const NotificationRow = React.memo(function NotificationRow({
   n,
-  onMarkRead,
+  onOpen,
   styles,
   colors,
 }: NotificationRowProps) {
   const read = isRead(n);
   const onPress = () => {
-    if (!read) onMarkRead(n.notificationId);
+    onOpen(n);
   };
   const title = n.title || 'Notification';
   const body = stripHtml(n.message);
