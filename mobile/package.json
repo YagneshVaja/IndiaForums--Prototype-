@@ -8,7 +8,12 @@
     "ios": "expo run:ios",
     "lint": "eslint . --ext .ts,.tsx",
     "tsc": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "build:dev:android": "eas build --profile development --platform android",
+    "build:preview:android": "eas build --profile preview --platform android",
+    "build:prod:android": "eas build --profile production --platform android",
+    "submit:android": "eas submit --profile production --platform android",
+    "update:preview": "eas update --channel preview"
   },
   "dependencies": {
     "@expo-google-fonts/roboto": "~0.4.3",
@@ -35,6 +40,7 @@
     "expo-secure-store": "~55.0.13",
     "expo-splash-screen": "~55.0.20",
     "expo-status-bar": "~55.0.6",
+    "expo-updates": "~55.0.21",
     "expo-video": "~55.0.16",
     "i18next": "~26.0.5",
     "nativewind": "~4.2.3",
