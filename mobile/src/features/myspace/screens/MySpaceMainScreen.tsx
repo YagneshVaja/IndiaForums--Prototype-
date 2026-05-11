@@ -1,8 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   Pressable,
   StyleSheet,
   StatusBar,
@@ -12,8 +11,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { CompositeScreenProps } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import Animated from 'react-native-reanimated';
+import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 import type {
   MySpaceStackParamList,
   MainTabParamList,
@@ -133,6 +135,14 @@ export default function MySpaceMainScreen({ navigation }: Props) {
   const mode = useThemeStore((s) => s.mode);
   const styles = useMemo(() => makeStyles(colors, mode), [colors, mode]);
 
+  const { scrollHandler, resetChrome } = useScrollChrome();
+
+  useFocusEffect(
+    useCallback(() => {
+      resetChrome();
+    }, [resetChrome]),
+  );
+
   const profileQ = useProfile();
   const buddiesCountQ = useBuddiesCount(profileQ.data?.userId, true);
   const tabs = useMemo(
@@ -236,15 +246,18 @@ export default function MySpaceMainScreen({ navigation }: Props) {
           <ErrorState message={extractApiError(profileQ.error)} onRetry={profileQ.refetch} />
         </View>
       ) : (
-        <ScrollView
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <Animated.ScrollView
           style={styles.scroll}
           contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
           showsVerticalScrollIndicator={false}
           stickyHeaderIndices={[1]}
+          onScroll={scrollHandler as any}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
               refreshing={profileQ.isRefetching}
-              onRefresh={profileQ.refetch}
+              onRefresh={() => { resetChrome(); profileQ.refetch(); }}
               tintColor={colors.primary}
             />
           }
@@ -288,7 +301,7 @@ export default function MySpaceMainScreen({ navigation }: Props) {
               viewedUserName={profile.displayName || profile.userName}
             />
           </View>
-        </ScrollView>
+        </Animated.ScrollView>
       )}
     </View>
   );
