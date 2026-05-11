@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -47,6 +47,8 @@ export default function NotificationsScreen({ navigation }: Props) {
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
 
+  const autoAdvanceCount = useRef(0);
+
   const list = useNotificationsList({ page, templateIds: templateId });
   const unread = useUnreadCount();
   const markRead = useMarkAsRead();
@@ -60,6 +62,28 @@ export default function NotificationsScreen({ navigation }: Props) {
   const templates = data?.notificationTemplates ?? [];
   const visible = filter === 'unread' ? all.filter((n) => !isRead(n)) : all;
   const unreadCount = unread.data ?? 0;
+
+  // On Unread tab: if the current page has 0 unread but the server-wide
+  // unread count is >0, auto-advance to the next page until we find unread
+  // items or hit the safety cap. The API has no server-side `read` filter,
+  // so paginating is the only way.
+  useEffect(() => {
+    if (filter !== 'unread') {
+      autoAdvanceCount.current = 0;
+      return;
+    }
+    if (list.isLoading || list.isRefetching) return;
+    if (visible.length > 0) {
+      autoAdvanceCount.current = 0;
+      return;
+    }
+    if (unreadCount <= 0) return;
+    const totalPages = Number(data?.totalPages ?? 1) || 1;
+    if (page >= totalPages) return;
+    if (autoAdvanceCount.current >= 5) return;
+    autoAdvanceCount.current += 1;
+    setPage((p) => p + 1);
+  }, [filter, visible.length, unreadCount, list.isLoading, list.isRefetching, page, data?.totalPages]);
 
   const markOne = useCallback(
     (id: number | string) => {
@@ -216,11 +240,29 @@ export default function NotificationsScreen({ navigation }: Props) {
           <ErrorState message={extractApiError(list.error)} onRetry={list.refetch} />
         ) : visible.length === 0 ? (
           <EmptyState
-            icon={filter === 'unread' ? 'checkmark-circle-outline' : 'notifications-outline'}
-            title={filter === 'unread' ? 'All caught up' : 'No notifications yet'}
+            icon={
+              filter === 'unread' && unreadCount > 0
+                ? 'sync-outline'
+                : filter === 'unread'
+                  ? 'checkmark-circle-outline'
+                  : 'notifications-outline'
+            }
+            title={
+              filter === 'unread'
+                ? unreadCount > 0 && autoAdvanceCount.current >= 5
+                  ? "Couldn't load unread notifications"
+                  : unreadCount > 0
+                    ? 'Looking for unread…'
+                    : 'All caught up'
+                : 'No notifications yet'
+            }
             subtitle={
               filter === 'unread'
-                ? 'You have no unread notifications.'
+                ? unreadCount > 0 && autoAdvanceCount.current >= 5
+                  ? 'Try pulling to refresh.'
+                  : unreadCount > 0
+                    ? 'Loading more pages.'
+                    : 'You have no unread notifications.'
                 : 'Replies, likes, and mentions will appear here.'
             }
           />
@@ -312,19 +354,23 @@ function TemplateChip({
   onPress,
   styles,
 }: {
-  label: string;
+  label: string | null | undefined;
   count: number;
   active: boolean;
   onPress: () => void;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const safeLabel = (label ?? '').replace(/\s+/g, ' ').trim();
+  // Skip rendering entirely if we have nothing meaningful to show.
+  if (!safeLabel && count <= 0) return null;
+  const displayLabel = safeLabel || 'Other';
   return (
     <Pressable
       onPress={onPress}
       style={[styles.tplChip, active && styles.tplChipActive]}
     >
       <Text style={[styles.tplChipText, active && styles.tplChipTextActive]}>
-        {label}
+        {displayLabel}
         {count > 0 ? ` · ${count}` : ''}
       </Text>
     </Pressable>
