@@ -10,6 +10,7 @@ import {
   ScrollView,
   StatusBar,
   Linking,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -141,6 +142,16 @@ export default function NotificationsScreen({ navigation }: Props) {
       const target = routeFromNotification(n);
       if (target) {
         goTo(target);
+      } else {
+        // No clean route for this template yet — let the user know we got
+        // their tap and we're working on it.
+        const title = stripHtml(n.title ?? '') || 'Notification';
+        const body = stripHtml(n.message ?? '');
+        Alert.alert(
+          title,
+          body || "We can't open this notification yet. Coming soon.",
+          [{ text: 'OK' }],
+        );
       }
       // Always mark read on tap (matches popular-app behavior: tapping is engagement)
       if (!isRead(n)) {
@@ -148,6 +159,23 @@ export default function NotificationsScreen({ navigation }: Props) {
       }
     },
     [goTo, markRead],
+  );
+
+  const handleLongPress = useCallback(
+    (n: NotificationDto) => {
+      const lines = [
+        `templateId: ${n.templateId}`,
+        `contentTypeId: ${n.contentTypeId}`,
+        `contentTypeValue: ${n.contentTypeValue}`,
+        `read: ${n.read}`,
+        `notificationId: ${n.notificationId}`,
+        `jsonData: ${n.jsonData ?? '(null)'}`,
+      ];
+      Alert.alert('Notification debug info', lines.join('\n'), [
+        { text: 'Close' },
+      ]);
+    },
+    [],
   );
 
   const statusBarStyle = mode === 'dark' ? 'light-content' : 'dark-content';
@@ -298,6 +326,7 @@ export default function NotificationsScreen({ navigation }: Props) {
                 key={String(n.notificationId)}
                 n={n}
                 onOpen={handleOpen}
+                onLongPress={handleLongPress}
                 styles={styles}
                 colors={colors}
               />
@@ -412,6 +441,7 @@ function TemplateChip({
 interface NotificationRowProps {
   n: NotificationDto;
   onOpen: (n: NotificationDto) => void;
+  onLongPress: (n: NotificationDto) => void;
   styles: ReturnType<typeof makeStyles>;
   colors: ThemeColors;
 }
@@ -419,6 +449,7 @@ interface NotificationRowProps {
 const NotificationRow = React.memo(function NotificationRow({
   n,
   onOpen,
+  onLongPress,
   styles,
   colors,
 }: NotificationRowProps) {
@@ -426,12 +457,17 @@ const NotificationRow = React.memo(function NotificationRow({
   const onPress = () => {
     onOpen(n);
   };
+  const onLong = () => {
+    onLongPress(n);
+  };
   const title = n.title || 'Notification';
   const body = stripHtml(n.message);
   const icon = iconForNotification(n);
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLong}
+      delayLongPress={400}
       style={({ pressed }) => [
         styles.row,
         !read && styles.rowUnread,

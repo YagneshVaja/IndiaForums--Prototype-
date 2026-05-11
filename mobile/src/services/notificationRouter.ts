@@ -134,5 +134,25 @@ export function routeFromNotification(n: NotificationDto): NavTarget | null {
   // contentTypeId === 6 is media/photo — no dedicated mobile screen yet, return null
   // Other contentTypeId values are not yet documented in the OpenAPI spec.
 
+  // 3. templateId-based mapping — uses real backend template IDs from
+  // /user-notifications/notificationTemplates (verified on-device).
+  const tplIdRaw = n.templateId;
+  const tplId = typeof tplIdRaw === 'string' ? parseInt(tplIdRaw, 10) : tplIdRaw;
+  const ctValue = n.contentTypeValue == null ? null : String(n.contentTypeValue);
+
+  if (tplId === 23 && ctValue && ctValue !== '0') {
+    // "tagged you in a post" — contentTypeValue is the topic id
+    return {
+      stack: 'MySpace',
+      screen: 'NotificationDispatch',
+      params: { topicId: ctValue },
+    };
+  }
+
+  // templateIds 37, 38 (forum-related), 4, 5 (profile-related):
+  // We don't have a clean target screen yet. Returning null falls back
+  // to the Notifications list — the screen-level handler will show a
+  // toast so the user knows the tap was registered.
+
   return null;
 }

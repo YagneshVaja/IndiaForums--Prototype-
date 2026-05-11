@@ -230,4 +230,48 @@ describe('routeFromNotification', () => {
       params: { id: '88' },
     });
   });
+
+  test('templateId=23 (tagged in post) routes to NotificationDispatch using contentTypeValue', () => {
+    expect(
+      routeFromNotification(n({ templateId: 23, contentTypeValue: 5089183 })),
+    ).toEqual({
+      stack: 'MySpace',
+      screen: 'NotificationDispatch',
+      params: { topicId: '5089183' },
+    });
+  });
+
+  test('templateId=23 works with string templateId and contentTypeValue', () => {
+    expect(
+      routeFromNotification(n({ templateId: '23', contentTypeValue: '5089183' })),
+    ).toEqual({
+      stack: 'MySpace',
+      screen: 'NotificationDispatch',
+      params: { topicId: '5089183' },
+    });
+  });
+
+  test('templateId=23 with missing contentTypeValue returns null', () => {
+    expect(routeFromNotification(n({ templateId: 23, contentTypeValue: 0 }))).toBeNull();
+  });
+
+  test('templateId=37 (forum invite) currently has no route → null', () => {
+    expect(routeFromNotification(n({ templateId: 37, contentTypeValue: 99 }))).toBeNull();
+  });
+
+  test('jsonData still wins over templateId mapping', () => {
+    expect(
+      routeFromNotification(
+        n({
+          templateId: 23,
+          contentTypeValue: 99,
+          jsonData: JSON.stringify({ articleId: '42' }),
+        }),
+      ),
+    ).toEqual({
+      stack: 'News',
+      screen: 'ArticleDetail',
+      params: { id: '42' },
+    });
+  });
 });
