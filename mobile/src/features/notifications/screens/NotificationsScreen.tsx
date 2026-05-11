@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   Pressable,
+  TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
   ScrollView,
@@ -62,6 +63,17 @@ export default function NotificationsScreen({ navigation }: Props) {
   const templates = data?.notificationTemplates ?? [];
   const visible = filter === 'unread' ? all.filter((n) => !isRead(n)) : all;
   const unreadCount = unread.data ?? 0;
+  const totalPages = Number(data?.totalPages ?? 1) || 1;
+  // Server claims unread items exist but the list doesn't include any AND there
+  // are no more pages to load — the unread-count endpoint is stale relative to
+  // the list endpoint. Trust the list.
+  const unreadBadgeIsStale =
+    filter === 'unread' &&
+    unreadCount > 0 &&
+    !list.isLoading &&
+    !list.isRefetching &&
+    visible.length === 0 &&
+    page >= totalPages;
 
   // On Unread tab: if the current page has 0 unread but the server-wide
   // unread count is >0, auto-advance to the next page until we find unread
@@ -78,12 +90,20 @@ export default function NotificationsScreen({ navigation }: Props) {
       return;
     }
     if (unreadCount <= 0) return;
-    const totalPages = Number(data?.totalPages ?? 1) || 1;
     if (page >= totalPages) return;
     if (autoAdvanceCount.current >= 5) return;
     autoAdvanceCount.current += 1;
     setPage((p) => p + 1);
-  }, [filter, visible.length, unreadCount, list.isLoading, list.isRefetching, page, data?.totalPages]);
+  }, [filter, visible.length, unreadCount, list.isLoading, list.isRefetching, page, totalPages]);
+
+  // If the badge is stale (no items found server-wide), force a refetch of
+  // both queries so the badge can update to reality.
+  useEffect(() => {
+    if (!unreadBadgeIsStale) return;
+    unread.refetch();
+    // Don't refetch list — we just paginated it and confirmed it's empty.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unreadBadgeIsStale]);
 
   const markOne = useCallback(
     (id: number | string) => {
@@ -222,26 +242,6 @@ export default function NotificationsScreen({ navigation }: Props) {
         </ScrollView>
       ) : null}
 
-      {/* DEBUG STRIP — remove after diagnosing empty-chip bug */}
-      <View
-        style={{
-          backgroundColor: '#FFF3B0',
-          borderColor: '#E0A800',
-          borderWidth: 1,
-          padding: 8,
-          marginHorizontal: 14,
-          marginTop: 4,
-        }}
-      >
-        <Text style={{ fontSize: 11, fontWeight: '800', color: '#664D00' }}>
-          DEBUG · filter={filter} · templates={templates.length} · totalRecord=
-          {String(data?.totalRecordCount ?? 'n/a')} · unread={unreadCount} · all={all.length} ·
-          visible={visible.length} · page={page} · totalPages={String(data?.totalPages ?? 'n/a')}
-        </Text>
-        <Text style={{ fontSize: 10, color: '#664D00', marginTop: 4 }} selectable>
-          templates JSON: {JSON.stringify(templates)}
-        </Text>
-      </View>
 
       <ScrollView
         contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 40 }}
@@ -262,7 +262,7 @@ export default function NotificationsScreen({ navigation }: Props) {
         ) : visible.length === 0 ? (
           <EmptyState
             icon={
-              filter === 'unread' && unreadCount > 0
+              filter === 'unread' && unreadCount > 0 && !unreadBadgeIsStale
                 ? 'sync-outline'
                 : filter === 'unread'
                   ? 'checkmark-circle-outline'
@@ -270,20 +270,24 @@ export default function NotificationsScreen({ navigation }: Props) {
             }
             title={
               filter === 'unread'
-                ? unreadCount > 0 && autoAdvanceCount.current >= 5
-                  ? "Couldn't load unread notifications"
-                  : unreadCount > 0
-                    ? 'Looking for unread…'
-                    : 'All caught up'
+                ? unreadBadgeIsStale
+                  ? 'All caught up'
+                  : unreadCount > 0 && autoAdvanceCount.current >= 5
+                    ? "Couldn't load unread notifications"
+                    : unreadCount > 0
+                      ? 'Looking for unread…'
+                      : 'All caught up'
                 : 'No notifications yet'
             }
             subtitle={
               filter === 'unread'
-                ? unreadCount > 0 && autoAdvanceCount.current >= 5
-                  ? 'Try pulling to refresh.'
-                  : unreadCount > 0
-                    ? 'Loading more pages.'
-                    : 'You have no unread notifications.'
+                ? unreadBadgeIsStale
+                  ? 'Refreshing the unread count…'
+                  : unreadCount > 0 && autoAdvanceCount.current >= 5
+                    ? 'Try pulling to refresh.'
+                    : unreadCount > 0
+                      ? 'Loading more pages.'
+                      : 'You have no unread notifications.'
                 : 'Replies, likes, and mentions will appear here.'
             }
           />
@@ -381,20 +385,27 @@ function TemplateChip({
   onPress: () => void;
   styles: ReturnType<typeof makeStyles>;
 }) {
-  const safeLabel = (label ?? '').replace(/\s+/g, ' ').trim();
-  // Skip rendering entirely if we have nothing meaningful to show.
+  const safeLabel = String(label ?? '').replace(/\s+/g, ' ').trim();
   if (!safeLabel && count <= 0) return null;
   const displayLabel = safeLabel || 'Other';
+  // Concat into a single string so React Native never has to flatten a
+  // multi-child <Text> (which was rendering blank on the All tab — see
+  // commit history for empty-chip bug).
+  const text = count > 0 ? `${displayLabel} · ${count}` : displayLabel;
   return (
-    <Pressable
+    <TouchableOpacity
+      activeOpacity={0.7}
       onPress={onPress}
       style={[styles.tplChip, active && styles.tplChipActive]}
     >
-      <Text style={[styles.tplChipText, active && styles.tplChipTextActive]}>
-        {displayLabel}
-        {count > 0 ? ` · ${count}` : ''}
+      <Text
+        style={[styles.tplChipText, active && styles.tplChipTextActive]}
+        numberOfLines={1}
+        allowFontScaling={false}
+      >
+        {text}
       </Text>
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 
