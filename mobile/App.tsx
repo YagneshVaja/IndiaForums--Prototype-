@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { StatusBar } from 'expo-status-bar';
 import RootNavigator from './src/navigation/RootNavigator';
 import PushBootstrap from './src/components/PushBootstrap';
 import { navigationRef } from './src/navigation/navigationRef';
@@ -64,15 +65,21 @@ function ThemedNavigation() {
     };
   }, [mode, colors]);
   return (
-    <NavigationContainer
-      ref={navigationRef}
-      theme={navTheme}
-      onReady={() => {
-        void handleColdStartTap(() => useAuthStore.getState().isAuthenticated);
-      }}
-    >
-      <RootNavigator />
-    </NavigationContainer>
+    <>
+      {/* Global status-bar style — light icons in dark mode, dark icons in
+          light mode. Individual screens that need a different style (e.g.
+          immersive players) can override locally. */}
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+      <NavigationContainer
+        ref={navigationRef}
+        theme={navTheme}
+        onReady={() => {
+          void handleColdStartTap(() => useAuthStore.getState().isAuthenticated);
+        }}
+      >
+        <RootNavigator />
+      </NavigationContainer>
+    </>
   );
 }
 
