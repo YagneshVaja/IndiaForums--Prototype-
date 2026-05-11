@@ -181,6 +181,22 @@ export default function MainTabNavigator() {
         }}
       />
     </Tab.Navigator>
+    {/* Status-bar backdrop — keeps the safe-area-top region opaque so scrolling
+        content never bleeds through the status bar when AnimatedTopBar hides.
+        Drawn after Tab.Navigator (so it covers AnimatedTopBar's transparent
+        safe-area strip on the way down) and before SideMenu (so the drawer
+        renders on top when open). */}
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: insets.top,
+        backgroundColor: colors.card,
+      }}
+    />
     <SideMenu />
     </ChromeScrollProvider>
   );
