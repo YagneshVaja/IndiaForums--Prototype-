@@ -12,6 +12,8 @@ import ForumsStack from './ForumsStack';
 import SearchStack from './SearchStack';
 import MySpaceStack from './MySpaceStack';
 import SideMenu from '../components/layout/SideMenu';
+import { ChromeScrollProvider } from '../components/layout/chromeScroll/ChromeScrollContext';
+import AnimatedTabBar from '../components/layout/chromeScroll/AnimatedTabBar';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -86,8 +88,9 @@ export default function MainTabNavigator() {
   const colors = useThemeStore((s) => s.colors);
 
   return (
-    <>
+    <ChromeScrollProvider>
     <Tab.Navigator
+      tabBar={(props) => <AnimatedTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -179,6 +182,6 @@ export default function MainTabNavigator() {
       />
     </Tab.Navigator>
     <SideMenu />
-    </>
+    </ChromeScrollProvider>
   );
 }
