@@ -1,5 +1,25 @@
 // mobile/src/services/notificationRouter.test.ts
-import { routeFromPayload } from './notificationRouter';
+import { routeFromPayload, routeFromNotification } from './notificationRouter';
+import type { NotificationDto } from '../features/notifications/types';
+
+function n(partial: Partial<NotificationDto>): NotificationDto {
+  return {
+    notificationId: 0,
+    userId: 0,
+    templateId: 0,
+    contentTypeId: 0,
+    contentTypeValue: 0,
+    message: null,
+    createdBy: 0,
+    publishedWhen: '',
+    jsonData: null,
+    read: 0,
+    title: null,
+    user: null,
+    displayUserName: null,
+    ...partial,
+  };
+}
 
 describe('notificationRouter', () => {
   test('returns null for null/undefined/empty data', () => {
@@ -138,6 +158,76 @@ describe('notificationRouter', () => {
       stack: 'News',
       screen: 'ArticleDetail',
       params: { id: '1' },
+    });
+  });
+});
+
+describe('routeFromNotification', () => {
+  test('null jsonData + unknown contentType → null', () => {
+    expect(routeFromNotification(n({ contentTypeId: 99, contentTypeValue: 5 }))).toBeNull();
+  });
+
+  test('jsonData carrying topicId routes to NotificationDispatch', () => {
+    expect(
+      routeFromNotification(
+        n({ jsonData: JSON.stringify({ topicId: 42, postId: 99 }) }),
+      ),
+    ).toEqual({
+      stack: 'MySpace',
+      screen: 'NotificationDispatch',
+      params: { topicId: '42', focusPostId: '99' },
+    });
+  });
+
+  test('jsonData carrying deepLink wins', () => {
+    expect(
+      routeFromNotification(
+        n({ jsonData: JSON.stringify({ deepLink: 'iforums://message/7' }) }),
+      ),
+    ).toEqual({
+      stack: 'MySpace',
+      screen: 'MessageThread',
+      params: { threadId: '7' },
+    });
+  });
+
+  test('contentTypeId=7 + value routes to ArticleDetail', () => {
+    expect(
+      routeFromNotification(n({ contentTypeId: 7, contentTypeValue: 1234 })),
+    ).toEqual({
+      stack: 'News',
+      screen: 'ArticleDetail',
+      params: { id: '1234' },
+    });
+  });
+
+  test('contentTypeId=7 also handles string IDs', () => {
+    expect(
+      routeFromNotification(n({ contentTypeId: '7', contentTypeValue: '1234' })),
+    ).toEqual({
+      stack: 'News',
+      screen: 'ArticleDetail',
+      params: { id: '1234' },
+    });
+  });
+
+  test('malformed jsonData falls through gracefully', () => {
+    expect(
+      routeFromNotification(n({ jsonData: 'not json', contentTypeId: 7, contentTypeValue: 88 })),
+    ).toEqual({
+      stack: 'News',
+      screen: 'ArticleDetail',
+      params: { id: '88' },
+    });
+  });
+
+  test('empty jsonData object falls through to contentType', () => {
+    expect(
+      routeFromNotification(n({ jsonData: '{}', contentTypeId: 7, contentTypeValue: 88 })),
+    ).toEqual({
+      stack: 'News',
+      screen: 'ArticleDetail',
+      params: { id: '88' },
     });
   });
 });

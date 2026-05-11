@@ -1,4 +1,5 @@
 // mobile/src/services/notificationRouter.ts
+import type { NotificationDto } from '../features/notifications/types';
 
 export type NavTarget =
   | { stack: 'MySpace'; screen: 'Notifications' }
@@ -102,6 +103,36 @@ export function routeFromPayload(data: AnyData): NavTarget | null {
   if (userId) {
     return { stack: 'MySpace', screen: 'Profile', params: { userId } };
   }
+
+  return null;
+}
+
+export function routeFromNotification(n: NotificationDto): NavTarget | null {
+  // 1. jsonData is the richest hint — try it first
+  if (n.jsonData) {
+    try {
+      const parsed = JSON.parse(n.jsonData);
+      if (parsed && typeof parsed === 'object') {
+        const target = routeFromPayload(parsed as Record<string, unknown>);
+        if (target) return target;
+      }
+    } catch {
+      /* malformed — fall through */
+    }
+  }
+
+  // 2. (contentTypeId, contentTypeValue) discriminator
+  const ctIdRaw = n.contentTypeId;
+  const ctId = typeof ctIdRaw === 'string' ? parseInt(ctIdRaw, 10) : ctIdRaw;
+  const ctValRaw = n.contentTypeValue;
+  const ctVal = ctValRaw == null ? null : String(ctValRaw);
+
+  if (ctId === 7 && ctVal) {
+    return { stack: 'News', screen: 'ArticleDetail', params: { id: ctVal } };
+  }
+
+  // contentTypeId === 6 is media/photo — no dedicated mobile screen yet, return null
+  // Other contentTypeId values are not yet documented in the OpenAPI spec.
 
   return null;
 }
