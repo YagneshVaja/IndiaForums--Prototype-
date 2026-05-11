@@ -2,8 +2,14 @@
 import { Platform, AppState, type AppStateStatus, type NativeEventSubscription } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import type { QueryClient } from '@tanstack/react-query';
+
+// Push APIs are unsupported in Expo Go on Android since SDK 53. Skip all
+// notification side-effects there so the rest of the app can boot. Push works
+// normally in dev builds and standalone builds.
+const isExpoGo =
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
 import { registerDevice } from '../features/profile/services/profileApi';
 import { removeDevice } from '../features/profile/services/profileApi';
@@ -18,14 +24,16 @@ import { navigationRef } from '../navigation/navigationRef';
 import { routeFromPayload, type NavTarget } from './notificationRouter';
 
 // ── Foreground display behaviour ────────────────────────────────────────────
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: true,
-  }),
-});
+if (!isExpoGo) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: false,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 // ── Listener subscriptions held at module level ─────────────────────────────
 let receivedSub: Notifications.EventSubscription | null = null;
@@ -92,6 +100,11 @@ async function fetchExpoPushToken(): Promise<string | null> {
 export async function registerForPush(): Promise<void> {
   const store = usePushStore.getState();
 
+  if (isExpoGo) {
+    store.setPermission('unavailable');
+    return;
+  }
+
   await configureAndroidChannel();
 
   const status = await ensurePermission();
@@ -128,6 +141,11 @@ export async function registerForPush(): Promise<void> {
 }
 
 export async function deregisterFromPush(): Promise<void> {
+  if (isExpoGo) {
+    await clearStoredDeviceTokenId();
+    usePushStore.getState().reset();
+    return;
+  }
   const id = usePushStore.getState().deviceTokenId ?? (await getStoredDeviceTokenId());
   if (id) {
     try {
@@ -207,6 +225,7 @@ interface InstallArgs {
 }
 
 export function installPushListeners({ isAuthenticated, queryClient }: InstallArgs): void {
+  if (isExpoGo) return;
   // Received in foreground → invalidate notification queries.
   receivedSub?.remove();
   receivedSub = Notifications.addNotificationReceivedListener((notification) => {
@@ -250,6 +269,7 @@ export function teardownPushListeners(): void {
 export async function handleColdStartTap(isAuthenticated: () => boolean): Promise<void> {
   if (coldStartHandled) return;
   coldStartHandled = true;
+  if (isExpoGo) return;
   try {
     const last = await Notifications.getLastNotificationResponseAsync();
     if (last) handleNotificationResponse(last, isAuthenticated);
