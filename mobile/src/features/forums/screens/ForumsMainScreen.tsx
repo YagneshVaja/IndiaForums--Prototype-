@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 
 import ForumListView from '../components/ForumListView';
 import AllTopicsView from '../components/AllTopicsView';
@@ -10,8 +11,9 @@ import type { ForumsStackParamList } from '../../../navigation/types';
 import type { Forum, ForumTopic } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
-import { TopNavBrand } from '../../../components/layout/TopNavBar';
 import { useSideMenuStore } from '../../../store/sideMenuStore';
+import AnimatedTopBar from '../../../components/layout/chromeScroll/AnimatedTopBar';
+import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 
 type Nav = NativeStackNavigationProp<ForumsStackParamList, 'ForumsMain'>;
 
@@ -22,6 +24,14 @@ export default function ForumsMainScreen() {
   const [tab, setTab] = useState<TopTab>('forums');
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { resetChrome } = useScrollChrome();
+  const [topInset, setTopInset] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      resetChrome();
+    }, [resetChrome]),
+  );
 
   const handleForumPress = (forum: Forum) => {
     navigation.navigate('ForumThread', { forum });
@@ -41,7 +51,7 @@ export default function ForumsMainScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <TopNavBrand onMenuPress={useSideMenuStore.getState().open} />
+        <AnimatedTopBar onMenuPress={useSideMenuStore.getState().open} onMeasure={setTopInset} />
 
         {/* Tab strip */}
         <View style={styles.tabStrip}>
@@ -52,7 +62,7 @@ export default function ForumsMainScreen() {
       </View>
 
       {tab === 'forums' ? (
-        <ForumListView onForumPress={handleForumPress} />
+        <ForumListView onForumPress={handleForumPress} topInset={topInset} />
       ) : tab === 'all-topics' ? (
         <AllTopicsView onTopicPress={handleTopicPress} />
       ) : (

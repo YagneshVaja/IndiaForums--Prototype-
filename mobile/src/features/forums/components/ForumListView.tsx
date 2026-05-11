@@ -13,6 +13,7 @@ import JumpToPageSheet from './JumpToPageSheet';
 import ForumPaginationBar from './ForumPaginationBar';
 import { useForumHome, FORUM_HOME_PAGE_SIZE } from '../hooks/useForumHome';
 import { useHideOnScroll } from '../hooks/useHideOnScroll';
+import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 import { searchResults as apiSearchForums } from '../../../services/searchApi';
 import type { Forum } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
@@ -20,9 +21,10 @@ import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
   onForumPress: (forum: Forum) => void;
+  topInset?: number;
 }
 
-export default function ForumListView({ onForumPress }: Props) {
+export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
   const [activeCat, setActiveCat] = useState('all');
   const [activeSubCat, setActiveSubCat] = useState('all');
   const [search, setSearch] = useState('');
@@ -133,10 +135,12 @@ export default function ForumListView({ onForumPress }: Props) {
 
   const totalPages = firstPage?.totalPages ?? 1;
   const { hidden: barHidden, applyScroll: applyBarScroll } = useHideOnScroll();
+  const { applyScroll: applyChromeScroll, resetChrome } = useScrollChrome();
 
   const listScrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
       'worklet';
+      applyChromeScroll(e);
       applyBarScroll(e);
     },
   });
@@ -172,7 +176,14 @@ export default function ForumListView({ onForumPress }: Props) {
       scrollEventThrottle={16}
       refreshControl={
         !isSearchMode ? (
-          <RefreshControl refreshing={listRefetching} onRefresh={listRefetch} tintColor={colors.primary} />
+          <RefreshControl
+            refreshing={listRefetching}
+            onRefresh={() => {
+              resetChrome();
+              listRefetch();
+            }}
+            tintColor={colors.primary}
+          />
         ) : undefined
       }
       ListHeaderComponent={
@@ -225,7 +236,7 @@ export default function ForumListView({ onForumPress }: Props) {
           </View>
         ) : null
       }
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, topInset > 0 && { paddingTop: topInset }]}
     />
     {!isSearchMode && (
       <View style={styles.paginationDock} pointerEvents="box-none">
