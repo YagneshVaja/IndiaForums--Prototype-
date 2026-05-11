@@ -50,16 +50,19 @@ export default function ForumsMainScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
-        <AnimatedTopBar onMenuPress={useSideMenuStore.getState().open} onMeasure={setTopInset} />
-
-        {/* Tab strip */}
+      <AnimatedTopBar
+        onMenuPress={useSideMenuStore.getState().open}
+        onMeasure={setTopInset}
+      >
+        {/* Secondary tab strip — animates and measures together with the bar.
+            Solid card bg so it doesn't show scrolling content underneath
+            while hidden/sliding. */}
         <View style={styles.tabStrip}>
           <HeaderTab label="Forums"     active={tab === 'forums'}     onPress={() => setTab('forums')}     colors={colors} />
           <HeaderTab label="All Topics" active={tab === 'all-topics'} onPress={() => setTab('all-topics')} colors={colors} />
           <HeaderTab label="My"         active={tab === 'my'}         onPress={() => setTab('my')}         colors={colors} />
         </View>
-      </View>
+      </AnimatedTopBar>
 
       {tab === 'forums' ? (
         <ForumListView onForumPress={handleForumPress} topInset={topInset} />
@@ -137,14 +140,12 @@ function makeStyles(c: ThemeColors) {
       flex: 1,
       backgroundColor: c.bg,
     },
-    header: {
-      backgroundColor: c.card,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border,
-    },
     tabStrip: {
       flexDirection: 'row',
       alignItems: 'stretch',
+      backgroundColor: c.card,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
     },
   });
 }

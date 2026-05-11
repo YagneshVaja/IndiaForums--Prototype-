@@ -9,6 +9,12 @@ type TopNavBrandProps = React.ComponentProps<typeof TopNavBrand>;
 interface Props extends TopNavBrandProps {
   /** Receives the measured chrome height so the screen can pad its content. */
   onMeasure?: (height: number) => void;
+  /**
+   * Optional secondary chrome rendered below `TopNavBrand` in the same animated
+   * container — e.g. a screen-level tab strip. Animates and measures together
+   * with the bar so the consumer only needs one `topInset` value.
+   */
+  children?: React.ReactNode;
 }
 
 /**
@@ -17,7 +23,7 @@ interface Props extends TopNavBrandProps {
  * translation includes the status-bar safe-area inset and the bar fully
  * disappears on devices with a notch or tall status bar.
  */
-export default function AnimatedTopBar({ onMeasure, ...brandProps }: Props) {
+export default function AnimatedTopBar({ onMeasure, children, ...brandProps }: Props) {
   const { chromeProgress } = useChromeScroll();
   const [height, setHeight] = useState(0);
 
@@ -60,6 +66,7 @@ export default function AnimatedTopBar({ onMeasure, ...brandProps }: Props) {
       style={[styles.wrap, animStyle, pointerEventsStyle]}
     >
       <TopNavBrand {...brandProps} />
+      {children}
     </Animated.View>
   );
 }

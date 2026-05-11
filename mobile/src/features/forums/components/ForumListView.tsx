@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import Animated, { useAnimatedScrollHandler } from 'react-native-reanimated';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useQuery } from '@tanstack/react-query';
 
 import LoadingState from '../../../components/ui/LoadingState';
@@ -34,6 +35,10 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
   const listRef = useRef<any>(null);
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // The Tab.Navigator's bottom bar is now position:absolute, so this component
+  // extends to the device bottom. Lift the pagination dock by the tab bar
+  // height so it sits above the bar, and pad the list bottom by both.
+  const tabBarHeight = useBottomTabBarHeight();
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -236,10 +241,16 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
           </View>
         ) : null
       }
-      contentContainerStyle={[styles.content, topInset > 0 && { paddingTop: topInset }]}
+      contentContainerStyle={[
+        styles.content,
+        topInset > 0 && { paddingTop: topInset },
+        // 80px ≈ pagination bar height; without this the last forum card sits
+        // behind the bar.
+        { paddingBottom: tabBarHeight + 80 },
+      ]}
     />
     {!isSearchMode && (
-      <View style={styles.paginationDock} pointerEvents="box-none">
+      <View style={[styles.paginationDock, { bottom: tabBarHeight }]} pointerEvents="box-none">
         <ForumPaginationBar
           currentPage={currentPage}
           totalPages={totalPages}
@@ -267,7 +278,6 @@ function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     content: {
       paddingTop: 0,
-      paddingBottom: 80,
     },
     paginationDock: {
       position: 'absolute',
