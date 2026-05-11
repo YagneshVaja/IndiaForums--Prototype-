@@ -2,10 +2,12 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { TopNavBrand } from '../../../components/layout/TopNavBar';
+import Animated from 'react-native-reanimated';
+import AnimatedTopBar from '../../../components/layout/chromeScroll/AnimatedTopBar';
+import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 import { useSideMenuStore } from '../../../store/sideMenuStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
@@ -38,11 +40,24 @@ type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
 const keyExtractor = (article: Article) => article.id;
 
+// MUST be at module scope — defining inside the component would recreate the
+// wrapper on every render and FlashList would lose its list state.
+const AnimatedFlashList = Animated.createAnimatedComponent(FlashList) as unknown as typeof FlashList;
+
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  const { scrollHandler, resetChrome } = useScrollChrome();
+  const [topInset, setTopInset] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      resetChrome();
+    }, [resetChrome]),
+  );
 
   const queryCategory = selectedCategory === 'All' ? undefined : selectedCategory;
   const { data: banners = [], isLoading: bannersLoading } = useFeaturedBanners();
@@ -74,6 +89,7 @@ export default function HomeScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = useCallback(async () => {
+    resetChrome();
     setRefreshing(true);
     try {
       await Promise.all([
@@ -90,7 +106,7 @@ export default function HomeScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [queryClient]);
+  }, [queryClient, resetChrome]);
 
   const handleBannerPress = useCallback(
     (banner: Banner) => {
@@ -312,16 +328,22 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.screen}>
-      <TopNavBrand onMenuPress={useSideMenuStore.getState().open} />
+      <AnimatedTopBar
+        onMenuPress={useSideMenuStore.getState().open}
+        onMeasure={setTopInset}
+      />
 
-      <FlashList
+      <AnimatedFlashList
         data={articlesLoading ? [] : displayArticles}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={ListHeader}
         ListFooterComponent={ListFooter}
-        contentContainerStyle={styles.articlesBg}
+        contentContainerStyle={{ ...styles.articlesBg, paddingTop: topInset }}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onScroll={scrollHandler as any}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
