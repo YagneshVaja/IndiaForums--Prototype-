@@ -1,7 +1,15 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { getNotifications, markAsRead, getUnreadCount } from '../services/notificationsApi';
+import { getNotifications, markAsRead, getUnreadCount, getInboxCounts } from '../services/notificationsApi';
 import { useNotificationsStore } from '../../../store/notificationsStore';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 import type { ReadNotificationsRequestDto } from '../types';
+
+function toInt(v: number | string | undefined | null): number {
+  if (v == null) return 0;
+  const n = typeof v === 'string' ? parseInt(v, 10) : v;
+  return Number.isFinite(n) ? Number(n) : 0;
+}
 
 interface ListArgs {
   page: number;
@@ -21,6 +29,27 @@ export function useNotificationsList({ page, pageSize = 30, templateIds }: ListA
       }),
     staleTime: 30_000,
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useInboxCounts(enabled: boolean = true) {
+  const setUnreadCount = useNotificationsStore((s) => s.setUnreadCount);
+  return useQuery({
+    queryKey: ['notifications', 'inbox-counts'],
+    queryFn: async () => {
+      const r = await getInboxCounts();
+      const unreadNotifications = toInt(r.unreadNotifications);
+      const unreadMessages = toInt(r.unreadMessages);
+      setUnreadCount(unreadNotifications);
+      // Mirror to iOS app badge so the home screen reflects server truth.
+      if (Platform.OS === 'ios') {
+        Notifications.setBadgeCountAsync(unreadNotifications).catch(() => {});
+      }
+      return { unreadNotifications, unreadMessages };
+    },
+    enabled,
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000, // every 5 minutes while screen is mounted
   });
 }
 
@@ -52,8 +81,16 @@ export function useMarkAsRead() {
     onSuccess: (res) => {
       const remaining =
         typeof res.unreadCount === 'string' ? parseInt(res.unreadCount, 10) : res.unreadCount;
-      if (Number.isFinite(remaining)) setUnreadCount(Number(remaining));
+      if (Number.isFinite(remaining)) {
+        const safe = Number(remaining);
+        setUnreadCount(safe);
+        if (Platform.OS === 'ios') {
+          Notifications.setBadgeCountAsync(safe).catch(() => {});
+        }
+      }
       qc.invalidateQueries({ queryKey: ['notifications'] });
+      // Also invalidate inbox-counts so the message badge stays accurate.
+      qc.invalidateQueries({ queryKey: ['notifications', 'inbox-counts'] });
     },
   });
 }

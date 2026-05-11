@@ -25,7 +25,7 @@ import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import ErrorState from '../../../components/ui/ErrorState';
 import { extractApiError } from '../../../services/api';
-import { useMessagesOverview } from '../../messages/hooks/useMessages';
+import { useInboxCounts } from '../../notifications/hooks/useNotifications';
 
 import { useProfile } from '../../profile/hooks/useProfile';
 import { useBuddiesCount } from '../../profile/hooks/useBuddiesCount';
@@ -126,13 +126,8 @@ export default function MySpaceMainScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
-  const overview = useMessagesOverview(isAuthenticated);
-  const unreadMessages = (() => {
-    const raw = overview.data?.unreadMessageCount;
-    if (raw == null) return 0;
-    const n = typeof raw === 'string' ? parseInt(raw, 10) : raw;
-    return Number.isFinite(n) ? Number(n) : 0;
-  })();
+  const inboxCounts = useInboxCounts(isAuthenticated);
+  const unreadMessages = inboxCounts.data?.unreadMessages ?? 0;
 
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
