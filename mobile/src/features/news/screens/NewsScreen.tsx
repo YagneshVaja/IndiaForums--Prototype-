@@ -8,8 +8,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
+import Animated from 'react-native-reanimated';
 import type { NewsStackParamList } from '../../../navigation/types';
-import { TopNavBrand } from '../../../components/layout/TopNavBar';
+import AnimatedTopBar from '../../../components/layout/chromeScroll/AnimatedTopBar';
+import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 import { useSideMenuStore } from '../../../store/sideMenuStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
@@ -65,6 +68,15 @@ export default function NewsScreen({ navigation, route }: Props) {
 
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  const { scrollHandler, resetChrome } = useScrollChrome();
+  const [topInset, setTopInset] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      resetChrome();
+    }, [resetChrome]),
+  );
 
   // /home/articles filters server-side; when only a parent category is
   // active (sub=ALL), use that endpoint and skip catId filter below.
@@ -170,7 +182,7 @@ export default function NewsScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.screen}>
-      <TopNavBrand onMenuPress={useSideMenuStore.getState().open} />
+      <AnimatedTopBar onMeasure={setTopInset} onMenuPress={useSideMenuStore.getState().open} />
 
       {/* Category tabs */}
       <ScrollView
@@ -246,10 +258,13 @@ export default function NewsScreen({ navigation, route }: Props) {
           onRetry={refetch}
         />
       ) : (
-        <ScrollView
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <Animated.ScrollView
           style={styles.scrollBody}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: topInset }]}
           showsVerticalScrollIndicator={false}
+          onScroll={scrollHandler as any}
+          scrollEventThrottle={16}
         >
           {/* ── Latest News section ───────────────────────────────────── */}
           <View style={styles.newsSection}>
@@ -324,7 +339,7 @@ export default function NewsScreen({ navigation, route }: Props) {
             stories={previewStories}
             onSeeAll={() => {}}
           />
-        </ScrollView>
+        </Animated.ScrollView>
       )}
     </View>
   );
