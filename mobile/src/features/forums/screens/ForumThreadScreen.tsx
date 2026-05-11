@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, Pressable, Image, ActivityIndicator, StyleSheet,
-  type NativeSyntheticEvent, type NativeScrollEvent,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
+import Animated, { useAnimatedScrollHandler, runOnJS } from 'react-native-reanimated';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const AnimatedFlashList = Animated.createAnimatedComponent(FlashList) as any;
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -53,7 +56,8 @@ export default function ForumThreadScreen() {
   const persistedPage = useForumPaginationStore(selectForumPage(forum.id));
   const [currentPage, setCurrentPage] = useState(persistedPage);
   const [jumpSheetOpen, setJumpSheetOpen] = useState(false);
-  const listRef = useRef<React.ElementRef<typeof FlashList<ForumTopic>> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const listRef = useRef<any>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
 
@@ -201,25 +205,33 @@ export default function ForumThreadScreen() {
   // hide the bar so the UI doesn't lie about which page the user is on.
   const isFiltering = activeFlairId !== null || search.trim().length > 0;
 
-  const { hidden: barHidden, onScroll: handleListScroll } = useHideOnScroll();
+  const { hidden: barHidden, applyScroll: applyBarScroll } = useHideOnScroll();
 
   // Throttle scroll-position writes to the persistence store. 250ms is
   // responsive enough that a quick tap-to-topic-and-back lands within a few
   // px of where you were. Skip writes for 600ms after a page change so the
   // auto-scroll-to-0 doesn't overwrite the offset we want to remember.
   const lastSavedRef = useRef(0);
-  const handleScrollWithSave = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      handleListScroll(e);
+
+  // JS-thread callback called via runOnJS from the worklet handler.
+  const saveScrollY = useCallback(
+    (y: number) => {
       const now = Date.now();
       if (now - pageChangedAtRef.current < 600) return;
       if (now - lastSavedRef.current < 250) return;
       lastSavedRef.current = now;
-      const y = e.nativeEvent.contentOffset.y;
       useForumPaginationStore.getState().setForumScroll(forum.id, currentPage, y);
     },
-    [forum.id, currentPage, handleListScroll],
+    [forum.id, currentPage],
   );
+
+  const listScrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      'worklet';
+      applyBarScroll(e);
+      runOnJS(saveScrollY)(e.contentOffset.y);
+    },
+  });
 
   // Tracks when the current page changed — we suppress scroll-save writes for
   // a short window after, so the auto-scroll-to-0 on page change doesn't
@@ -265,12 +277,13 @@ export default function ForumThreadScreen() {
           onRetry={() => refetch()}
         />
       ) : (
-        <FlashList
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <AnimatedFlashList
           ref={listRef}
           data={filteredTopics}
-          keyExtractor={t => String(t.id)}
+          keyExtractor={(t: ForumTopic) => String(t.id)}
           renderItem={renderTopicItem}
-          onScroll={!isFiltering ? handleScrollWithSave : undefined}
+          onScroll={!isFiltering ? (listScrollHandler as any) : undefined}
           scrollEventThrottle={16}
           ListHeaderComponent={
             <View>

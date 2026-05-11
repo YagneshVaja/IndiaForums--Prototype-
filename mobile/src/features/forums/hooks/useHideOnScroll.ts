@@ -1,52 +1,52 @@
-import { useCallback, useRef, useState } from 'react';
-import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
+import type { NativeScrollEvent } from 'react-native';
 
 /**
- * Returns `hidden` (true while the user is scrolling DOWN) and an `onScroll`
- * handler to wire onto a list. Used to auto-hide the sticky pagination bar
- * while the user is reading and bring it back when they stop or scroll up.
+ * Worklet-based hide-on-scroll for an in-page bar (e.g. forums pagination bar).
  *
- *   - `hidden=true`  while scrolling down past the threshold
- *   - `hidden=false` when scrolling up, or near the top, or near the bottom
+ * Returns:
+ *   - `hidden`: SharedValue<number> (0 = visible, 1 = hidden) — drive an
+ *     Animated.View via useAnimatedStyle.
+ *   - `applyScroll`: worklet function — call from inside any
+ *     useAnimatedScrollHandler to update `hidden` based on scroll delta.
+ *   - `show`: JS function — force the bar visible (e.g. on a sort toggle).
  *
  * Mimics Twitter / Reddit / Instagram bar-hide behavior on mobile.
  */
 export function useHideOnScroll(threshold = 8) {
-  const [hidden, setHidden] = useState(false);
-  const lastY = useRef(0);
-  const lastDir = useRef<'up' | 'down' | null>(null);
+  const hidden = useSharedValue(0);
+  const lastY = useSharedValue(0);
 
-  const onScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const y = e.nativeEvent.contentOffset.y;
-      const layoutH = e.nativeEvent.layoutMeasurement.height;
-      const contentH = e.nativeEvent.contentSize.height;
-      const nearBottom = y + layoutH >= contentH - 60;
-      const nearTop = y < 80;
+  function applyScroll(e: NativeScrollEvent) {
+    'worklet';
+    const y = e.contentOffset.y;
+    const layoutH = e.layoutMeasurement.height;
+    const contentH = e.contentSize.height;
+    const delta = y - lastY.value;
+    lastY.value = y;
 
-      const delta = y - lastY.current;
-      lastY.current = y;
+    const nearTop = y < 80;
+    const nearBottom = y + layoutH >= contentH - 60;
 
-      if (nearTop || nearBottom) {
-        if (lastDir.current !== 'up') lastDir.current = 'up';
-        if (hidden) setHidden(false);
-        return;
-      }
+    if (nearTop || nearBottom) {
+      if (hidden.value !== 0) hidden.value = withTiming(0, { duration: 180 });
+      return;
+    }
 
-      if (delta > threshold && !hidden) {
-        setHidden(true);
-        lastDir.current = 'down';
-      } else if (delta < -threshold && hidden) {
-        setHidden(false);
-        lastDir.current = 'up';
-      }
-    },
-    [hidden, threshold],
-  );
+    if (delta > threshold && hidden.value !== 1) {
+      hidden.value = withTiming(1, { duration: 180 });
+    } else if (delta < -threshold && hidden.value !== 0) {
+      hidden.value = withTiming(0, { duration: 180 });
+    }
+  }
 
-  /** Force-reveals the bar — used when an action (e.g. sort toggle) shouldn't
-   * leave the bar in whatever scroll-derived state it had before. */
-  const show = useCallback(() => setHidden(false), []);
+  function show() {
+    hidden.value = withTiming(0, { duration: 180 });
+  }
 
-  return { hidden, onScroll, show };
+  return { hidden, applyScroll, show } as {
+    hidden: SharedValue<number>;
+    applyScroll: (e: NativeScrollEvent) => void;
+    show: () => void;
+  };
 }

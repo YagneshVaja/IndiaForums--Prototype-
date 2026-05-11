@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
+import Animated, { useAnimatedScrollHandler } from 'react-native-reanimated';
 import { useQuery } from '@tanstack/react-query';
 
 import LoadingState from '../../../components/ui/LoadingState';
@@ -28,7 +29,7 @@ export default function ForumListView({ onForumPress }: Props) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [jumpSheetOpen, setJumpSheetOpen] = useState(false);
-  const listRef = useRef<FlatList<Forum> | null>(null);
+  const listRef = useRef<any>(null);
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -131,7 +132,14 @@ export default function ForumListView({ onForumPress }: Props) {
   }
 
   const totalPages = firstPage?.totalPages ?? 1;
-  const { hidden: barHidden, onScroll: handleListScroll } = useHideOnScroll();
+  const { hidden: barHidden, applyScroll: applyBarScroll } = useHideOnScroll();
+
+  const listScrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      'worklet';
+      applyBarScroll(e);
+    },
+  });
 
   const handleJumpToPage = useCallback((page: number) => {
     setJumpSheetOpen(false);
@@ -154,13 +162,13 @@ export default function ForumListView({ onForumPress }: Props) {
 
   return (
     <View style={styles.flexFill}>
-    <FlatList
+    <Animated.FlatList
       ref={listRef}
       style={styles.flexFill}
       data={displayForums}
       keyExtractor={f => String(f.id)}
       renderItem={({ item }) => <ForumCard forum={item} onPress={onForumPress} />}
-      onScroll={!isSearchMode ? handleListScroll : undefined}
+      onScroll={!isSearchMode ? listScrollHandler : undefined}
       scrollEventThrottle={16}
       refreshControl={
         !isSearchMode ? (

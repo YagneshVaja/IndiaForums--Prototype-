@@ -7,12 +7,16 @@ import {
   StyleSheet,
   Platform,
   Keyboard,
+  type LayoutChangeEvent,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   Easing,
+  interpolate,
+  Extrapolation,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -27,8 +31,12 @@ interface Props {
   pageSize: number;
   totalItems: number;
   itemLabel: string;
-  /** True while the user is scrolling down — hides the bar to free up space. */
-  hidden?: boolean;
+  /**
+   * SharedValue<number> (0 = visible, 1 = hidden) — driven by worklet scroll handler.
+   * Legacy boolean is also accepted for backward-compatibility with consumers that
+   * haven't been migrated to worklet-based scroll handlers yet.
+   */
+  hidden?: SharedValue<number> | boolean;
   /**
    * Distance in px between the bar's natural bottom edge and the screen bottom
    * (i.e. the `bottom: N` value of the parent dock). Used to compute how far
@@ -75,17 +83,48 @@ export default function ForumPaginationBar({
     if (!editing) setDraft(String(currentPage));
   }, [currentPage, editing]);
 
-  const translateY = useSharedValue(0);
+  // Measure bar height for accurate translateY slide-out distance.
+  const [barHeight, setBarHeight] = useState(80);
+  const onLayout = (e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    if (h && h !== barHeight) setBarHeight(h);
+  };
 
-  // Hide-on-scroll behavior — only kicks in when not editing. While editing
-  // the keyboard listeners control the position.
+  // `keyboardOffset` tracks keyboard-lift: negative Y moves the bar up above
+  // the keyboard. Zero means the bar is in its normal bottom position.
+  const keyboardOffset = useSharedValue(0);
+
+  // Normalise `hidden` prop: accept either a SharedValue<number> (worklet path)
+  // or a legacy boolean (JS-thread path). We bridge the boolean into a local
+  // SharedValue so the animated style can always read `.value`.
+  const hiddenFallback = useSharedValue(0);
+  const hiddenSv: SharedValue<number> =
+    hidden !== null && hidden !== undefined && typeof hidden === 'object'
+      ? (hidden as SharedValue<number>)
+      : hiddenFallback;
+
+  // Sync boolean → fallback SharedValue on the JS thread.
   useEffect(() => {
-    if (editing) return;
-    translateY.value = withTiming(hidden ? 100 : 0, {
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [hidden, editing, translateY]);
+    if (typeof hidden === 'boolean') {
+      hiddenFallback.value = withTiming(hidden ? 1 : 0, { duration: 220 });
+    }
+  }, [hidden, hiddenFallback]);
+
+  // Worklet-driven hide: interpolate from the normalised SharedValue,
+  // then add keyboard offset so both animations compose correctly.
+  const animatedStyle = useAnimatedStyle(() => {
+    const hiddenVal = hiddenSv.value;
+    const hideTranslate = interpolate(hiddenVal, [0, 1], [0, barHeight], Extrapolation.CLAMP);
+    const hideOpacity  = interpolate(hiddenVal, [0, 1], [1, 0], Extrapolation.CLAMP);
+    return {
+      transform: [{ translateY: hideTranslate + keyboardOffset.value }],
+      // Only fade out when sliding off the bottom (positive Y). When lifted
+      // above the keyboard (negative Y), keep full opacity.
+      opacity: hideTranslate + keyboardOffset.value > 0
+        ? Math.max(0, hideOpacity)
+        : 1,
+    };
+  });
 
   // Lift the bar above the keyboard while the input is focused. We subtract
   // `bottomInset` because the dock may already sit above other UI (e.g. the
@@ -96,28 +135,23 @@ export default function ForumPaginationBar({
     const showSub = Keyboard.addListener(showEvt, (e) => {
       if (!editingRef.current) return;
       const targetY = bottomInset - e.endCoordinates.height;
-      translateY.value = withTiming(targetY, {
+      keyboardOffset.value = withTiming(targetY, {
         duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 250,
+        easing: Easing.out(Easing.cubic),
       });
     });
     const hideSub = Keyboard.addListener(hideEvt, (e) => {
       if (!editingRef.current) return;
-      translateY.value = withTiming(0, {
+      keyboardOffset.value = withTiming(0, {
         duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 250,
+        easing: Easing.out(Easing.cubic),
       });
     });
     return () => {
       showSub.remove();
       hideSub.remove();
     };
-  }, [bottomInset, translateY]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-    // Only fade out when sliding off the bottom (positive Y). When lifted
-    // above the keyboard (negative Y), keep full opacity.
-    opacity: translateY.value > 0 ? Math.max(0, 1 - translateY.value / 100) : 1,
-  }));
+  }, [bottomInset, keyboardOffset]);
 
   if (totalPages <= 1) return null;
 
@@ -175,7 +209,7 @@ export default function ForumPaginationBar({
   };
 
   return (
-    <Animated.View style={[styles.wrap, animatedStyle]}>
+    <Animated.View style={[styles.wrap, animatedStyle]} onLayout={onLayout}>
       <PageScrubber
         currentPage={currentPage}
         totalPages={totalPages}
