@@ -230,7 +230,7 @@ export default function NotificationsScreen({ navigation }: Props) {
             styles={styles}
           />
         </View>
-        {markRead.isPending ? (
+        {markRead.isPending || list.isPlaceholderData ? (
           <ActivityIndicator size="small" color={colors.primary} />
         ) : null}
       </View>
