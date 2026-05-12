@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -49,7 +49,7 @@ export default function NotificationsScreen({ navigation }: Props) {
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
 
-  const autoAdvanceCount = useRef(0);
+  const [autoAdvanceCount, setAutoAdvanceCount] = useState(0);
 
   const list = useNotificationsList({ page, templateIds: templateId });
   const unread = useUnreadCount();
@@ -82,20 +82,20 @@ export default function NotificationsScreen({ navigation }: Props) {
   // so paginating is the only way.
   useEffect(() => {
     if (filter !== 'unread') {
-      autoAdvanceCount.current = 0;
+      setAutoAdvanceCount(0);
       return;
     }
     if (list.isLoading || list.isRefetching) return;
     if (visible.length > 0) {
-      autoAdvanceCount.current = 0;
+      setAutoAdvanceCount(0);
       return;
     }
     if (unreadCount <= 0) return;
     if (page >= totalPages) return;
-    if (autoAdvanceCount.current >= 5) return;
-    autoAdvanceCount.current += 1;
+    if (autoAdvanceCount >= 5) return;
+    setAutoAdvanceCount((n) => n + 1);
     setPage((p) => p + 1);
-  }, [filter, visible.length, unreadCount, list.isLoading, list.isRefetching, page, totalPages]);
+  }, [filter, visible.length, unreadCount, list.isLoading, list.isRefetching, page, totalPages, autoAdvanceCount]);
 
   // If the badge is stale (no items found server-wide), force a refetch of
   // both queries so the badge can update to reality.
@@ -303,7 +303,7 @@ export default function NotificationsScreen({ navigation }: Props) {
               filter === 'unread'
                 ? unreadBadgeIsStale
                   ? 'All caught up'
-                  : unreadCount > 0 && autoAdvanceCount.current >= 5
+                  : unreadCount > 0 && autoAdvanceCount >= 5
                     ? "Couldn't load unread notifications"
                     : unreadCount > 0
                       ? 'Looking for unread…'
@@ -314,7 +314,7 @@ export default function NotificationsScreen({ navigation }: Props) {
               filter === 'unread'
                 ? unreadBadgeIsStale
                   ? 'Refreshing the unread count…'
-                  : unreadCount > 0 && autoAdvanceCount.current >= 5
+                  : unreadCount > 0 && autoAdvanceCount >= 5
                     ? 'Try pulling to refresh.'
                     : unreadCount > 0
                       ? 'Loading more pages.'
