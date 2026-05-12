@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { useAuthStore } from '../../../store/authStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
@@ -39,7 +40,7 @@ export default function WriteMovieReviewScreen() {
   const isEditing = !!existingReview;
 
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const queryClient = useQueryClient();
 

@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { QuizPlayer } from '../../../services/api';
 import MemberAvatar from './MemberAvatar';
@@ -13,8 +13,7 @@ interface Props {
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
 export default function LeaderboardRow({ player, totalQuestions }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const scoreLabel = totalQuestions
     ? `Score: ${player.score} / ${totalQuestions}`

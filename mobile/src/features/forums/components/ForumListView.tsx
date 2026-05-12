@@ -19,6 +19,7 @@ import { useScrollChrome } from '../../../components/layout/chromeScroll/useScro
 import { searchResults as apiSearchForums } from '../../../services/searchApi';
 import type { Forum } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -36,7 +37,7 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const listRef = useRef<any>(null);
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   // The Tab.Navigator's bottom bar is now position:absolute, so this component
   // extends to the device bottom. Lift the pagination dock by the tab bar
   // height so it sits above the bar, and pad the list bottom by both.

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -23,7 +24,7 @@ interface Props extends TextInputProps {
 export default function AuthInput({ label, icon, error, isPassword, ...rest }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const hasError = !!error;
 
   return (

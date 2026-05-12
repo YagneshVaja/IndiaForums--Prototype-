@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import { extractApiError, uploadPostImage } from '../../../services/api';
 import { hapticError, hapticSuccess, hapticTap } from '../../../utils/haptics';
@@ -48,7 +49,7 @@ function isValidUrl(s: string): boolean {
 
 export default function OwnWallComposer() {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const qc = useQueryClient();
   const profileQ = useProfile();
   const me = profileQ.data;

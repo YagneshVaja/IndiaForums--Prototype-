@@ -17,6 +17,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { MySpaceStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import { extractApiError } from '../../../services/api';
@@ -38,7 +39,7 @@ export default function MessageComposeScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const params = route.params ?? {};
   const recipientId = params.recipientId;

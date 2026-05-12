@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors, ThemeMode } from '../../../theme/tokens';
 
 // Soft horizontal wash sitting behind the orb row. Pattern borrowed from
@@ -136,9 +137,9 @@ function CategoryOrb({ category: c, styles, onPress }: OrbProps) {
 
 export default function StoriesStrip({ onItemPress }: Props) {
   const navigation = useNavigation<Nav>();
-  const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const colors = useThemeStore((s) => s.colors);
+  const styles = useThemedStyles(makeStyles);
   const stripGradient = STRIP_GRADIENT[mode];
 
   const handlePress = (c: Category) => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal, View, Text, Pressable, FlatList, StyleSheet,
   ActivityIndicator,
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { fetchForumHome, type Forum } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -17,7 +18,7 @@ interface Props {
 
 export default function ReportsForumPickerSheet({ visible, onClose, onPick }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const [forums,  setForums]  = useState<Forum[]>([]);
   const [loading, setLoading] = useState(false);

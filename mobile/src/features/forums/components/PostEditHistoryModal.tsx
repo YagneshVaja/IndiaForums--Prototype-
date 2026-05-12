@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal, View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getPostEditHistory, type PostEditHistoryEntry } from '../../../services/api';
 import { stripPostHtml } from '../utils/stripHtml';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -18,7 +19,7 @@ export default function PostEditHistoryModal({ postId, visible, onClose }: Props
   const [loading, setLoading] = useState(false);
   const [entries, setEntries] = useState<PostEditHistoryEntry[]>([]);
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   useEffect(() => {
     if (!visible || postId == null) {

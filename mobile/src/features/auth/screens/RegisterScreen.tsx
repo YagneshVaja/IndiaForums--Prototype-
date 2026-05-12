@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import AuthInput from '../components/AuthInput';
 import { useAuthStore } from '../../../store/authStore';
 import { extractApiError } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
@@ -35,7 +36,7 @@ const SUCCESS_GREEN = '#22C55E';
 export default function RegisterScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const register = useAuthStore(s => s.register);
   const [form, setForm] = useState({ fullName: '', username: '', email: '', password: '', confirmPassword: '' });
   const [errors, setErrors] = useState<Partial<typeof form>>({});

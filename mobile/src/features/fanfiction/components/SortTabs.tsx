@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { FF_SORT_TABS, type FanFictionSortTab } from '../../../services/api';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type SortId = FanFictionSortTab['id'];
@@ -12,8 +12,7 @@ interface Props {
 }
 
 export default function SortTabs({ active, onChange }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.wrap}>
       {FF_SORT_TABS.map((tab) => {

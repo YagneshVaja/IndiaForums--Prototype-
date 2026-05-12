@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import {
   getReportTypes,
@@ -34,7 +35,7 @@ interface Props {
 
 export default function ReportUserSheet({ visible, onClose, userId, userHandle }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const [reasons, setReasons] = useState<ReportTypeEntry[]>([]);
   const [loadingReasons, setLoadingReasons] = useState(false);

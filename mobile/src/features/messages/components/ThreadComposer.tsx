@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -27,7 +28,7 @@ export default function ThreadComposer({
   bottomInset = 0,
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const canSend = !!value.trim() && !isPending && !disabled;
   const overMeter = value.length >= METER_THRESHOLD;
   const overLimit = value.length >= MAX_CHARS;

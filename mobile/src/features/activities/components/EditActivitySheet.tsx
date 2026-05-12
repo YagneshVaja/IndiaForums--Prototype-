@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import { extractApiError } from '../../../services/api';
 import { hapticError, hapticSuccess } from '../../../utils/haptics';
@@ -33,7 +34,7 @@ const MAX_LEN = 1000;
 
 export default function EditActivitySheet({ visible, activity, onClose }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const qc = useQueryClient();
 
   const [text, setText] = useState('');

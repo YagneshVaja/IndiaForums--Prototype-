@@ -7,6 +7,7 @@ import { formatCount } from '../utils/format';
 import { useForumFollowStore } from '../store/forumFollowStore';
 import { useForumStats } from '../hooks/useForumStats';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -21,7 +22,7 @@ const ACCENT_SOFT = '#FFEDD5';
 
 function ForumCardImpl({ forum, onPress }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const { data: stats, isLoading: statsLoading } = useForumStats(forum.id);
   const followOverride = useForumFollowStore((s) => s.byForumId[forum.id]);

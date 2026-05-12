@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import Avatar from './Avatar';
 import type { NormalizedProfile } from '../hooks/useProfile';
@@ -24,7 +25,7 @@ interface Props {
 
 export default function ProfileHero({ profile, onEdit: _onEdit, onMessage }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const isOwn = profile.isOwnProfile;
   const qc = useQueryClient();
 

@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Text, Pressable, ScrollView, StyleSheet } from 'react-native';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 export interface SubFilter<K extends string> {
@@ -18,8 +18,7 @@ interface Props<K extends string> {
 // Mirrors the dropdown chevrons web uses (e.g. Feed → All / Scrapbook / Slambook /
 // Testimonial) without forcing a multi-step tap on mobile.
 export default function SubFilterPills<K extends string>({ filters, active, onChange }: Props<K>) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   return (
     <ScrollView

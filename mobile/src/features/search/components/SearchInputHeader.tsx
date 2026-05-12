@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useRef } from 'react';
 import {
   View, TextInput, Pressable, StyleSheet, Keyboard, Text,
   type NativeSyntheticEvent, type TextInputSubmitEditingEventData,
@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -35,7 +36,7 @@ export default function SearchInputHeader({
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const inputRef = useRef<TextInput | null>(null);
 
   function handleSubmit(e: NativeSyntheticEvent<TextInputSubmitEditingEventData>) {

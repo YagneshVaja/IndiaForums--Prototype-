@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useSideMenuStore } from '../../store/sideMenuStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useThemedStyles } from '../../theme/useThemedStyles';
 import type { ThemeColors } from '../../theme/tokens';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -46,19 +47,44 @@ function DarkModeToggle({
   styles: Styles;
 }) {
   const translateX = useRef(new Animated.Value(on ? 18 : 0)).current;
-  useEffect(() => {
+  // Drive the visual on/off locally so the pill background and thumb flip on
+  // the same frame as the press, instead of waiting for the global theme
+  // re-render (~240 subscribers) to propagate the new `on` prop back to us.
+  const [localOn, setLocalOn] = useState(on);
+  const lastAnimatedTo = useRef(on);
+
+  const animateTo = (next: boolean) => {
+    if (lastAnimatedTo.current === next) return;
+    lastAnimatedTo.current = next;
     Animated.timing(translateX, {
-      toValue: on ? 18 : 0,
+      toValue: next ? 18 : 0,
       duration: 180,
       useNativeDriver: true,
     }).start();
-  }, [on, translateX]);
+  };
+
+  // Reconcile if the prop diverges from local (e.g. theme set elsewhere).
+  useEffect(() => {
+    if (on !== localOn) {
+      setLocalOn(on);
+      animateTo(on);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [on]);
+
+  const handlePress = () => {
+    const next = !localOn;
+    setLocalOn(next);
+    animateTo(next); // fires on UI thread, doesn't wait for React render
+    onToggle();
+  };
+
   return (
     <Pressable
-      onPress={onToggle}
-      style={[styles.toggle, on && styles.toggleOn]}
+      onPress={handlePress}
+      style={[styles.toggle, localOn && styles.toggleOn]}
       accessibilityRole="switch"
-      accessibilityState={{ checked: on }}
+      accessibilityState={{ checked: localOn }}
       accessibilityLabel="Toggle dark mode"
     >
       <Animated.View style={[styles.toggleThumb, { transform: [{ translateX }] }]} />
@@ -192,7 +218,7 @@ export default function SideMenu() {
   const navigation = useNavigation<any>();
   const [mounted, setMounted] = useState(false);
 
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const translateX = useRef(new Animated.Value(-PANEL_WIDTH)).current;
   const scrimOpacity = useRef(new Animated.Value(0)).current;

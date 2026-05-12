@@ -9,6 +9,7 @@ import {
 } from '../../../services/api';
 import { countryFlag } from '../utils/format';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -25,7 +26,7 @@ export default function UserMiniCard({
   const [profile, setProfile] = useState<UserMiniProfile | null>(null);
   const [fetching, setFetching] = useState(false);
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   useEffect(() => {
     if (!visible || !post?.authorId) {

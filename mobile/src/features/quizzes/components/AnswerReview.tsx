@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { QuizQuestion } from '../../../services/api';
 
@@ -20,8 +20,7 @@ interface Props {
  * answer when wrong. Trivia-only (personality has no "correct" answer).
  */
 export default function AnswerReview({ questions, answers }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const byId = useMemo(() => {
     const m: Record<number, ReviewAnswer> = {};

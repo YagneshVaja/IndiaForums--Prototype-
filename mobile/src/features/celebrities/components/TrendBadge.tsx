@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { CELEB_TREND_UP, CELEB_TREND_DOWN, CELEB_TREND_FLAT } from '../utils/constants';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
 
 export default function TrendBadge({ trend, rankDiff, compact = false }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   if (trend === 'stable' || rankDiff === 0) {
     return (

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { ScrollView, Pressable, Text, StyleSheet } from 'react-native';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { QuizCategory } from '../../../services/api';
 
@@ -17,8 +17,7 @@ interface Props {
 }
 
 export default function CategoryChipsRow({ categories, activeCatId, onChange }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const chips: Chip[] = useMemo(
     () => [

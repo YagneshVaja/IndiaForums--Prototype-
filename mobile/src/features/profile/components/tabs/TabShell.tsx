@@ -1,6 +1,7 @@
-import React, { ReactNode, useMemo } from 'react';
+import React, { ReactNode } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useThemeStore } from '../../../../store/themeStore';
+import { useThemedStyles } from '../../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../../theme/tokens';
 import ErrorState from '../../../../components/ui/ErrorState';
 import EmptyState from '../EmptyState';
@@ -42,7 +43,7 @@ export default function TabShell({
   onPageChange,
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   if (isLoading) {
     return (

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useThemeStore } from '../../../../store/themeStore';
+import { useThemedStyles } from '../../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../../theme/tokens';
 import { useProfileTab } from '../../hooks/useProfileTab';
 import type { ActivityDto } from '../../types';
@@ -92,7 +93,7 @@ export default function ActivityTab({ userId, isOwn, viewedUserName }: Props) {
   const [filter, setFilter] = useState<ActivityTabKey>('activity');
   const q = useProfileTab({ tab: filter, userId, isOwn, page: 1 });
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const qc = useQueryClient();
   const meQ = useProfile();
   const meId = meQ.data?.userId;

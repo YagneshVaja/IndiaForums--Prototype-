@@ -11,6 +11,7 @@ import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
 import { CHANNELS_DATA, type ChannelShow } from '../data/channels';
@@ -43,7 +44,7 @@ interface Props {
 
 export default function ChannelsSection({ onShowPress }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const navigation = useNavigation<NavigationProp>();
 
   const [activeId, setActiveId] = useState<number>(CHANNELS_DATA[0].channelId);

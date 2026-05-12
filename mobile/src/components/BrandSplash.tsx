@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Image,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../store/themeStore';
+import { useThemedStyles } from '../theme/useThemedStyles';
 import type { ThemeColors } from '../theme/tokens';
 import SPLASH_LOGO from '../../assets/splash-logo.png';
 
@@ -152,7 +153,7 @@ const sharedStyles = StyleSheet.create({
 
 export default function BrandSplash({ onReady, holdMs = 2000 }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.86)).current;
   const logoY = useRef(new Animated.Value(20)).current;

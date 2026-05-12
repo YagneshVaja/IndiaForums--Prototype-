@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { MySpaceStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { usePushStore } from '../../../store/pushStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
@@ -45,7 +46,7 @@ export default function NotificationsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const [filter, setFilter] = useState<Filter>('all');
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);

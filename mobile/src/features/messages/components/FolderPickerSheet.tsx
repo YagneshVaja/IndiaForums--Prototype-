@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   Modal,
   View,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import { useFolders } from '../hooks/useMessages';
 import type { PmFolderDto } from '../types';
@@ -33,7 +34,7 @@ export default function FolderPickerSheet({
   title = 'Move to folder',
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const folders = useFolders();
 
   // Inbox row is synthetic (folderId=0 moves a message out of any folder).

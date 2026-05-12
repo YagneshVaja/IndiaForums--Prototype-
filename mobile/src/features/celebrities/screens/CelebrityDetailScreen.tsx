@@ -21,7 +21,7 @@ import DiscussionTab from '../components/DiscussionTab';
 import { useCelebrityBiography } from '../hooks/useCelebrityBiography';
 import { useCelebrityFans } from '../hooks/useCelebrityFans';
 import { useCelebrityDiscussion } from '../hooks/useCelebrityDiscussion';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type Route = RouteProp<HomeStackParamList, 'CelebrityProfile'>;
@@ -40,8 +40,7 @@ export default function CelebrityDetailScreen() {
   const navigation = useNavigation<Nav>();
   const { celebrity } = route.params;
   const [tab, setTab] = useState<TabId>('biography');
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const bioQuery = useCelebrityBiography(celebrity.id);
   const fansQuery = useCelebrityFans(celebrity.id);

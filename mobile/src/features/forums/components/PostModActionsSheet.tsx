@@ -12,6 +12,7 @@ import {
 } from '../../../services/api';
 import { stripPostHtml } from '../utils/stripHtml';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 export type PostActionKey =
@@ -57,7 +58,7 @@ export default function PostModActionsSheet({
   const [moveTarget,  setMoveTarget]  = useState<string>('');
 
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const menuItems: MenuItem[] = useMemo(() => {
     if (!post) return [];

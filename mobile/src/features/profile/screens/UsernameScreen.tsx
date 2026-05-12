@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import type { MySpaceStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { useAuthStore } from '../../../store/authStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
@@ -40,7 +41,7 @@ export default function UsernameScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);

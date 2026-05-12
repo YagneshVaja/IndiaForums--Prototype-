@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
 
 export default function StarRow({ percent, size = 14, color }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const filledTone = color ?? '#F5B400';
 
   // 0-100 → 0-5, snap to 0.5

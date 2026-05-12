@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import type { Movie } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import FilmographyRow from './FilmographyRow';
 import Spinner from './Spinner';
@@ -22,7 +23,7 @@ export default function FilmographyTab({
   movies, isLoading, isError, hasNextPage, isFetchingNextPage, onLoadMore, onRetry,
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   if (isLoading) return <Spinner text="Loading filmography..." />;
   if (isError)   return <ErrorBlock message="Couldn't load filmography" onRetry={onRetry} />;

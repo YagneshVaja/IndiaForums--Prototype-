@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import AuthInput from '../components/AuthInput';
 import { useAuthStore } from '../../../store/authStore';
 import { extractApiError } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import {
   isFacebookConfigured,
@@ -35,7 +36,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 export default function LoginScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const login = useAuthStore(s => s.login);
   const externalLogin = useAuthStore(s => s.externalLogin);
 

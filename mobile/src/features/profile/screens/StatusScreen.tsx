@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import type { MySpaceStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import ErrorState from '../../../components/ui/ErrorState';
@@ -37,7 +38,7 @@ export default function StatusScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const q = useQuery({
     queryKey: ['profile', 'status'],

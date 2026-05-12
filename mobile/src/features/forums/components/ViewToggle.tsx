@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 export type ViewMode = 'detailed' | 'compact';
@@ -13,7 +14,7 @@ interface Props {
 
 export default function ViewToggle({ mode, onChange }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.group}>
       <Pressable

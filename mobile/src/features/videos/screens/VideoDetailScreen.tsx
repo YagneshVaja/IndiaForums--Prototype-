@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import SectionHeader from '../../../components/ui/SectionHeader';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
 import type { Video } from '../../../services/api';
@@ -35,7 +36,7 @@ export default function VideoDetailScreen() {
   const route = useRoute<Rt>();
   const video = route.params.video;
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const { data: details } = useVideoDetails(video.id);
   const enriched = useMemo(() => ({ ...video, ...(details || {}) }), [video, details]);

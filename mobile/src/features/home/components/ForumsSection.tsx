@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import { useHomeForumTopics } from '../hooks/useHomeForumTopics';
 import { formatCount } from '../../forums/utils/format';
@@ -74,7 +75,7 @@ function synthesizeForumTopic(t: HomeForumTopic, displayName: string): ForumTopi
 export default function ForumsSection({ onTopicPress }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>('announcements');
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const navigation = useNavigation();
 
   const topicType = TABS.find((t) => t.id === activeTab)!.topicType;

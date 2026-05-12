@@ -30,6 +30,7 @@ import ErrorState from '../../../components/ui/ErrorState';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import SocialEmbed, { detectPlatform as detectSocialUrl } from '../../../components/ui/SocialEmbed';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -355,7 +356,7 @@ export default function ArticleDetailScreen({ route, navigation }: Props) {
   const [commentText, setCommentText] = useState('');
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const { data: article, isLoading, isError, refetch } = useQuery({
     queryKey: ['article', id],

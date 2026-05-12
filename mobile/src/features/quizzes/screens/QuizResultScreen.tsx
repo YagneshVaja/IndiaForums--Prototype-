@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import Animated, {
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import ErrorState from '../../../components/ui/ErrorState';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
 import { extractApiError } from '../../../services/api';
@@ -45,7 +46,7 @@ export default function QuizResultScreen() {
   const { id, score, answers = [], server = null } = params;
 
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const { data: quiz, isLoading, isError, error, refetch } = useQuizDetails(id);
 

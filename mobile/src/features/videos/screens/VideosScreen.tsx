@@ -7,7 +7,7 @@ import { TopNavBack } from '../../../components/layout/TopNavBar';
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
 import SectionHeader from '../../../components/ui/SectionHeader';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
 import { VIDEO_CAT_TABS, type Video } from '../../../services/api';
@@ -21,8 +21,7 @@ type Nav = NativeStackNavigationProp<HomeStackParamList, 'Videos'>;
 
 export default function VideosScreen() {
   const navigation = useNavigation<Nav>();
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const [activeCat, setActiveCat] = useState('all');
   const activeTab = VIDEO_CAT_TABS.find((t) => t.id === activeCat) || VIDEO_CAT_TABS[0];
 

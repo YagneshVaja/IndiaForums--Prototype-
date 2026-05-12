@@ -8,6 +8,7 @@ import {
   type TopicPost, type ThreadLiker,
 } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -24,7 +25,7 @@ export default function ReactionsSheet({ post, visible, onClose }: Props) {
   const [likers, setLikers]   = useState<ThreadLiker[]>([]);
   const [activeTab, setActiveTab] = useState<string>('all');
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   useEffect(() => {
     if (!visible || !post) return;

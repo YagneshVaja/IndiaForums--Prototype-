@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useThemeStore } from '../../../../store/themeStore';
+import { useThemedStyles } from '../../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../../theme/tokens';
 import type { MySpaceStackParamList } from '../../../../navigation/types';
 import { useProfileTab } from '../../hooks/useProfileTab';
@@ -19,8 +19,7 @@ export default function FFollowingTab({ userId, variant }: Props) {
   const [page, setPage] = useState(1);
   const tab = variant === 'following' ? 'ff-following' : 'ff-followers';
   const q = useProfileTab({ tab, userId, isOwn: true, page });
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const nav = useNavigation<NativeStackNavigationProp<MySpaceStackParamList>>();
 
   const data = q.data;

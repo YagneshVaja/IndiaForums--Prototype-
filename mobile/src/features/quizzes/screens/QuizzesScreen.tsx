@@ -13,6 +13,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import ErrorState from '../../../components/ui/ErrorState';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
 import { extractApiError, type Quiz } from '../../../services/api';
@@ -68,7 +69,7 @@ function applySort(quizzes: Quiz[], sort: SortKey): Quiz[] {
 export default function QuizzesScreen() {
   const navigation = useNavigation<Nav>();
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const [activeCatId, setActiveCatId] = useState<number | null>(null);
   const [sort, setSort] = useState<SortKey>('all');

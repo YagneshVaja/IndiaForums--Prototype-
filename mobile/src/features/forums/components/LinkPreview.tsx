@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, Linking, ActivityIndicator,
 } from 'react-native';
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useLinkOEmbed } from '../hooks/useLinkOEmbed';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -25,7 +26,7 @@ export default function LinkPreview({ url }: Props) {
   const { data, isLoading } = useLinkOEmbed(url);
   const [imageFailed, setImageFailed] = useState(false);
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const open = () => { Linking.openURL(url).catch(() => {}); };
 

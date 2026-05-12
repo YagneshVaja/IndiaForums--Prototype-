@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -8,8 +8,7 @@ interface Props {
 }
 
 export default function FanFictionSkeleton({ count = 5 }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const opacity = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {

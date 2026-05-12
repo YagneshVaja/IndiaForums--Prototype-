@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../../store/themeStore';
+import { useThemedStyles } from '../../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../../theme/tokens';
 import { useProfileTab } from '../../hooks/useProfileTab';
 import TabShell from './TabShell';
@@ -52,7 +53,7 @@ function StoriesList({ userId, isOwn }: { userId: number | string; isOwn: boolea
   const [page, setPage] = useState(1);
   const q = useProfileTab({ tab: 'fan-fictions', userId, isOwn, page });
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const data = q.data && q.data.kind === 'fan-fictions' ? q.data : null;
   const items = data?.items ?? [];

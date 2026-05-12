@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   Modal, Pressable, Text, StyleSheet, useWindowDimensions,
 } from 'react-native';
 import { REACTION_CODES, REACTION_META, type ReactionCode } from '../../../services/api';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 export interface AnchorRect {
@@ -31,8 +31,7 @@ export default function ReactionPickerSheet({
   visible, anchor, current, onPick, onClose,
 }: Props) {
   const { width: screenW } = useWindowDimensions();
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   let left = 0;
   let top  = 0;

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { MySpaceStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { useAuthStore } from '../../../store/authStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
@@ -50,7 +51,7 @@ export default function MyActivitiesScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const authUser = useAuthStore((s) => s.user);
   const qc = useQueryClient();
 

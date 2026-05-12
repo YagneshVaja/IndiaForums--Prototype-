@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   Text,
@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import PageScrubber from './PageScrubber';
 
@@ -70,7 +71,7 @@ export default function ForumPaginationBar({
   onPageChange,
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   // Local draft synced from `currentPage` while idle. While editing we leave
   // it alone so the user can type without their input getting overwritten.

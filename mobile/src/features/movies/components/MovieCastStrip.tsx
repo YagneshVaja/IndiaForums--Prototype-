@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { MovieCastMember } from '../../../services/api';
 
@@ -10,8 +10,7 @@ interface Props {
 }
 
 function MovieCastStripImpl({ cast }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <ScrollView
       horizontal

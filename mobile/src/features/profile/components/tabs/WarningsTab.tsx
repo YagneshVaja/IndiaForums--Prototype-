@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../../store/themeStore';
+import { useThemedStyles } from '../../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../../theme/tokens';
 import { useProfileTab } from '../../hooks/useProfileTab';
 import TabShell from './TabShell';
@@ -22,7 +23,7 @@ function levelMeta(c: ThemeColors): Record<number, { label: string; color: strin
 export default function WarningsTab({ userId }: Props) {
   const q = useProfileTab({ tab: 'warnings', userId, isOwn: true, page: 1 });
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const items = q.data && q.data.kind === 'warnings' ? q.data.items : [];
   const LEVEL_META = useMemo(() => levelMeta(colors), [colors]);
 

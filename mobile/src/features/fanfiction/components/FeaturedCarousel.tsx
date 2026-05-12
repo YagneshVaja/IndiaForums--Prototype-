@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -8,7 +8,7 @@ import {
   type NativeScrollEvent,
 } from 'react-native';
 import type { FanFiction } from '../../../services/api';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import FeaturedHeroCard from './FeaturedHeroCard';
 
@@ -23,8 +23,7 @@ const CARD_GAP = 10;
 const PEEK = 24;
 
 export default function FeaturedCarousel({ stories, rankLabel, onPress }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = screenWidth - H_PADDING * 2 - PEEK;
   const snapInterval = cardWidth + CARD_GAP;

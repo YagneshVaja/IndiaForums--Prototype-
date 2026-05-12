@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../../store/themeStore';
+import { useThemedStyles } from '../../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../../theme/tokens';
 import { useProfileTab } from '../../hooks/useProfileTab';
 import TabShell from './TabShell';
@@ -15,7 +16,7 @@ export default function DraftsTab({ userId }: Props) {
   const [page, setPage] = useState(1);
   const q = useProfileTab({ tab: 'drafts', userId, isOwn: true, page });
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const data = q.data && q.data.kind === 'drafts' ? q.data : null;
   const items = data?.items ?? [];
 

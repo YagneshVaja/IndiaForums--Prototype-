@@ -18,6 +18,7 @@ import type {
   RootStackParamList,
 } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import ErrorState from '../../../components/ui/ErrorState';
@@ -54,7 +55,7 @@ export default function ProfileScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const viewedUserId = route.params?.userId;
   const q = useProfile(viewedUserId);

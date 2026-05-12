@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   type NativeScrollEvent,
 } from 'react-native';
 
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { Quiz } from '../../../services/api';
 import FeaturedQuizCard, { type FeaturedKind } from './FeaturedQuizCard';
@@ -35,8 +35,7 @@ const AUTO_ADVANCE_MS = 5000;
 const PAUSE_AFTER_TOUCH_MS = 8000;
 
 function FeaturedCarouselImpl({ slides, freshnessLabel, onPress, onReroll }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const listRef = useRef<FlatList<FeaturedSlide>>(null);
   const [index, setIndex] = useState(0);
   const pausedUntilRef = useRef<number>(0);

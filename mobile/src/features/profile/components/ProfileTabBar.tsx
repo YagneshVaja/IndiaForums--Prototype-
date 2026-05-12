@@ -1,6 +1,6 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { ProfileTabKey } from '../hooks/useProfileTab';
 import { fmtNum } from '../utils/format';
@@ -58,8 +58,7 @@ interface Props {
 }
 
 export default function ProfileTabBar({ tabs, active, onChange }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const scrollRef = useRef<ScrollView | null>(null);
   const chipRefs = useRef<Record<string, { x: number; w: number } | undefined>>({});
 

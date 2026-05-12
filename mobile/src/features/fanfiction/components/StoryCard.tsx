@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import type { FanFiction } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -13,7 +14,7 @@ interface Props {
 
 function StoryCard({ story, onPress }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const [imgFailed, setImgFailed] = useState(false);
   const showImg = !!story.thumbnail && !imgFailed;
   const isCompleted = story.statusRaw === 1;

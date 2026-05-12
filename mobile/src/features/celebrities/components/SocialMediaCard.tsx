@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, Pressable, Linking, StyleSheet } from 'react-native';
 import type { CelebrityBiography } from '../../../services/api';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -9,8 +9,7 @@ interface Props {
 }
 
 export default function SocialMediaCard({ biography }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const links: { label: string; icon: string; url: string }[] = [];
   if (biography.instagram) links.push({ label: 'Instagram', icon: '📷', url: `https://instagram.com/${biography.instagram}` });

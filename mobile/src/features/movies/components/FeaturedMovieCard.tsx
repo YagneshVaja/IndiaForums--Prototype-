@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { Movie } from '../../../services/api';
 
@@ -32,8 +32,7 @@ const FALLBACK_GRADIENTS: { bg: string; accent: string }[] = [
 ];
 
 function FeaturedMovieCardImpl({ movie, onPress }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const [imgFailed, setImgFailed] = useState(false);
 
   const released = formatReleaseDate(movie.releaseDate, movie.startYear);

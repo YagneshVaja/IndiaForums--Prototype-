@@ -11,6 +11,7 @@ import PostHtml from './PostHtml';
 import type { AnchorRect } from './ReactionPickerSheet';
 import { ensureOpPost, useTopicLike } from '../hooks/useTopicLike';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -39,7 +40,7 @@ function TopicCardImpl({
 }: Props) {
   const detailed = viewMode === 'detailed';
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const { reaction, opLikeCount, pending, opPost } = useTopicLike(topic);
   const liked = reaction != null;

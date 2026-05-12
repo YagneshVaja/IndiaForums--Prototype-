@@ -1,8 +1,9 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useThemeStore } from '../../../../store/themeStore';
+import { useThemedStyles } from '../../../../theme/useThemedStyles';
 import type { MySpaceStackParamList } from '../../../../navigation/types';
 import { useProfileTab } from '../../hooks/useProfileTab';
 import TabShell from './TabShell';
@@ -18,7 +19,7 @@ export default function WatchingTab({ userId }: Props) {
   const [page, setPage] = useState(1);
   const q = useProfileTab({ tab: 'watching', userId, isOwn: true, page });
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const nav = useNavigation<NativeStackNavigationProp<MySpaceStackParamList>>();
   const data = q.data && q.data.kind === 'watching' ? q.data : null;
   const items = data?.items ?? [];

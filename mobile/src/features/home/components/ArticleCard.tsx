@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import type { Article } from '../../../services/api';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -11,8 +11,7 @@ interface Props {
 }
 
 function ArticleCardImpl({ article, onPress }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}

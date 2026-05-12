@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../store/themeStore';
+import { useThemedStyles } from '../../theme/useThemedStyles';
 import type { ThemeColors } from '../../theme/tokens';
 import LOGO_ICON from '../../../assets/icon.png';
 
@@ -27,7 +28,7 @@ export function TopNavBrand({
 }: BrandProps) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={[styles.safeWrap, { paddingTop: insets.top }]}>
       <View style={styles.bar}>
@@ -103,7 +104,7 @@ export function TopNavBack({
 }: BackProps) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   // Resolve final action list — prefer the array form, fall back to the
   // legacy single-icon props so existing callers don't have to change.

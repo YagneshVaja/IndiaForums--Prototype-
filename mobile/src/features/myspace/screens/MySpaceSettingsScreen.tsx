@@ -20,6 +20,7 @@ import type {
 } from '../../../navigation/types';
 import { useAuthStore } from '../../../store/authStore';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { usePushStore } from '../../../store/pushStore';
 import { registerForPush } from '../../../services/pushNotifications';
 import type { ThemeColors } from '../../../theme/tokens';
@@ -89,7 +90,7 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const tints = useMemo(() => tintColors(colors), [colors]);
   const user = useAuthStore((s) => s.user);
   const isModerator = useAuthStore((s) => s.isModerator);

@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import type { CelebrityBiography } from '../../../services/api';
 import { formatCount } from '../utils/formatCount';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -10,8 +10,7 @@ interface Props {
 }
 
 export default function StatsBar({ biography }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const stats: { icon: string; label: string; value: number }[] = [
     { icon: '👥', label: 'Fans',     value: biography.fanCount },

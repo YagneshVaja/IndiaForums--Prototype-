@@ -9,6 +9,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { NewsStackParamList } from '../../../navigation/types';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import { useNewsArticles } from '../hooks/useNewsData';
 import { useIsOnline } from '../../../hooks/useIsOnline';
@@ -32,7 +33,7 @@ const MAX_AUTO_FETCH_PAGES = 4;
 export default function ArticlesFullListScreen({ navigation, route }: Props) {
   const { category, subCat } = route.params;
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const isOnline = useIsOnline();
   const hasSubCatFilter = subCat !== 'all';

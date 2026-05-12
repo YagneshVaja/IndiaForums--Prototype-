@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { ScrollView, Pressable, Text, View, StyleSheet } from 'react-native';
 import { FF_GENRE_TABS } from '../../../services/api';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -10,8 +10,7 @@ interface Props {
 }
 
 export default function GenreChipsRow({ active, onChange }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.wrap}>
       <ScrollView

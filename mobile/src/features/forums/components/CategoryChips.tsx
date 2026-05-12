@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { ScrollView, Pressable, Text, StyleSheet, View } from 'react-native';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 export interface ChipItem {
@@ -17,8 +17,7 @@ interface Props {
 
 export default function CategoryChips({ chips, activeId, onChange, variant = 'primary' }: Props) {
   const primary = variant === 'primary';
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={primary ? styles.primaryWrap : styles.secondaryWrap}>
       <ScrollView

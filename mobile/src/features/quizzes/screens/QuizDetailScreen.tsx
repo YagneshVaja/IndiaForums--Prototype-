@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import ErrorState from '../../../components/ui/ErrorState';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
 import { extractApiError } from '../../../services/api';
@@ -23,7 +24,7 @@ export default function QuizDetailScreen() {
   const { id, title: paramTitle, thumbnail: paramThumb } = params;
 
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const { data: quiz, isLoading, isError, error, refetch } = useQuizDetails(id);
   const { data: players = [] } = useQuizPlayers(id);

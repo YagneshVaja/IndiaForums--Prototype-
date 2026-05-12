@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   Modal, View, Text, Pressable, ScrollView, StyleSheet,
 } from 'react-native';
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { formatCount } from '../utils/format';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { TopicTopPoster } from '../../../services/api';
 
@@ -23,7 +24,7 @@ interface Props {
  */
 export default function FrequentPostersSheet({ visible, posters, onClose }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>

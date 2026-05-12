@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 export interface FactItem { label: string; value: string }
@@ -13,8 +13,7 @@ interface Props {
 }
 
 export default function FactsCard({ title, icon, items }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const visible = items.filter((i): i is FactItem => !!i && !!i.value);
   if (visible.length === 0) return null;
   return (

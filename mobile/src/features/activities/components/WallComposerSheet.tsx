@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   View,
@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import { extractApiError } from '../../../services/api';
 import { postOnWall } from '../services/activitiesApi';
@@ -51,7 +52,7 @@ export default function WallComposerSheet({
   defaultKind,
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const qc = useQueryClient();
 
   const [kind, setKind] = useState<FeedKind>(defaultKind ?? 'scrapbook');

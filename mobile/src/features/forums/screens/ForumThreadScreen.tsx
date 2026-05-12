@@ -35,6 +35,7 @@ import { formatCount } from '../utils/format';
 import type { ForumsStackParamList } from '../../../navigation/types';
 import { searchTopics, setForumFollow, type Forum, type ForumTopic } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -46,7 +47,7 @@ export default function ForumThreadScreen() {
   const navigation = useNavigation<Nav>();
   const { forum } = useRoute<Rt>().params;
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   // Tab.Navigator's bottom bar is position:absolute (chrome hide-on-scroll),
   // so this screen extends to the device bottom. Lift the pagination dock and
   // the list's bottom padding by the bar height so neither sits behind it.

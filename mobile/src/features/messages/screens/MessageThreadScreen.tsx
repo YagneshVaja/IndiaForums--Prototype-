@@ -23,6 +23,7 @@ import * as Haptics from 'expo-haptics';
 
 import type { MySpaceStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { useAuthStore } from '../../../store/authStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
@@ -62,7 +63,7 @@ export default function MessageThreadScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const qc = useQueryClient();
   const meId = useAuthStore((s) => s.user?.userId);
   const meIdNum = useMemo(() => {

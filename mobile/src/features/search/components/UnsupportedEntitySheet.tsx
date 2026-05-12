@@ -1,9 +1,10 @@
-import React, { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import BottomSheet, { BottomSheetView, BottomSheetBackdrop, type BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 export interface UnsupportedEntityPayload {
@@ -21,7 +22,7 @@ export interface UnsupportedEntitySheetHandle {
 const UnsupportedEntitySheet = forwardRef<UnsupportedEntitySheetHandle, object>(
   function UnsupportedEntitySheet(_props, ref) {
     const colors = useThemeStore((s) => s.colors);
-    const styles = useMemo(() => makeStyles(colors), [colors]);
+    const styles = useThemedStyles(makeStyles);
     const sheetRef = useRef<BottomSheet>(null);
     const [payload, setPayload] = useState<UnsupportedEntityPayload | null>(null);
 

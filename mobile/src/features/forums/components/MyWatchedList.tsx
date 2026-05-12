@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, Pressable, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import BrandRefreshIndicator from '../../../components/ui/BrandPullToRefresh';
 import Animated, { useAnimatedScrollHandler } from 'react-native-reanimated';
@@ -19,6 +19,7 @@ import { useTopicReactionsStore } from '../store/topicReactionsStore';
 import { stripPostHtml } from '../utils/stripHtml';
 import type { ForumTopic, ReactionCode, TopicPost } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -31,7 +32,7 @@ interface Props {
 
 export default function MyWatchedList({ onTopicPress, topInset = 0 }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const queryClient = useQueryClient();
   const tabBarHeight = useBottomTabBarHeight();
   const { applyScroll: applyChromeScroll, resetChrome } = useScrollChrome();

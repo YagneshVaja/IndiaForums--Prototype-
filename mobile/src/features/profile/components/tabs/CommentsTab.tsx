@@ -1,10 +1,11 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useThemeStore } from '../../../../store/themeStore';
+import { useThemedStyles } from '../../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../../theme/tokens';
 import type { MySpaceStackParamList } from '../../../../navigation/types';
 import { useProfileTab } from '../../hooks/useProfileTab';
@@ -21,7 +22,7 @@ export default function CommentsTab({ userId, isOwn }: Props) {
   const [page, setPage] = useState(1);
   const q = useProfileTab({ tab: 'comments', userId, isOwn, page });
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const nav = useNavigation<NativeStackNavigationProp<MySpaceStackParamList>>();
 
   const data = q.data && q.data.kind === 'comments' ? q.data : null;

@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
 import type { Gallery } from '../../../services/api';
@@ -36,7 +37,7 @@ export default function GalleryDetailScreen() {
   const route = useRoute<Rt>();
   const colors = useThemeStore((s) => s.colors);
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   // Route accepts either a full Gallery (from list screens) or an id + hints
   // (from shorts / deep links). Build a placeholder in the id-only case so the

@@ -14,6 +14,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import { useHomeMediaGalleries } from '../hooks/useHomeMediaGalleries';
 import LoadingState from '../../../components/ui/LoadingState';
@@ -38,7 +39,7 @@ interface Props {
 
 export default function PhotoGallerySection({ onSeeAll, onGalleryPress }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const { data: galleries = [], isLoading } = useHomeMediaGalleries();
 
   const visible = useMemo(() => galleries.slice(0, PREVIEW_COUNT), [galleries]);

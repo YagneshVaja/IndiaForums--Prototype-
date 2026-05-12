@@ -43,16 +43,21 @@ interface ThemeState {
   toggle: () => void;
 }
 
+// Subscribers cascade is cheap now that each `useThemedStyles` call hits a
+// per-mode cache instead of re-running `StyleSheet.create`, so the update can
+// fire synchronously. Persistence still goes behind a `setTimeout(0)` so the
+// MMKV write never sits in the press-handler's task.
+function applyMode(set: (s: Partial<ThemeState>) => void, mode: ThemeMode) {
+  set({ mode, colors: themes[mode] });
+  setTimeout(() => storage.set(KEY, mode), 0);
+}
+
 export const useThemeStore = create<ThemeState>((set, get) => ({
   mode: loadInitialMode(),
   colors: themes[loadInitialMode()],
-  setMode: (mode) => {
-    storage.set(KEY, mode);
-    set({ mode, colors: themes[mode] });
-  },
+  setMode: (mode) => applyMode(set, mode),
   toggle: () => {
     const next: ThemeMode = get().mode === 'dark' ? 'light' : 'dark';
-    storage.set(KEY, next);
-    set({ mode: next, colors: themes[next] });
+    applyMode(set, next);
   },
 }));

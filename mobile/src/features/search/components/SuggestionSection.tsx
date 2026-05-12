@@ -1,14 +1,13 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import { entityMetadataLine } from '../utils/entityMetadata';
 
 interface Props { entityType: string; }
 
 export default function SuggestionSection({ entityType }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{entityMetadataLine(entityType).toUpperCase()}</Text>

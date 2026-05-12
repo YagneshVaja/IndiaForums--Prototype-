@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import AuthInput from '../components/AuthInput';
 import { forgotPassword } from '../../../services/authApi';
 import { extractApiError } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
@@ -24,7 +25,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 export default function ForgotPasswordScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

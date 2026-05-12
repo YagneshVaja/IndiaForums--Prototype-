@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '../../../navigation/types';
 import { markOnboardingComplete } from '../../../store/onboardingStore';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import SPLASH_LOGO from '../../../../assets/splash-logo.png';
 
@@ -47,7 +48,7 @@ const CHANNELS = ['Star Plus', 'Zee TV', 'Sony', 'Colors', 'SAB'] as const;
 
 export default function GetStartedScreen({ navigation }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   // Start at full opacity so content is always visible even if the
   // animation doesn't fire (e.g. unmount before useEffect completes).
   // Only animate translateY from a small offset to 0 for a subtle settle.

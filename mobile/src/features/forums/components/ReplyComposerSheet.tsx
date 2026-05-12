@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal, View, Text, TextInput, Pressable, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { replyToTopic, uploadPostImage, extractApiError } from '../../../services/api';
 import type { ForumTopic } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 const MAX_BYTES = 10 * 1024 * 1024; // matches API's 10MB cap
@@ -53,7 +54,7 @@ export default function ReplyComposerSheet({ visible, topic, quotedPost, onClose
   const [attachments,    setAttachments]    = useState<Attachment[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   useEffect(() => {
     if (!visible) return;

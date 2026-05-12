@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { WebStorySummary } from '../../../services/api';
 
@@ -25,7 +26,7 @@ function angleToStartEnd(angle: number) {
 
 function WebStoryCard({ story, onPress }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const [imgFailed, setImgFailed] = useState(false);
 
   const showImage = story.coverImage && !imgFailed;

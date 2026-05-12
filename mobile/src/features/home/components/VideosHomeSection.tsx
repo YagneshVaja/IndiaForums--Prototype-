@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
 import type { Video } from '../../../services/api';
@@ -22,7 +23,7 @@ function pickPreview(videos: Video[]): Video[] {
 
 export default function VideosHomeSection() {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const navigation = useNavigation<NavigationProp>();
 
   const { data, isLoading, isError } = useVideos(null);

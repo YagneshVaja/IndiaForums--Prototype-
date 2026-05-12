@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { SearchStackParamList } from '../../../navigation/types';
 import { useSearchStore } from '../../../store/searchStore';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { SearchResultItemDto } from '../../../services/searchApi';
 
@@ -30,7 +31,7 @@ type Styles = ReturnType<typeof makeStyles>;
 export default function SearchResultsScreen() {
   const navigation = useNavigation<Nav>();
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const query = useSearchStore((s) => s.query);
   const setQueryQuiet = useSearchStore((s) => s.setQueryQuiet);

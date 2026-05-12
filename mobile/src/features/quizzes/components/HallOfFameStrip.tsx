@@ -1,6 +1,6 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { QuizPlayer } from '../../../services/api';
 import MemberAvatar from './MemberAvatar';
@@ -14,8 +14,7 @@ interface Props {
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
 function HallOfFameStripImpl({ players, quizTitle, onSeeAll }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   if (!players.length) return null;
   const top = players.slice(0, 5);

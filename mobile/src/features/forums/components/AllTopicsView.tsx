@@ -22,6 +22,7 @@ import { formatCount } from '../utils/format';
 import { stripPostHtml } from '../utils/stripHtml';
 import type { ForumTopic, ReactionCode, TopicPost } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -36,7 +37,7 @@ export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('latest');
   const [viewMode, setViewMode] = useState<ViewMode>('detailed');
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const queryClient = useQueryClient();
   const tabBarHeight = useBottomTabBarHeight();
   const { applyScroll: applyChromeScroll, resetChrome } = useScrollChrome();

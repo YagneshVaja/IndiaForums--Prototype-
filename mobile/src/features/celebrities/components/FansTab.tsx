@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, FlatList, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import type { CelebrityFan } from '../../../services/api';
 import FanCard from './FanCard';
 import Spinner from './Spinner';
 import ErrorBlock from './ErrorBlock';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -27,7 +28,7 @@ export default function FansTab({
   onRetry,
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   if (isLoading) return <Spinner text="Loading fans..." />;
   if (isError)   return <ErrorBlock message="Couldn't load fans" onRetry={onRetry} />;

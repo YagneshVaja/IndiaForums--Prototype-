@@ -1,7 +1,8 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -28,7 +29,7 @@ const FALLBACK = { emoji: '🎯', from: '#3558F0', to: '#1E1B4B' } as const;
 
 function CategoryHeroImpl({ categoryName, quizCount, totalPlays }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const theme = CATEGORY_THEME[categoryName] ?? FALLBACK;
 

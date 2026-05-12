@@ -1,7 +1,8 @@
-import React, { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -20,7 +21,7 @@ const SearchBar = forwardRef<SearchBarHandle, Props>(function SearchBar(
   ref,
 ) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const inputRef = useRef<TextInput>(null);
 
   useImperativeHandle(ref, () => ({

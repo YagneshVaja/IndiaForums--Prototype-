@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { VisualStoryItem } from '../data/newsStaticData';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
 
 export default function NewsVisualStoriesSection({ stories, onSeeAll }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   if (stories.length === 0) return null;
 

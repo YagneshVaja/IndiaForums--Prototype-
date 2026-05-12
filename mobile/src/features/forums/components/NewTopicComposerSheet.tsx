@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator,
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { createTopic, type PollData } from '../../../services/api';
 import type { Forum, ForumFlair } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -32,7 +33,7 @@ const POLL_MAX_OPTIONS = 10;
 
 export default function NewTopicComposerSheet({ visible, forum, flairs, onClose, onCreated }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const [topicTypeId, setTopicTypeId]   = useState(1);
   const [subject,     setSubject]       = useState('');

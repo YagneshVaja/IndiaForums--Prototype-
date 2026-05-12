@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Movie } from '../../../services/api';
 import type { HomeStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
@@ -24,7 +25,7 @@ const TITLE_TYPE_LABEL: Record<number, string> = {
 function FilmographyRowImpl({ movie }: Props) {
   const navigation = useNavigation<Nav>();
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const rating = movie.averageRating > 0
     ? movie.averageRating

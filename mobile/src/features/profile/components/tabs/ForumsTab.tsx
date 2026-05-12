@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useThemeStore } from '../../../../store/themeStore';
+import { useThemedStyles } from '../../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../../theme/tokens';
 import type { MySpaceStackParamList } from '../../../../navigation/types';
 import { useProfileTab } from '../../hooks/useProfileTab';
@@ -23,7 +24,7 @@ export default function ForumsTab({ userId, isOwn }: Props) {
   const [page, setPage] = useState(1);
   const q = useProfileTab({ tab: 'forums', userId, isOwn, page });
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const nav = useNavigation<NativeStackNavigationProp<MySpaceStackParamList>>();
   const followOverrides = useForumFollowStore((s) => s.byForumId);
   const data = q.data && q.data.kind === 'forums' ? q.data : null;

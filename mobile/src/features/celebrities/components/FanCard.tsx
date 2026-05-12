@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import type { CelebrityFan } from '../../../services/api';
 import Initials from './Initials';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -10,8 +10,7 @@ interface Props {
 }
 
 export default function FanCard({ fan }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.card}>
       <Initials name={fan.name} size={44} bgColor={fan.avatarAccent} />

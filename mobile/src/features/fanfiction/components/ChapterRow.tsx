@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { FanFictionChapterSummary } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -28,7 +29,7 @@ function formatDate(d: string | null): string {
 
 function ChapterRow({ chapter, onPress }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const { orderNumber, chapterTitle, publishedAt, viewCount, likeCount, commentCount, membersOnly, mature } = chapter;
 
   return (

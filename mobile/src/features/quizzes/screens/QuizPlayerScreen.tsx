@@ -27,6 +27,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ErrorState from '../../../components/ui/ErrorState';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { useAuthStore } from '../../../store/authStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
@@ -74,7 +75,7 @@ export default function QuizPlayerScreen() {
   const colors = useThemeStore((s) => s.colors);
   const user   = useAuthStore((s) => s.user);
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const { data: quiz, isLoading, isError, error, refetch } = useQuizDetails(id);
 

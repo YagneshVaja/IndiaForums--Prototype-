@@ -1,11 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import ErrorState from '../../../components/ui/ErrorState';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
 import { GALLERY_CAT_TABS, type Gallery } from '../../../services/api';
@@ -23,8 +23,7 @@ type Styles = ReturnType<typeof makeStyles>;
 
 export default function GalleriesScreen() {
   const navigation = useNavigation<Nav>();
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const [activeCat, setActiveCat] = useState('all');
   const activeTab = GALLERY_CAT_TABS.find((t) => t.id === activeCat) || GALLERY_CAT_TABS[0];
   const isAll = activeCat === 'all';

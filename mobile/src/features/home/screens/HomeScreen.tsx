@@ -11,6 +11,7 @@ import { useNotificationBell } from '../../../hooks/useNotificationBell';
 import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 import { useSideMenuStore } from '../../../store/sideMenuStore';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import LoadingState from '../../../components/ui/LoadingState';
 import BrandRefreshIndicator from '../../../components/ui/BrandPullToRefresh';
@@ -50,7 +51,7 @@ export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const { scrollHandler, resetChrome } = useScrollChrome();
   const [topInset, setTopInset] = useState(0);

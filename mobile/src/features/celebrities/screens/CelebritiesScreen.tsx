@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,7 +10,7 @@ import type { Celebrity, CelebCategoryId } from '../../../services/api';
 import { useCelebritiesRanking } from '../hooks/useCelebritiesRanking';
 import { CELEB_CATEGORY_TABS } from '../utils/constants';
 import { formatRankRange } from '../utils/formatDate';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 import HeroCard from '../components/HeroCard';
@@ -25,8 +25,7 @@ export default function CelebritiesScreen() {
   const navigation = useNavigation<Nav>();
   const [activeCat, setActiveCat] = useState<CelebCategoryId>('bollywood');
   const { data, isLoading, error, refetch } = useCelebritiesRanking();
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const celebs = useMemo<Celebrity[]>(() => {
     if (!data) return [];

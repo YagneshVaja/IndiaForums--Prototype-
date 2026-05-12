@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, Pressable, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import BrandRefreshIndicator from '../../../components/ui/BrandPullToRefresh';
 import Animated, { useAnimatedScrollHandler } from 'react-native-reanimated';
@@ -15,6 +15,7 @@ import { useMyFavouriteForums } from '../hooks/useMyFavouriteForums';
 import { useForumFollowStore } from '../store/forumFollowStore';
 import type { Forum, InvitedForum } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -25,7 +26,7 @@ interface Props {
 export default function MyForumsList({ onForumPress, topInset = 0 }: Props) {
   const [showInvites, setShowInvites] = useState(false);
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const tabBarHeight = useBottomTabBarHeight();
   const { applyScroll: applyChromeScroll, resetChrome } = useScrollChrome();
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, Linking, ActivityIndicator,
 } from 'react-native';
@@ -15,6 +15,7 @@ import {
   type SocialPlatform,
 } from '../utils/socialUrls';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -54,7 +55,7 @@ export default function SocialEmbed({ url, width }: Props) {
 // ── YouTube ──────────────────────────────────────────────────────────────────
 function YouTubeEmbed({ url, width }: { url: string; width?: number }) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const videoId = extractYouTubeId(url);
   if (!videoId) return <FallbackLink url={url} platform="YouTube" />;
   const h = width ? Math.round(width * (9 / 16)) : DEFAULT_HEIGHTS.youtube;
@@ -293,7 +294,7 @@ function AutoHeightWebView({
   const [failed, setFailed] = useState(false);
   const hasMeasuredRef = useRef(false);
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -380,7 +381,7 @@ function platformLabel(p: SocialPlatform): string {
 // ── Fallback link card (when embed fails or platform unknown) ────────────────
 function FallbackLink({ url, platform }: { url: string; platform: string }) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <Pressable style={styles.fallback} onPress={() => Linking.openURL(url).catch(() => {})}>
       <View style={styles.fallbackIcon}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import type { MySpaceStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { useAuthStore } from '../../../store/authStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
@@ -52,7 +53,7 @@ export default function EditProfileScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const [section, setSection] = useState<SectionKey>('profile');
 
   return (
@@ -91,7 +92,7 @@ export default function EditProfileScreen({ navigation }: Props) {
 
 function ProfileForm() {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const q = useProfile();
   const updateAuthUser = useAuthStore((s) => s.updateUser);
   const nav = useNavigation<NativeStackNavigationProp<MySpaceStackParamList>>();
@@ -433,7 +434,7 @@ function GenderRadio({
   onChange: (v: 0 | 1 | 2 | 3) => void;
 }) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.radioGroup}>
       {GENDER_OPTIONS.map((opt) => {
@@ -501,7 +502,7 @@ function SocialInput({
   onChange: (v: string) => void;
 }) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const meta = SOCIAL_META[platform];
   return (
     <View style={styles.socialField}>
@@ -562,7 +563,7 @@ const PERMISSION_PREFS: { key: keyof UserPreferencesDto; label: string }[] = [
 
 function PreferencesForm() {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const q = usePreferences();
   const [prefs, setPrefs] = useState<UserPreferencesDto | null>(null);
   const [saving, setSaving] = useState(false);
@@ -646,7 +647,7 @@ function PrefGroup({
   onToggle: (key: keyof UserPreferencesDto) => void;
 }) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.prefGroup}>
       <Text style={styles.prefGroupTitle}>{title}</Text>
@@ -688,7 +689,7 @@ function Field({
   children: React.ReactNode;
 }) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -700,7 +701,7 @@ function Field({
 
 function Banner({ kind, text }: { kind: 'error' | 'success'; text: string }) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={[styles.banner, kind === 'error' ? styles.bannerError : styles.bannerSuccess]}>
       <Ionicons

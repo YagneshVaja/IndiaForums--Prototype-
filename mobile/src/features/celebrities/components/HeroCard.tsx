@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, Pressable, ImageBackground, StyleSheet } from 'react-native';
 import type { Celebrity } from '../../../services/api';
 import TrendBadge from './TrendBadge';
 import Initials from './Initials';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -14,8 +14,7 @@ interface Props {
 }
 
 export default function HeroCard({ celeb, onPress }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const hasImage = !!celeb.thumbnail;
   return (
     <Pressable

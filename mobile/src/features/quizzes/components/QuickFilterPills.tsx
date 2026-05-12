@@ -1,6 +1,6 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo } from 'react';
 import { ScrollView, Pressable, Text, StyleSheet } from 'react-native';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 export type SortKey = 'all' | 'trending' | 'quick' | 'personality' | 'trivia';
@@ -19,8 +19,7 @@ const PILLS: { key: SortKey; label: string; icon: string }[] = [
 ];
 
 function QuickFilterPillsImpl({ active, onChange }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   return (
     <ScrollView

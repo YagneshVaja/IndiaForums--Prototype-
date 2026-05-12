@@ -19,6 +19,7 @@ import { useQuery } from '@tanstack/react-query';
 import ErrorState from '../../../components/ui/ErrorState';
 import LoadingState from '../../../components/ui/LoadingState';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
 import {
@@ -65,7 +66,7 @@ export default function ChapterReaderScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<R>();
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { fanFictionId, chapterId } = route.params;

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { ONBOARDING_SLIDES } from '../data/onboardingSlides';
 import { OnboardingStackParamList } from '../../../navigation/types';
 import { OnboardingSlide as SlideType } from '../types';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -29,7 +30,7 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'OnboardingSlides'
 export default function OnboardingScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList<SlideType>>(null);
   const isLastSlide = currentIndex === ONBOARDING_SLIDES.length - 1;

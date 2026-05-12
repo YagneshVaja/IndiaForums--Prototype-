@@ -3,6 +3,7 @@ import { View, Text, Pressable, Modal, StyleSheet, ScrollView } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import type { ForumFlair } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
 export default function FlairDropdown({ flairs, activeId, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const activeLabel = useMemo(() => {
     if (activeId == null) return 'All';
     return flairs.find(f => f.id === activeId)?.name || 'All';

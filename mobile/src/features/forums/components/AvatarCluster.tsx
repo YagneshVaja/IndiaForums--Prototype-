@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { TopicTopPoster } from '../../../services/api';
 
@@ -21,8 +21,7 @@ const OVERLAP = 8;
  * "X people did this" without spending a full row on a horizontal scroll.
  */
 export default function AvatarCluster({ posters, maxVisible = 5, onPress }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   if (posters.length === 0) return null;
 

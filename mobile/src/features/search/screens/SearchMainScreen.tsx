@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View, Text, FlatList, StyleSheet, Pressable,
 } from 'react-native';
@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { SearchStackParamList } from '../../../navigation/types';
 import { useSearchStore } from '../../../store/searchStore';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { SuggestItemDto } from '../../../services/searchApi';
 
@@ -45,7 +46,7 @@ const BROWSE_TILES: { label: string; icon: IoniconName; entityType: string; seed
 export default function SearchMainScreen() {
   const navigation = useNavigation<Nav>();
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const query = useSearchStore((s) => s.query);
   const setQuery = useSearchStore((s) => s.setQuery);

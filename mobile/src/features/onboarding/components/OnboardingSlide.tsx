@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, useWindowDimensions, Animated } from 'react-native';
 import { OnboardingSlide as SlideType } from '../types';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import CommunityHero from './slideHeroes/CommunityHero';
 import DiscussionHero from './slideHeroes/DiscussionHero';
@@ -19,8 +19,7 @@ interface Props {
 
 export function OnboardingSlide({ slide }: Props) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const Hero = HEROES[slide.id];
   const scale = useRef(new Animated.Value(0.96)).current;
 

@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, Linking, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../store/themeStore';
+import { useThemedStyles } from '../../theme/useThemedStyles';
 import type { ThemeColors } from '../../theme/tokens';
 
 export type SocialPlatform =
@@ -164,7 +165,7 @@ function EmbedWebView({
   externalUrl,
 }: EmbedWebViewProps) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const [height, setHeight] = useState(initialHeight);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -261,7 +262,7 @@ function youtubeHtml(videoId: string) {
 
 function YouTubeEmbed({ videoId }: { videoId: string }) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.youtubeWrap}>
       <WebView
@@ -302,7 +303,7 @@ function FallbackLink({
   icon: keyof typeof Ionicons.glyphMap;
 }) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <Pressable style={styles.fallback} onPress={() => Linking.openURL(url).catch(() => {})}>
       <View style={styles.fallbackIcon}>

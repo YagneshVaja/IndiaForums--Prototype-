@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import SectionHeader from '../../../components/ui/SectionHeader';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { useAuthStore } from '../../../store/authStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
@@ -72,7 +73,7 @@ export default function MovieDetailScreen() {
   const navigation = useNavigation<Nav>();
   const { movie } = route.params;
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const { cast, reviews } = useMovieDetail(movie.titleId);
   // Lazy: gate the bottom-of-screen sections so cold-load only fetches the

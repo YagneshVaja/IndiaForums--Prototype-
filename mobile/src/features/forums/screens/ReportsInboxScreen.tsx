@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator,
 } from 'react-native';
@@ -14,6 +14,7 @@ import {
   type ReportedTopic, type ReportedPost,
 } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { ForumsStackParamList } from '../../../navigation/types';
 
@@ -24,7 +25,7 @@ export default function ReportsInboxScreen() {
   const navigation = useNavigation<Nav>();
   const { forum } = useRoute<Rt>().params;
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const [topics, setTopics]   = useState<ReportedTopic[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +112,7 @@ function ReportedPostsView({
   onBack:  () => void;
 }) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const [posts,   setPosts]   = useState<ReportedPost[]>([]);
   const [loading, setLoading] = useState(true);

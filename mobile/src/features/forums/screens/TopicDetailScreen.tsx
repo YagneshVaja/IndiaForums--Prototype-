@@ -48,6 +48,7 @@ import { stripPostHtml } from '../utils/stripHtml';
 import { formatCount } from '../utils/format';
 import { useAuthStore } from '../../../store/authStore';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { ForumsStackParamList } from '../../../navigation/types';
 import {
@@ -86,7 +87,7 @@ function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams
   const currentUser = useAuthStore(s => s.user);
   const queryClient = useQueryClient();
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const tabBarHeight = useBottomTabBarHeight();
   const { resetChrome } = useScrollChrome();
 

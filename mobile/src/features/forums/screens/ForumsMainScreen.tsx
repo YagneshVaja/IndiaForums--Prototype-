@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,6 +10,7 @@ import MyView from '../components/MyView';
 import type { ForumsStackParamList } from '../../../navigation/types';
 import type { Forum, ForumTopic } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import { useSideMenuStore } from '../../../store/sideMenuStore';
 import AnimatedTopBar from '../../../components/layout/chromeScroll/AnimatedTopBar';
@@ -24,7 +25,7 @@ export default function ForumsMainScreen() {
   const navigation = useNavigation<Nav>();
   const [tab, setTab] = useState<TopTab>('forums');
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const { resetChrome } = useScrollChrome();
   const [topInset, setTopInset] = useState(0);
   const { notifCount, openNotifications } = useNotificationBell();

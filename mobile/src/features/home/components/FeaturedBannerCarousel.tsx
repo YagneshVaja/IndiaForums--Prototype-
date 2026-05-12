@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import type { Banner } from '../../../services/api';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 const CARD_W = 280;
@@ -72,8 +72,7 @@ const BannerCard = React.memo(function BannerCard({ banner, onPress, styles }: {
 
 export default function FeaturedBannerCarousel({ banners, onPress }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {

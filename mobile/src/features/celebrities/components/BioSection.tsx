@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import type { BioSection as BioSectionData, BioImage } from '../utils/parseBioHtml';
 import { SECTION_ICONS } from '../utils/parseBioHtml';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -12,8 +12,7 @@ interface Props {
 }
 
 export default function BioSection({ section, onImagePress }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const icon = SECTION_ICONS[section.title] || '📌';
   return (
     <View style={styles.card}>

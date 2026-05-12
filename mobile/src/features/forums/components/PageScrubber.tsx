@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import Animated, {
   Easing,
@@ -10,7 +10,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -36,8 +36,7 @@ export default function PageScrubber({
   totalPages,
   onPageChange,
 }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const [trackWidth, setTrackWidth] = useState(0);
   const [previewPage, setPreviewPage] = useState<number | null>(null);

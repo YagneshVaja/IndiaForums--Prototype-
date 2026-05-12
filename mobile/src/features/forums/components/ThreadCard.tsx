@@ -6,6 +6,7 @@ import type { ForumTopic, Forum, ForumFlair } from '../../../services/api';
 import { formatCount } from '../utils/format';
 import { stripPostHtml } from '../utils/stripHtml';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -21,7 +22,7 @@ function ThreadCardImpl({ topic, forum, flairs, onPress }: Props) {
   const bg = forum?.bg || '#1e3a5e';
   const emoji = forum?.emoji || '💬';
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const descriptionPreview = useMemo(
     () => stripPostHtml(topic.description),

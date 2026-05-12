@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Pressable, Text, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -14,7 +15,7 @@ interface Props {
 
 export default function BrowseTile({ label, icon, onPress }: Props) {
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   return (
     <Pressable
       onPress={onPress}

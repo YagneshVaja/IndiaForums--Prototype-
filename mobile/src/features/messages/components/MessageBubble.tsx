@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import Avatar from '../../profile/components/Avatar';
 import { fmtDate, stripHtmlKeepBreaks, timeAgo } from '../../profile/utils/format';
@@ -21,8 +21,7 @@ function MessageBubbleImpl({
   isLastInGroup,
   onLongPress,
 }: Props) {
-  const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
   const [showTime, setShowTime] = useState(false);
   const name = message.displayName || message.userName;
   const body = stripHtmlKeepBreaks(message.message);

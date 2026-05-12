@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { useThemeStore } from '../../../../store/themeStore';
+import { useThemedStyles } from '../../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../../theme/tokens';
 import { useProfileTab } from '../../hooks/useProfileTab';
 import TabShell from './TabShell';
@@ -15,7 +16,7 @@ interface Props {
 export default function FavoritesTab({ userId, isOwn }: Props) {
   const q = useProfileTab({ tab: 'favorites', userId, isOwn, page: 1 });
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const data = q.data && q.data.kind === 'favorites' ? q.data : null;
   const isEmpty =

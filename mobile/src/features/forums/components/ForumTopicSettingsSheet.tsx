@@ -11,6 +11,7 @@ import {
   type Forum, type ForumTopic, type TopicActionLog,
 } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
@@ -54,7 +55,7 @@ export default function ForumTopicSettingsSheet({
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const colors = useThemeStore((s) => s.colors);
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useThemedStyles(makeStyles);
 
   const menuItems: MenuItem[] = useMemo(() => {
     const items: MenuItem[] = [];
