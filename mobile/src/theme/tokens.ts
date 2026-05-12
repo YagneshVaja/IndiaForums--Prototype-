@@ -29,8 +29,8 @@ export interface ThemeColors {
 }
 
 export const lightColors: ThemeColors = {
-  bg: '#F5F6F7',
-  surface: '#F5F6F7',
+  bg: '#F8F5F0',
+  surface: '#F8F5F0',
   card: '#FFFFFF',
   cardElevated: '#FFFFFF',
   border: '#E2E2E2',

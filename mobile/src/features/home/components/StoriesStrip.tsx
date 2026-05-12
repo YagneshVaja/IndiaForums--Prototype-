@@ -16,11 +16,12 @@ import type { ThemeColors, ThemeMode } from '../../../theme/tokens';
 
 // Soft horizontal wash sitting behind the orb row. Pattern borrowed from
 // Paytm / PhonePe / Tata Neu quick-action strips — a subtle warm-to-cool
-// gradient grounds the icons without competing with their saturated colors,
-// and the white "halo" around each orb pops crisply against it.
+// sweep grounds the icons without competing with their saturated colors.
+// Dark stops are deeper than card (#1C1D22) and lighter than bg (#0E0F12)
+// so the strip reads as its own zone — same warm→cool feel as light mode.
 const STRIP_GRADIENT: Record<ThemeMode, readonly [string, string, string]> = {
-  light: ['#FFF5EC', '#FFE6DA', '#EFE7FF'],
-  dark:  ['#1F1A20', '#1C1D22', '#1A1C28'],
+  light: ['#FFF1E8', '#FFE2D8', '#ECE4FF'],
+  dark:  ['#2B1F2E', '#1F1B28', '#1B2230'],
 };
 
 type MciName = ComponentProps<typeof MaterialCommunityIcons>['name'];
