@@ -39,3 +39,17 @@ export async function setStoredDeviceTokenId(id: string): Promise<void> {
 export async function clearStoredDeviceTokenId(): Promise<void> {
   await secure.deleteItemAsync(KEY);
 }
+
+const BANNER_KEY = 'if_push_banner_dismissed';
+
+export async function getStoredBannerDismissed(): Promise<boolean> {
+  return (await secure.getItemAsync(BANNER_KEY)) === '1';
+}
+
+export async function setStoredBannerDismissed(v: boolean): Promise<void> {
+  if (v) {
+    await secure.setItemAsync(BANNER_KEY, '1');
+  } else {
+    await secure.deleteItemAsync(BANNER_KEY);
+  }
+}

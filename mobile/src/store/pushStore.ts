@@ -1,5 +1,6 @@
 // mobile/src/store/pushStore.ts
 import { create } from 'zustand';
+import { getStoredBannerDismissed, setStoredBannerDismissed } from '../services/pushStorage';
 
 export type PushPermissionStatus = 'undetermined' | 'granted' | 'denied' | 'unavailable';
 
@@ -15,6 +16,7 @@ type PushState = {
   setDeviceTokenId: (id: string | null) => void;
   setError: (msg: string | null) => void;
   dismissBanner: () => void;
+  hydrateBannerDismissed: () => Promise<void>;
   reset: () => void;
 };
 
@@ -32,6 +34,13 @@ export const usePushStore = create<PushState>((set) => ({
   setToken: (t) => set({ expoPushToken: t }),
   setDeviceTokenId: (id) => set({ deviceTokenId: id }),
   setError: (msg) => set({ lastError: msg }),
-  dismissBanner: () => set({ bannerDismissed: true }),
+  dismissBanner: () => {
+    set({ bannerDismissed: true });
+    setStoredBannerDismissed(true).catch(() => {});
+  },
+  hydrateBannerDismissed: async () => {
+    const v = await getStoredBannerDismissed();
+    set({ bannerDismissed: v });
+  },
   reset: () => set({ ...initial }),
 }));

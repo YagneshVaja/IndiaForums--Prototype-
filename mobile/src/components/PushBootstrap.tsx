@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useAuthStore } from '../store/authStore';
+import { usePushStore } from '../store/pushStore';
 import {
   registerForPush,
   deregisterFromPush,
@@ -17,8 +18,9 @@ export default function PushBootstrap(): null {
   const authRef = useRef(isAuthenticated);
   authRef.current = isAuthenticated;
 
-  // Install listeners once on mount.
+  // Install listeners once on mount. Also hydrate persisted banner dismissal.
   useEffect(() => {
+    void usePushStore.getState().hydrateBannerDismissed();
     installPushListeners({
       isAuthenticated: () => authRef.current,
       queryClient,
