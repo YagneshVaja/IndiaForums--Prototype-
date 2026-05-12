@@ -1,7 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
+import Animated, { useAnimatedScrollHandler } from 'react-native-reanimated';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
@@ -15,12 +18,22 @@ import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
   onForumPress: (forum: Forum) => void;
+  topInset?: number;
 }
 
-export default function MyForumsList({ onForumPress }: Props) {
+export default function MyForumsList({ onForumPress, topInset = 0 }: Props) {
   const [showInvites, setShowInvites] = useState(false);
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const tabBarHeight = useBottomTabBarHeight();
+  const { applyScroll: applyChromeScroll, resetChrome } = useScrollChrome();
+
+  const listScrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      'worklet';
+      applyChromeScroll(e);
+    },
+  });
 
   const {
     data,
@@ -64,12 +77,22 @@ export default function MyForumsList({ onForumPress }: Props) {
   );
 
   return (
-    <FlatList
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    <Animated.FlatList
       data={forums}
       keyExtractor={f => String(f.id)}
       renderItem={({ item }) => <ForumCard forum={item} onPress={onForumPress} />}
+      onScroll={listScrollHandler as any}
+      scrollEventThrottle={16}
       refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={() => {
+            resetChrome();
+            refetch();
+          }}
+          tintColor={colors.primary}
+        />
       }
       onEndReached={() => {
         if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -110,7 +133,11 @@ export default function MyForumsList({ onForumPress }: Props) {
           </View>
         ) : null
       }
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        topInset > 0 && { paddingTop: topInset },
+        { paddingBottom: tabBarHeight + 24 },
+      ]}
     />
   );
 }
@@ -210,7 +237,6 @@ function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     content: {
       paddingTop: 0,
-      paddingBottom: 24,
     },
     countRow: {
       flexDirection: 'row',

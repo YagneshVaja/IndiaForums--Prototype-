@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
+import Animated, { useAnimatedScrollHandler } from 'react-native-reanimated';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useQueryClient } from '@tanstack/react-query';
+import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
@@ -25,14 +28,24 @@ interface Props {
     topic: ForumTopic,
     opts?: { jumpToLast?: boolean; autoAction?: 'like' | 'reply' | 'quote' },
   ) => void;
+  topInset?: number;
 }
 
-export default function AllTopicsView({ onTopicPress }: Props) {
+export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('latest');
   const [viewMode, setViewMode] = useState<ViewMode>('detailed');
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const queryClient = useQueryClient();
+  const tabBarHeight = useBottomTabBarHeight();
+  const { applyScroll: applyChromeScroll, resetChrome } = useScrollChrome();
+
+  const listScrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      'worklet';
+      applyChromeScroll(e);
+    },
+  });
 
   const [composerTopic, setComposerTopic] = useState<ForumTopic | null>(null);
   const [composerQuote, setComposerQuote] = useState<QuotedPost | null>(null);
@@ -164,7 +177,8 @@ export default function AllTopicsView({ onTopicPress }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <FlatList
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <Animated.FlatList
         data={sortedTopics}
         keyExtractor={t => String(t.id)}
         renderItem={({ item }) => (
@@ -178,8 +192,17 @@ export default function AllTopicsView({ onTopicPress }: Props) {
             onOpenReactionsList={handleOpenReactionsList}
           />
         )}
+        onScroll={listScrollHandler as any}
+        scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={() => {
+              resetChrome();
+              refetch();
+            }}
+            tintColor={colors.primary}
+          />
         }
         onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -207,7 +230,11 @@ export default function AllTopicsView({ onTopicPress }: Props) {
             </View>
           ) : null
         }
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          topInset > 0 && { paddingTop: topInset },
+          { paddingBottom: tabBarHeight + 24 },
+        ]}
       />
 
       {composerTopic && (
@@ -249,7 +276,6 @@ function makeStyles(c: ThemeColors) {
       flex: 1,
     },
     content: {
-      paddingBottom: 24,
     },
     sortBar: {
       flexDirection: 'row',

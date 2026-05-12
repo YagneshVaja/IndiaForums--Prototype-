@@ -19,16 +19,17 @@ interface Props {
     topic: ForumTopic,
     opts?: { jumpToLast?: boolean; autoAction?: 'like' | 'reply' | 'quote' },
   ) => void;
+  topInset?: number;
 }
 
-export default function MyView({ onForumPress, onTopicPress }: Props) {
+export default function MyView({ onForumPress, onTopicPress, topInset = 0 }: Props) {
   const [segment, setSegment] = useState<MySegment>('forums');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: topInset }]}>
       <SegmentBar
         segment={segment}
         onChange={setSegment}

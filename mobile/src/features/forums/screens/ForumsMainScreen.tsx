@@ -14,6 +14,7 @@ import type { ThemeColors } from '../../../theme/tokens';
 import { useSideMenuStore } from '../../../store/sideMenuStore';
 import AnimatedTopBar from '../../../components/layout/chromeScroll/AnimatedTopBar';
 import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
+import { useNotificationBell } from '../../notifications/hooks/useNotificationBell';
 
 type Nav = NativeStackNavigationProp<ForumsStackParamList, 'ForumsMain'>;
 
@@ -26,6 +27,7 @@ export default function ForumsMainScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { resetChrome } = useScrollChrome();
   const [topInset, setTopInset] = useState(0);
+  const { notifCount, openNotifications } = useNotificationBell();
 
   useFocusEffect(
     useCallback(() => {
@@ -52,6 +54,8 @@ export default function ForumsMainScreen() {
     <View style={styles.screen}>
       <AnimatedTopBar
         onMenuPress={useSideMenuStore.getState().open}
+        onNotificationsPress={openNotifications}
+        notifCount={notifCount}
         onMeasure={setTopInset}
       >
         {/* Secondary tab strip — animates and measures together with the bar.
@@ -67,9 +71,9 @@ export default function ForumsMainScreen() {
       {tab === 'forums' ? (
         <ForumListView onForumPress={handleForumPress} topInset={topInset} />
       ) : tab === 'all-topics' ? (
-        <AllTopicsView onTopicPress={handleTopicPress} />
+        <AllTopicsView onTopicPress={handleTopicPress} topInset={topInset} />
       ) : (
-        <MyView onForumPress={handleForumPress} onTopicPress={handleTopicPress} />
+        <MyView onForumPress={handleForumPress} onTopicPress={handleTopicPress} topInset={topInset} />
       )}
     </View>
   );
