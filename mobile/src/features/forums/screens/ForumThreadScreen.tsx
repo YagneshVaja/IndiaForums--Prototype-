@@ -8,9 +8,10 @@ import Animated, { useAnimatedScrollHandler, runOnJS } from 'react-native-reanim
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const AnimatedFlashList = Animated.createAnimatedComponent(FlashList) as any;
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 
@@ -211,6 +212,16 @@ export default function ForumThreadScreen() {
   const isFiltering = activeFlairId !== null || search.trim().length > 0;
 
   const { hidden: barHidden, applyScroll: applyBarScroll } = useHideOnScroll();
+  const { applyScroll: applyChromeScroll, resetChrome } = useScrollChrome();
+
+  // Without this reset, chrome state carries over from the previous screen
+  // (e.g. a deep-scrolled ForumsMainScreen) and the tab bar stays hidden
+  // while we're on this screen, leaving the pagination bar floating mid-page.
+  useFocusEffect(
+    useCallback(() => {
+      resetChrome();
+    }, [resetChrome]),
+  );
 
   // Throttle scroll-position writes to the persistence store. 250ms is
   // responsive enough that a quick tap-to-topic-and-back lands within a few
@@ -233,6 +244,7 @@ export default function ForumThreadScreen() {
   const listScrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
       'worklet';
+      applyChromeScroll(e);
       applyBarScroll(e);
       runOnJS(saveScrollY)(e.contentOffset.y);
     },

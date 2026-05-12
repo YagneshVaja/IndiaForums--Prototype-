@@ -7,9 +7,10 @@ import Animated, {
   useAnimatedStyle, useSharedValue, withTiming, Easing,
 } from 'react-native-reanimated';
 import { Image } from 'expo-image';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -65,6 +66,15 @@ export default function TopicDetailScreen() {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const tabBarHeight = useBottomTabBarHeight();
+  const { resetChrome } = useScrollChrome();
+
+  // Reset chrome on entry so a previous screen's hidden state doesn't carry
+  // over and leave the tab bar invisible while reading a topic.
+  useFocusEffect(
+    useCallback(() => {
+      resetChrome();
+    }, [resetChrome]),
+  );
 
   const [replyOpen, setReplyOpen] = useState(false);
   const [quotedPost, setQuotedPost] = useState<QuotedPost | null>(null);
