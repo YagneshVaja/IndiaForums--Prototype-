@@ -7,6 +7,7 @@ import { useScrollChrome } from '../../../components/layout/chromeScroll/useScro
 
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
+import BrandRefreshIndicator from '../../../components/ui/BrandPullToRefresh';
 import { describeFetchError } from '../../../services/fetchError';
 import SortDropdown, { type SortMode } from './SortDropdown';
 import ViewToggle, { type ViewMode } from './ViewToggle';
@@ -201,7 +202,11 @@ export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
               resetChrome();
               refetch();
             }}
-            tintColor={colors.primary}
+            // OS spinner hidden — BrandRefreshIndicator paints on top.
+            tintColor="transparent"
+            colors={['transparent']}
+            progressBackgroundColor="transparent"
+            progressViewOffset={topInset}
           />
         }
         onEndReached={() => {
@@ -266,6 +271,8 @@ export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
           <Text style={styles.toastText} numberOfLines={2}>{toast}</Text>
         </Pressable>
       )}
+
+      <BrandRefreshIndicator refreshing={isRefetching} topInset={topInset} />
     </View>
   );
 }

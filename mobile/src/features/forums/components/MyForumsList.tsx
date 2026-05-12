@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
+import BrandRefreshIndicator from '../../../components/ui/BrandPullToRefresh';
 import Animated, { useAnimatedScrollHandler } from 'react-native-reanimated';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Image } from 'expo-image';
@@ -77,7 +78,8 @@ export default function MyForumsList({ onForumPress, topInset = 0 }: Props) {
   );
 
   return (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    <View style={{ flex: 1 }}>
+    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
     <Animated.FlatList
       data={forums}
       keyExtractor={f => String(f.id)}
@@ -91,7 +93,11 @@ export default function MyForumsList({ onForumPress, topInset = 0 }: Props) {
             resetChrome();
             refetch();
           }}
-          tintColor={colors.primary}
+          // OS spinner hidden — BrandRefreshIndicator paints on top.
+          tintColor="transparent"
+          colors={['transparent']}
+          progressBackgroundColor="transparent"
+          progressViewOffset={topInset}
         />
       }
       onEndReached={() => {
@@ -139,6 +145,8 @@ export default function MyForumsList({ onForumPress, topInset = 0 }: Props) {
         { paddingBottom: tabBarHeight + 24 },
       ]}
     />
+    <BrandRefreshIndicator refreshing={isRefetching} topInset={topInset} />
+    </View>
   );
 }
 

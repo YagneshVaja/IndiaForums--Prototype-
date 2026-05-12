@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
+import BrandRefreshIndicator from '../../../components/ui/BrandPullToRefresh';
 import { describeFetchError } from '../../../services/fetchError';
 import SearchBar from './SearchBar';
 import CategoryChips, { type ChipItem } from './CategoryChips';
@@ -187,7 +188,11 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
               resetChrome();
               listRefetch();
             }}
-            tintColor={colors.primary}
+            // OS spinner hidden — BrandRefreshIndicator paints on top.
+            tintColor="transparent"
+            colors={['transparent']}
+            progressBackgroundColor="transparent"
+            progressViewOffset={topInset}
           />
         ) : undefined
       }
@@ -270,6 +275,9 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
       onClose={() => setJumpSheetOpen(false)}
       onJump={handleJumpToPage}
     />
+    {!isSearchMode && (
+      <BrandRefreshIndicator refreshing={listRefetching} topInset={topInset} />
+    )}
     </View>
   );
 }

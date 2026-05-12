@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
+import BrandRefreshIndicator from '../../../components/ui/BrandPullToRefresh';
 import Animated, { useAnimatedScrollHandler } from 'react-native-reanimated';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useQueryClient } from '@tanstack/react-query';
@@ -205,7 +206,11 @@ export default function MyPostsList({ onTopicPress, topInset = 0 }: Props) {
               resetChrome();
               refetch();
             }}
-            tintColor={colors.primary}
+            // OS spinner hidden — BrandRefreshIndicator paints on top.
+            tintColor="transparent"
+            colors={['transparent']}
+            progressBackgroundColor="transparent"
+            progressViewOffset={topInset}
           />
         }
         onEndReached={() => {
@@ -282,6 +287,8 @@ export default function MyPostsList({ onTopicPress, topInset = 0 }: Props) {
           <Text style={styles.toastText} numberOfLines={2}>{toast}</Text>
         </Pressable>
       )}
+
+      <BrandRefreshIndicator refreshing={isRefetching} topInset={topInset} />
     </View>
   );
 }
