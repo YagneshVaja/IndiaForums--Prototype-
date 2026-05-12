@@ -64,11 +64,10 @@ const AnimatedView = Animated.createAnimatedComponent(View);
 interface OrbProps {
   category: Category;
   styles: ReturnType<typeof makeStyles>;
-  gapColor: string;
   onPress: () => void;
 }
 
-function CategoryOrb({ category: c, styles, gapColor, onPress }: OrbProps) {
+function CategoryOrb({ category: c, styles, onPress }: OrbProps) {
   // Reanimated spring on press — gives the orb a tactile, slightly bouncy
   // "squish" instead of a flat CSS scale. This is what makes Cred/Paytm
   // category buttons feel premium.
@@ -89,12 +88,7 @@ function CategoryOrb({ category: c, styles, gapColor, onPress }: OrbProps) {
       style={styles.item}
     >
       <AnimatedView style={[styles.shadowWrap, { shadowColor: c.shadowColor }, animatedStyle]}>
-        {/* Outer brand-color ring (2px visible) with a thin white gap that
-            isolates the orb from the strip background and from the ring. */}
-        <View style={[styles.brandRing, { backgroundColor: c.shadowColor }]}>
-          <View style={[styles.gapRing, { backgroundColor: gapColor }]}>
         <View style={styles.circleClip}>
-          {/* Base brand gradient. */}
           <LinearGradient
             colors={[c.gradient[0], c.gradient[1], c.gradient[2]]}
             start={{ x: 0.15, y: 0 }}
@@ -102,7 +96,6 @@ function CategoryOrb({ category: c, styles, gapColor, onPress }: OrbProps) {
             style={StyleSheet.absoluteFill}
           />
 
-          {/* Top gloss highlight — soft light source from above. */}
           <LinearGradient
             colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.18)', 'rgba(255,255,255,0)']}
             locations={[0, 0.35, 0.65]}
@@ -112,8 +105,6 @@ function CategoryOrb({ category: c, styles, gapColor, onPress }: OrbProps) {
             pointerEvents="none"
           />
 
-          {/* Bottom inset shadow — anchors the orb visually, makes it feel
-              like a real 3D ball rather than a flat disc. */}
           <LinearGradient
             colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.22)']}
             start={{ x: 0.5, y: 0.55 }}
@@ -122,18 +113,11 @@ function CategoryOrb({ category: c, styles, gapColor, onPress }: OrbProps) {
             pointerEvents="none"
           />
 
-          {/* Decorative sparkles — two small white dots at top-right corner
-              area. Picks up the "stickered" / lively quality you see on
-              JioSaavn and Cred category tiles. */}
           <View style={styles.sparkleLg} pointerEvents="none" />
           <View style={styles.sparkleSm} pointerEvents="none" />
 
-          {/* Subtle inner rim — edge definition. */}
           <View style={styles.innerRim} pointerEvents="none" />
 
-          {/* Inner translucent chip cradling the icon — common premium-app
-              pattern (Tata Neu, BHIM, Razorpay). Gives the icon a clear
-              focal frame and adds a second layer of glassiness. */}
           <View style={styles.iconChip}>
             <MaterialCommunityIcons
               name={c.icon}
@@ -141,8 +125,6 @@ function CategoryOrb({ category: c, styles, gapColor, onPress }: OrbProps) {
               color="#FFFFFF"
               style={styles.iconShadow}
             />
-          </View>
-        </View>
           </View>
         </View>
       </AnimatedView>
@@ -214,7 +196,6 @@ export default function StoriesStrip({ onItemPress }: Props) {
             key={c.id}
             category={c}
             styles={styles}
-            gapColor={colors.card}
             onPress={() => handlePress(c)}
           />
         ))}
@@ -245,27 +226,13 @@ function makeStyles(c: ThemeColors) {
       gap: 7,
     },
     shadowWrap: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
+      width: 72,
+      height: 72,
+      borderRadius: 36,
       shadowOpacity: 0.5,
       shadowRadius: 12,
       shadowOffset: { width: 0, height: 7 },
       elevation: 7,
-    },
-    brandRing: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    gapRing: {
-      width: 76,
-      height: 76,
-      borderRadius: 38,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     circleClip: {
       width: 72,
