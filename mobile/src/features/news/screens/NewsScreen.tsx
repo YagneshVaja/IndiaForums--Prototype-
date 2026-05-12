@@ -210,59 +210,62 @@ export default function NewsScreen({ navigation, route }: Props) {
         onMenuPress={useSideMenuStore.getState().open}
         onNotificationsPress={openNotifications}
         notifCount={notifCount}
-      />
-
-      {/* Category tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.catRow}
-        style={styles.catScroll}
       >
-        {NEWS_CATEGORIES.map((cat) => {
-          const active = cat.id === selectedCategory;
-          return (
-            <Pressable
-              key={cat.id}
-              style={[styles.catTab, active && styles.catTabActive]}
-              onPress={() => handleCategorySelect(cat.id)}
-              accessibilityRole="button"
-              accessibilityLabel={cat.label}
-            >
-              <Text style={[styles.catTabText, active && styles.catTabTextActive]}>
-                {cat.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {/* Subcategory strip */}
-      {subCats.length > 1 ? (
+        {/* Category tabs + subcategory strip animate and measure together
+            with the brand bar — same pattern as the Forums sub-tabs.
+            Keeping them inside AnimatedTopBar means topInset reflects the
+            full chrome height so the body's paddingTop lines up exactly
+            below the strip with no blank gap. */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.subCatRow}
-          style={styles.subCatScroll}
+          contentContainerStyle={styles.catRow}
+          style={styles.catScroll}
         >
-          {subCats.map((sub) => {
-            const active = sub.id === selectedSubCat;
+          {NEWS_CATEGORIES.map((cat) => {
+            const active = cat.id === selectedCategory;
             return (
               <Pressable
-                key={sub.id}
-                style={[styles.subTab, active && styles.subTabActive]}
-                onPress={() => setSelectedSubCat(sub.id)}
+                key={cat.id}
+                style={[styles.catTab, active && styles.catTabActive]}
+                onPress={() => handleCategorySelect(cat.id)}
                 accessibilityRole="button"
-                accessibilityLabel={sub.label}
+                accessibilityLabel={cat.label}
               >
-                <Text style={[styles.subTabText, active && styles.subTabTextActive]}>
-                  {sub.label}
+                <Text style={[styles.catTabText, active && styles.catTabTextActive]}>
+                  {cat.label}
                 </Text>
               </Pressable>
             );
           })}
         </ScrollView>
-      ) : null}
+
+        {subCats.length > 1 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.subCatRow}
+            style={styles.subCatScroll}
+          >
+            {subCats.map((sub) => {
+              const active = sub.id === selectedSubCat;
+              return (
+                <Pressable
+                  key={sub.id}
+                  style={[styles.subTab, active && styles.subTabActive]}
+                  onPress={() => setSelectedSubCat(sub.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={sub.label}
+                >
+                  <Text style={[styles.subTabText, active && styles.subTabTextActive]}>
+                    {sub.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : null}
+      </AnimatedTopBar>
 
       {/* Persistent offline banner */}
       {!isOnline ? (
