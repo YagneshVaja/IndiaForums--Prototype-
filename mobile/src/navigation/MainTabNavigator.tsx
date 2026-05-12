@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { StackActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { MainTabParamList } from './types';
@@ -179,6 +180,29 @@ export default function MainTabNavigator() {
             />
           ),
         }}
+        listeners={({ navigation }) => ({
+          // Tap on My Space should always land on MySpaceMain. By default
+          // React Navigation preserves stack state, so if the user pushed
+          // Notifications / Messages / Profile and switched tabs, returning
+          // would re-show that screen. Pop the nested stack to its root on
+          // every tab tap — same pattern modern apps use.
+          tabPress: () => {
+            const state = navigation.getState();
+            const mySpaceRoute = state.routes.find((r) => r.name === 'MySpace');
+            const stackState = mySpaceRoute?.state;
+            if (
+              stackState &&
+              typeof stackState.index === 'number' &&
+              stackState.index > 0 &&
+              stackState.key
+            ) {
+              navigation.dispatch({
+                ...StackActions.popToTop(),
+                target: stackState.key,
+              });
+            }
+          },
+        })}
       />
     </Tab.Navigator>
     {/* Status-bar backdrop — keeps the safe-area-top region opaque so scrolling
