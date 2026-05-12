@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StackActions } from '@react-navigation/native';
+import { StackActions, getFocusedRouteNameFromRoute, type RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { MainTabParamList } from './types';
@@ -17,6 +17,23 @@ import { ChromeScrollProvider } from '../components/layout/chromeScroll/ChromeSc
 import AnimatedTabBar from '../components/layout/chromeScroll/AnimatedTabBar';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
+
+// Root screens of each tab's nested stack. While the focused nested route
+// is one of these (or undefined — stack hasn't navigated yet), the tab bar
+// stays visible. Any pushed detail screen hides it. Centralized here so new
+// detail screens get the behavior for free.
+const TAB_ROOT_SCREENS = new Set<string>([
+  'HomeMain',
+  'NewsMain',
+  'ForumsMain',
+  'SearchMain',
+  'MySpaceMain',
+]);
+
+function shouldShowTabBar(route: RouteProp<MainTabParamList, keyof MainTabParamList>): boolean {
+  const focused = getFocusedRouteNameFromRoute(route);
+  return focused === undefined || TAB_ROOT_SCREENS.has(focused);
+}
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -92,17 +109,19 @@ export default function MainTabNavigator() {
     <ChromeScrollProvider>
     <Tab.Navigator
       tabBar={(props) => <AnimatedTabBar {...props} />}
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          height: 56 + insets.bottom,
-          paddingBottom: insets.bottom,
-          paddingTop: 8,
-          paddingHorizontal: 4,
-        },
+        tabBarStyle: shouldShowTabBar(route)
+          ? {
+              backgroundColor: colors.card,
+              borderTopColor: colors.border,
+              borderTopWidth: 1,
+              height: 56 + insets.bottom,
+              paddingBottom: insets.bottom,
+              paddingTop: 8,
+              paddingHorizontal: 4,
+            }
+          : { display: 'none' },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: {
@@ -110,7 +129,7 @@ export default function MainTabNavigator() {
           fontWeight: '600',
           marginTop: 2,
         },
-      }}
+      })}
     >
       <Tab.Screen
         name="Home"
