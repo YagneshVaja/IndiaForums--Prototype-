@@ -29,7 +29,7 @@ const fallback: StorageAdapter = {
 function createStorage(): StorageAdapter {
   if (Platform.OS === 'web') return fallback;
   try {
-     
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require('react-native-mmkv') as {
       createMMKV?: (cfg: { id: string }) => MMKV;
       MMKV?: { new (cfg: { id: string }): MMKV };

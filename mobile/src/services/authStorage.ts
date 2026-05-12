@@ -44,7 +44,7 @@ const memKV: KVAdapter = {
 function createSecure(): SecureAdapter {
   if (Platform.OS === 'web') return memSecure;
   try {
-     
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const store = require('expo-secure-store') as SecureAdapter;
     return store;
   } catch {
@@ -58,7 +58,7 @@ function createKV(): KVAdapter {
     // react-native-mmkv v4 exports a class constructor; older versions
     // shipped a `createMMKV` factory. Support both, and wrap the native
     // instance so remove() delegates to delete() when needed.
-     
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mmkv = require('react-native-mmkv') as {
       createMMKV?: (cfg: { id: string }) => unknown;
       MMKV?: new (cfg: { id: string }) => unknown;
