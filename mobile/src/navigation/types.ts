@@ -97,12 +97,14 @@ export type HomeStackParamList = {
   };
   // Forum thread reachable from Movie → Discussion. Same shape as the
   // ForumsStack version so we can reuse TopicDetailScreen as-is.
-  TopicDetail: {
-    topic: import('../services/api').ForumTopic;
-    forum?: import('../services/api').Forum;
-    jumpToLast?: boolean;
-    autoAction?: 'like' | 'reply' | 'quote';
-  };
+  TopicDetail:
+    | {
+        topic: import('../services/api').ForumTopic;
+        forum?: import('../services/api').Forum;
+        jumpToLast?: boolean;
+        autoAction?: 'like' | 'reply' | 'quote';
+      }
+    | { topicId: string; forumId?: string; focusPostId?: string };
   /** Pushed from the home Channels section "See full ranking" CTA. */
   ChannelDetail: { channelId: number };
   /** Forum thread reachable from ShowDetail's "Open discussion" CTA. Same
@@ -140,13 +142,15 @@ export type NewsStackParamList = {
 export type ForumsStackParamList = {
   ForumsMain: undefined;
   ForumThread: { forum: import('../services/api').Forum };
-  TopicDetail: {
-    topic: import('../services/api').ForumTopic;
-    forum?: import('../services/api').Forum;
-    jumpToLast?: boolean;
-    /** When set, auto-fire the matching action on the first post once posts load. */
-    autoAction?: 'like' | 'reply' | 'quote';
-  };
+  TopicDetail:
+    | {
+        topic: import('../services/api').ForumTopic;
+        forum?: import('../services/api').Forum;
+        jumpToLast?: boolean;
+        /** When set, auto-fire the matching action on the first post once posts load. */
+        autoAction?: 'like' | 'reply' | 'quote';
+      }
+    | { topicId: string; forumId?: string; focusPostId?: string };
   ReportsInbox: { forum: import('../services/api').Forum };
 };
 
@@ -160,12 +164,14 @@ export type SearchStackParamList = {
     | { gallery: import('../services/api').Gallery }
     | { id: string | number; title?: string; thumbnail?: string | null };
   ForumThread: { forum: import('../services/api').Forum };
-  TopicDetail: {
-    topic: import('../services/api').ForumTopic;
-    forum?: import('../services/api').Forum;
-    jumpToLast?: boolean;
-    autoAction?: 'like' | 'reply' | 'quote';
-  };
+  TopicDetail:
+    | {
+        topic: import('../services/api').ForumTopic;
+        forum?: import('../services/api').Forum;
+        jumpToLast?: boolean;
+        autoAction?: 'like' | 'reply' | 'quote';
+      }
+    | { topicId: string; forumId?: string; focusPostId?: string };
   MovieDetail: { movie: import('../services/api').Movie };
 };
 
@@ -190,16 +196,18 @@ export type MySpaceStackParamList = {
   Messages: undefined;
   MessageThread: { threadId: string };
   MessageFolders: undefined;
-  Compose: { recipientId?: string };
+  Compose: { recipientId?: string; draftId?: string };
   // Forum entry points reachable from profile tabs (Posts, Watching, Forums).
   // Same shape as ForumsStackParamList — screens are reused as-is.
   ForumThread: { forum: import('../services/api').Forum };
-  TopicDetail: {
-    topic: import('../services/api').ForumTopic;
-    forum?: import('../services/api').Forum;
-    jumpToLast?: boolean;
-    autoAction?: 'like' | 'reply' | 'quote';
-  };
+  TopicDetail:
+    | {
+        topic: import('../services/api').ForumTopic;
+        forum?: import('../services/api').Forum;
+        jumpToLast?: boolean;
+        autoAction?: 'like' | 'reply' | 'quote';
+      }
+    | { topicId: string; forumId?: string; focusPostId?: string };
   // Article entry point reachable from the Comments tab — comments link out
   // to the article they were posted on.
   ArticleDetail: { id: string; thumbnailUrl?: string; title?: string };

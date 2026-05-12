@@ -60,7 +60,19 @@ type Rt  = RouteProp<ForumsStackParamList, 'TopicDetail'>;
 
 export default function TopicDetailScreen() {
   const navigation = useNavigation<Nav>();
-  const { topic, forum, jumpToLast, autoAction } = useRoute<Rt>().params;
+  const routeParams = useRoute<Rt>().params;
+
+  // Reject the id-only param shape until follow-up wires the fetch path.
+  // Today, navigation to this screen always passes the full topic — the
+  // id-only shape is reserved for a future deep-link refactor.
+  if (!('topic' in routeParams)) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Text>Couldn't load this topic.</Text>
+      </View>
+    );
+  }
+  const { topic, forum, jumpToLast, autoAction } = routeParams;
   const currentUser = useAuthStore(s => s.user);
   const queryClient = useQueryClient();
   const colors = useThemeStore((s) => s.colors);
