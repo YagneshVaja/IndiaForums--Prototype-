@@ -10,6 +10,7 @@ const AnimatedFlashList = Animated.createAnimatedComponent(FlashList) as any;
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 
@@ -45,6 +46,10 @@ export default function ForumThreadScreen() {
   const { forum } = useRoute<Rt>().params;
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // Tab.Navigator's bottom bar is position:absolute (chrome hide-on-scroll),
+  // so this screen extends to the device bottom. Lift the pagination dock and
+  // the list's bottom padding by the bar height so neither sits behind it.
+  const tabBarHeight = useBottomTabBarHeight();
 
   const [activeFlairId, setActiveFlairId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
@@ -435,12 +440,12 @@ export default function ForumThreadScreen() {
               </View>
             ) : null
           }
-          contentContainerStyle={styles.content}
+          contentContainerStyle={{ paddingBottom: tabBarHeight + 80 }}
         />
       )}
 
       {!isFiltering && (
-        <View style={styles.paginationDock} pointerEvents="box-none">
+        <View style={[styles.paginationDock, { bottom: tabBarHeight }]} pointerEvents="box-none">
           <ForumPaginationBar
             currentPage={currentPage}
             totalPages={totalPages}
@@ -509,9 +514,6 @@ function makeStyles(c: ThemeColors) {
     screen: {
       flex: 1,
       backgroundColor: c.bg,
-    },
-    content: {
-      paddingBottom: 80,
     },
     paginationDock: {
       position: 'absolute',

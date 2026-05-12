@@ -9,6 +9,7 @@ import Animated, {
 import { Image } from 'expo-image';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -63,6 +64,7 @@ export default function TopicDetailScreen() {
   const queryClient = useQueryClient();
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const tabBarHeight = useBottomTabBarHeight();
 
   const [replyOpen, setReplyOpen] = useState(false);
   const [quotedPost, setQuotedPost] = useState<QuotedPost | null>(null);
@@ -1110,7 +1112,7 @@ export default function TopicDetailScreen() {
               </View>
             ) : null
           }
-          contentContainerStyle={styles.content}
+          contentContainerStyle={{ paddingBottom: tabBarHeight + 110 }}
         />
         </Animated.View>
       )}
@@ -1134,7 +1136,7 @@ export default function TopicDetailScreen() {
       )}
 
       {!isFilteringPosts && (
-        <View style={styles.paginationDock} pointerEvents="box-none">
+        <View style={[styles.paginationDock, { bottom: tabBarHeight }]} pointerEvents="box-none">
           <ForumPaginationBar
             currentPage={currentPage}
             totalPages={totalPages}
@@ -1235,9 +1237,6 @@ function makeStyles(c: ThemeColors) {
     screen: {
       flex: 1,
       backgroundColor: c.bg,
-    },
-    content: {
-      paddingBottom: 110,
     },
     listFade: {
       flex: 1,
