@@ -240,6 +240,9 @@ export default function NotificationsScreen({ navigation }: Props) {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.templateRow}
+          // Pin so the inner vertical ScrollView (notification list) can't
+          // squeeze the chip row when there's lots of content below.
+          style={styles.templateScroll}
         >
           <TemplateChip
             label="All types"
@@ -560,10 +563,16 @@ function makeStyles(c: ThemeColors) {
       color: c.onPrimary,
     },
 
+    templateScroll: {
+      // Don't let the outer flex parent compress this row.
+      flexGrow: 0,
+      flexShrink: 0,
+    },
     templateRow: {
       paddingHorizontal: 14,
       paddingVertical: 10,
       gap: 8,
+      alignItems: 'center',
     },
     tplChip: {
       paddingHorizontal: 12,
@@ -572,6 +581,13 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.card,
       borderWidth: 1,
       borderColor: c.border,
+      // Don't compress when parent runs out of space.
+      flexShrink: 0,
+      // Force the chip to be at least wide enough for the count separator
+      // plus a couple of characters so it never collapses to ellipsis.
+      minWidth: 60,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     tplChipActive: {
       backgroundColor: c.primarySoft,
