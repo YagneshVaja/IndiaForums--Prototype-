@@ -1,70 +1,186 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import type { ComponentProps } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 
-const STORIES = [
-  { id: 1, label: 'Celebrities', emoji: '⭐', bgLight: '#FFF7ED', bgDark: '#3A2E1A' },
-  { id: 2, label: 'Movies',      emoji: '🎬', bgLight: '#FEF2F2', bgDark: '#3A1A1A' },
-  { id: 3, label: 'Videos',      emoji: '📺', bgLight: '#EFF6FF', bgDark: '#1B2A45' },
-  { id: 4, label: 'Galleries',   emoji: '🖼️', bgLight: '#F0FDF4', bgDark: '#163225' },
-  { id: 5, label: 'Fan Fictions',emoji: '📖', bgLight: '#FDF4FF', bgDark: '#2E1B3A' },
-  { id: 6, label: 'Quizzes',     emoji: '❓', bgLight: '#FFF1F2', bgDark: '#3A1F22' },
-  { id: 7, label: 'Shorts',      emoji: '⚡', bgLight: '#FFFBEB', bgDark: '#3A2F1A' },
-  { id: 8, label: 'Web Stories', emoji: '🌐', bgLight: '#F0F9FF', bgDark: '#172A3A' },
-] as const;
+type MciName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
-type Story = typeof STORIES[number];
+type Category = {
+  id: number;
+  label: string;
+  icon: MciName;
+  size: number;
+  gradient: readonly [string, string, string];
+  shadowColor: string;
+};
+
+const CATEGORIES: readonly Category[] = [
+  // Saffron-to-cherry — Filmfare glamour
+  { id: 1, label: 'Celebrities',  icon: 'star-face',              size: 30, gradient: ['#FFE259', '#FFA751', '#E1306C'], shadowColor: '#FF8008' },
+  // Crimson cinema
+  { id: 2, label: 'Movies',       icon: 'movie-open',             size: 26, gradient: ['#FF6A88', '#FF416C', '#921C30'], shadowColor: '#FF416C' },
+  // Royal streaming blue
+  { id: 3, label: 'Videos',       icon: 'play-circle',            size: 30, gradient: ['#56CCF2', '#2F80ED', '#1E3C72'], shadowColor: '#2F80ED' },
+  // Jewel emerald
+  { id: 4, label: 'Galleries',    icon: 'image-multiple',         size: 26, gradient: ['#43E97B', '#11998E', '#0B5345'], shadowColor: '#11998E' },
+  // Literary royal purple
+  { id: 5, label: 'Fan Fictions', icon: 'book-open-page-variant', size: 26, gradient: ['#D38CFF', '#8E2DE2', '#3B0764'], shadowColor: '#8E2DE2' },
+  // Tangerine sunshine — distinct from celebrities (orange-red, not gold)
+  { id: 6, label: 'Quizzes',      icon: 'head-question',          size: 28, gradient: ['#FFB75E', '#F37335', '#B33C00'], shadowColor: '#F37335' },
+  // Hot magenta — Reels signature
+  { id: 7, label: 'Shorts',       icon: 'lightning-bolt',         size: 28, gradient: ['#FF6FD8', '#DD2476', '#7E0E4A'], shadowColor: '#DD2476' },
+  // Editorial teal
+  { id: 8, label: 'Web Stories',  icon: 'newspaper-variant',      size: 26, gradient: ['#43E2F5', '#00B4DB', '#003B5E'], shadowColor: '#00B4DB' },
+];
 
 interface Props {
-  onItemPress?: (story: Story) => void;
+  onItemPress?: (category: Category) => void;
 }
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
+const AnimatedView = Animated.createAnimatedComponent(View);
+
+interface OrbProps {
+  category: Category;
+  styles: ReturnType<typeof makeStyles>;
+  gapColor: string;
+  onPress: () => void;
+}
+
+function CategoryOrb({ category: c, styles, gapColor, onPress }: OrbProps) {
+  // Reanimated spring on press — gives the orb a tactile, slightly bouncy
+  // "squish" instead of a flat CSS scale. This is what makes Cred/Paytm
+  // category buttons feel premium.
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPressIn={() => {
+        scale.value = withSpring(0.9, { damping: 14, stiffness: 320 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 12, stiffness: 280 });
+      }}
+      onPress={onPress}
+      style={styles.item}
+    >
+      <AnimatedView style={[styles.shadowWrap, { shadowColor: c.shadowColor }, animatedStyle]}>
+        {/* Outer brand-color ring (2px visible) with a thin white gap that
+            isolates the orb from the strip background and from the ring. */}
+        <View style={[styles.brandRing, { backgroundColor: c.shadowColor }]}>
+          <View style={[styles.gapRing, { backgroundColor: gapColor }]}>
+        <View style={styles.circleClip}>
+          {/* Base brand gradient. */}
+          <LinearGradient
+            colors={[c.gradient[0], c.gradient[1], c.gradient[2]]}
+            start={{ x: 0.15, y: 0 }}
+            end={{ x: 0.85, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+
+          {/* Top gloss highlight — soft light source from above. */}
+          <LinearGradient
+            colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.18)', 'rgba(255,255,255,0)']}
+            locations={[0, 0.35, 0.65]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+
+          {/* Bottom inset shadow — anchors the orb visually, makes it feel
+              like a real 3D ball rather than a flat disc. */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.22)']}
+            start={{ x: 0.5, y: 0.55 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+
+          {/* Decorative sparkles — two small white dots at top-right corner
+              area. Picks up the "stickered" / lively quality you see on
+              JioSaavn and Cred category tiles. */}
+          <View style={styles.sparkleLg} pointerEvents="none" />
+          <View style={styles.sparkleSm} pointerEvents="none" />
+
+          {/* Subtle inner rim — edge definition. */}
+          <View style={styles.innerRim} pointerEvents="none" />
+
+          {/* Inner translucent chip cradling the icon — common premium-app
+              pattern (Tata Neu, BHIM, Razorpay). Gives the icon a clear
+              focal frame and adds a second layer of glassiness. */}
+          <View style={styles.iconChip}>
+            <MaterialCommunityIcons
+              name={c.icon}
+              size={c.size}
+              color="#FFFFFF"
+              style={styles.iconShadow}
+            />
+          </View>
+        </View>
+          </View>
+        </View>
+      </AnimatedView>
+      <Text style={styles.label} numberOfLines={1}>{c.label}</Text>
+    </Pressable>
+  );
+}
+
 export default function StoriesStrip({ onItemPress }: Props) {
   const navigation = useNavigation<Nav>();
   const colors = useThemeStore((s) => s.colors);
-  const mode = useThemeStore((s) => s.mode);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const handlePress = (s: Story) => {
-    if (s.label === 'Celebrities') {
+  const handlePress = (c: Category) => {
+    if (c.label === 'Celebrities') {
       navigation.navigate('Celebrities');
       return;
     }
-    if (s.label === 'Movies') {
+    if (c.label === 'Movies') {
       navigation.navigate('Movies');
       return;
     }
-    if (s.label === 'Videos') {
+    if (c.label === 'Videos') {
       navigation.navigate('Videos');
       return;
     }
-    if (s.label === 'Galleries') {
+    if (c.label === 'Galleries') {
       navigation.navigate('Galleries');
       return;
     }
-    if (s.label === 'Fan Fictions') {
+    if (c.label === 'Fan Fictions') {
       navigation.navigate('FanFiction');
       return;
     }
-    if (s.label === 'Shorts') {
+    if (c.label === 'Shorts') {
       navigation.navigate('Shorts');
       return;
     }
-    if (s.label === 'Quizzes') {
+    if (c.label === 'Quizzes') {
       navigation.navigate('Quizzes');
       return;
     }
-    if (s.label === 'Web Stories') {
+    if (c.label === 'Web Stories') {
       navigation.navigate('WebStories');
       return;
     }
-    onItemPress?.(s);
+    onItemPress?.(c);
   };
 
   return (
@@ -74,19 +190,14 @@ export default function StoriesStrip({ onItemPress }: Props) {
       contentContainerStyle={styles.row}
       style={styles.strip}
     >
-      {STORIES.map(s => (
-        <Pressable
-          key={s.id}
-          style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
-          onPress={() => handlePress(s)}
-        >
-          <View style={styles.ring}>
-            <View style={[styles.innerCircle, { backgroundColor: mode === 'dark' ? s.bgDark : s.bgLight }]}>
-              <Text style={styles.emoji}>{s.emoji}</Text>
-            </View>
-          </View>
-          <Text style={styles.label} numberOfLines={1}>{s.label}</Text>
-        </Pressable>
+      {CATEGORIES.map((c) => (
+        <CategoryOrb
+          key={c.id}
+          category={c}
+          styles={styles}
+          gapColor={colors.card}
+          onPress={() => handlePress(c)}
+        />
       ))}
     </ScrollView>
   );
@@ -99,47 +210,94 @@ function makeStyles(c: ThemeColors) {
     },
     row: {
       paddingHorizontal: 14,
-      paddingTop: 12,
-      paddingBottom: 8,
-      gap: 12,
+      paddingTop: 14,
+      paddingBottom: 14,
+      gap: 16,
       flexDirection: 'row',
       alignItems: 'center',
     },
     item: {
-      width: 68,
+      width: 80,
       alignItems: 'center',
-      gap: 5,
+      gap: 7,
     },
-    itemPressed: {
-      opacity: 0.7,
-      transform: [{ scale: 0.95 }],
+    shadowWrap: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      shadowOpacity: 0.5,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 7 },
+      elevation: 7,
     },
-    ring: {
-      width: 58,
-      height: 58,
-      borderRadius: 29,
-      backgroundColor: c.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    innerCircle: {
-      width: 51,
-      height: 51,
-      borderRadius: 25.5,
-      borderWidth: 2.5,
-      borderColor: c.card,
+    brandRing: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    emoji: {
-      fontSize: 22,
+    gapRing: {
+      width: 76,
+      height: 76,
+      borderRadius: 38,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    circleClip: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      overflow: 'hidden',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    innerRim: {
+      ...StyleSheet.absoluteFillObject,
+      borderRadius: 36,
+      borderWidth: 1.5,
+      borderColor: 'rgba(255,255,255,0.4)',
+    },
+    sparkleLg: {
+      position: 'absolute',
+      top: 12,
+      right: 14,
+      width: 5,
+      height: 5,
+      borderRadius: 2.5,
+      backgroundColor: 'rgba(255,255,255,0.9)',
+    },
+    sparkleSm: {
+      position: 'absolute',
+      top: 20,
+      right: 9,
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      backgroundColor: 'rgba(255,255,255,0.7)',
+    },
+    iconChip: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: 'rgba(255,255,255,0.22)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.35)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    iconShadow: {
+      textShadowColor: 'rgba(0,0,0,0.25)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
     },
     label: {
-      fontSize: 10,
-      fontWeight: '600',
+      fontSize: 11,
+      fontWeight: '700',
       color: c.textSecondary,
       textAlign: 'center',
-      maxWidth: 68,
+      maxWidth: 80,
+      letterSpacing: 0.1,
     },
   });
 }
