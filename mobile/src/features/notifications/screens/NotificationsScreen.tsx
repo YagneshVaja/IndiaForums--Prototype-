@@ -93,7 +93,7 @@ export default function NotificationsScreen({ navigation }: Props) {
     }
     if (unreadCount <= 0) return;
     if (page >= totalPages) return;
-    if (autoAdvanceCount >= 5) return;
+    if (autoAdvanceCount >= 20) return;
     setAutoAdvanceCount((n) => n + 1);
     setPage((p) => p + 1);
   }, [filter, visible.length, unreadCount, list.isLoading, list.isRefetching, page, totalPages, autoAdvanceCount]);
@@ -316,7 +316,7 @@ export default function NotificationsScreen({ navigation }: Props) {
               filter === 'unread'
                 ? unreadBadgeIsStale
                   ? 'All caught up'
-                  : unreadCount > 0 && autoAdvanceCount >= 5
+                  : unreadCount > 0 && autoAdvanceCount >= 20
                     ? "Couldn't load unread notifications"
                     : unreadCount > 0
                       ? 'Looking for unread…'
@@ -327,7 +327,7 @@ export default function NotificationsScreen({ navigation }: Props) {
               filter === 'unread'
                 ? unreadBadgeIsStale
                   ? 'Refreshing the unread count…'
-                  : unreadCount > 0 && autoAdvanceCount >= 5
+                  : unreadCount > 0 && autoAdvanceCount >= 20
                     ? 'Try pulling to refresh.'
                     : unreadCount > 0
                       ? 'Loading more pages.'
