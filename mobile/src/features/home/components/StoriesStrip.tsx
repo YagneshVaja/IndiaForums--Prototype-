@@ -12,7 +12,16 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
-import type { ThemeColors } from '../../../theme/tokens';
+import type { ThemeColors, ThemeMode } from '../../../theme/tokens';
+
+// Soft horizontal wash sitting behind the orb row. Pattern borrowed from
+// Paytm / PhonePe / Tata Neu quick-action strips — a subtle warm-to-cool
+// gradient grounds the icons without competing with their saturated colors,
+// and the white "halo" around each orb pops crisply against it.
+const STRIP_GRADIENT: Record<ThemeMode, readonly [string, string, string]> = {
+  light: ['#FFF5EC', '#FFE6DA', '#EFE7FF'],
+  dark:  ['#1F1A20', '#1C1D22', '#1A1C28'],
+};
 
 type MciName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
@@ -145,7 +154,9 @@ function CategoryOrb({ category: c, styles, gapColor, onPress }: OrbProps) {
 export default function StoriesStrip({ onItemPress }: Props) {
   const navigation = useNavigation<Nav>();
   const colors = useThemeStore((s) => s.colors);
+  const mode = useThemeStore((s) => s.mode);
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const stripGradient = STRIP_GRADIENT[mode];
 
   const handlePress = (c: Category) => {
     if (c.label === 'Celebrities') {
@@ -184,29 +195,41 @@ export default function StoriesStrip({ onItemPress }: Props) {
   };
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.row}
-      style={styles.strip}
-    >
-      {CATEGORIES.map((c) => (
-        <CategoryOrb
-          key={c.id}
-          category={c}
-          styles={styles}
-          gapColor={colors.card}
-          onPress={() => handlePress(c)}
-        />
-      ))}
-    </ScrollView>
+    <View style={styles.stripWrap}>
+      <LinearGradient
+        colors={[stripGradient[0], stripGradient[1], stripGradient[2]]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.row}
+        style={styles.strip}
+      >
+        {CATEGORIES.map((c) => (
+          <CategoryOrb
+            key={c.id}
+            category={c}
+            styles={styles}
+            gapColor={colors.card}
+            onPress={() => handlePress(c)}
+          />
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
-    strip: {
+    stripWrap: {
       backgroundColor: c.card,
+    },
+    strip: {
+      backgroundColor: 'transparent',
     },
     row: {
       paddingHorizontal: 14,
