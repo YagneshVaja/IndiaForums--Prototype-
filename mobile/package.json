@@ -53,6 +53,7 @@
     "react-native": "0.83.6",
     "react-native-gesture-handler": "~2.30.0",
     "react-native-mmkv": "~4.3.1",
+    "react-native-nitro-modules": "^0.35.6",
     "react-native-pager-view": "8.0.0",
     "react-native-reanimated": "4.2.1",
     "react-native-render-html": "^6.3.4",
