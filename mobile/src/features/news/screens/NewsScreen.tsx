@@ -5,10 +5,12 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import Animated from 'react-native-reanimated';
 import type { NewsStackParamList } from '../../../navigation/types';
 import AnimatedTopBar from '../../../components/layout/chromeScroll/AnimatedTopBar';
@@ -33,6 +35,7 @@ import NewsGallerySection from '../components/NewsGallerySection';
 import NewsVisualStoriesSection from '../components/NewsVisualStoriesSection';
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
+import BrandRefreshIndicator from '../../../components/ui/BrandPullToRefresh';
 import type { Article } from '../../../services/api';
 
 type Props = NativeStackScreenProps<NewsStackParamList, 'NewsMain'>;
@@ -92,6 +95,24 @@ export default function NewsScreen({ navigation, route }: Props) {
 
   const { data: videos = [] }    = useNewsVideos();
   const { data: galleries = [] } = useNewsGalleries();
+
+  // Pull-to-refresh: invalidate all News query roots. Both
+  // `useNewsArticles` variants live under ['articles','news',...] and the
+  // inline video/gallery hooks live under ['news',...].
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    resetChrome();
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['articles', 'news'] }),
+        queryClient.invalidateQueries({ queryKey: ['news'] }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient, resetChrome]);
 
   const articles: Article[] = useMemo(() => {
     const seen = new Set<string>();
@@ -272,6 +293,18 @@ export default function NewsScreen({ navigation, route }: Props) {
           showsVerticalScrollIndicator={false}
           onScroll={scrollHandler as any}
           scrollEventThrottle={16}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              // OS spinner hidden — BrandRefreshIndicator paints on top while
+              // the native RefreshControl owns the gesture and threshold.
+              tintColor="transparent"
+              colors={['transparent']}
+              progressBackgroundColor="transparent"
+              progressViewOffset={topInset}
+            />
+          }
         >
           {/* ── Latest News section ───────────────────────────────────── */}
           <View style={styles.newsSection}>
@@ -348,6 +381,8 @@ export default function NewsScreen({ navigation, route }: Props) {
           />
         </Animated.ScrollView>
       )}
+
+      <BrandRefreshIndicator refreshing={refreshing} topInset={topInset} />
     </View>
   );
 }
