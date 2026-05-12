@@ -168,18 +168,26 @@ export async function deregisterFromPush(): Promise<void> {
 function navigateToTarget(target: NavTarget): void {
   if (!navigationRef.isReady()) return;
   // Navigation lib types here are loose; we trust the discriminated union.
+  // `initial: false` keeps each tab stack's configured root (NewsMain /
+  // MySpaceMain) under the target, so back from a deep-linked detail lands on
+  // the tab root instead of skipping out to the previously-focused tab, and
+  // the tab doesn't end up preserving a detail-only stack.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const params: any =
     target.screen === 'Notifications'
-      ? undefined
-      : { screen: target.screen, params: 'params' in target ? target.params : undefined };
+      ? { screen: 'Notifications', initial: false }
+      : {
+          screen: target.screen,
+          params: 'params' in target ? target.params : undefined,
+          initial: false,
+        };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const nav = navigationRef.navigate as (...args: any[]) => void;
   if (target.stack === 'News') {
     nav('Main', {
       screen: 'News',
-      params: { screen: target.screen, params: target.params },
+      params: { screen: target.screen, params: target.params, initial: false },
     });
     return;
   }

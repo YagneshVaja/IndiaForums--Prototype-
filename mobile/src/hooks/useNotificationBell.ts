@@ -24,10 +24,14 @@ export function useNotificationBell() {
       (navigationRef as any).navigate('Auth', { screen: 'Login' });
       return;
     }
+    // `initial: false` keeps MySpaceMain at the bottom of the stack so that
+    // back from Notifications lands on MySpaceMain (not whatever tab was
+    // previously focused) and the MySpace tab isn't left preserving a
+    // Notifications-only stack on first navigation.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (navigationRef as any).navigate('Main', {
       screen: 'MySpace',
-      params: { screen: 'Notifications' },
+      params: { screen: 'Notifications', initial: false },
     });
   }, [isAuthenticated]);
 
