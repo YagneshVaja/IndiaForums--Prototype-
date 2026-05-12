@@ -8,11 +8,13 @@ import type {
   FolderListResponseDto,
   MessageBulkActionRequestDto,
   MessageBulkActionResponseDto,
+  MessageDetailResponseDto,
   MessageDraftsResponseDto,
   MessageListResponseDto,
   MessageOverviewResponseDto,
   MessageThreadResponseDto,
   MoveMessagesToFolderRequestDto,
+  NewMessageFormDto,
   OptOutOfThreadResponseDto,
 } from '../types';
 
@@ -73,9 +75,30 @@ export function getMessageThread(
     .then((r) => r.data);
 }
 
+// ── Compose initialization + single-message detail ──────────────────────────
+
+export interface NewMessageFormParams {
+  mode?: string;
+  id?: number | string;     // pmId for replies
+  did?: number | string;    // draftId for hydration
+  tuid?: number | string;   // target userId
+  tunm?: string;            // target username
+  prtid?: number | string;  // parentId
+}
+
+export function getNewMessageForm(params: NewMessageFormParams) {
+  return apiClient.get<NewMessageFormDto>(`${M}/new`, { params }).then((r) => r.data);
+}
+
+export function getMessageDetail(id: Id) {
+  return apiClient.get<MessageDetailResponseDto>(`${M}/${id}`).then((r) => r.data);
+}
+
 export function optOutOfThread(rootId: Id) {
+  // IIS/Cloudflare rejects POSTs without a body as 411 "Length Required" —
+  // pass an empty object so axios sets Content-Type + Content-Length.
   return apiClient
-    .post<OptOutOfThreadResponseDto>(`${M}/thread/${rootId}/opt-out`)
+    .post<OptOutOfThreadResponseDto>(`${M}/thread/${rootId}/opt-out`, {})
     .then((r) => r.data);
 }
 

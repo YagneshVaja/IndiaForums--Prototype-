@@ -218,3 +218,61 @@ export interface MessageOverviewResponseDto {
   outboxMessageCount: number | string;
   pmFolders: PmFolderDto[];
 }
+
+// ── /messages/new (compose initialization) ──────────────────────────────────
+// Only the fields the mobile UI reads. Widen later if needed.
+
+export interface UserDetailsDto {
+  userId: number | string;
+  userName: string;
+  displayName: string;
+  avatarType: number | string | null;
+  avatarAccent: string | null;
+}
+
+export interface MessageDetailDto {
+  pmId: number | string;
+  subject: string;
+  message: string;
+  messageDate: string;
+  fromUserId: number | string;
+  userName: string;
+  displayName: string;
+}
+
+export interface MessageDraftDetailDto {
+  messageDraftId: number | string;
+  subject: string;
+  message: string | null;
+  toIds: string | null;
+  toGroups: string | null;
+}
+
+export interface NewMessageFormDto {
+  user: UserDetailsDto;
+  messageDetail: MessageDetailDto | null;
+  draft: MessageDraftDetailDto | null;
+  mode: string;
+  pmUserTagLimit: number | string;
+  rootMessageId: number | string;
+  parentId: number | string | null;
+  pmId: number | string;
+  toUserId: number | string | null;
+  toUsername: string | null;
+  subject: string | null;
+}
+
+export interface RelatedMessageDto {
+  pmId: number | string;
+  subject: string;
+  messageDate: string;
+}
+
+export interface MessageDetailResponseDto {
+  message: MessageDetailDto;
+  parentMessage: MessageDetailDto | null;
+  relatedMessages: RelatedMessageDto[];
+  recipients: PmThreadParticipant[];
+  wasAlreadyRead: boolean;
+  mode: string;
+}

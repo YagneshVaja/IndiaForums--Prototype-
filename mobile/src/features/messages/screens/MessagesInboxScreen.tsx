@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,13 @@ import {
   RefreshControl,
   StatusBar,
   Alert,
+  type LayoutChangeEvent,
 } from 'react-native';
+import type { TopNavAction } from '../../../components/layout/TopNavBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as Haptics from 'expo-haptics';
 
 import type { MySpaceStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
@@ -23,7 +26,7 @@ import ErrorState from '../../../components/ui/ErrorState';
 import EmptyState from '../../profile/components/EmptyState';
 import Avatar from '../../profile/components/Avatar';
 import Pagination from '../../profile/components/Pagination';
-import { extractApiError } from '../../../services/api';
+import { errorHintForStatus, extractApiError, extractStatus } from '../../../services/api';
 import { timeAgo } from '../../profile/utils/format';
 
 import {
@@ -65,12 +68,24 @@ export default function MessagesInboxScreen({ navigation }: Props) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [tab, setTab] = useState<Tab>('Inbox');
+  // `searchInput` is what the user types; `search` is the debounced value that
+  // actually flows into the React Query key. Without debouncing the inbox would
+  // re-fetch on every keystroke.
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [folderId, setFolderId] = useState<number | undefined>(undefined);
   const [page, setPage] = useState(1);
   // Selection mode — a set of pmlIds the user has chosen for bulk actions.
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const inSelectionMode = selected.size > 0;
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 280);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const folders = useFolders();
   const list = useMessagesList({
@@ -83,10 +98,14 @@ export default function MessagesInboxScreen({ navigation }: Props) {
   const move = useMoveMessagesToFolder();
   const [moveSheetOpen, setMoveSheetOpen] = useState(false);
 
-  const draftItems: MessageDraftDto[] =
-    list.data?.kind === 'drafts' ? list.data.data.drafts : [];
-  const messageItems: MessageListItemDto[] =
-    list.data?.kind === 'messages' ? list.data.data.messages : [];
+  const draftItems = useMemo<MessageDraftDto[]>(
+    () => (list.data?.kind === 'drafts' ? list.data.data.drafts : []),
+    [list.data],
+  );
+  const messageItems = useMemo<MessageListItemDto[]>(
+    () => (list.data?.kind === 'messages' ? list.data.data.messages : []),
+    [list.data],
+  );
   const items: MessageDraftDto[] | MessageListItemDto[] =
     tab === 'Drafts' ? draftItems : messageItems;
 
@@ -100,6 +119,8 @@ export default function MessagesInboxScreen({ navigation }: Props) {
 
   const statusBarStyle = mode === 'dark' ? 'light-content' : 'dark-content';
   const showFilters = tab !== 'Drafts';
+  // Folders only apply to the user's own incoming surfaces; Outbox is server-side.
+  const showFolderChips = tab === 'Inbox' || tab === 'Unread' || tab === 'Read';
 
   const openThread = useCallback(
     (rootId: number | string, pmlId: number | string) => {
@@ -118,6 +139,7 @@ export default function MessagesInboxScreen({ navigation }: Props) {
     [inSelectionMode, navigation],
   );
   const toggleSelect = useCallback((pmlId: number | string) => {
+    void Haptics.selectionAsync();
     setSelected((prev) => {
       const next = new Set(prev);
       const key = String(pmlId);
@@ -126,9 +148,17 @@ export default function MessagesInboxScreen({ navigation }: Props) {
       return next;
     });
   }, []);
+  const selectAllVisible = useCallback(() => {
+    const ids = messageItems.map((m) => String(m.pmlId));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      return next;
+    });
+  }, [messageItems]);
   const openDraft = useCallback(
     (draftId: number | string) => {
-      navigation.navigate('Compose', { draftId: String(draftId) } as never);
+      navigation.navigate('Compose', { draftId: String(draftId) });
     },
     [navigation],
   );
@@ -171,13 +201,33 @@ export default function MessagesInboxScreen({ navigation }: Props) {
       <TopNavBack
         title={inSelectionMode ? `${selected.size} selected` : 'Messages'}
         onBack={inSelectionMode ? clearSelection : () => navigation.goBack()}
-        rightIcon={inSelectionMode ? undefined : 'create-outline'}
-        onRightPress={inSelectionMode ? undefined : () => navigation.navigate('Compose', {})}
-        rightAccessibilityLabel="Compose new message"
+        rightActions={
+          inSelectionMode
+            ? undefined
+            : ([
+                {
+                  icon: 'folder-open-outline',
+                  label: 'Manage folders',
+                  onPress: () => navigation.navigate('MessageFolders'),
+                },
+                {
+                  icon: 'create-outline',
+                  label: 'Compose new message',
+                  onPress: () => navigation.navigate('Compose', {}),
+                  primary: true,
+                },
+              ] satisfies TopNavAction[])
+        }
       />
 
       {inSelectionMode ? (
         <View style={styles.actionBar}>
+          <ActionIcon
+            icon="checkbox-outline"
+            label="All"
+            onPress={selectAllVisible}
+            styles={styles}
+          />
           <ActionIcon icon="mail-open-outline" label="Read" onPress={() => runBulk('read')} styles={styles} />
           <ActionIcon icon="mail-outline" label="Unread" onPress={() => runBulk('unread')} styles={styles} />
           <ActionIcon icon="star-outline" label="Star" onPress={() => runBulk('star')} styles={styles} />
@@ -200,29 +250,12 @@ export default function MessagesInboxScreen({ navigation }: Props) {
         </View>
       ) : null}
 
-      {/* Tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabs}
-      >
-        {TABS.map((t) => {
-          const active = tab === t.key;
-          return (
-            <Pressable
-              key={t.key}
-              onPress={() => {
-                setTab(t.key);
-                setFolderId(undefined);
-                setPage(1);
-              }}
-              style={[styles.tab, active && styles.tabActive]}
-            >
-              <Text style={[styles.tabText, active && styles.tabTextActive]}>{t.label}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      <TabsRow tab={tab} setTab={setTab} reset={() => {
+        setFolderId(undefined);
+        setPage(1);
+        setSearchInput('');
+        setSearch('');
+      }} styles={styles} />
 
       {/* Search + folder bar */}
       {showFilters ? (
@@ -230,19 +263,32 @@ export default function MessagesInboxScreen({ navigation }: Props) {
           <View style={styles.searchWrap}>
             <Ionicons name="search" size={14} color={colors.textTertiary} />
             <TextInput
-              value={search}
-              onChangeText={setSearch}
+              value={searchInput}
+              onChangeText={setSearchInput}
               placeholder="Search subject or sender…"
               placeholderTextColor={colors.textTertiary}
               style={styles.searchInput}
               onSubmitEditing={() => {
+                setSearch(searchInput);
                 setPage(1);
-                list.refetch();
               }}
               returnKeyType="search"
+              autoCorrect={false}
+              autoCapitalize="none"
             />
+            {searchInput ? (
+              <Pressable
+                hitSlop={8}
+                onPress={() => {
+                  setSearchInput('');
+                  setSearch('');
+                }}
+              >
+                <Ionicons name="close-circle" size={14} color={colors.textTertiary} />
+              </Pressable>
+            ) : null}
           </View>
-          {folders.data && folders.data.folders.length > 0 ? (
+          {showFolderChips && folders.data && folders.data.folders.length > 0 ? (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -274,14 +320,6 @@ export default function MessagesInboxScreen({ navigation }: Props) {
               })}
             </ScrollView>
           ) : null}
-          <Pressable
-            onPress={() => navigation.navigate('MessageFolders' as never)}
-            style={({ pressed }) => [styles.foldersBtn, pressed && styles.pressed]}
-            hitSlop={8}
-          >
-            <Ionicons name="folder-open-outline" size={14} color={colors.primary} />
-            <Text style={styles.foldersBtnText}>Manage folders</Text>
-          </Pressable>
         </View>
       ) : null}
 
@@ -296,11 +334,23 @@ export default function MessagesInboxScreen({ navigation }: Props) {
         }
       >
         {list.isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.primary} />
+          <View style={styles.list}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonRow key={i} styles={styles} />
+            ))}
           </View>
         ) : list.isError ? (
-          <ErrorState message={extractApiError(list.error)} onRetry={list.refetch} />
+          (() => {
+            const status = extractStatus(list.error);
+            return (
+              <ErrorState
+                message={extractApiError(list.error)}
+                status={status ?? undefined}
+                hint={errorHintForStatus(status) ?? undefined}
+                onRetry={list.refetch}
+              />
+            );
+          })()
         ) : items.length === 0 ? (
           <EmptyState
             icon={tab === 'Drafts' ? 'document-text-outline' : 'mail-outline'}
@@ -370,6 +420,75 @@ export default function MessagesInboxScreen({ navigation }: Props) {
           );
         }}
       />
+    </View>
+  );
+}
+
+// Horizontal tab strip that auto-scrolls the active tab into view. Pulled out
+// of the main component to localise the scroll/measurement bookkeeping.
+function TabsRow({
+  tab,
+  setTab,
+  reset,
+  styles,
+}: {
+  tab: Tab;
+  setTab: (t: Tab) => void;
+  reset: () => void;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  const scrollRef = useRef<ScrollView | null>(null);
+  const offsetsRef = useRef<Record<string, { x: number; width: number }>>({});
+
+  useEffect(() => {
+    const entry = offsetsRef.current[tab];
+    if (!entry) return;
+    // Centre the active pill roughly within the visible row.
+    const target = Math.max(0, entry.x - 14);
+    scrollRef.current?.scrollTo({ x: target, animated: true });
+  }, [tab]);
+
+  const onLayoutTab = (key: Tab) => (e: LayoutChangeEvent) => {
+    const { x, width } = e.nativeEvent.layout;
+    offsetsRef.current[key] = { x, width };
+  };
+
+  return (
+    <ScrollView
+      ref={scrollRef}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.tabsScroll}
+      contentContainerStyle={styles.tabs}
+    >
+      {TABS.map((t) => {
+        const active = tab === t.key;
+        return (
+          <Pressable
+            key={t.key}
+            onLayout={onLayoutTab(t.key)}
+            onPress={() => {
+              setTab(t.key);
+              reset();
+            }}
+            style={[styles.tab, active && styles.tabActive]}
+          >
+            <Text style={[styles.tabText, active && styles.tabTextActive]}>{t.label}</Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+function SkeletonRow({ styles }: { styles: ReturnType<typeof makeStyles> }) {
+  return (
+    <View style={[styles.row, styles.skeletonRow]}>
+      <View style={styles.skeletonAvatar} />
+      <View style={styles.rowBody}>
+        <View style={[styles.skeletonBar, { width: '40%' }]} />
+        <View style={[styles.skeletonBar, { width: '80%', marginTop: 6 }]} />
+      </View>
     </View>
   );
 }
@@ -444,6 +563,7 @@ const MessageRow = React.memo(function MessageRow({
 }: MessageRowProps) {
   const unread = !m.readPost;
   const sender = m.displayName || m.userName;
+  const starred = Number(m.likeType) > 0;
   const onPress = () => onOpen(m.rootMessageId || m.pmId, m.pmlId);
   const onLong = () => onLongPress(m.pmlId);
   return (
@@ -467,26 +587,32 @@ const MessageRow = React.memo(function MessageRow({
         userId={m.userId}
         avatarType={m.avatarType}
         name={sender}
-        size={42}
+        size={48}
       />
       <View style={styles.rowBody}>
         <View style={styles.rowTopline}>
           <Text style={[styles.sender, unread && styles.senderUnread]} numberOfLines={1}>
             {sender}
           </Text>
-          <Text style={styles.date}>{timeAgo(m.messageDate)}</Text>
+          <Text style={[styles.date, unread && styles.dateUnread]}>{timeAgo(m.messageDate)}</Text>
         </View>
-        <Text style={[styles.subject, unread && styles.subjectUnread]} numberOfLines={2}>
+        <Text style={[styles.subject, unread && styles.subjectUnread]} numberOfLines={1}>
           {m.subject || '(no subject)'}
         </Text>
-        {m.folderName ? (
-          <View style={styles.folderBadge}>
-            <Ionicons name="folder-outline" size={10} color={styles.folderBadgeText.color} />
-            <Text style={styles.folderBadgeText}>{m.folderName}</Text>
+        {(m.folderName || starred) ? (
+          <View style={styles.metaStrip}>
+            {m.folderName ? (
+              <View style={styles.folderBadge}>
+                <Ionicons name="folder-outline" size={10} color={styles.folderBadgeText.color} />
+                <Text style={styles.folderBadgeText}>{m.folderName}</Text>
+              </View>
+            ) : null}
+            {starred ? (
+              <Ionicons name="star" size={12} color={styles.starredIcon.color} />
+            ) : null}
           </View>
         ) : null}
       </View>
-      {unread ? <View style={styles.unreadDot} /> : null}
     </Pressable>
   );
 });
@@ -498,8 +624,25 @@ interface DraftRowProps {
   colors: ThemeColors;
 }
 
+// Drafts persist recipients as either a comma-list of usernames OR numeric
+// user IDs (the back end doesn't normalise). Show IDs as an opaque count so we
+// never leak "To: 121342,55879" to the user.
+function formatDraftRecipients(toIds: string | null): string | null {
+  if (!toIds) return null;
+  const trimmed = toIds.trim();
+  if (!trimmed) return null;
+  const parts = trimmed.split(/[,\s]+/).filter(Boolean);
+  if (parts.length === 0) return null;
+  const allNumeric = parts.every((p) => /^\d+$/.test(p));
+  if (allNumeric) {
+    return parts.length === 1 ? 'To: 1 recipient' : `To: ${parts.length} recipients`;
+  }
+  return `To: ${parts.join(', ')}`;
+}
+
 const DraftRow = React.memo(function DraftRow({ d, onOpen, styles, colors }: DraftRowProps) {
   const onPress = () => onOpen(d.messageDraftId);
+  const recipientLabel = formatDraftRecipients(d.toIds);
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
       <View
@@ -522,8 +665,8 @@ const DraftRow = React.memo(function DraftRow({ d, onOpen, styles, colors }: Dra
         <Text style={styles.subject} numberOfLines={2}>
           {d.subject || '(no subject)'}
         </Text>
-        {d.toIds ? (
-          <Text style={styles.meta} numberOfLines={1}>To: {d.toIds}</Text>
+        {recipientLabel ? (
+          <Text style={styles.meta} numberOfLines={1}>{recipientLabel}</Text>
         ) : null}
       </View>
     </Pressable>
@@ -535,13 +678,19 @@ function makeStyles(c: ThemeColors) {
     screen: { flex: 1, backgroundColor: c.bg },
     center: { paddingVertical: 48, alignItems: 'center' },
 
+    tabsScroll: {
+      // Without this the horizontal ScrollView grabs flex:1 and stretches.
+      flexGrow: 0,
+      flexShrink: 0,
+      backgroundColor: c.card,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
     tabs: {
       paddingHorizontal: 14,
       paddingVertical: 10,
       gap: 8,
-      backgroundColor: c.card,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border,
+      alignItems: 'center',
     },
     tab: {
       paddingHorizontal: 14,
@@ -609,35 +758,26 @@ function makeStyles(c: ThemeColors) {
       color: c.primary,
       fontWeight: '800',
     },
-    foldersBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      alignSelf: 'flex-start',
-      paddingVertical: 2,
-    },
-    foldersBtnText: {
-      fontSize: 11,
-      color: c.primary,
-      fontWeight: '700',
-    },
-
     list: { gap: 8 },
     row: {
       flexDirection: 'row',
       backgroundColor: c.card,
       borderRadius: 12,
-      padding: 12,
+      paddingVertical: 12,
+      paddingLeft: 12,
+      paddingRight: 14,
       gap: 12,
       alignItems: 'center',
+      // Reserve space on the left for the accent bar so unread rows don't
+      // shift content sideways.
+      borderLeftWidth: 3,
+      borderLeftColor: 'transparent',
     },
     rowUnread: {
-      borderLeftWidth: 3,
       borderLeftColor: c.primary,
     },
     rowSelected: {
       backgroundColor: c.primarySoft,
-      borderLeftWidth: 3,
       borderLeftColor: c.primary,
     },
     selectionMark: {
@@ -685,8 +825,8 @@ function makeStyles(c: ThemeColors) {
       alignItems: 'center',
     },
     sender: {
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 14,
+      fontWeight: '700',
       color: c.textSecondary,
       flex: 1,
     },
@@ -698,6 +838,11 @@ function makeStyles(c: ThemeColors) {
       fontSize: 11,
       color: c.textTertiary,
       fontWeight: '600',
+      marginLeft: 8,
+    },
+    dateUnread: {
+      color: c.primary,
+      fontWeight: '700',
     },
     subject: {
       fontSize: 13,
@@ -706,7 +851,16 @@ function makeStyles(c: ThemeColors) {
     },
     subjectUnread: {
       color: c.text,
-      fontWeight: '700',
+      fontWeight: '600',
+    },
+    metaStrip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 2,
+    },
+    starredIcon: {
+      color: c.warning,
     },
     meta: {
       fontSize: 11,
@@ -727,11 +881,19 @@ function makeStyles(c: ThemeColors) {
       color: c.textTertiary,
       fontWeight: '700',
     },
-    unreadDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: c.primary,
+    skeletonRow: {
+      borderLeftColor: 'transparent',
+    },
+    skeletonAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: c.surface,
+    },
+    skeletonBar: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: c.surface,
     },
   });
 }

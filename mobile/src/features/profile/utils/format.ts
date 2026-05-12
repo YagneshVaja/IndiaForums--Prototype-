@@ -59,3 +59,28 @@ export function stripHtml(s: string | null | undefined): string {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+/**
+ * Like stripHtml but preserves paragraph/break structure as `\n`. Use for
+ * message bodies where readers expect line breaks (PMs, posts) — not for
+ * single-line previews.
+ */
+export function stripHtmlKeepBreaks(s: string | null | undefined): string {
+  if (!s) return '';
+  return s
+    // Convert block-level breaks to newlines BEFORE stripping tags.
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    // Collapse 3+ newlines but preserve double-newline paragraph breaks.
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim horizontal whitespace per line; keep newlines.
+    .split('\n').map((l) => l.replace(/[ \t]+/g, ' ').trim()).join('\n')
+    .trim();
+}
