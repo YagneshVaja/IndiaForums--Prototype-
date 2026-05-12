@@ -26,6 +26,7 @@ import { useNotificationsStore } from '../../../store/notificationsStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import ErrorState from '../../../components/ui/ErrorState';
+import BrandRefreshIndicator from '../../../components/ui/BrandPullToRefresh';
 import { extractApiError } from '../../../services/api';
 import { useInboxCounts } from '../../notifications/hooks/useNotifications';
 
@@ -258,7 +259,18 @@ export default function MySpaceMainScreen({ navigation }: Props) {
             <RefreshControl
               refreshing={profileQ.isRefetching}
               onRefresh={() => { resetChrome(); profileQ.refetch(); }}
-              tintColor={colors.primary}
+              // OS spinner hidden two ways: transparent tint/colors AND a
+              // large negative progressViewOffset that parks it well above
+              // the visible area. Unlike Home/News/Forums where an absolute
+              // top bar covers the spinner zone, MySpace's title bar is in
+              // normal flow — so any residual visibility from platform
+              // spinner artifacts isn't covered by chrome. Negative offset
+              // only affects where the spinner DRAWS; the pull gesture and
+              // threshold still fire as normal.
+              tintColor="transparent"
+              colors={['transparent']}
+              progressBackgroundColor="transparent"
+              progressViewOffset={-120}
             />
           }
         >
@@ -303,6 +315,10 @@ export default function MySpaceMainScreen({ navigation }: Props) {
           </View>
         </Animated.ScrollView>
       )}
+
+      {/* topInset = topBar height (52). Positions the gem just below the
+          static title bar — same visual rhythm as Home / News / Forums. */}
+      <BrandRefreshIndicator refreshing={profileQ.isRefetching} topInset={52} />
     </View>
   );
 }
