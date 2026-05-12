@@ -13,7 +13,7 @@ import type { ThemeColors } from '../../../theme/tokens';
 import type { SuggestItemDto } from '../../../services/searchApi';
 
 import SearchInputHeader from '../components/SearchInputHeader';
-import { useNotificationBell } from '../../notifications/hooks/useNotificationBell';
+import { useNotificationBell } from '../../../hooks/useNotificationBell';
 import SuggestionRow from '../components/SuggestionRow';
 import RecentRow from '../components/RecentRow';
 import UnsupportedEntitySheet from '../components/UnsupportedEntitySheet';

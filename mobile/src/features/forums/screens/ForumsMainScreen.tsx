@@ -14,7 +14,7 @@ import type { ThemeColors } from '../../../theme/tokens';
 import { useSideMenuStore } from '../../../store/sideMenuStore';
 import AnimatedTopBar from '../../../components/layout/chromeScroll/AnimatedTopBar';
 import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
-import { useNotificationBell } from '../../notifications/hooks/useNotificationBell';
+import { useNotificationBell } from '../../../hooks/useNotificationBell';
 
 type Nav = NativeStackNavigationProp<ForumsStackParamList, 'ForumsMain'>;
 

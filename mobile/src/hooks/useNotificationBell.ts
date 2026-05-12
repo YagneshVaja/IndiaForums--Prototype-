@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { useAuthStore } from '../../../store/authStore';
-import { useInboxCounts } from './useNotifications';
+import { useAuthStore } from '../store/authStore';
+import { useInboxCounts } from '../features/notifications/hooks/useNotifications';
 
 /**
  * Shared header-bell logic. Returns:

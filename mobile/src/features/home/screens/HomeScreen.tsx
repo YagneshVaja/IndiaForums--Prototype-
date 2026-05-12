@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated from 'react-native-reanimated';
 import AnimatedTopBar from '../../../components/layout/chromeScroll/AnimatedTopBar';
-import { useNotificationBell } from '../../notifications/hooks/useNotificationBell';
+import { useNotificationBell } from '../../../hooks/useNotificationBell';
 import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 import { useSideMenuStore } from '../../../store/sideMenuStore';
 import { useThemeStore } from '../../../store/themeStore';
