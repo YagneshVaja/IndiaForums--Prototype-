@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { MySpaceStackParamList } from '../../../navigation/types';
@@ -140,6 +141,7 @@ export default function NotificationsScreen({ navigation }: Props) {
 
   const handleOpen = useCallback(
     (n: NotificationDto) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       const target = routeFromNotification(n);
       if (target) {
         goTo(target);
