@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -13,7 +13,7 @@ import { useSideMenuStore } from '../../../store/sideMenuStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import LoadingState from '../../../components/ui/LoadingState';
-import BrandPullToRefresh from '../../../components/ui/BrandPullToRefresh';
+import BrandRefreshIndicator from '../../../components/ui/BrandPullToRefresh';
 import FeaturedBannerCarousel from '../components/FeaturedBannerCarousel';
 import CategoryChips from '../components/CategoryChips';
 import ArticleCard from '../components/ArticleCard';
@@ -52,7 +52,7 @@ export default function HomeScreen() {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const { scrollHandler, resetChrome, scrollY } = useScrollChrome();
+  const { scrollHandler, resetChrome } = useScrollChrome();
   const [topInset, setTopInset] = useState(0);
   const { notifCount, openNotifications } = useNotificationBell();
 
@@ -338,27 +338,31 @@ export default function HomeScreen() {
         onMeasure={setTopInset}
       />
 
-      <BrandPullToRefresh
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-        topInset={topInset}
-        scrollY={scrollY}
-      >
-        <AnimatedFlashList
-          data={articlesLoading ? [] : displayArticles}
-          keyExtractor={keyExtractor}
-          renderItem={renderItem}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={ListHeader}
-          ListFooterComponent={ListFooter}
-          contentContainerStyle={{ ...styles.articlesBg, paddingTop: topInset }}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onScroll={scrollHandler as any}
-          scrollEventThrottle={16}
-          overScrollMode="never"
-          bounces={false}
-        />
-      </BrandPullToRefresh>
+      <AnimatedFlashList
+        data={articlesLoading ? [] : displayArticles}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={ListHeader}
+        ListFooterComponent={ListFooter}
+        contentContainerStyle={{ ...styles.articlesBg, paddingTop: topInset }}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onScroll={scrollHandler as any}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            // OS spinner hidden — BrandRefreshIndicator paints on top while
+            // the native RefreshControl owns the gesture and threshold.
+            tintColor="transparent"
+            colors={['transparent']}
+            progressBackgroundColor="transparent"
+            progressViewOffset={topInset}
+          />
+        }
+      />
+      <BrandRefreshIndicator refreshing={refreshing} topInset={topInset} />
     </View>
   );
 }
