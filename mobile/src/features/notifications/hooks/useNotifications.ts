@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { getNotifications, markAsRead, getUnreadCount, getInboxCounts } from '../services/notificationsApi';
 import { useNotificationsStore } from '../../../store/notificationsStore';
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { useEffect } from 'react';
+import { Platform, AppState } from 'react-native';
 import type { ReadNotificationsRequestDto } from '../types';
 
 function toInt(v: number | string | undefined | null): number {
@@ -34,7 +35,7 @@ export function useNotificationsList({ page, pageSize = 30, templateIds }: ListA
 
 export function useInboxCounts(enabled: boolean = true) {
   const setUnreadCount = useNotificationsStore((s) => s.setUnreadCount);
-  return useQuery({
+  const q = useQuery({
     queryKey: ['notifications', 'inbox-counts'],
     queryFn: async () => {
       const r = await getInboxCounts();
@@ -50,7 +51,22 @@ export function useInboxCounts(enabled: boolean = true) {
     enabled,
     staleTime: 60_000,
     refetchInterval: 5 * 60_000, // every 5 minutes while screen is mounted
+    refetchOnWindowFocus: true,  // RN doesn't have a window, but RQ uses AppState behind the scenes when configured
   });
+
+  // Also refetch when AppState flips to active (covers cases where focus events
+  // don't fire — RN AppState is the canonical signal for "user is here now").
+  useEffect(() => {
+    if (!enabled) return;
+    const sub = AppState.addEventListener('change', (status) => {
+      if (status === 'active') {
+        q.refetch();
+      }
+    });
+    return () => sub.remove();
+  }, [enabled, q]);
+
+  return q;
 }
 
 export function useUnreadCount() {
