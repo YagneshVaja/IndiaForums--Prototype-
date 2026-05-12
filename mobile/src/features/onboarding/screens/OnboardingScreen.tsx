@@ -10,9 +10,8 @@ import {
   Image,
   Animated,
 } from 'react-native';
-
-const LOGO_ICON = require('../../../../assets/icon.png');
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import LOGO_ICON from '../../../../assets/icon.png';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingSlide } from '../components/OnboardingSlide';

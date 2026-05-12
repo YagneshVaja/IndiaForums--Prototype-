@@ -23,7 +23,7 @@ class ErrorBoundaryClass extends React.Component<Props & { colors: ThemeColors }
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // eslint-disable-next-line no-console
+     
     console.warn('[ErrorBoundary]', this.props.scope ?? 'unknown', error, info.componentStack);
   }
 

@@ -79,7 +79,7 @@ export default function MyForumsList({ onForumPress, topInset = 0 }: Props) {
 
   return (
     <View style={{ flex: 1 }}>
-    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+    { }
     <Animated.FlatList
       data={forums}
       keyExtractor={f => String(f.id)}

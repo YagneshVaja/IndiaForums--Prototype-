@@ -247,7 +247,7 @@ export default function MySpaceMainScreen({ navigation }: Props) {
           <ErrorState message={extractApiError(profileQ.error)} onRetry={profileQ.refetch} />
         </View>
       ) : (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         <Animated.ScrollView
           style={styles.scroll}
           contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}

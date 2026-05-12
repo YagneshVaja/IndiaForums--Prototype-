@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-const LOGO_ICON = require('../../../../../assets/icon.png');
+import LOGO_ICON from '../../../../../assets/icon.png';
 
 // Real channel names sourced from indiaforums.com homepage.
 const CHANNELS = [

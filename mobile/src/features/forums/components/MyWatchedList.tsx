@@ -173,7 +173,7 @@ export default function MyWatchedList({ onTopicPress, topInset = 0 }: Props) {
 
   return (
     <View style={styles.wrap}>
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      { }
       <Animated.FlatList
         data={topics}
         keyExtractor={t => String(t.id)}

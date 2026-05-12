@@ -40,7 +40,7 @@ export async function savePronoun(
       await ensureDir();
       await FileSystem.writeAsStringAsync(uri, trimmed);
     } catch (err) {
-      // eslint-disable-next-line no-console
+       
       console.warn('[profileLocalCache] savePronoun failed', err);
     }
   } else {
@@ -67,7 +67,7 @@ export async function loadPronoun(
     const v = (await FileSystem.readAsStringAsync(uri)).trim();
     return v || null;
   } catch (err) {
-    // eslint-disable-next-line no-console
+     
     console.warn('[profileLocalCache] loadPronoun failed', err);
     return null;
   }

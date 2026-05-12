@@ -19,7 +19,7 @@ const memSecure: SecureAdapter = {
 function createSecure(): SecureAdapter {
   if (Platform.OS === 'web') return memSecure;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     return require('expo-secure-store') as SecureAdapter;
   } catch {
     return memSecure;

@@ -169,6 +169,30 @@ export function extractApiError(
   return d?.message || d?.detail || d?.title || d?.error || fallback;
 }
 
+/**
+ * HTTP status from an axios error, or null when there was no response
+ * (network failure / offline / cancellation).
+ */
+export function extractStatus(err: unknown): number | null {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const s = (err as any)?.response?.status;
+  return typeof s === 'number' ? s : null;
+}
+
+/**
+ * Short, human-friendly diagnostic for an error response — used as the
+ * `hint` line in error states. Returns null when the status doesn't warrant
+ * a special hint (e.g. 400 with a useful detail message).
+ */
+export function errorHintForStatus(status: number | null): string | null {
+  if (status == null) return null;
+  if (status === 401 || status === 403) return 'Your session may have expired. Try signing in again.';
+  if (status === 404) return 'This endpoint is missing on the server.';
+  if (status === 429) return null; // extractApiError already produces a clear message
+  if (status >= 500 && status < 600) return 'The server is failing on this endpoint. The team has been notified.';
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Category helpers
 // ---------------------------------------------------------------------------
@@ -928,7 +952,7 @@ function transformArticleDetail(data: any): ArticleDetail {
 
   // Real API fields: articleItemId, articleItemTypeId, orderNum, contentCodes (media URL)
   const articleItems: ArticleItem[] = itemsRaw
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     .slice()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .sort((a: any, b: any) => (a.orderNum ?? 0) - (b.orderNum ?? 0))
@@ -970,7 +994,7 @@ function transformArticleDetail(data: any): ArticleDetail {
       const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const arr: any[] = parsed?.json ?? parsed ?? [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       jsonEntities = arr
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((e: any) => ({

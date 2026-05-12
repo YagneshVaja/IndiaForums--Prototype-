@@ -10,9 +10,8 @@ import {
   Platform,
   Image,
 } from 'react-native';
-
-const LOGO_ICON = require('../../../../assets/icon.png');
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import LOGO_ICON from '../../../../assets/icon.png';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../../../navigation/types';

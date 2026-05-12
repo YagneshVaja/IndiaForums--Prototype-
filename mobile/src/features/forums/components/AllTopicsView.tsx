@@ -178,7 +178,7 @@ export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
 
   return (
     <View style={styles.wrap}>
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      { }
       <Animated.FlatList
         data={sortedTopics}
         keyExtractor={t => String(t.id)}

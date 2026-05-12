@@ -294,7 +294,7 @@ export default function ForumThreadScreen() {
           onRetry={() => refetch()}
         />
       ) : (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         <AnimatedFlashList
           ref={listRef}
           data={filteredTopics}

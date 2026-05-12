@@ -289,7 +289,7 @@ export default function NewsScreen({ navigation, route }: Props) {
           onRetry={refetch}
         />
       ) : (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         <Animated.ScrollView
           style={styles.scrollBody}
           contentContainerStyle={[styles.scrollContent, { paddingTop: topInset }]}

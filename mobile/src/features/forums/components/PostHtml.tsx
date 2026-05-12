@@ -60,7 +60,7 @@ const HtmlImage: CustomBlockRenderer = ({ tnode }) => {
   const src = attrs.src || '';
   const alt = attrs.alt || '';
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+   
   const [state, setState] = useState<ImgState>({ status: 'pending' });
 
   // Proactively drop obviously-broken sources without wasting a network hit.

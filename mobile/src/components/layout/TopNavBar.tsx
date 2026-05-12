@@ -4,8 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../store/themeStore';
 import type { ThemeColors } from '../../theme/tokens';
-
-const LOGO_ICON = require('../../../assets/icon.png');
+import LOGO_ICON from '../../../assets/icon.png';
 
 // ── Gem logo mark ─────────────────────────────────────────────────────────────
 function LogoGem({ styles }: { styles: ReturnType<typeof makeStyles> }) {

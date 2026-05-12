@@ -15,8 +15,7 @@ import { OnboardingStackParamList } from '../../../navigation/types';
 import { markOnboardingComplete } from '../../../store/onboardingStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
-
-const SPLASH_LOGO = require('../../../../assets/splash-logo.png');
+import SPLASH_LOGO from '../../../../assets/splash-logo.png';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'GetStarted'>;
 

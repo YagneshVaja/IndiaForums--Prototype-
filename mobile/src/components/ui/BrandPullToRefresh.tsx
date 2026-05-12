@@ -10,8 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useThemeStore } from '../../store/themeStore';
-
-const LOGO_ICON = require('../../../assets/icon.png');
+import LOGO_ICON from '../../../assets/icon.png';
 
 const INDICATOR_SIZE = 40;
 const HELD_OFFSET = 24;

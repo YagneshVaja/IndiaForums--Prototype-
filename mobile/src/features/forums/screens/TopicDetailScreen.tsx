@@ -58,8 +58,13 @@ import {
 type Nav = NativeStackNavigationProp<ForumsStackParamList, 'TopicDetail'>;
 type Rt  = RouteProp<ForumsStackParamList, 'TopicDetail'>;
 
+// The route's params shape is a discriminated union; the screen only supports
+// the `{ topic }` variant today. Splitting the early-return wrapper from the
+// inner body keeps hooks unconditional (the inner function only mounts when
+// `topic` is present).
+type TopicDetailParams = Extract<Rt['params'], { topic: ForumTopic }>;
+
 export default function TopicDetailScreen() {
-  const navigation = useNavigation<Nav>();
   const routeParams = useRoute<Rt>().params;
 
   // Reject the id-only param shape until follow-up wires the fetch path.
@@ -72,6 +77,11 @@ export default function TopicDetailScreen() {
       </View>
     );
   }
+  return <TopicDetailScreenBody routeParams={routeParams} />;
+}
+
+function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams }) {
+  const navigation = useNavigation<Nav>();
   const { topic, forum, jumpToLast, autoAction } = routeParams;
   const currentUser = useAuthStore(s => s.user);
   const queryClient = useQueryClient();

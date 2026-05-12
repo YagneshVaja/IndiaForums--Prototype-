@@ -10,8 +10,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../store/themeStore';
 import type { ThemeColors } from '../theme/tokens';
-
-const SPLASH_LOGO = require('../../assets/splash-logo.png');
+import SPLASH_LOGO from '../../assets/splash-logo.png';
 
 interface Props {
   /** Called once after holdMs has elapsed. The visual keeps animating. */
