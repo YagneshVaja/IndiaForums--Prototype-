@@ -1,6 +1,6 @@
 # Backend Bug Report
 
-**Date:** 2026-04-07 | **Updated:** 2026-04-08 | **Reported by:** Frontend Team
+**Date:** 2026-04-07 | **Updated:** 2026-05-11 | **Reported by:** Frontend Team
 
 ---
 
@@ -8,17 +8,18 @@
 
 | Class | Count | HTTP Status | Root Cause | Action |
 |-------|-------|-------------|------------|--------|
-| **A** | 6 | 500 | Unhandled exception (catch-all) | Check server logs for stack trace |
+| **A** | 9 | 500 | Unhandled exception (catch-all) | Check server logs for stack trace |
 | **B** | 3 | 400 | MediatR handler not in DI container | Add handler to `RegisterServicesFromAssembly` |
 | **C** | 2 | 200 / 404 | Silent data bugs | Fix projection / ID space mismatch |
 | **D** | 5 | 500 | EF Core `FromSql` missing column | Add missing column to SQL `SELECT` list |
 | **E** | 2 | 500 / 400 | FanFictions handler errors | Check server logs; fix empty 400 body |
+| **F** | 3 | various | Mobile Messages module bugs (see below) | See "Mobile Messages module" section |
 
-**Total broken: 18 endpoints** | **Recently fixed: 2** (`check-username`, `check-email`)
+**Total broken: 22 endpoints** | **Recently fixed: 2** (`check-username`, `check-email`)
 
 ---
 
-## Class A — Generic 500 (6 endpoints)
+## Class A — Generic 500 (9 endpoints)
 
 **Every endpoint returns this identical body — check server logs for the real stack trace:**
 
@@ -35,6 +36,9 @@
 | 4 | `/api/v1/auth/external-login` | POST | Google / Facebook / Microsoft login |
 | 5 | `/api/v1/comments` | POST | Comment composer (all content types) |
 | 6 | `/api/v1/reports` | POST | Report Content modal |
+| 7 | `/api/v1/messages?mode=Inbox` | GET | Mobile Messages — **Inbox tab** (mode-specific: Inbox + Unread return 500; Read + Outbox return 200) |
+| 8 | `/api/v1/messages?mode=Unread` | GET | Mobile Messages — **Unread tab** |
+| 9 | `/api/v1/messages` | POST | Mobile Messages — **Send / Save Draft / Reply** (all three postType values return 500) |
 
 **Useful pattern** — these `/me` sub-routes all work; only the base + username are broken:
 
@@ -77,6 +81,17 @@ curl -i -X POST -H "api-key: Api2IndiaForums@2026" -H "Content-Type: application
 curl -i -X POST -H "api-key: Api2IndiaForums@2026" -H "Content-Type: application/json" \
   -d '{"contentType":7,"contentId":1,"reason":"Spam","remark":"test","authorName":"test","authorEmail":"test@example.com"}' \
   "https://api2.indiaforums.com/api/v1/reports"
+
+# #7 GET /messages (any mode)
+curl -i -H "api-key: Api2IndiaForums@2026" -H "Authorization: Bearer <TOKEN>" \
+  "https://api2.indiaforums.com/api/v1/messages?mode=Inbox&pageNumber=1&pageSize=24"
+# Reproduced on the mobile app 2026-05-11 with a fresh user token. Returns the
+# Class A envelope (status 500, detail = "An unexpected error occurred...").
+# Related endpoints to check while you're in there:
+#   GET /api/v1/messages/overview
+#   GET /api/v1/messages/folders
+#   GET /api/v1/messages/drafts
+#   GET /api/v1/messages/thread/{id}
 ```
 
 ---
@@ -230,6 +245,73 @@ curl -i "https://api2.indiaforums.com/api/v1/fan-fictions/author/856064/follower
 `856064` is a real `userId` from the working `GET /fan-fictions` list. Tried `page`, `pageSize`, `pageNumber` — all 400.
 
 **Please add a `application/problem+json` body to this 400** so we can see the actual reason. Possible causes: required query param we haven't guessed, FluentValidation throwing before controller model binding completes.
+
+---
+
+## Class F — Mobile Messages Module (added 2026-05-11)
+
+Live triage of every `/api/v1/messages/*` endpoint, executed with a real user token (`userId: 121342`). Includes both bugs and working endpoints for reference.
+
+| Endpoint | Method | Status | Verdict | Notes |
+|---|---|---|---|---|
+| `/messages/overview` | GET | **400** | 🔴 Bug | `"Invalid Operation"` — handler rejects the empty params. Spec says no params required. The matching response shape suggests this should always work. |
+| `/messages/folders` | GET | 200 | ✅ Works | Returns `{ folders: [...], userId }` |
+| `/messages/folders` | POST | 200 | ✅ Works | `{folderId:0, folderName:"X"}` → creates folder, returns new id |
+| `/messages/folders/{id}` | DELETE | 200 | ✅ Works | |
+| `/messages?mode=Inbox` | GET | **500** | 🔴 Bug | Class A envelope. Inbox tab unusable. |
+| `/messages?mode=Unread` | GET | **500** | 🔴 Bug | Class A envelope. Unread tab unusable. |
+| `/messages?mode=Outbox` | GET | 200 | ✅ Works | Returns full list |
+| `/messages?mode=Read` | GET | 200 | ✅ Works | Returns full list |
+| `/messages` | POST | **500** | 🔴 Bug | All three `postType` values (`New`, `Reply`, `Draft`) return Class A 500. **Sending PMs / replies / saving drafts is completely broken.** |
+| `/messages/drafts` | GET | 200 | ✅ Works | Returns drafts (paginated) |
+| `/messages/new?mode=PM[&did=…&tunm=…]` | GET | 200 | ✅ Works | Returns compose-form init |
+| `/messages/thread/{id}` | GET | 200 | ✅ Works | Returns thread + messages |
+| `/messages/thread/{id}/opt-out` | POST | 200 ⚠️ | ✅ Works (with caveat) | Requires a request body; sending nothing returns IIS 411 "Length Required". Mobile client now sends `{}` to satisfy this — but the BE should accept an empty body too. |
+| `/messages/{id}` | GET | **404** | 🟡 Unclear | Returned 404 for both `pmId` (26199342) and `pmlId` (62271385) of a known message. ID space the route accepts is undocumented and could not be inferred from the spec. |
+| `/messages/actions` | POST | 200 ⚠️ | ✅ Works (cosmetic bug) | Always returns `affectedCount: -1` with message `"-1 message(s) marked as read."` — looks like a SQL `@@ROWCOUNT` not being captured. UI ignores the count, but the BE message would be confusing if shown. |
+| `/messages/move-to-folder` | POST | 200 ⚠️ | ✅ Works (cosmetic bug) | Same `-1` count issue. |
+
+### F-1: Inbox + Unread modes 500 while Read + Outbox work — mode-specific SQL bug
+
+The same controller returns 200 for `mode=Read` and `mode=Outbox` but 500 for `mode=Inbox` and `mode=Unread`. Suggests the per-mode query branch is bad (probably a NULL/JOIN difference in the SELECT for unread/inbox where the row hasn't been read yet).
+
+```bash
+curl -i -H "api-key: Api2IndiaForums@2026" -H "Authorization: Bearer <TOKEN>" \
+  "https://api2.indiaforums.com/api/v1/messages?mode=Inbox&pageNumber=1&pageSize=24"
+# HTTP/1.1 500 — Class A envelope
+
+# Same call with mode=Read or mode=Outbox returns 200 with real data.
+```
+
+### F-2: `POST /messages` 500 on all postType values
+
+Sending a new PM, replying inside a thread, and saving as draft all return Class A 500. Tried with and without `userGroupList`, with and without `parentId`/`rootMessageId`. Send is **completely broken** for the mobile client (and presumably the web prototype too).
+
+```bash
+curl -i -X POST -H "api-key: Api2IndiaForums@2026" -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"subject":"probe","message":"hello","userList":"vijay","userGroupList":null,"bcc":false,"parentId":null,"rootMessageId":0,"emailNotify":false,"draftId":null,"postType":"New"}' \
+  "https://api2.indiaforums.com/api/v1/messages"
+# HTTP/1.1 500 — Class A envelope
+```
+
+### F-3: `GET /messages/overview` 400 "Invalid Operation"
+
+Takes no params per the OpenAPI spec. Authenticated GET still returns 400 with the generic `Invalid Operation` envelope. The same user can hit `/folders`, `/thread/{id}`, `/new`, etc. fine — so the bug is specific to the overview handler.
+
+```bash
+curl -i -H "api-key: Api2IndiaForums@2026" -H "Authorization: Bearer <TOKEN>" \
+  "https://api2.indiaforums.com/api/v1/messages/overview"
+# HTTP/1.1 400 — "The requested operation could not be completed."
+```
+
+### F-4: `GET /messages/{id}` 404 — unclear ID space
+
+Tested with both `pmId` (e.g. `26199342`) and `pmlId` (e.g. `62271385`) of a real message returned from `/messages/thread/{id}` — both return `404 "Message with ID … not found."`. Not blocking mobile (no screen calls this endpoint yet), but the route either has a bug or expects a third ID space we haven't found documented.
+
+### F-5: Affected-count returns -1 (cosmetic)
+
+Both `POST /messages/actions` and `POST /messages/move-to-folder` return `isSuccess: true, affectedCount: -1` with a message like `"-1 message(s) marked as read."` — looks like SQL `@@ROWCOUNT` is being returned without checking for the "no count" sentinel. Mobile UI works because it ignores the count; just clean up the message text and resolve the count properly so logs aren't misleading.
 
 ---
 
