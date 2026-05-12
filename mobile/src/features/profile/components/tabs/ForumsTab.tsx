@@ -27,7 +27,7 @@ export default function ForumsTab({ userId, isOwn }: Props) {
   const nav = useNavigation<NativeStackNavigationProp<MySpaceStackParamList>>();
   const followOverrides = useForumFollowStore((s) => s.byForumId);
   const data = q.data && q.data.kind === 'forums' ? q.data : null;
-  const rawItems = data?.items ?? [];
+  const rawItems = useMemo(() => data?.items ?? [], [data]);
 
   const openForum = useCallback(
     (f: MyForumDto) =>

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, Pressable, ActivityIndicator, ScrollView, StyleSheet, FlatList,
+  View, Text, Pressable, ActivityIndicator, StyleSheet, FlatList,
   NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import Animated, {
@@ -188,26 +188,17 @@ function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams
   } = useTopicPosts(topic.id, debouncedPostSearch, currentPage, sortBy);
 
   const firstPage = data?.pages[0];
-  const liveTopic: ForumTopic = firstPage?.topicDetail
-    ? { ...topic, ...firstPage.topicDetail }
-    : topic;
-  const forumFlairs = firstPage?.flairs ?? [];
+  const liveTopic: ForumTopic = useMemo(
+    () => (firstPage?.topicDetail ? { ...topic, ...firstPage.topicDetail } : topic),
+    [firstPage, topic],
+  );
+  const forumFlairs = useMemo(() => firstPage?.flairs ?? [], [firstPage]);
 
   const { data: topPosters = [] } = useTopicTopPosters(topic.id, 12);
   const topicFlair = useMemo(
     () => forumFlairs.find(f => f.id === liveTopic.flairId) ?? null,
     [forumFlairs, liveTopic.flairId],
   );
-
-  // OP avatar — used to upgrade the colored-letter placeholder once posts arrive.
-  const opAvatarUrl = useMemo<string | null>(() => {
-    for (const page of data?.pages || []) {
-      for (const post of page.posts) {
-        if (post.isOp) return post.avatarUrl ?? null;
-      }
-    }
-    return null;
-  }, [data]);
 
   // Page-by-page pagination: only the current page's posts are displayed.
   const allPosts = useMemo<TopicPost[]>(

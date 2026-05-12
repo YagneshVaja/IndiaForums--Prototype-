@@ -90,7 +90,7 @@ export default function ForumThreadScreen() {
 
   const firstPage = data?.pages[0];
   const detail: Forum = firstPage?.forumDetail || forum;
-  const flairs = firstPage?.flairs || [];
+  const flairs = useMemo(() => firstPage?.flairs || [], [firstPage]);
   const hasModerationRights =
     (detail.priorityPosts ?? 0) > 0 ||
     (detail.editPosts ?? 0) > 0 ||
@@ -300,6 +300,7 @@ export default function ForumThreadScreen() {
           data={filteredTopics}
           keyExtractor={(t: ForumTopic) => String(t.id)}
           renderItem={renderTopicItem}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onScroll={!isFiltering ? (listScrollHandler as any) : undefined}
           scrollEventThrottle={16}
           ListHeaderComponent={

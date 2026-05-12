@@ -5,7 +5,6 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
-  Dimensions,
   ViewToken,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -13,7 +12,6 @@ import type { Banner } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_W = 280;
 const CARD_H = 180;
 const CARD_GAP = 12;
@@ -43,6 +41,7 @@ const BannerCard = React.memo(function BannerCard({ banner, onPress, styles }: {
         />
       ) : (
         <View style={[styles.bg, styles.bgFallback]}>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <Text style={styles.bgEmoji}>{(banner as any).emoji ?? '📰'}</Text>
         </View>
       )}

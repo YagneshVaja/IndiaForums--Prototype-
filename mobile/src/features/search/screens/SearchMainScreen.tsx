@@ -55,7 +55,6 @@ export default function SearchMainScreen() {
   const recents = useSearchStore((s) => s.recents);
   const removeRecent = useSearchStore((s) => s.removeRecent);
   const clearRecents = useSearchStore((s) => s.clearRecents);
-  const setEntityFilter = useSearchStore((s) => s.setEntityFilter);
 
   const { sheetRef, openSuggestion } = useEntityNavigator();
   const { notifCount, openNotifications } = useNotificationBell();

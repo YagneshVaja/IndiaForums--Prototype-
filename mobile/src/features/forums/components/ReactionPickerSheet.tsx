@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import {
-  Modal, Pressable, View, Text, StyleSheet, useWindowDimensions,
+  Modal, Pressable, Text, StyleSheet, useWindowDimensions,
 } from 'react-native';
 import { REACTION_CODES, REACTION_META, type ReactionCode } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';

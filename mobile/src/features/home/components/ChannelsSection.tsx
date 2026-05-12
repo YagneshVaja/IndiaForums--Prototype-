@@ -13,7 +13,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
-import { CHANNELS_DATA, type Channel, type ChannelShow } from '../data/channels';
+import { CHANNELS_DATA, type ChannelShow } from '../data/channels';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 

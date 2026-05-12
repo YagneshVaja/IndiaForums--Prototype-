@@ -22,7 +22,7 @@ interface Props {
   onBlockToggle?: (blocked: boolean) => void;
 }
 
-export default function ProfileHero({ profile, onEdit, onMessage }: Props) {
+export default function ProfileHero({ profile, onEdit: _onEdit, onMessage }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const isOwn = profile.isOwnProfile;

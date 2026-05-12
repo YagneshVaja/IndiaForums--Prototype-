@@ -84,6 +84,7 @@ export default function MyForumsList({ onForumPress, topInset = 0 }: Props) {
       data={forums}
       keyExtractor={f => String(f.id)}
       renderItem={({ item }) => <ForumCard forum={item} onPress={onForumPress} />}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onScroll={listScrollHandler as any}
       scrollEventThrottle={16}
       refreshControl={

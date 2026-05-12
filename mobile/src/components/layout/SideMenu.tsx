@@ -188,6 +188,7 @@ export default function SideMenu() {
   const colors = useThemeStore((s) => s.colors);
   const toggleTheme = useThemeStore((s) => s.toggle);
   const insets = useSafeAreaInsets();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   const [mounted, setMounted] = useState(false);
 

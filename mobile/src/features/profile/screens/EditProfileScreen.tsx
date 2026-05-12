@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Pressable,
   ActivityIndicator,
-  Alert,
   StatusBar,
   KeyboardAvoidingView,
   Platform,

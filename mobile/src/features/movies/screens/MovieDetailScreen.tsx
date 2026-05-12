@@ -108,7 +108,7 @@ export default function MovieDetailScreen() {
   const language      = reviewsMovie?.language || null;
   const castList      = cast.data?.cast ?? [];
   const criticReviews = reviews.data?.criticReviews ?? [];
-  const userReviews   = reviews.data?.userReviews   ?? [];
+  const userReviews   = useMemo(() => reviews.data?.userReviews ?? [], [reviews.data]);
   const yearLabel     = movie.startYear ? String(movie.startYear) : null;
   const newsList      = news.data ?? [];
   const discussionTopics = discussion.data ?? [];
@@ -123,7 +123,10 @@ export default function MovieDetailScreen() {
   // below), so they don't fire until the user scrolls near them.
 
   // ---- Status pill (Released vs Coming Soon) ---------------------------------
-  const releaseDateObj = movie.releaseDate ? new Date(movie.releaseDate) : null;
+  const releaseDateObj = useMemo(
+    () => (movie.releaseDate ? new Date(movie.releaseDate) : null),
+    [movie.releaseDate],
+  );
   const isUpcoming =
     !!releaseDateObj && !Number.isNaN(releaseDateObj.getTime()) && releaseDateObj.getTime() > Date.now();
 
@@ -209,7 +212,7 @@ export default function MovieDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ['movieDiscussion', movie.titleName] }),
     ]);
     setRefreshing(false);
-  }, [queryClient, movie.titleId]);
+  }, [queryClient, movie.titleId, movie.titleName]);
 
   // ---- Review actions --------------------------------------------------------
   const handleEditOwnReview = useCallback((r: MovieReview) => {

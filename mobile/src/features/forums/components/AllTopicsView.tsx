@@ -193,6 +193,7 @@ export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
             onOpenReactionsList={handleOpenReactionsList}
           />
         )}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onScroll={listScrollHandler as any}
         scrollEventThrottle={16}
         refreshControl={

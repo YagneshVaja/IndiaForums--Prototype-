@@ -109,7 +109,7 @@ export default function QuizzesScreen() {
     return out;
   }, [data]);
 
-  const categories = data?.pages?.[0]?.categories ?? [];
+  const categories = useMemo(() => data?.pages?.[0]?.categories ?? [], [data]);
 
   const activeCategory = useMemo(
     () => (activeCatId ? categories.find((c) => c.categoryId === activeCatId) : null),

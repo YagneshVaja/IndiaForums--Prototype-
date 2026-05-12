@@ -247,6 +247,7 @@ export default function HomeScreen() {
       articlesLoading,
       handleBannerPress,
       handleNewsViewAll,
+      colors.primary,
     ],
   );
 

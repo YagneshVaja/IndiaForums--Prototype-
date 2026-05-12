@@ -78,7 +78,7 @@ export default function QuizPlayerScreen() {
 
   const { data: quiz, isLoading, isError, error, refetch } = useQuizDetails(id);
 
-  const questions = quiz?.quiz_questions ?? [];
+  const questions = useMemo(() => quiz?.quiz_questions ?? [], [quiz]);
   const totalQ = questions.length;
   const timerDuration = quiz?.countdownTimer || 0;
 

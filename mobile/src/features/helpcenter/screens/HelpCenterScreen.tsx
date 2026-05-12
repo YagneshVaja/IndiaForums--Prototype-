@@ -41,8 +41,8 @@ export default function HelpCenterScreen({ navigation }: Props) {
   const [activeCategoryId, setActiveCategoryId] = useState<number | string | null>(null);
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | string | null>(null);
 
-  const categories = home.data?.categories ?? [];
-  const questions = home.data?.questionsByCategory ?? [];
+  const categories = useMemo(() => home.data?.categories ?? [], [home.data]);
+  const questions = useMemo(() => home.data?.questionsByCategory ?? [], [home.data]);
 
   // Default to first category once data loads
   React.useEffect(() => {

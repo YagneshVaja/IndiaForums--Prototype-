@@ -294,6 +294,7 @@ export default function NewsScreen({ navigation, route }: Props) {
           style={styles.scrollBody}
           contentContainerStyle={[styles.scrollContent, { paddingTop: topInset }]}
           showsVerticalScrollIndicator={false}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onScroll={scrollHandler as any}
           scrollEventThrottle={16}
           refreshControl={

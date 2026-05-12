@@ -253,6 +253,7 @@ export default function MySpaceMainScreen({ navigation }: Props) {
           contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
           showsVerticalScrollIndicator={false}
           stickyHeaderIndices={[1]}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onScroll={scrollHandler as any}
           scrollEventThrottle={16}
           refreshControl={
@@ -323,7 +324,7 @@ export default function MySpaceMainScreen({ navigation }: Props) {
   );
 }
 
-function makeStyles(c: ThemeColors, mode: 'light' | 'dark') {
+function makeStyles(c: ThemeColors, _mode: 'light' | 'dark') {
   const warn = {
     bg: c.warningSoft,
     border: c.warningSoftBorder,

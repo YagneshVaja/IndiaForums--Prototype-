@@ -33,6 +33,7 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [jumpSheetOpen, setJumpSheetOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const listRef = useRef<any>(null);
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -73,8 +74,8 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
   });
 
   const firstPage = data?.pages[0];
-  const categories = firstPage?.categories || [];
-  const subCatMap = firstPage?.subCatMap || {};
+  const categories = useMemo(() => firstPage?.categories || [], [firstPage]);
+  const subCatMap = useMemo(() => firstPage?.subCatMap || {}, [firstPage]);
   const listTotalCount = firstPage?.totalForumCount ?? 0;
 
   // Page-by-page pagination: show only the current page's items, not all

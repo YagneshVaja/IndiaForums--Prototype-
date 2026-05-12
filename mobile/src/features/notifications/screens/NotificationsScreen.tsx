@@ -108,12 +108,6 @@ export default function NotificationsScreen({ navigation }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unreadBadgeIsStale]);
 
-  const markOne = useCallback(
-    (id: number | string) => {
-      markRead.mutate({ ids: String(id) });
-    },
-    [markRead],
-  );
 
   const markAll = useCallback(() => {
     if (unreadCount === 0) return;
