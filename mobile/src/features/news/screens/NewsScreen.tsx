@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import Animated from 'react-native-reanimated';
 import type { NewsStackParamList } from '../../../navigation/types';
 import AnimatedTopBar from '../../../components/layout/chromeScroll/AnimatedTopBar';
+import { useNotificationBell } from '../../notifications/hooks/useNotificationBell';
 import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 import { useSideMenuStore } from '../../../store/sideMenuStore';
 import { useThemeStore } from '../../../store/themeStore';
@@ -71,6 +72,7 @@ export default function NewsScreen({ navigation, route }: Props) {
 
   const { scrollHandler, resetChrome } = useScrollChrome();
   const [topInset, setTopInset] = useState(0);
+  const { notifCount, openNotifications } = useNotificationBell();
 
   useFocusEffect(
     useCallback(() => {
@@ -182,7 +184,12 @@ export default function NewsScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.screen}>
-      <AnimatedTopBar onMeasure={setTopInset} onMenuPress={useSideMenuStore.getState().open} />
+      <AnimatedTopBar
+        onMeasure={setTopInset}
+        onMenuPress={useSideMenuStore.getState().open}
+        onNotificationsPress={openNotifications}
+        notifCount={notifCount}
+      />
 
       {/* Category tabs */}
       <ScrollView

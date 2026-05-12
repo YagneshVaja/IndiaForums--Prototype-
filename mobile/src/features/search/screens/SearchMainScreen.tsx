@@ -13,6 +13,7 @@ import type { ThemeColors } from '../../../theme/tokens';
 import type { SuggestItemDto } from '../../../services/searchApi';
 
 import SearchInputHeader from '../components/SearchInputHeader';
+import { useNotificationBell } from '../../notifications/hooks/useNotificationBell';
 import SuggestionRow from '../components/SuggestionRow';
 import RecentRow from '../components/RecentRow';
 import UnsupportedEntitySheet from '../components/UnsupportedEntitySheet';
@@ -57,6 +58,7 @@ export default function SearchMainScreen() {
   const setEntityFilter = useSearchStore((s) => s.setEntityFilter);
 
   const { sheetRef, openSuggestion } = useEntityNavigator();
+  const { notifCount, openNotifications } = useNotificationBell();
 
   const handleSubmit = useCallback(
     (q: string) => {
@@ -117,6 +119,12 @@ export default function SearchMainScreen() {
         onChangeText={setQuery}
         onSubmit={handleSubmit}
         autoFocus
+        trailingIcon={{
+          name: 'notifications-outline',
+          onPress: openNotifications,
+          badge: notifCount,
+          accessibilityLabel: 'Notifications',
+        }}
       />
 
       {showSuggestionsList || showSuggestionSkeletons ? (

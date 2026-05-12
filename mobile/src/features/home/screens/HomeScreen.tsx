@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -7,11 +7,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated from 'react-native-reanimated';
 import AnimatedTopBar from '../../../components/layout/chromeScroll/AnimatedTopBar';
+import { useNotificationBell } from '../../notifications/hooks/useNotificationBell';
 import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 import { useSideMenuStore } from '../../../store/sideMenuStore';
 import { useThemeStore } from '../../../store/themeStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import LoadingState from '../../../components/ui/LoadingState';
+import BrandPullToRefresh from '../../../components/ui/BrandPullToRefresh';
 import FeaturedBannerCarousel from '../components/FeaturedBannerCarousel';
 import CategoryChips from '../components/CategoryChips';
 import ArticleCard from '../components/ArticleCard';
@@ -50,8 +52,9 @@ export default function HomeScreen() {
   const colors = useThemeStore((s) => s.colors);
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const { scrollHandler, resetChrome } = useScrollChrome();
+  const { scrollHandler, resetChrome, scrollY } = useScrollChrome();
   const [topInset, setTopInset] = useState(0);
+  const { notifCount, openNotifications } = useNotificationBell();
 
   useFocusEffect(
     useCallback(() => {
@@ -330,28 +333,32 @@ export default function HomeScreen() {
     <View style={styles.screen}>
       <AnimatedTopBar
         onMenuPress={useSideMenuStore.getState().open}
+        onNotificationsPress={openNotifications}
+        notifCount={notifCount}
         onMeasure={setTopInset}
       />
 
-      <AnimatedFlashList
-        data={articlesLoading ? [] : displayArticles}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={ListHeader}
-        ListFooterComponent={ListFooter}
-        contentContainerStyle={{ ...styles.articlesBg, paddingTop: topInset }}
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        onScroll={scrollHandler as any}
-        scrollEventThrottle={16}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary}
-          />
-        }
-      />
+      <BrandPullToRefresh
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        topInset={topInset}
+        scrollY={scrollY}
+      >
+        <AnimatedFlashList
+          data={articlesLoading ? [] : displayArticles}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={ListHeader}
+          ListFooterComponent={ListFooter}
+          contentContainerStyle={{ ...styles.articlesBg, paddingTop: topInset }}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onScroll={scrollHandler as any}
+          scrollEventThrottle={16}
+          overScrollMode="never"
+          bounces={false}
+        />
+      </BrandPullToRefresh>
     </View>
   );
 }

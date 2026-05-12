@@ -1,6 +1,6 @@
 import React, { useMemo, useRef } from 'react';
 import {
-  View, TextInput, Pressable, StyleSheet, Keyboard,
+  View, TextInput, Pressable, StyleSheet, Keyboard, Text,
   type NativeSyntheticEvent, type TextInputSubmitEditingEventData,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,13 @@ interface Props {
   onBack?: () => void;
   autoFocus?: boolean;
   placeholder?: string;
+  /** Optional trailing icon shown to the right of the search input. */
+  trailingIcon?: {
+    name: React.ComponentProps<typeof Ionicons>['name'];
+    onPress: () => void;
+    badge?: number;
+    accessibilityLabel?: string;
+  };
 }
 
 export default function SearchInputHeader({
@@ -24,6 +31,7 @@ export default function SearchInputHeader({
   onBack,
   autoFocus,
   placeholder = 'Search movies, shows, celebrities…',
+  trailingIcon,
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const insets = useSafeAreaInsets();
@@ -76,6 +84,23 @@ export default function SearchInputHeader({
           </Pressable>
         ) : null}
       </View>
+      {trailingIcon ? (
+        <Pressable
+          onPress={trailingIcon.onPress}
+          hitSlop={8}
+          style={styles.trailingBtn}
+          accessibilityLabel={trailingIcon.accessibilityLabel ?? 'Action'}
+        >
+          <Ionicons name={trailingIcon.name} size={20} color={colors.text} />
+          {trailingIcon.badge != null && trailingIcon.badge > 0 ? (
+            <View style={styles.trailingBadge}>
+              <Text style={styles.trailingBadgeText}>
+                {trailingIcon.badge > 99 ? '99+' : String(trailingIcon.badge)}
+              </Text>
+            </View>
+          ) : null}
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -108,6 +133,35 @@ function makeStyles(c: ThemeColors) {
       fontSize: 14,
       color: c.text,
       padding: 0,
+    },
+    trailingBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 4,
+      position: 'relative',
+    },
+    trailingBadge: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      paddingHorizontal: 4,
+      backgroundColor: c.danger,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1.5,
+      borderColor: c.card,
+    },
+    trailingBadgeText: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: c.onPrimary,
+      lineHeight: 11,
     },
   });
 }
