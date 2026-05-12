@@ -27,6 +27,7 @@ import Pagination from '../../profile/components/Pagination';
 import { extractApiError } from '../../../services/api';
 import { timeAgo, stripHtml } from '../../profile/utils/format';
 
+import Skeleton from '../../../components/ui/Skeleton';
 import {
   useMarkAsRead,
   useNotificationsList,
@@ -273,6 +274,18 @@ export default function NotificationsScreen({ navigation }: Props) {
         </ScrollView>
       ) : null}
 
+      {templates.length === 0 && list.isLoading ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.templateRow}
+          style={styles.templateScroll}
+        >
+          <Skeleton width={80} height={28} borderRadius={14} />
+          <Skeleton width={140} height={28} borderRadius={14} />
+          <Skeleton width={100} height={28} borderRadius={14} />
+        </ScrollView>
+      ) : null}
 
       <ScrollView
         contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 40 }}
