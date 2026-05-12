@@ -7,6 +7,7 @@ import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import RootNavigator from './src/navigation/RootNavigator';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import PushBootstrap from './src/components/PushBootstrap';
 import { navigationRef } from './src/navigation/navigationRef';
 import { useThemeStore } from './src/store/themeStore';
@@ -77,7 +78,9 @@ function ThemedNavigation() {
           void handleColdStartTap(() => useAuthStore.getState().isAuthenticated);
         }}
       >
-        <RootNavigator />
+        <ErrorBoundary scope="App">
+          <RootNavigator />
+        </ErrorBoundary>
       </NavigationContainer>
     </>
   );
