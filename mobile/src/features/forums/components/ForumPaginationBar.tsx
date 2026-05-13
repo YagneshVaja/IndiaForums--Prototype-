@@ -44,12 +44,6 @@ interface Props {
    * to lift the bar above the keyboard so it sits flush with the keyboard top.
    */
   bottomInset?: number;
-  /**
-   * When rendered inline as a list footer (not a floating dock), suppress the
-   * hide-on-scroll translateY and the keyboard-lift translateY — both would
-   * detach the bar from its scroll position and look broken.
-   */
-  inline?: boolean;
   onPageChange: (page: number) => void;
 }
 
@@ -74,7 +68,6 @@ export default function ForumPaginationBar({
   itemLabel,
   hidden,
   bottomInset = 0,
-  inline = false,
   onPageChange,
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
@@ -120,10 +113,7 @@ export default function ForumPaginationBar({
 
   // Worklet-driven hide: interpolate from the normalised SharedValue,
   // then add keyboard offset so both animations compose correctly.
-  // Inline mode skips both transforms — the bar lives inside the scroll
-  // content and any translateY would detach it from its layout.
   const animatedStyle = useAnimatedStyle(() => {
-    if (inline) return {};
     const hiddenVal = hiddenSv.value;
     const hideTranslate = interpolate(hiddenVal, [0, 1], [0, barHeight], Extrapolation.CLAMP);
     const hideOpacity  = interpolate(hiddenVal, [0, 1], [1, 0], Extrapolation.CLAMP);
@@ -140,9 +130,7 @@ export default function ForumPaginationBar({
   // Lift the bar above the keyboard while the input is focused. We subtract
   // `bottomInset` because the dock may already sit above other UI (e.g. the
   // reply bar on TopicDetailScreen), so the absolute lift needed is smaller.
-  // Skipped in inline mode — the screen owns keyboard handling there.
   useEffect(() => {
-    if (inline) return;
     const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const showSub = Keyboard.addListener(showEvt, (e) => {
@@ -167,7 +155,7 @@ export default function ForumPaginationBar({
       showSub.remove();
       hideSub.remove();
     };
-  }, [bottomInset, keyboardOffset, inline]);
+  }, [bottomInset, keyboardOffset]);
 
   if (totalPages <= 1) return null;
 
