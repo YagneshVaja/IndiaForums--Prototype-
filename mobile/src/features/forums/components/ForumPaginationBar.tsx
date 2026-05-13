@@ -142,7 +142,10 @@ export default function ForumPaginationBar({
       });
     });
     const hideSub = Keyboard.addListener(hideEvt, (e) => {
-      if (!editingRef.current) return;
+      // Always settle back to 0 on hide. Committing the draft flips
+      // editingRef before Keyboard.dismiss() fires this event — guarding on
+      // editingRef here would leave the bar stuck in its lifted position,
+      // floating mid-screen until the next focus cycle.
       keyboardOffset.value = withTiming(0, {
         duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 250,
         easing: Easing.out(Easing.cubic),
