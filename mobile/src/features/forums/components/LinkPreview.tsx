@@ -50,7 +50,7 @@ export default function LinkPreview({ url }: Props) {
     return (
       <Pressable style={styles.chip} onPress={open}>
         <View style={styles.chipIcon}>
-          <Ionicons name="link-outline" size={13} color="#FFFFFF" />
+          <Ionicons name="link-outline" size={13} color={colors.onPrimary} />
         </View>
         <View style={styles.chipText}>
           <Text style={styles.chipDomain} numberOfLines={1}>

@@ -60,38 +60,38 @@ export default function ForumTopicSettingsSheet({
   const menuItems: MenuItem[] = useMemo(() => {
     const items: MenuItem[] = [];
     if (forum.editPosts > 0) {
-      items.push({ key: 'edit', label: 'Edit Topic', icon: 'create-outline', iconBg: '#E8EEFF', iconColor: '#3558F0' });
+      items.push({ key: 'edit', label: 'Edit Topic', icon: 'create-outline', iconBg: colors.primarySoft, iconColor: colors.primary });
     }
     if (forum.priorityPosts > 0) {
-      items.push({ key: 'migrateFF', label: 'Migrate FF', icon: 'arrow-redo-outline', iconBg: '#E8EEFF', iconColor: '#3558F0' });
-      items.push({ key: 'move',      label: 'Move Topic', icon: 'folder-outline',    iconBg: '#FEF3C7', iconColor: '#d97706' });
-      items.push({ key: 'merge',     label: 'Merge Topic', icon: 'git-merge-outline', iconBg: '#D1FAE5', iconColor: '#059669' });
+      items.push({ key: 'migrateFF', label: 'Migrate FF', icon: 'arrow-redo-outline', iconBg: colors.primarySoft, iconColor: colors.primary });
+      items.push({ key: 'move',      label: 'Move Topic', icon: 'folder-outline',    iconBg: colors.warningSoft, iconColor: colors.warning });
+      items.push({ key: 'merge',     label: 'Merge Topic', icon: 'git-merge-outline', iconBg: colors.successSoft, iconColor: colors.success });
       const isLocked = selectedTopic?.locked ?? false;
       items.push({
         key: 'lock',
         label: isLocked ? 'Unlock Topic' : 'Lock Topic',
         icon: isLocked ? 'lock-open-outline' : 'lock-closed-outline',
-        iconBg: '#FEF3C7', iconColor: '#d97706',
+        iconBg: colors.warningSoft, iconColor: colors.warning,
       });
       const isPinned = selectedTopic?.pinned ?? false;
       items.push({
         key: 'pin',
         label: isPinned ? 'Unpin Topic' : 'Pin Topic',
         icon: 'bookmark-outline',
-        iconBg: '#FEF3C7', iconColor: '#d97706',
+        iconBg: colors.warningSoft, iconColor: colors.warning,
       });
     }
     if (forum.deletePosts > 0) {
-      items.push({ key: 'trash',   label: 'Trash Topic',   icon: 'trash-outline',   iconBg: '#FEE2E2', iconColor: '#dc2626', danger: true });
-      items.push({ key: 'restore', label: 'Restore Topic', icon: 'refresh-outline', iconBg: '#D1FAE5', iconColor: '#059669' });
+      items.push({ key: 'trash',   label: 'Trash Topic',   icon: 'trash-outline',   iconBg: colors.dangerSoft, iconColor: colors.danger, danger: true });
+      items.push({ key: 'restore', label: 'Restore Topic', icon: 'refresh-outline', iconBg: colors.successSoft, iconColor: colors.success });
     }
     if (forum.priorityPosts > 0 || forum.editPosts > 0) {
-      items.push({ key: 'history', label: 'Topic History', icon: 'time-outline', iconBg: '#F5F6F7', iconColor: '#5A5A5A' });
+      items.push({ key: 'history', label: 'Topic History', icon: 'time-outline', iconBg: colors.surface, iconColor: colors.textSecondary });
     }
-    items.push({ key: 'hideSignature', label: 'Hide Signature', icon: 'eye-off-outline', iconBg: '#F5F6F7', iconColor: '#5A5A5A' });
-    items.push({ key: 'team',          label: 'Team',           icon: 'people-outline',  iconBg: '#D1FAE5', iconColor: '#059669' });
+    items.push({ key: 'hideSignature', label: 'Hide Signature', icon: 'eye-off-outline', iconBg: colors.surface, iconColor: colors.textSecondary });
+    items.push({ key: 'team',          label: 'Team',           icon: 'people-outline',  iconBg: colors.successSoft, iconColor: colors.success });
     return items;
-  }, [forum, selectedTopic]);
+  }, [forum, selectedTopic, colors]);
 
   function reset() {
     setSelectedTopic(null);
@@ -425,8 +425,8 @@ export default function ForumTopicSettingsSheet({
                       <Switch
                         value={hideSig}
                         onValueChange={setHideSig}
-                        thumbColor="#FFFFFF"
-                        trackColor={{ false: '#D1D5DB', true: colors.primary }}
+                        thumbColor={colors.onPrimary}
+                        trackColor={{ false: colors.border, true: colors.primary }}
                       />
                     </View>
                   )}
@@ -443,7 +443,7 @@ export default function ForumTopicSettingsSheet({
                   )}
                   {success && (
                     <View style={styles.successBox}>
-                      <Ionicons name="checkmark-circle" size={14} color="#059669" />
+                      <Ionicons name="checkmark-circle" size={14} color={colors.success} />
                       <Text style={styles.successText}>{success}</Text>
                     </View>
                   )}
@@ -479,7 +479,7 @@ export default function ForumTopicSettingsSheet({
                           ]}
                         >
                           {busy ? (
-                            <ActivityIndicator color="#FFFFFF" size="small" />
+                            <ActivityIndicator color={colors.onPrimary} size="small" />
                           ) : (
                             <Text style={styles.confirmBtnText}>Confirm</Text>
                           )}

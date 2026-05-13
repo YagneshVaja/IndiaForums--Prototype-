@@ -17,9 +17,6 @@ interface Props {
   onPress: (forum: Forum) => void;
 }
 
-const ACCENT = '#EA580C';
-const ACCENT_SOFT = '#FFEDD5';
-
 function ForumCardImpl({ forum, onPress }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
@@ -84,7 +81,7 @@ function ForumCardImpl({ forum, onPress }: Props) {
             <Ionicons
               name="flame"
               size={14}
-              color={ACCENT}
+              color={colors.accent}
               style={styles.hotIcon}
             />
           )}
@@ -97,7 +94,7 @@ function ForumCardImpl({ forum, onPress }: Props) {
               accessible
               accessibilityLabel={`ranked number ${rank}${rankMove ? `, ${rankMove.startsWith('+') ? 'up' : 'down'} ${rankMove.replace(/^[+-]/, '')}` : ''}`}
             >
-              <Ionicons name="trophy" size={11} color={ACCENT} />
+              <Ionicons name="trophy" size={11} color={colors.accent} />
               <Text style={styles.rankText}>#{rank}</Text>
               {!!rankMove && (
                 <Text
@@ -228,12 +225,12 @@ function makeStyles(c: ThemeColors) {
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 999,
-      backgroundColor: ACCENT_SOFT,
+      backgroundColor: c.accentSoft,
     },
     rankText: {
       fontSize: 11,
       fontWeight: '800',
-      color: ACCENT,
+      color: c.accent,
       letterSpacing: 0.2,
     },
     rankMove: {
@@ -242,10 +239,10 @@ function makeStyles(c: ThemeColors) {
       marginLeft: 2,
     },
     rankMoveUp: {
-      color: '#16A34A',
+      color: c.success,
     },
     rankMoveDown: {
-      color: '#DC2626',
+      color: c.danger,
     },
     stat: {
       flexDirection: 'row',

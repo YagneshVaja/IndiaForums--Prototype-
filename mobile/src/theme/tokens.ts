@@ -22,6 +22,8 @@ export interface ThemeColors {
   warning: string;
   warningSoft: string;
   warningSoftBorder: string;
+  accent: string;
+  accentSoft: string;
   scrim: string;
   hamburgerAccent: string;
   mediaBg: string;
@@ -50,6 +52,8 @@ export const lightColors: ThemeColors = {
   warning: '#B26A00',
   warningSoft: '#FEF3C7',
   warningSoftBorder: '#FCD38A',
+  accent: '#EA580C',
+  accentSoft: '#FFEDD5',
   scrim: 'rgba(0,0,0,0.48)',
   hamburgerAccent: '#3558F0',
   mediaBg: '#000000',
@@ -78,6 +82,8 @@ export const darkColors: ThemeColors = {
   warning: '#F0B95C',
   warningSoft: '#3A2F1A',
   warningSoftBorder: '#5A4825',
+  accent: '#F97316',
+  accentSoft: '#3A2218',
   scrim: 'rgba(0,0,0,0.6)',
   hamburgerAccent: '#6A88FF',
   mediaBg: '#000000',

@@ -176,7 +176,7 @@ export default function NewTopicComposerSheet({ visible, forum, flairs, onClose,
                       <Ionicons
                         name={t.icon}
                         size={14}
-                        color={active ? '#FFFFFF' : colors.textSecondary}
+                        color={active ? colors.onPrimary : colors.textSecondary}
                       />
                       <Text style={[styles.typeBtnText, active && styles.typeBtnTextActive]}>
                         {t.label}
@@ -242,7 +242,7 @@ export default function NewTopicComposerSheet({ visible, forum, flairs, onClose,
               <TextInput
                 value={message}
                 onChangeText={setMessage}
-                placeholder="Start the discussion…"
+                placeholder="Start the discussionâ€¦"
                 placeholderTextColor={colors.textTertiary}
                 multiline
                 editable={!submitting}
@@ -301,12 +301,14 @@ export default function NewTopicComposerSheet({ visible, forum, flairs, onClose,
                       checked={pollMultiple}
                       onToggle={() => setPollMultiple(v => !v)}
                       styles={styles}
+                      checkColor={colors.onPrimary}
                     />
                     <CheckRow
                       label="Poll only (no replies)"
                       checked={pollOnly}
                       onToggle={() => setPollOnly(v => !v)}
                       styles={styles}
+                      checkColor={colors.onPrimary}
                     />
                   </View>
                 </View>
@@ -320,24 +322,28 @@ export default function NewTopicComposerSheet({ visible, forum, flairs, onClose,
                   checked={membersOnly}
                   onToggle={() => setMembersOnly(v => !v)}
                   styles={styles}
+                  checkColor={colors.onPrimary}
                 />
                 <CheckRow
                   label="Matured Content"
                   checked={matured}
                   onToggle={() => setMatured(v => !v)}
                   styles={styles}
+                  checkColor={colors.onPrimary}
                 />
                 <CheckRow
                   label="Show Signature"
                   checked={showSig}
                   onToggle={() => setShowSig(v => !v)}
                   styles={styles}
+                  checkColor={colors.onPrimary}
                 />
                 <CheckRow
                   label="Add to Watch List"
                   checked={watchList}
                   onToggle={() => setWatchList(v => !v)}
                   styles={styles}
+                  checkColor={colors.onPrimary}
                 />
               </View>
 
@@ -363,10 +369,10 @@ export default function NewTopicComposerSheet({ visible, forum, flairs, onClose,
                 style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
               >
                 {submitting ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
+                  <ActivityIndicator color={colors.onPrimary} size="small" />
                 ) : (
                   <>
-                    <Ionicons name="add-circle" size={14} color="#FFFFFF" />
+                    <Ionicons name="add-circle" size={14} color={colors.onPrimary} />
                     <Text style={styles.submitBtnText}>Post Topic</Text>
                   </>
                 )}
@@ -382,12 +388,12 @@ export default function NewTopicComposerSheet({ visible, forum, flairs, onClose,
 type Styles = ReturnType<typeof makeStyles>;
 
 function CheckRow({
-  label, checked, onToggle, styles,
-}: { label: string; checked: boolean; onToggle: () => void; styles: Styles }) {
+  label, checked, onToggle, styles, checkColor,
+}: { label: string; checked: boolean; onToggle: () => void; styles: Styles; checkColor: string }) {
   return (
     <Pressable style={styles.checkRow} onPress={onToggle}>
       <View style={[styles.checkBox, checked && styles.checkBoxOn]}>
-        {checked && <Ionicons name="checkmark" size={11} color="#FFFFFF" />}
+        {checked && <Ionicons name="checkmark" size={11} color={checkColor} />}
       </View>
       <Text style={styles.checkLabel}>{label}</Text>
     </Pressable>
@@ -561,3 +567,4 @@ function makeStyles(c: ThemeColors) {
     btnDisabled: { opacity: 0.5 },
   });
 }
+

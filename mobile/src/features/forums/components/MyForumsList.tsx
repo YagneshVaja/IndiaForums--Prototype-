@@ -202,7 +202,7 @@ function InvitationsSection({
                   rank: 0,
                   prevRank: 0,
                   rankDisplay: '',
-                  bg: '#E5E7EB',
+                  bg: colors.border,
                   emoji: '💬',
                   bannerUrl: null,
                   thumbnailUrl: inv.thumbnailUrl,
