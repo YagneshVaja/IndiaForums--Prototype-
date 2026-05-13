@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import Animated, { useAnimatedStyle, interpolate } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import MyForumsList from './MyForumsList';
 import MyPostsList from './MyPostsList';
 import MyWatchedList from './MyWatchedList';
+import { useChromeScroll } from '../../../components/layout/chromeScroll/ChromeScrollContext';
 import { useAuthStore } from '../../../store/authStore';
 import type { Forum, ForumTopic } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
@@ -28,9 +31,18 @@ export default function MyView({ onForumPress, onTopicPress, topInset = 0 }: Pro
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
+  const { chromeProgress } = useChromeScroll();
+  const safeTop = useSafeAreaInsets().top;
+
+  // Track the top bar: when chrome hides, collapse the reserved space so the
+  // segment bar slides up — but stop at the status-bar safe inset so the pills
+  // never tuck behind the OS clock/battery.
+  const insetStyle = useAnimatedStyle(() => ({
+    paddingTop: interpolate(chromeProgress.value, [0, 1], [topInset, safeTop]),
+  }));
 
   return (
-    <View style={[styles.container, { paddingTop: topInset }]}>
+    <Animated.View style={[styles.container, insetStyle]}>
       <SegmentBar
         segment={segment}
         onChange={setSegment}
@@ -45,7 +57,7 @@ export default function MyView({ onForumPress, onTopicPress, topInset = 0 }: Pro
       ) : (
         <MyWatchedList onTopicPress={onTopicPress} />
       )}
-    </View>
+    </Animated.View>
   );
 }
 

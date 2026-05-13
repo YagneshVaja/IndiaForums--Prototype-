@@ -1,9 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
-import Animated, { useAnimatedScrollHandler } from 'react-native-reanimated';
+import { View, Text, Pressable, ActivityIndicator, RefreshControl, StyleSheet, type LayoutChangeEvent } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  interpolate,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useQueryClient } from '@tanstack/react-query';
 import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
+import { useChromeScroll } from '../../../components/layout/chromeScroll/ChromeScrollContext';
 
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
@@ -41,6 +47,9 @@ export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
   const queryClient = useQueryClient();
   const tabBarHeight = useBottomTabBarHeight();
   const { applyScroll: applyChromeScroll, resetChrome } = useScrollChrome();
+  const { chromeProgress } = useChromeScroll();
+  const safeTop = useSafeAreaInsets().top;
+  const [sortBarHeight, setSortBarHeight] = useState(0);
 
   const listScrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
@@ -48,6 +57,18 @@ export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
       applyChromeScroll(e);
     },
   });
+
+  // Sticky sort bar tracks the top bar — slides up with it on scroll, then
+  // locks at the status-bar safe inset so the sort + view controls stay
+  // one tap away.
+  const sortBarDockStyle = useAnimatedStyle(() => ({
+    paddingTop: interpolate(chromeProgress.value, [0, 1], [topInset, safeTop]),
+  }));
+
+  const onSortBarLayout = useCallback((e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    if (h && h !== sortBarHeight) setSortBarHeight(h);
+  }, [sortBarHeight]);
 
   const [composerTopic, setComposerTopic] = useState<ForumTopic | null>(null);
   const [composerQuote, setComposerQuote] = useState<QuotedPost | null>(null);
@@ -208,22 +229,13 @@ export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
             tintColor="transparent"
             colors={['transparent']}
             progressBackgroundColor="transparent"
-            progressViewOffset={topInset}
+            progressViewOffset={topInset + sortBarHeight}
           />
         }
         onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) fetchNextPage();
         }}
         onEndReachedThreshold={0.5}
-        ListHeaderComponent={
-          <View style={styles.sortBar}>
-            <SortDropdown mode={sortMode} onChange={setSortMode} />
-            <View style={styles.sortRight}>
-              <Text style={styles.countText}>{formatCount(totalCount)} topics</Text>
-              <ViewToggle mode={viewMode} onChange={setViewMode} />
-            </View>
-          </View>
-        }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>📭</Text>
@@ -239,10 +251,23 @@ export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
         }
         contentContainerStyle={[
           styles.content,
-          topInset > 0 && { paddingTop: topInset },
+          { paddingTop: topInset + sortBarHeight },
           { paddingBottom: tabBarHeight + 24 },
         ]}
       />
+
+      <Animated.View
+        style={[styles.sortBarDock, sortBarDockStyle]}
+        pointerEvents="box-none"
+      >
+        <View style={styles.sortBar} onLayout={onSortBarLayout}>
+          <SortDropdown mode={sortMode} onChange={setSortMode} />
+          <View style={styles.sortRight}>
+            <Text style={styles.countText}>{formatCount(totalCount)} topics</Text>
+            <ViewToggle mode={viewMode} onChange={setViewMode} />
+          </View>
+        </View>
+      </Animated.View>
 
       {composerTopic && (
         <ReplyComposerSheet
@@ -274,7 +299,7 @@ export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
         </Pressable>
       )}
 
-      <BrandRefreshIndicator refreshing={isRefetching} topInset={topInset} />
+      <BrandRefreshIndicator refreshing={isRefetching} topInset={topInset + sortBarHeight} />
     </View>
   );
 }
@@ -286,6 +311,14 @@ function makeStyles(c: ThemeColors) {
     },
     content: {
     },
+    sortBarDock: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 5,
+      backgroundColor: c.bg,
+    },
     sortBar: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -293,6 +326,8 @@ function makeStyles(c: ThemeColors) {
       paddingHorizontal: 14,
       paddingTop: 14,
       paddingBottom: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
     },
     sortRight: {
       flexDirection: 'row',

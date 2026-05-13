@@ -1,6 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
-import Animated, { useAnimatedScrollHandler } from 'react-native-reanimated';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, ActivityIndicator, RefreshControl, StyleSheet, type LayoutChangeEvent } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  interpolate,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useQuery } from '@tanstack/react-query';
 
@@ -13,6 +18,7 @@ import CategoryChips, { type ChipItem } from './CategoryChips';
 import ForumCard from './ForumCard';
 import { useForumHome } from '../hooks/useForumHome';
 import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
+import { useChromeScroll } from '../../../components/layout/chromeScroll/ChromeScrollContext';
 import { searchResults as apiSearchForums } from '../../../services/searchApi';
 import type { Forum } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
@@ -135,6 +141,15 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
   }
 
   const { applyScroll: applyChromeScroll, resetChrome } = useScrollChrome();
+  const { chromeProgress } = useChromeScroll();
+  const safeTop = useSafeAreaInsets().top;
+  const [chipsHeight, setChipsHeight] = useState(0);
+
+  // Show the sticky dock only in non-search list mode (primary chips only
+  // exist there). The reserved padding/refresh offset also collapses when the
+  // dock is hidden.
+  const showStickyChips = !isSearchMode;
+  const stickyDockHeight = showStickyChips ? chipsHeight : 0;
 
   const listScrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
@@ -142,6 +157,17 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
       applyChromeScroll(e);
     },
   });
+
+  // Primary chip strip tracks the top bar: slides up with it and locks at the
+  // status-bar safe inset so category filtering stays one tap away.
+  const chipsDockStyle = useAnimatedStyle(() => ({
+    paddingTop: interpolate(chromeProgress.value, [0, 1], [topInset, safeTop]),
+  }));
+
+  const onChipsLayout = useCallback((e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    if (h && h !== chipsHeight) setChipsHeight(h);
+  }, [chipsHeight]);
 
   if (isLoading) return <LoadingState height={400} />;
   if (isError) return (
@@ -176,7 +202,7 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
             tintColor="transparent"
             colors={['transparent']}
             progressBackgroundColor="transparent"
-            progressViewOffset={topInset}
+            progressViewOffset={topInset + stickyDockHeight}
           />
         ) : undefined
       }
@@ -187,23 +213,6 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
             onChangeText={setSearch}
             placeholder="Search forums..."
           />
-          {!isSearchMode && (
-            <>
-              <CategoryChips
-                chips={catChips}
-                activeId={activeCat}
-                onChange={selectCat}
-              />
-              {subCatChips.length > 0 && (
-                <CategoryChips
-                  chips={subCatChips}
-                  activeId={activeSubCat}
-                  onChange={selectSubCat}
-                  variant="secondary"
-                />
-              )}
-            </>
-          )}
           <View style={styles.countRow}>
             <Text style={styles.countText}>
               {totalCount.toLocaleString()} FORUMS
@@ -238,12 +247,34 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
       onEndReachedThreshold={0.5}
       contentContainerStyle={[
         styles.content,
-        topInset > 0 && { paddingTop: topInset },
+        { paddingTop: topInset + stickyDockHeight },
         { paddingBottom: tabBarHeight },
       ]}
     />
+    {showStickyChips && (
+      <Animated.View
+        style={[styles.chipsDock, chipsDockStyle]}
+        pointerEvents="box-none"
+      >
+        <View style={styles.chipsDockInner} onLayout={onChipsLayout}>
+          <CategoryChips
+            chips={catChips}
+            activeId={activeCat}
+            onChange={selectCat}
+          />
+          {subCatChips.length > 0 && (
+            <CategoryChips
+              chips={subCatChips}
+              activeId={activeSubCat}
+              onChange={selectSubCat}
+              variant="secondary"
+            />
+          )}
+        </View>
+      </Animated.View>
+    )}
     {!isSearchMode && (
-      <BrandRefreshIndicator refreshing={listRefetching} topInset={topInset} />
+      <BrandRefreshIndicator refreshing={listRefetching} topInset={topInset + stickyDockHeight} />
     )}
     </View>
   );
@@ -253,6 +284,18 @@ function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     content: {
       paddingTop: 0,
+    },
+    chipsDock: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 5,
+      backgroundColor: c.bg,
+    },
+    chipsDockInner: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
     },
     countRow: {
       flexDirection: 'row',
