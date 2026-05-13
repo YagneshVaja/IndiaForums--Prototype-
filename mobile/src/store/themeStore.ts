@@ -43,10 +43,15 @@ interface ThemeState {
   toggle: () => void;
 }
 
-// Subscribers cascade is cheap now that each `useThemedStyles` call hits a
-// per-mode cache instead of re-running `StyleSheet.create`, so the update can
-// fire synchronously. Persistence still goes behind a `setTimeout(0)` so the
-// MMKV write never sits in the press-handler's task.
+// Keep the mutation synchronous so every subscriber — the SideMenu and the
+// screens visible in the scrim gap — re-renders in the *same* React commit
+// and the new theme paints everywhere on the same frame. Splitting the work
+// across frames (UI-thread chrome animation + JS-side cascade) makes the
+// SideMenu flip ahead of the screens behind it, which reads as a visible
+// desync to the user.
+//
+// Persistence stays behind setTimeout(0) so the MMKV write never sits in the
+// press handler's task.
 function applyMode(set: (s: Partial<ThemeState>) => void, mode: ThemeMode) {
   set({ mode, colors: themes[mode] });
   setTimeout(() => storage.set(KEY, mode), 0);
