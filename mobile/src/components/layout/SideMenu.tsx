@@ -18,7 +18,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useSideMenuStore } from '../../store/sideMenuStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useThemedStyles } from '../../theme/useThemedStyles';
-import type { ThemeColors, ThemeMode } from '../../theme/tokens';
+import ThemeTransitionOverlay from '../../theme/ThemeTransitionOverlay';
+import type { ThemeColors } from '../../theme/tokens';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 type Styles = ReturnType<typeof makeStyles>;
@@ -49,21 +50,36 @@ function DarkModeToggle({
   const translateX = useRef(new Animated.Value(on ? 18 : 0)).current;
   const lastAnimatedTo = useRef(on);
 
-  // The parent stages the mode synchronously, so `on` flips on the same frame
-  // as the press. We just need to drive the native-driven slide on UI thread.
-  useEffect(() => {
-    if (lastAnimatedTo.current === on) return;
-    lastAnimatedTo.current = on;
+  const animateTo = (target: boolean) => {
+    if (lastAnimatedTo.current === target) return;
+    lastAnimatedTo.current = target;
     Animated.timing(translateX, {
-      toValue: on ? 18 : 0,
+      toValue: target ? 18 : 0,
       duration: 180,
       useNativeDriver: true,
     }).start();
-  }, [on, translateX]);
+  };
+
+  // Reconcile if `on` flips from outside the press handler (e.g. system or
+  // remote theme change). On a press the handler has already kicked the slide.
+  useEffect(() => {
+    animateTo(on);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [on]);
+
+  const handlePress = () => {
+    // Kick the native-driven slide BEFORE calling onToggle so the bridge
+    // request reaches the native animation module *before* the JS cascade
+    // blocks the thread. The thumb keeps animating on UI thread even while
+    // the React commit is in flight, so the post-transition state lands
+    // visually correct as soon as the overlay fades.
+    animateTo(!on);
+    onToggle();
+  };
 
   return (
     <Pressable
-      onPress={onToggle}
+      onPress={handlePress}
       style={[styles.toggle, on && styles.toggleOn]}
       accessibilityRole="switch"
       accessibilityState={{ checked: on }}
@@ -194,46 +210,13 @@ export default function SideMenu() {
   const close = useSideMenuStore((s) => s.close);
   const mode = useThemeStore((s) => s.mode);
   const colors = useThemeStore((s) => s.colors);
-  const setMode = useThemeStore((s) => s.setMode);
+  const toggleTheme = useThemeStore((s) => s.toggle);
   const insets = useSafeAreaInsets();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   const [mounted, setMounted] = useState(false);
 
   const styles = useThemedStyles(makeStyles);
-
-  // Defer the actual theme commit until the menu dismisses. Toggling stages
-  // a pending mode so the switch gives instant input feedback, but the
-  // ~160-component React cascade does not fire until the menu starts sliding
-  // away — so the cascade happens *during* the 280ms close animation and the
-  // menu + app flip together off-screen. No visible desync.
-  const [pendingMode, setPendingMode] = useState<ThemeMode | null>(null);
-  const stagedMode: ThemeMode = pendingMode ?? mode;
-
-  const handleToggleTheme = () => {
-    setPendingMode((prev) => {
-      const current = prev ?? mode;
-      const next: ThemeMode = current === 'dark' ? 'light' : 'dark';
-      // Collapse back to no-op if the user toggled back to the committed mode.
-      return next === mode ? null : next;
-    });
-  };
-
-  // Commit pending mode when the menu closes (any path: scrim, X, nav item,
-  // hardware back). The cascade is deferred a tick so the close-animation's
-  // first frame can paint on the UI thread before JS gets blocked by the
-  // ~160-component re-render. Without this, the bridge call for the native
-  // slide can sit behind the cascade and the menu visibly stalls before it
-  // starts moving.
-  useEffect(() => {
-    if (!isOpen && pendingMode !== null && pendingMode !== mode) {
-      const pending = pendingMode;
-      setPendingMode(null);
-      const handle = setTimeout(() => setMode(pending), 0);
-      return () => clearTimeout(handle);
-    }
-    return undefined;
-  }, [isOpen, pendingMode, mode, setMode]);
 
   const translateX = useRef(new Animated.Value(-PANEL_WIDTH)).current;
   const scrimOpacity = useRef(new Animated.Value(0)).current;
@@ -339,7 +322,7 @@ export default function SideMenu() {
             {/* Dark mode */}
             <View style={styles.darkRow}>
               <Text style={styles.darkLabel}>Dark Mode</Text>
-              <DarkModeToggle on={stagedMode === 'dark'} onToggle={handleToggleTheme} styles={styles} />
+              <DarkModeToggle on={mode === 'dark'} onToggle={toggleTheme} styles={styles} />
             </View>
 
             <View style={styles.divider} />
@@ -410,6 +393,11 @@ export default function SideMenu() {
             <View style={styles.drawerFooter} />
           </ScrollView>
         </Animated.View>
+        {/* Mounted *inside* the Modal so the transition mask covers the panel
+            + scrim layer (Modal contents render in a layer above the regular
+            app, so the App-root overlay alone doesn't reach them). Both
+            overlays read the same shared values and animate in lockstep. */}
+        <ThemeTransitionOverlay />
       </View>
     </Modal>
   );

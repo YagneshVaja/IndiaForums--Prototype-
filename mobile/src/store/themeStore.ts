@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { create } from 'zustand';
 import type { MMKV } from 'react-native-mmkv';
 import { type ThemeMode, type ThemeColors, themes } from '../theme/tokens';
+import { triggerThemeTransition } from '../theme/themeTransition';
 
 const KEY = 'theme_mode';
 
@@ -43,16 +44,29 @@ interface ThemeState {
   toggle: () => void;
 }
 
-// Keep the mutation synchronous so every subscriber — the SideMenu and the
-// screens visible in the scrim gap — re-renders in the *same* React commit
-// and the new theme paints everywhere on the same frame. Splitting the work
-// across frames (UI-thread chrome animation + JS-side cascade) makes the
-// SideMenu flip ahead of the screens behind it, which reads as a visible
-// desync to the user.
+// Theme change sequence:
+//   1. `triggerThemeTransition(oldBg)` — snaps a full-screen opaque overlay
+//      on the UI thread (via Reanimated shared values, bypassing React).
+//      This paints on the very next UI-thread frame, *before* the JS
+//      cascade fires.
+//   2. `set({mode, colors})` — fires the synchronous React cascade. Every
+//      theme subscriber re-renders. JS thread is blocked for the cascade
+//      duration, but the overlay is already covering the screen on the
+//      UI thread, so the user sees only the overlay.
+//   3. The overlay then animates from opacity 1 → 0 over 300ms (UI thread
+//      via `withTiming`), revealing the now-committed new theme.
 //
-// Persistence stays behind setTimeout(0) so the MMKV write never sits in the
-// press handler's task.
-function applyMode(set: (s: Partial<ThemeState>) => void, mode: ThemeMode) {
+// Net effect: the cascade is fully masked. The user perceives an intentional
+// ~300ms crossfade instead of a stalled tap. This is the pattern iOS uses
+// at the OS level when system theme changes.
+function applyMode(
+  set: (s: Partial<ThemeState>) => void,
+  get: () => ThemeState,
+  mode: ThemeMode,
+) {
+  if (get().mode !== mode) {
+    triggerThemeTransition(themes[get().mode].bg);
+  }
   set({ mode, colors: themes[mode] });
   setTimeout(() => storage.set(KEY, mode), 0);
 }
@@ -60,9 +74,9 @@ function applyMode(set: (s: Partial<ThemeState>) => void, mode: ThemeMode) {
 export const useThemeStore = create<ThemeState>((set, get) => ({
   mode: loadInitialMode(),
   colors: themes[loadInitialMode()],
-  setMode: (mode) => applyMode(set, mode),
+  setMode: (mode) => applyMode(set, get, mode),
   toggle: () => {
     const next: ThemeMode = get().mode === 'dark' ? 'light' : 'dark';
-    applyMode(set, next);
+    applyMode(set, get, next);
   },
 }));

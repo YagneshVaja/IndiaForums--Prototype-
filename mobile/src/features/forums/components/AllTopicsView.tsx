@@ -39,6 +39,11 @@ interface Props {
   topInset?: number;
 }
 
+// Stable at module scope so FlatList isn't fed a fresh function reference on
+// every parent render — it short-circuits item re-renders when key identity
+// is preserved across batches.
+const keyExtractTopicId = (t: ForumTopic) => String(t.id);
+
 export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('latest');
   const [viewMode, setViewMode] = useState<ViewMode>('detailed');
@@ -190,6 +195,31 @@ export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
     return topics;
   }, [topics, sortMode]);
 
+  const renderTopic = useCallback(
+    ({ item }: { item: ForumTopic }) => (
+      <TopicCard
+        topic={item}
+        viewMode={viewMode}
+        onPress={onTopicPress}
+        onReply={handleReply}
+        onQuote={handleQuote}
+        onOpenReactionPicker={handleOpenReactionPicker}
+        onOpenReactionsList={handleOpenReactionsList}
+      />
+    ),
+    [viewMode, onTopicPress, handleReply, handleQuote, handleOpenReactionPicker, handleOpenReactionsList],
+  );
+
+  const listFooter = useMemo(
+    () =>
+      isFetchingNextPage ? (
+        <View style={styles.footer}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : null,
+    [isFetchingNextPage, styles.footer, colors.primary],
+  );
+
   if (isLoading && !data) return <LoadingState height={400} />;
   if (isError && !data) return (
     <ErrorState
@@ -203,21 +233,19 @@ export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
       { }
       <Animated.FlatList
         data={sortedTopics}
-        keyExtractor={t => String(t.id)}
-        renderItem={({ item }) => (
-          <TopicCard
-            topic={item}
-            viewMode={viewMode}
-            onPress={onTopicPress}
-            onReply={handleReply}
-            onQuote={handleQuote}
-            onOpenReactionPicker={handleOpenReactionPicker}
-            onOpenReactionsList={handleOpenReactionsList}
-          />
-        )}
+        keyExtractor={keyExtractTopicId}
+        renderItem={renderTopic}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onScroll={listScrollHandler as any}
         scrollEventThrottle={16}
+        // TopicCard does HTML stripping, social-URL extraction, and reaction
+        // lookups per item. Cap the initial batch + per-scroll batch so the
+        // JS thread doesn't sit through 20+ TopicCard mounts in one frame —
+        // that's what trips the "VirtualizedList is slow to update" warning.
+        initialNumToRender={6}
+        maxToRenderPerBatch={5}
+        windowSize={7}
+        updateCellsBatchingPeriod={50}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
@@ -242,13 +270,7 @@ export default function AllTopicsView({ onTopicPress, topInset = 0 }: Props) {
             <Text style={styles.emptyTitle}>No topics yet</Text>
           </View>
         }
-        ListFooterComponent={
-          isFetchingNextPage ? (
-            <View style={styles.footer}>
-              <ActivityIndicator color={colors.primary} />
-            </View>
-          ) : null
-        }
+        ListFooterComponent={listFooter}
         contentContainerStyle={[
           styles.content,
           { paddingTop: topInset + sortBarHeight },

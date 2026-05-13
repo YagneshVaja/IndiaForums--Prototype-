@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import RootNavigator from './src/navigation/RootNavigator';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import PushBootstrap from './src/components/PushBootstrap';
+import ThemeTransitionOverlay from './src/theme/ThemeTransitionOverlay';
 import { navigationRef } from './src/navigation/navigationRef';
 import { useThemeStore } from './src/store/themeStore';
 import { handleColdStartTap } from './src/services/pushNotifications';
@@ -97,6 +98,10 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
           <PushBootstrap />
           <ThemedNavigation />
+          {/* Sits above all regular screen content but below Modals (which
+              render in their own native window). The SideMenu Modal mounts
+              its own copy so the transition is contiguous across layers. */}
+          <ThemeTransitionOverlay />
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

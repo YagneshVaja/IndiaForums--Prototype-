@@ -59,6 +59,11 @@ import {
 type Nav = NativeStackNavigationProp<ForumsStackParamList, 'TopicDetail'>;
 type Rt  = RouteProp<ForumsStackParamList, 'TopicDetail'>;
 
+// Stable keyExtractor at module scope — avoids allocating a new function on
+// every render, which would otherwise cause FlatList to treat every key as
+// "new" and skip its internal key-stability optimizations.
+const keyExtractPostId = (p: TopicPost) => String(p.id);
+
 // The route's params shape is a discriminated union; the screen only supports
 // the `{ topic }` variant today. Splitting the early-return wrapper from the
 // inner body keeps hooks unconditional (the inner function only mounts when
@@ -906,15 +911,20 @@ function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams
           ref={listRef}
           data={sortedPosts}
           extraData={sortBy}
-          keyExtractor={p => String(p.id)}
+          keyExtractor={keyExtractPostId}
           onScroll={handleScroll}
           scrollEventThrottle={16}
           renderItem={renderReply}
           // Standard FlatList — predictable layout, no recycler animations.
-          // Page size is small (20 items) so virtualization isn't critical.
+          // PostCards are heavy (HTML rendering, reactions, social embeds) so
+          // we cap how many mount in the first frame and per scroll batch.
+          // Without this, mounting 20 cards up-front triggers the
+          // "VirtualizedList is slow to update" warning (dt 500–1600ms).
           windowSize={5}
           removeClippedSubviews={false}
-          initialNumToRender={20}
+          initialNumToRender={6}
+          maxToRenderPerBatch={5}
+          updateCellsBatchingPeriod={50}
           ListHeaderComponent={
             <>
               {/* Compact forum strip — replaces the title/breadcrumb that
