@@ -18,6 +18,8 @@ import { isSmileyImage, parseBBCode, sanitizeHtmlImages } from '../utils/bbcode'
 // Forum HTML contains non-HTML5 tags (e.g. <edited>) that the renderer would
 // otherwise warn about and skip. Register them as plain block containers so
 // their content displays, matching the browser's default unknown-tag behavior.
+// `<font>` is deprecated HTML4 but still appears in legacy posts — model it as
+// textual so its children render inline; we drop its color/face/size attrs.
 const CUSTOM_ELEMENT_MODELS: Record<string, HTMLElementModel<string, HTMLContentModel>> = {
   edited: HTMLElementModel.fromCustomModel({
     tagName: 'edited',
@@ -30,6 +32,10 @@ const CUSTOM_ELEMENT_MODELS: Record<string, HTMLElementModel<string, HTMLContent
   spoiler: HTMLElementModel.fromCustomModel({
     tagName: 'spoiler',
     contentModel: HTMLContentModel.block,
+  }),
+  font: HTMLElementModel.fromCustomModel({
+    tagName: 'font',
+    contentModel: HTMLContentModel.textual,
   }),
 };
 
