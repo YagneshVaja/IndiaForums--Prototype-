@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import Animated, { useAnimatedScrollHandler } from 'react-native-reanimated';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -11,10 +11,7 @@ import { describeFetchError } from '../../../services/fetchError';
 import SearchBar from './SearchBar';
 import CategoryChips, { type ChipItem } from './CategoryChips';
 import ForumCard from './ForumCard';
-import JumpToPageSheet from './JumpToPageSheet';
-import ForumPaginationBar from './ForumPaginationBar';
-import { useForumHome, FORUM_HOME_PAGE_SIZE } from '../hooks/useForumHome';
-import { useHideOnScroll } from '../hooks/useHideOnScroll';
+import { useForumHome } from '../hooks/useForumHome';
 import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 import { searchResults as apiSearchForums } from '../../../services/searchApi';
 import type { Forum } from '../../../services/api';
@@ -32,15 +29,12 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
   const [activeSubCat, setActiveSubCat] = useState('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [jumpSheetOpen, setJumpSheetOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const listRef = useRef<any>(null);
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
-  // The Tab.Navigator's bottom bar is now position:absolute, so this component
-  // extends to the device bottom. Lift the pagination dock by the tab bar
-  // height so it sits above the bar, and pad the list bottom by both.
+  // The Tab.Navigator's bottom bar is position:absolute, so pad the list bottom
+  // by its height to keep the last card visible above the bar.
   const tabBarHeight = useBottomTabBarHeight();
 
   useEffect(() => {
@@ -60,12 +54,14 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
   const {
     data,
     isLoading: listLoading,
-    isFetching: listFetching,
     isRefetching: listRefetching,
     isError: listError,
     error: listErr,
     refetch: listRefetch,
-  } = useForumHome(apiCategoryId, currentPage);
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useForumHome(apiCategoryId);
 
   const searchQuery = useQuery({
     queryKey: ['forum-search', debouncedSearch],
@@ -79,11 +75,10 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
   const subCatMap = useMemo(() => firstPage?.subCatMap || {}, [firstPage]);
   const listTotalCount = firstPage?.totalForumCount ?? 0;
 
-  // Page-by-page pagination: show only the current page's items, not all
-  // accumulated pages. Matches the live website's behavior.
+  // Infinite scroll: concatenate every loaded page.
   const listForums = useMemo<Forum[]>(
-    () => firstPage?.forums ?? [],
-    [firstPage],
+    () => data?.pages.flatMap((p) => p.forums) ?? [],
+    [data],
   );
 
   const searchForums = useMemo<Forum[]>(() => {
@@ -133,33 +128,20 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
   function selectCat(id: string) {
     setActiveCat(id);
     setActiveSubCat('all');
-    setCurrentPage(1);
   }
 
   function selectSubCat(id: string) {
     setActiveSubCat(id);
-    setCurrentPage(1);
   }
 
-  const totalPages = firstPage?.totalPages ?? 1;
-  const { hidden: barHidden, applyScroll: applyBarScroll } = useHideOnScroll();
   const { applyScroll: applyChromeScroll, resetChrome } = useScrollChrome();
 
   const listScrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
       'worklet';
       applyChromeScroll(e);
-      applyBarScroll(e);
     },
   });
-
-  const handleJumpToPage = useCallback((page: number) => {
-    setJumpSheetOpen(false);
-    setCurrentPage(page);
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated: false });
-    });
-  }, []);
 
   if (isLoading) return <LoadingState height={400} />;
   if (isError) return (
@@ -242,40 +224,23 @@ export default function ForumListView({ onForumPress, topInset = 0 }: Props) {
         </View>
       }
       ListFooterComponent={
-        !isSearchMode && listFetching && !listRefetching ? (
+        !isSearchMode && isFetchingNextPage ? (
           <View style={styles.footerLoading}>
             <ActivityIndicator color={colors.primary} />
           </View>
         ) : null
       }
+      onEndReached={() => {
+        if (!isSearchMode && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      }}
+      onEndReachedThreshold={0.5}
       contentContainerStyle={[
         styles.content,
         topInset > 0 && { paddingTop: topInset },
-        // 80px ≈ pagination bar height; without this the last forum card sits
-        // behind the bar.
-        { paddingBottom: tabBarHeight + 80 },
+        { paddingBottom: tabBarHeight },
       ]}
-    />
-    {!isSearchMode && (
-      <View style={[styles.paginationDock, { bottom: tabBarHeight }]} pointerEvents="box-none">
-        <ForumPaginationBar
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={FORUM_HOME_PAGE_SIZE}
-          totalItems={totalCount}
-          itemLabel="forums"
-          hidden={barHidden}
-          onPageChange={handleJumpToPage}
-        />
-      </View>
-    )}
-    <JumpToPageSheet
-      visible={jumpSheetOpen}
-      currentPage={currentPage}
-      totalPages={totalPages}
-      label="forums"
-      onClose={() => setJumpSheetOpen(false)}
-      onJump={handleJumpToPage}
     />
     {!isSearchMode && (
       <BrandRefreshIndicator refreshing={listRefetching} topInset={topInset} />
@@ -288,12 +253,6 @@ function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     content: {
       paddingTop: 0,
-    },
-    paginationDock: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
     },
     countRow: {
       flexDirection: 'row',
