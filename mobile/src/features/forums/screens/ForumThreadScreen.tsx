@@ -27,7 +27,6 @@ import ForumTopicSettingsSheet from '../components/ForumTopicSettingsSheet';
 import JumpToPageSheet from '../components/JumpToPageSheet';
 import ForumPaginationBar from '../components/ForumPaginationBar';
 import { useForumTopics, FORUM_TOPICS_PAGE_SIZE } from '../hooks/useForumTopics';
-import { useHideOnScroll } from '../hooks/useHideOnScroll';
 import { useMyFavouriteForums } from '../hooks/useMyFavouriteForums';
 import { useForumFollowStore, selectForumFollow } from '../store/forumFollowStore';
 import { useForumPaginationStore, selectForumPage } from '../store/forumPaginationStore';
@@ -49,8 +48,8 @@ export default function ForumThreadScreen() {
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
   // Tab.Navigator's bottom bar is position:absolute (chrome hide-on-scroll),
-  // so this screen extends to the device bottom. Lift the pagination dock and
-  // the list's bottom padding by the bar height so neither sits behind it.
+  // so this screen extends to the device bottom. Pad the list's bottom by the
+  // bar height so the inline pagination footer can scroll above the tab bar.
   const tabBarHeight = useBottomTabBarHeight();
 
   const [activeFlairId, setActiveFlairId] = useState<number | null>(null);
@@ -212,12 +211,11 @@ export default function ForumThreadScreen() {
   // hide the bar so the UI doesn't lie about which page the user is on.
   const isFiltering = activeFlairId !== null || search.trim().length > 0;
 
-  const { hidden: barHidden, applyScroll: applyBarScroll } = useHideOnScroll();
   const { applyScroll: applyChromeScroll, resetChrome } = useScrollChrome();
 
   // Without this reset, chrome state carries over from the previous screen
-  // (e.g. a deep-scrolled ForumsMainScreen) and the tab bar stays hidden
-  // while we're on this screen, leaving the pagination bar floating mid-page.
+  // (e.g. a deep-scrolled ForumsMainScreen) and the tab bar stays hidden,
+  // which would obscure the inline pagination footer at the bottom of the list.
   useFocusEffect(
     useCallback(() => {
       resetChrome();
@@ -246,7 +244,6 @@ export default function ForumThreadScreen() {
     onScroll: (e) => {
       'worklet';
       applyChromeScroll(e);
-      applyBarScroll(e);
       runOnJS(saveScrollY)(e.contentOffset.y);
     },
   });
@@ -448,28 +445,27 @@ export default function ForumThreadScreen() {
             </View>
           }
           ListFooterComponent={
-            isFetching ? (
-              <View style={styles.footerLoading}>
-                <ActivityIndicator color={colors.primary} />
-              </View>
-            ) : null
+            <>
+              {isFetching && (
+                <View style={styles.footerLoading}>
+                  <ActivityIndicator color={colors.primary} />
+                </View>
+              )}
+              {!isFiltering && !isFetching && (
+                <ForumPaginationBar
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  pageSize={FORUM_TOPICS_PAGE_SIZE}
+                  totalItems={detail.topicCount ?? 0}
+                  itemLabel="topics"
+                  inline
+                  onPageChange={handleJumpToPage}
+                />
+              )}
+            </>
           }
-          contentContainerStyle={{ paddingBottom: tabBarHeight + 80 }}
+          contentContainerStyle={{ paddingBottom: tabBarHeight + 12 }}
         />
-      )}
-
-      {!isFiltering && (
-        <View style={[styles.paginationDock, { bottom: tabBarHeight }]} pointerEvents="box-none">
-          <ForumPaginationBar
-            currentPage={currentPage}
-            totalPages={totalPages}
-            pageSize={FORUM_TOPICS_PAGE_SIZE}
-            totalItems={detail.topicCount ?? 0}
-            itemLabel="topics"
-            hidden={barHidden}
-            onPageChange={handleJumpToPage}
-          />
-        </View>
       )}
 
       <NewTopicComposerSheet
@@ -528,12 +524,6 @@ function makeStyles(c: ThemeColors) {
     screen: {
       flex: 1,
       backgroundColor: c.bg,
-    },
-    paginationDock: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
     },
     bannerWrap: {
       position: 'relative',
