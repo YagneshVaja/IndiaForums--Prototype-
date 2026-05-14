@@ -137,6 +137,16 @@ export type NewsStackParamList = {
    * matches what the user was just looking at.
    */
   ArticlesFullList: { category: string; subCat: string };
+  // Detail screens reachable from the interleaved News feed rails — registered
+  // here (rather than cross-tab nav to HomeStack) so tapping a video / gallery /
+  // movie pushes within the News tab and the back gesture returns to the feed.
+  // Same pattern SearchStack uses for its result cards.
+  VideoDetail: { video: import('../services/api').Video };
+  GalleryDetail:
+    | { gallery: import('../services/api').Gallery }
+    | { id: string | number; title?: string; thumbnail?: string | null };
+  MovieDetail: { movie: import('../services/api').Movie };
+  WebStories: undefined;
 };
 
 export type ForumsStackParamList = {

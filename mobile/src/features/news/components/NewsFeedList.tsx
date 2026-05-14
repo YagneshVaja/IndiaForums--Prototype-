@@ -38,6 +38,10 @@ interface Props {
   onVideoPress?: (video: Video) => void;
   onGalleryPress?: (gallery: Gallery) => void;
   onMoviePress?: (movie: Movie) => void;
+  // Visual stories on the news feed are static placeholders, so this is a
+  // no-arg handler — the screen navigates the user to the WebStories listing
+  // rather than trying to play a non-existent backend story.
+  onStoryPress?: () => void;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onScroll: any;
@@ -62,6 +66,7 @@ export default function NewsFeedList({
   onVideoPress,
   onGalleryPress,
   onMoviePress,
+  onStoryPress,
   onScroll,
 }: Props) {
   const styles = useThemedStyles(makeStyles);
@@ -82,7 +87,12 @@ export default function NewsFeedList({
             />
           );
         case 'rail-stories':
-          return <NewsVisualStoriesSection stories={item.stories} />;
+          return (
+            <NewsVisualStoriesSection
+              stories={item.stories}
+              onStoryPress={onStoryPress}
+            />
+          );
         case 'card-quiz':
           return <NewsQuizSection quiz={item.quiz} />;
         case 'rail-photos':
@@ -101,7 +111,7 @@ export default function NewsFeedList({
           );
       }
     },
-    [onArticlePress, onVideoPress, onGalleryPress, onMoviePress],
+    [onArticlePress, onVideoPress, onGalleryPress, onMoviePress, onStoryPress],
   );
 
   // Footer:

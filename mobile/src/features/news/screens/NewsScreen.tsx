@@ -24,7 +24,7 @@ import NewsFeedList from '../components/NewsFeedList';
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
 import BrandRefreshIndicator from '../../../components/ui/BrandPullToRefresh';
-import type { Article } from '../../../services/api';
+import type { Article, Gallery, Movie, Video } from '../../../services/api';
 
 type Props = NativeStackScreenProps<NewsStackParamList, 'NewsMain'>;
 
@@ -103,6 +103,34 @@ export default function NewsScreen({ navigation, route }: Props) {
         title: article.title,
       });
     },
+    [navigation],
+  );
+
+  // Rail tile handlers. Detail screens are registered directly in NewsStack
+  // (see NewsStack.tsx) so these push within the News tab — back gesture
+  // returns to the feed at the same scroll position.
+  const handleVideoPress = useCallback(
+    (video: Video) => navigation.navigate('VideoDetail', { video }),
+    [navigation],
+  );
+
+  const handleGalleryPress = useCallback(
+    (gallery: Gallery) => navigation.navigate('GalleryDetail', { gallery }),
+    [navigation],
+  );
+
+  const handleMoviePress = useCallback(
+    (movie: Movie) => navigation.navigate('MovieDetail', { movie }),
+    [navigation],
+  );
+
+  // Visual stories on this feed are static placeholder tiles (see
+  // VISUAL_STORIES in newsStaticData) — they don't carry real
+  // WebStorySummary ids, so they can't drive WebStoryPlayer directly.
+  // Tap navigates to the WebStories listing where real, playable stories
+  // live.
+  const handleStoryPress = useCallback(
+    () => navigation.navigate('WebStories'),
     [navigation],
   );
 
@@ -193,6 +221,10 @@ export default function NewsScreen({ navigation, route }: Props) {
           onEndReached={handleEndReached}
           onLoadMore={handleLoadMore}
           onArticlePress={handleArticlePress}
+          onVideoPress={handleVideoPress}
+          onGalleryPress={handleGalleryPress}
+          onMoviePress={handleMoviePress}
+          onStoryPress={handleStoryPress}
           onScroll={listScrollHandler}
         />
       )}

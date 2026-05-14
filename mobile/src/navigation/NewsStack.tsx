@@ -5,6 +5,10 @@ import { NewsStackParamList } from './types';
 import NewsScreen from '../features/news/screens/NewsScreen';
 import ArticleDetailScreen from '../features/news/screens/ArticleDetailScreen';
 import ArticlesFullListScreen from '../features/news/screens/ArticlesFullListScreen';
+import VideoDetailScreen from '../features/videos/screens/VideoDetailScreen';
+import GalleryDetailScreen from '../features/galleries/screens/GalleryDetailScreen';
+import MovieDetailScreen from '../features/movies/screens/MovieDetailScreen';
+import WebStoriesScreen from '../features/webstories/screens/WebStoriesScreen';
 import { useThemeStore } from '../store/themeStore';
 
 function PlaceholderScreen({ route }: { route: { name: string } }) {
@@ -25,6 +29,10 @@ export default function NewsStack() {
       <Stack.Screen name="ArticleDetail" component={ArticleDetailScreen} />
       <Stack.Screen name="CategoryFeed" component={PlaceholderScreen} />
       <Stack.Screen name="ArticlesFullList" component={ArticlesFullListScreen} />
+      <Stack.Screen name="VideoDetail" component={VideoDetailScreen} />
+      <Stack.Screen name="GalleryDetail" component={GalleryDetailScreen} />
+      <Stack.Screen name="MovieDetail" component={MovieDetailScreen} />
+      <Stack.Screen name="WebStories" component={WebStoriesScreen} />
     </Stack.Navigator>
   );
 }

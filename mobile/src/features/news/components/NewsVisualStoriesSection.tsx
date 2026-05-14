@@ -8,10 +8,14 @@ import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
   stories: VisualStoryItem[];
+  // Static tiles aren't backed by a real WebStorySummary id, so the press
+  // handler is intentionally arg-less — the screen routes the tap to the
+  // WebStories listing rather than the player.
+  onStoryPress?: () => void;
   onSeeAll?: () => void;
 }
 
-function NewsVisualStoriesSectionImpl({ stories, onSeeAll }: Props) {
+function NewsVisualStoriesSectionImpl({ stories, onStoryPress, onSeeAll }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
 
@@ -40,6 +44,7 @@ function NewsVisualStoriesSectionImpl({ stories, onSeeAll }: Props) {
           <Pressable
             key={s.id}
             style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+            onPress={() => onStoryPress?.()}
           >
             <View style={[styles.thumb, { backgroundColor: s.colors[0] }]}>
               <View style={styles.progressBar}>
