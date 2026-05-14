@@ -23,9 +23,10 @@ import { useThemeStore } from '../../../store/themeStore';
 import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { usePushStore } from '../../../store/pushStore';
 import { registerForPush } from '../../../services/pushNotifications';
-import type { ThemeColors } from '../../../theme/tokens';
+import { PALETTE_META, type ThemeColors } from '../../../theme/tokens';
 import { TopNavBack } from '../../../components/layout/TopNavBar';
 import ReportsForumPickerSheet from '../../forums/components/ReportsForumPickerSheet';
+import PalettePickerSheet from '../components/PalettePickerSheet';
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<MySpaceStackParamList, 'MySpaceSettings'>,
@@ -54,6 +55,8 @@ type RowProps = {
   tint: IconTint;
   label: string;
   subtitle?: string;
+  trailingLabel?: string;
+  trailingSwatch?: string;
   onPress: () => void;
   last?: boolean;
   styles: Styles;
@@ -62,7 +65,10 @@ type RowProps = {
   tints: Record<IconTint, { bg: string; fg: string }>;
 };
 
-function Row({ icon, tint, label, subtitle, onPress, last, styles, chevronColor, rippleColor, tints }: RowProps) {
+function Row({
+  icon, tint, label, subtitle, trailingLabel, trailingSwatch,
+  onPress, last, styles, chevronColor, rippleColor, tints,
+}: RowProps) {
   const t = tints[tint];
   return (
     <Pressable
@@ -81,6 +87,12 @@ function Row({ icon, tint, label, subtitle, onPress, last, styles, chevronColor,
         <Text style={styles.label}>{label}</Text>
         {subtitle ? <Text style={styles.sub} numberOfLines={1}>{subtitle}</Text> : null}
       </View>
+      {trailingSwatch ? (
+        <View style={[styles.trailingSwatch, { backgroundColor: trailingSwatch }]} />
+      ) : null}
+      {trailingLabel ? (
+        <Text style={styles.trailingLabel}>{trailingLabel}</Text>
+      ) : null}
       <Ionicons name="chevron-forward" size={16} color={chevronColor} />
     </Pressable>
   );
@@ -90,6 +102,8 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const colors = useThemeStore((s) => s.colors);
   const mode = useThemeStore((s) => s.mode);
+  const palette = useThemeStore((s) => s.palette);
+  const toggleTheme = useThemeStore((s) => s.toggle);
   const styles = useThemedStyles(makeStyles);
   const tints = useMemo(() => tintColors(colors), [colors]);
   const user = useAuthStore((s) => s.user);
@@ -97,6 +111,7 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
   const logout = useAuthStore((s) => s.logout);
   const pushStatus = usePushStore((s) => s.permissionStatus);
   const [reportsPickerOpen, setReportsPickerOpen] = useState(false);
+  const [palettePickerOpen, setPalettePickerOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -117,6 +132,36 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Appearance */}
+        <Text style={styles.sectionLabel}>Appearance</Text>
+        <View style={styles.card}>
+          <Row
+            icon="contrast-outline"
+            tint="blue"
+            label="Theme"
+            subtitle="Light or dark surfaces"
+            trailingLabel={mode === 'dark' ? 'Dark' : 'Light'}
+            onPress={toggleTheme}
+            styles={styles}
+            chevronColor={colors.textTertiary}
+            rippleColor={colors.surface}
+            tints={tints}
+          />
+          <Row
+            icon="color-palette-outline"
+            tint="blue"
+            label="Accent color"
+            subtitle={PALETTE_META[palette].label}
+            trailingSwatch={colors.primary}
+            onPress={() => setPalettePickerOpen(true)}
+            last
+            styles={styles}
+            chevronColor={colors.textTertiary}
+            rippleColor={colors.surface}
+            tints={tints}
+          />
+        </View>
+
         {/* Account */}
         <Text style={styles.sectionLabel}>Account</Text>
         <View style={styles.card}>
@@ -282,6 +327,11 @@ export default function MySpaceSettingsScreen({ navigation }: Props) {
           });
         }}
       />
+
+      <PalettePickerSheet
+        visible={palettePickerOpen}
+        onClose={() => setPalettePickerOpen(false)}
+      />
     </View>
   );
 }
@@ -349,6 +399,20 @@ function makeStyles(c: ThemeColors) {
       fontSize: 12,
       color: c.textTertiary,
       marginTop: 2,
+    },
+    trailingLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.textSecondary,
+      marginRight: 2,
+    },
+    trailingSwatch: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      borderWidth: 1.5,
+      borderColor: c.card,
+      marginRight: 2,
     },
     signOut: {
       flexDirection: 'row',

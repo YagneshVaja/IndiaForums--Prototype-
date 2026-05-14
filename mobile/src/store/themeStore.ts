@@ -1,10 +1,17 @@
 import { Platform } from 'react-native';
 import { create } from 'zustand';
 import type { MMKV } from 'react-native-mmkv';
-import { type ThemeMode, type ThemeColors, themes } from '../theme/tokens';
+import {
+  type ThemeMode,
+  type ThemeColors,
+  type PaletteId,
+  PALETTE_IDS,
+  themes,
+} from '../theme/tokens';
 import { triggerThemeTransition } from '../theme/themeTransition';
 
-const KEY = 'theme_mode';
+const MODE_KEY    = 'theme_mode';
+const PALETTE_KEY = 'theme_palette';
 
 type StorageAdapter = {
   getString(key: string): string | undefined;
@@ -33,15 +40,22 @@ function createStorage(): StorageAdapter {
 const storage = createStorage();
 
 function loadInitialMode(): ThemeMode {
-  const raw = storage.getString(KEY);
+  const raw = storage.getString(MODE_KEY);
   return raw === 'dark' ? 'dark' : 'light';
+}
+
+function loadInitialPalette(): PaletteId {
+  const raw = storage.getString(PALETTE_KEY);
+  return (PALETTE_IDS as string[]).includes(raw ?? '') ? (raw as PaletteId) : 'blue';
 }
 
 interface ThemeState {
   mode: ThemeMode;
+  palette: PaletteId;
   colors: ThemeColors;
-  setMode: (mode: ThemeMode) => void;
-  toggle: () => void;
+  setMode:    (mode: ThemeMode)    => void;
+  setPalette: (palette: PaletteId) => void;
+  toggle:     () => void;
 }
 
 // Theme change sequence:
@@ -49,34 +63,45 @@ interface ThemeState {
 //      on the UI thread (via Reanimated shared values, bypassing React).
 //      This paints on the very next UI-thread frame, *before* the JS
 //      cascade fires.
-//   2. `set({mode, colors})` — fires the synchronous React cascade. Every
-//      theme subscriber re-renders. JS thread is blocked for the cascade
-//      duration, but the overlay is already covering the screen on the
-//      UI thread, so the user sees only the overlay.
+//   2. `set({mode, palette, colors})` — fires the synchronous React cascade.
+//      Every theme subscriber re-renders. JS thread is blocked for the
+//      cascade duration, but the overlay is already covering the screen
+//      on the UI thread, so the user sees only the overlay.
 //   3. The overlay then animates from opacity 1 → 0 over 300ms (UI thread
 //      via `withTiming`), revealing the now-committed new theme.
 //
-// Net effect: the cascade is fully masked. The user perceives an intentional
-// ~300ms crossfade instead of a stalled tap. This is the pattern iOS uses
-// at the OS level when system theme changes.
-function applyMode(
+// Net effect: the cascade is fully masked. Same masking applies to both
+// mode flips and palette swaps.
+function apply(
   set: (s: Partial<ThemeState>) => void,
   get: () => ThemeState,
-  mode: ThemeMode,
+  next: { mode?: ThemeMode; palette?: PaletteId },
 ) {
-  if (get().mode !== mode) {
-    triggerThemeTransition(themes[get().mode].bg);
+  const cur = get();
+  const mode    = next.mode    ?? cur.mode;
+  const palette = next.palette ?? cur.palette;
+  const changed = mode !== cur.mode || palette !== cur.palette;
+
+  if (changed) {
+    triggerThemeTransition(cur.colors.bg);
   }
-  set({ mode, colors: themes[mode] });
-  setTimeout(() => storage.set(KEY, mode), 0);
+
+  set({ mode, palette, colors: themes[palette][mode] });
+
+  if (next.mode    !== undefined) setTimeout(() => storage.set(MODE_KEY,    mode),    0);
+  if (next.palette !== undefined) setTimeout(() => storage.set(PALETTE_KEY, palette), 0);
 }
 
-export const useThemeStore = create<ThemeState>((set, get) => ({
-  mode: loadInitialMode(),
-  colors: themes[loadInitialMode()],
-  setMode: (mode) => applyMode(set, get, mode),
-  toggle: () => {
-    const next: ThemeMode = get().mode === 'dark' ? 'light' : 'dark';
-    applyMode(set, get, next);
-  },
-}));
+export const useThemeStore = create<ThemeState>((set, get) => {
+  const mode    = loadInitialMode();
+  const palette = loadInitialPalette();
+
+  return {
+    mode,
+    palette,
+    colors: themes[palette][mode],
+    setMode:    (m) => apply(set, get, { mode: m }),
+    setPalette: (p) => apply(set, get, { palette: p }),
+    toggle:     ()  => apply(set, get, { mode: get().mode === 'dark' ? 'light' : 'dark' }),
+  };
+});
