@@ -10,7 +10,7 @@ interface Props {
   quiz: QuizItem;
 }
 
-export default function NewsQuizSection({ quiz }: Props) {
+function NewsQuizSectionImpl({ quiz }: Props) {
   const styles = useThemedStyles(makeStyles);
   const [selected, setSelected] = useState<number | null>(null);
 
@@ -83,6 +83,13 @@ export default function NewsQuizSection({ quiz }: Props) {
     </View>
   );
 }
+
+// Memoized so the rest of the feed re-rendering doesn't reset the user's
+// selected option (component's internal useState would survive memo anyway,
+// but the memo additionally skips the heavier render+style work for unchanged
+// quizzes during scroll).
+const NewsQuizSection = React.memo(NewsQuizSectionImpl);
+export default NewsQuizSection;
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({

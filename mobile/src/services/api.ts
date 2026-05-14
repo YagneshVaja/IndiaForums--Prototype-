@@ -788,6 +788,11 @@ export interface PostBadge {
   imageUrl: string;
 }
 
+export interface TopicPostTaggedUser {
+  id: number;
+  name: string;
+}
+
 export interface TopicPost {
   id: number;
   topicId: number;
@@ -815,6 +820,9 @@ export interface TopicPost {
   postCount: number | null;
   joinYear: number | null;
   reactionJson: string | null;
+  /** Users the OP curated as a pinned roster on the post (e.g. forum DT
+   *  members on a sticky). Comes from the post's `userJsonData` field. */
+  taggedUsers: TopicPostTaggedUser[];
   // Moderator-visible fields — surfaced in the per-post settings sheet.
   // Backend only returns these to callers with moderator rights.
   ip: string | null;
@@ -1233,8 +1241,14 @@ export async function fetchArticleList(params: FetchArticleListParams = {}): Pro
   const { page = 1, limit = 25 } = params;
   // Errors propagate so React Query sees `isError` and the screen can show
   // a real error / offline UI instead of silently rendering stale mock data.
+  //
+  // The backend expects `pageNumber`, NOT `page` — every other paginated
+  // endpoint here (fetchArticles, fetchVideos, fetchMediaGalleries) uses
+  // pageNumber. Sending `page` made the server silently fall back to page 1
+  // on every call, so /articles/list returned the same 25 rows forever and
+  // the News feed could never advance past its first batch.
   const { data } = await apiClient.get('/articles/list', {
-    params: { page, pageSize: limit },
+    params: { pageNumber: page, pageSize: limit },
   });
   // Handle both { data: { articles } } and { articles } shapes.
   const payload = data?.data ?? data;
@@ -3126,6 +3140,44 @@ export async function fetchMyWatchedTopics(
 // Topic Posts (read-only for Phase 2)
 // ---------------------------------------------------------------------------
 
+/**
+ * The backend appends edit metadata into the message HTML as a trailing
+ *   <edited><editid>USERNAME</editid><editdate>YYYY-MM-DD HH:mm:ss</editdate></edited>
+ * block. We strip it from the body (so the renderer doesn't show an empty
+ * gap) and surface `editedBy` / `editedWhen` for the "Edited by …" affordance.
+ */
+function extractEditMeta(html: string): {
+  cleanHtml: string;
+  metaBy: string | null;
+  metaWhen: string | null;
+} {
+  if (!html) return { cleanHtml: html, metaBy: null, metaWhen: null };
+  const m = html.match(
+    /<edited\b[^>]*>\s*(?:<editid\b[^>]*>([\s\S]*?)<\/editid>)?\s*(?:<editdate\b[^>]*>([\s\S]*?)<\/editdate>)?\s*<\/edited>/i,
+  );
+  if (!m) return { cleanHtml: html, metaBy: null, metaWhen: null };
+  return {
+    cleanHtml: html.replace(m[0], '').trimEnd(),
+    metaBy: m[1]?.trim() || null,
+    metaWhen: m[2]?.trim() || null,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parsePostTaggedUsers(raw: any): TopicPostTaggedUser[] {
+  if (!raw?.userJsonData) return [];
+  try {
+    const parsed = JSON.parse(raw.userJsonData);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (parsed?.json || []).map((u: any) => ({
+      id: Number(u.id),
+      name: String(u.name ?? ''),
+    })).filter((u: TopicPostTaggedUser) => u.id && u.name);
+  } catch {
+    return [];
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformPost(raw: any): TopicPost {
   let badges: PostBadge[] = [];
@@ -3141,11 +3193,16 @@ function transformPost(raw: any): TopicPost {
     } catch { /* malformed */ }
   }
 
+  // Pull edit metadata out of the inline <edited> tail and clean the body.
+  const rawMessage = raw.message ?? raw.body ?? raw.content ?? '';
+  const { cleanHtml, metaBy, metaWhen } = extractEditMeta(rawMessage);
+
   const rawJoinDate = raw.registerDate ?? raw.joinDate ?? raw.memberSince ?? null;
   const joinYear    = rawJoinDate ? new Date(rawJoinDate).getFullYear() : null;
-  const editedWhen  = raw.editedWhen ?? raw.updatedWhen ?? raw.lastEditedWhen ?? null;
+  const editedWhen  = raw.editedWhen ?? raw.updatedWhen ?? raw.lastEditedWhen ?? metaWhen ?? null;
+  const editedBy    = raw.editedByUserName ?? raw.editedBy ?? metaBy ?? null;
   const editCount   = Number(raw.editCount ?? raw.editHistoryCount ?? 0);
-  const isEdited    = Boolean(raw.isEdited ?? editedWhen ?? editCount > 0);
+  const isEdited    = Boolean(raw.isEdited ?? editedWhen ?? editedBy ?? editCount > 0);
   const rawTime     = raw.messageDate ?? raw.postedWhen ?? raw.createdAt ?? new Date().toISOString();
 
   return {
@@ -3157,7 +3214,7 @@ function transformPost(raw: any): TopicPost {
     rank:         raw.name || '',
     userLevel:    Number(raw.userLevel ?? 0),
     visitStreakCount: Number(raw.visitStreakCount ?? 0),
-    message:      raw.message ?? raw.body ?? raw.content ?? '',
+    message:      cleanHtml,
     time:         timeAgo(rawTime),
     rawTime,
     likes:        Number(raw.likeCount ?? 0),
@@ -3168,11 +3225,12 @@ function transformPost(raw: any): TopicPost {
     isOp:         Boolean(raw.isOriginalPoster ?? false),
     isEdited,
     editedWhen,
-    editedBy:     raw.editedByUserName ?? raw.editedBy ?? null,
+    editedBy,
     editCount,
     postCount:    raw.postCount ?? raw.postsCount ?? raw.totalMessages ?? null,
     joinYear,
     reactionJson: raw.reactionJson ?? raw.jsonData ?? null,
+    taggedUsers:  parsePostTaggedUsers(raw),
     ip:                raw.ip ?? raw.ipAddress ?? raw.posterIp ?? null,
     hasMaturedContent: Boolean(raw.hasMaturedContent ?? raw.isMatured ?? false),
     moderatorNote:     raw.moderatorNote ?? null,

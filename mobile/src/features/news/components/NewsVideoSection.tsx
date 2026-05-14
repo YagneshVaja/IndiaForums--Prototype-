@@ -13,7 +13,7 @@ interface Props {
   onSeeAll?: () => void;
 }
 
-export default function NewsVideoSection({ videos, onVideoPress, onSeeAll }: Props) {
+function NewsVideoSectionImpl({ videos, onVideoPress, onSeeAll }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
 
@@ -78,6 +78,12 @@ export default function NewsVideoSection({ videos, onVideoPress, onSeeAll }: Pro
     </View>
   );
 }
+
+// Memoized so a parent re-render (e.g. the news feed appending another article
+// page) doesn't re-render every rail. Props are reference-stable from the
+// assembler when their underlying slot hasn't changed.
+const NewsVideoSection = React.memo(NewsVideoSectionImpl);
+export default NewsVideoSection;
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({

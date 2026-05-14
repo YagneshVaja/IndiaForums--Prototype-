@@ -11,7 +11,7 @@ interface Props {
   onSeeAll?: () => void;
 }
 
-export default function NewsVisualStoriesSection({ stories, onSeeAll }: Props) {
+function NewsVisualStoriesSectionImpl({ stories, onSeeAll }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
 
@@ -57,6 +57,9 @@ export default function NewsVisualStoriesSection({ stories, onSeeAll }: Props) {
     </View>
   );
 }
+
+const NewsVisualStoriesSection = React.memo(NewsVisualStoriesSectionImpl);
+export default NewsVisualStoriesSection;
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({

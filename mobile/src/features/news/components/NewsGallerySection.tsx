@@ -13,7 +13,7 @@ interface Props {
   onSeeAll?: () => void;
 }
 
-export default function NewsGallerySection({ galleries, onGalleryPress, onSeeAll }: Props) {
+function NewsGallerySectionImpl({ galleries, onGalleryPress, onSeeAll }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
 
@@ -69,6 +69,9 @@ export default function NewsGallerySection({ galleries, onGalleryPress, onSeeAll
     </View>
   );
 }
+
+const NewsGallerySection = React.memo(NewsGallerySectionImpl);
+export default NewsGallerySection;
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
