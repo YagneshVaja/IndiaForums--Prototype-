@@ -1,6 +1,44 @@
 import type { Article, Gallery, Movie, Video } from '../../../services/api';
 import type { QuizItem, VisualStoryItem } from '../data/newsStaticData';
 
+// Round-robin pool items by category. The IndiaForums API typically returns
+// content category-clumped (e.g. 8 movies videos in a row, then 2 TV, then
+// 2 digital). On the ALL tab, the first videos / photos / stories rail
+// would otherwise look mono-category even though the user clicked "ALL".
+// Interleaving pulls one from each category bucket per round so every rail
+// mixes categories.
+//
+// Stable within a category (we keep original index order inside each
+// bucket), so React reconciliation stays efficient. The category key is
+// supplied by the caller because Video/Gallery use `cat` and
+// VisualStoryItem uses `category`.
+export function interleaveByCat<T>(items: T[], getCat: (item: T) => string | null | undefined): T[] {
+  if (items.length === 0) return items;
+  const buckets = new Map<string, T[]>();
+  for (const item of items) {
+    const key = getCat(item) ?? '__other';
+    let bucket = buckets.get(key);
+    if (!bucket) {
+      bucket = [];
+      buckets.set(key, bucket);
+    }
+    bucket.push(item);
+  }
+  if (buckets.size <= 1) return items; // nothing to interleave
+  const lanes = Array.from(buckets.values());
+  const out: T[] = [];
+  let drained = 0;
+  while (drained < lanes.length) {
+    drained = 0;
+    for (const lane of lanes) {
+      const next = lane.shift();
+      if (next) out.push(next);
+      else drained += 1;
+    }
+  }
+  return out;
+}
+
 // One mixed-media block is injected after every BLOCK_SIZE articles. With 4
 // articles per group (1 hero + 3 compact), the user reads ~1.5 screens of
 // news between each rail/quiz — close to the rhythm TOI / News18 / Inshorts
@@ -10,6 +48,11 @@ export const BLOCK_SIZE = 4;
 // Per-injection slice size for rail-style blocks (videos, photos, movies).
 // Matches the visible card count in the existing horizontal rails.
 export const RAIL_SLICE = 4;
+
+// Visual-stories rails show more cards because each is narrower (110px vs
+// 130-140px for videos / galleries / movies), so a single 5-card slice still
+// fits the same horizontal real estate.
+export const STORIES_SLICE = 5;
 
 const ROTATION = [
   'rail-videos',
@@ -31,7 +74,11 @@ export type FeedItem =
 
 export interface FeedPools {
   videos: Video[];
-  stories: VisualStoryItem[][];
+  // Visual stories are now stored flat (with a per-story `category` tag)
+  // instead of as pre-chunked groups, so the assembler can slice a fresh
+  // STORIES_SLICE-sized window each rail. This mirrors how videos / photos
+  // / movies are consumed and keeps category filtering simple.
+  stories: VisualStoryItem[];
   quizzes: QuizItem[];
   galleries: Gallery[];
   movies: Movie[];
@@ -63,10 +110,10 @@ function buildBlock(
       return { kind, key: `videos-${slot}`, videos: slice };
     }
     case 'rail-stories': {
-      const group = pools.stories[cursor.stories];
-      if (!group || group.length === 0) return null;
-      cursor.stories += 1;
-      return { kind, key: `stories-${slot}`, stories: group };
+      const slice = pools.stories.slice(cursor.stories, cursor.stories + STORIES_SLICE);
+      if (slice.length === 0) return null;
+      cursor.stories += slice.length;
+      return { kind, key: `stories-${slot}`, stories: slice };
     }
     case 'card-quiz': {
       const quiz = pools.quizzes[cursor.quizzes];

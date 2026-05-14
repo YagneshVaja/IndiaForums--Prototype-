@@ -1,11 +1,16 @@
 import { useEffect, useMemo } from 'react';
 import { useNewsArticles, useNewsGalleries, useNewsVideos } from './useNewsData';
 import { useTrendingMovies } from './useTrendingMovies';
-import { QUIZZES, VISUAL_STORIES } from '../data/newsStaticData';
+import {
+  NEWS_CATEGORY_CONTENT_CAT,
+  QUIZZES,
+  VISUAL_STORIES,
+} from '../data/newsStaticData';
 import {
   assembleNewsFeed,
   BLOCK_SIZE,
   RAIL_SLICE,
+  interleaveByCat,
   type FeedItem,
 } from '../utils/assembleNewsFeed';
 import type { Article, Gallery, Movie, Video } from '../../../services/api';
@@ -117,61 +122,135 @@ export function useNewsFeed(category: string): UseNewsFeedResult {
     return out;
   }, [moviesQ.data]);
 
+  // ── Category filtering for media pools ─────────────────────────────────
+  // Articles already filter server-side (the /home/articles endpoint takes
+  // `articleType`). Media pools don't expose a category filter on the API,
+  // so we filter client-side against each item's `cat` (videos, galleries)
+  // or its static `category` tag (quizzes, stories).
+  //
+  // Movies have no category metadata on the model — the rail is conceptually
+  // "trending movies", which only really makes sense inside ALL or the
+  // MOVIES tab. For every other category the movies rail simply doesn't
+  // appear in rotation.
+  const contentCat = NEWS_CATEGORY_CONTENT_CAT[category]; // undefined for 'all'
+
+  // On the ALL tab we round-robin by category before slicing into rails.
+  // The IF backend returns content category-clumped — without interleaving,
+  // the first videos / photos rail in ALL ends up looking mono-category
+  // (e.g. an all-movies rail when the user clicked ALL). Other categories
+  // already have category-coherent pools by definition, so no shuffle there.
+  const filteredVideos = useMemo(() => {
+    if (contentCat) return videos.filter((v) => v.cat === contentCat);
+    return interleaveByCat(videos, (v) => v.cat);
+  }, [videos, contentCat]);
+
+  const filteredGalleries = useMemo(() => {
+    if (contentCat) return galleries.filter((g) => g.cat === contentCat);
+    return interleaveByCat(galleries, (g) => g.cat);
+  }, [galleries, contentCat]);
+
+  const filteredMovies = useMemo(() => {
+    if (category === 'all' || category === 'movies') return movies;
+    return [];
+  }, [movies, category]);
+
+  // Static pools are stored category-grouped in the file (easier to read).
+  // For ALL, interleave so the first quiz/stories blocks aren't all-TV or
+  // all-movies. For specific categories we filter to that subset.
+  const filteredQuizzes = useMemo(() => {
+    if (category === 'all') return interleaveByCat(QUIZZES, (q) => q.category);
+    return QUIZZES.filter((q) => q.category === category);
+  }, [category]);
+
+  const filteredStories = useMemo(() => {
+    if (category === 'all') return interleaveByCat(VISUAL_STORIES, (s) => s.category);
+    return VISUAL_STORIES.filter((s) => s.category === category);
+  }, [category]);
+
   const items = useMemo(
     () =>
       assembleNewsFeed({
         articles,
         pools: {
-          videos,
-          stories:   VISUAL_STORIES,
-          quizzes:   QUIZZES,
-          galleries,
-          movies,
+          videos:    filteredVideos,
+          stories:   filteredStories,
+          quizzes:   filteredQuizzes,
+          galleries: filteredGalleries,
+          movies:    filteredMovies,
         },
       }),
-    [articles, videos, galleries, movies],
+    [articles, filteredVideos, filteredStories, filteredQuizzes, filteredGalleries, filteredMovies],
   );
 
   // ── Pool pagination triggers ─────────────────────────────────────────────
   // For each paginating pool, estimate how many items the assembler will
   // need given the current article count, and pull the next API page when
-  // we're within POOL_LEAD items of running out. Static pools (quizzes,
-  // stories) don't participate — they just stop appearing once exhausted.
+  // the *filtered* pool is running low. Driving off the filtered count
+  // (not the raw count) is what lets niche categories like SPORTS keep
+  // fetching until enough matching items accumulate — without it, the
+  // raw pool fills up quickly with mostly-irrelevant items and pagination
+  // stops before the user sees any SPORTS videos.
   //
-  // Effect deps below pull primitives (hasNextPage, isFetchingNextPage,
-  // fetchNextPage) out of the full query object. The query reference itself
-  // changes on every render — depending on it ran every effect every render
-  // unnecessarily. Primitives are stable until the underlying state actually
-  // changes, which is what React's exhaustive-deps lint wants anyway.
+  // Cap each pool at MAX_POOL_PAGES so a category with truly no API
+  // matches (e.g. a brand-new vertical with no content yet) can't loop
+  // through the entire archive looking for non-existent items.
+  //
+  // Effect deps below pull primitives out of the full query object. The
+  // query reference changes on every render — depending on it ran every
+  // effect every render unnecessarily.
   const expectedRails    = Math.floor(articles.length / ARTICLES_PER_RAIL_INJECT) + 1;
   const expectedItemsNeed = expectedRails * RAIL_SLICE + POOL_LEAD;
+  const MAX_POOL_PAGES = 8;
 
-  const videosHasNext    = videosQ.hasNextPage;
-  const videosFetching   = videosQ.isFetchingNextPage;
-  const videosFetchNext  = videosQ.fetchNextPage;
+  const videosPages       = videosQ.data?.pages.length ?? 0;
+  const videosHasNext     = videosQ.hasNextPage;
+  const videosFetching    = videosQ.isFetchingNextPage;
+  const videosFetchNext   = videosQ.fetchNextPage;
   useEffect(() => {
-    if (videos.length < expectedItemsNeed && videosHasNext && !videosFetching) {
+    if (
+      filteredVideos.length < expectedItemsNeed &&
+      videosPages < MAX_POOL_PAGES &&
+      videosHasNext &&
+      !videosFetching
+    ) {
       videosFetchNext();
     }
-  }, [videos.length, expectedItemsNeed, videosHasNext, videosFetching, videosFetchNext]);
+  }, [filteredVideos.length, expectedItemsNeed, videosPages, videosHasNext, videosFetching, videosFetchNext]);
 
+  const galleriesPages     = galleriesQ.data?.pages.length ?? 0;
   const galleriesHasNext   = galleriesQ.hasNextPage;
   const galleriesFetching  = galleriesQ.isFetchingNextPage;
   const galleriesFetchNext = galleriesQ.fetchNextPage;
   useEffect(() => {
-    if (galleries.length < expectedItemsNeed && galleriesHasNext && !galleriesFetching) {
+    if (
+      filteredGalleries.length < expectedItemsNeed &&
+      galleriesPages < MAX_POOL_PAGES &&
+      galleriesHasNext &&
+      !galleriesFetching
+    ) {
       galleriesFetchNext();
     }
-  }, [galleries.length, expectedItemsNeed, galleriesHasNext, galleriesFetching, galleriesFetchNext]);
+  }, [filteredGalleries.length, expectedItemsNeed, galleriesPages, galleriesHasNext, galleriesFetching, galleriesFetchNext]);
 
+  // Movies pool only matters when its rail can actually appear in the
+  // current tab (ALL or MOVIES). Skip prefetching when the rail is gated
+  // off — no point paging through the API for content that won't render.
+  const moviesPages     = moviesQ.data?.pages.length ?? 0;
   const moviesHasNext   = moviesQ.hasNextPage;
   const moviesFetching  = moviesQ.isFetchingNextPage;
   const moviesFetchNext = moviesQ.fetchNextPage;
+  const moviesGated     = category !== 'all' && category !== 'movies';
   useEffect(() => {
-    if (movies.length < expectedItemsNeed && moviesHasNext && !moviesFetching) {
+    if (moviesGated) return;
+    if (
+      filteredMovies.length < expectedItemsNeed &&
+      moviesPages < MAX_POOL_PAGES &&
+      moviesHasNext &&
+      !moviesFetching
+    ) {
       moviesFetchNext();
     }
-  }, [movies.length, expectedItemsNeed, moviesHasNext, moviesFetching, moviesFetchNext]);
+  }, [filteredMovies.length, expectedItemsNeed, moviesPages, moviesGated, moviesHasNext, moviesFetching, moviesFetchNext]);
 
   // Eagerly prefetch page 2 once page 1 lands so a 30-article buffer is
   // ready before the user hits the bottom. With the /articles/list paging

@@ -1,4 +1,4 @@
-import { useInfiniteQuery, type InfiniteData } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, type InfiniteData } from '@tanstack/react-query';
 import {
   fetchArticleList,
   fetchArticles,
@@ -50,6 +50,13 @@ export function useNewsArticles(parentCategory: string, hasSubCatFilter: boolean
     },
     initialPageParam: 1,
     staleTime: 2 * 60 * 1000,
+    // Tapping a category chip swaps the query key. Without this option,
+    // React Query returns `data: undefined` for the new key until the fetch
+    // completes, which makes the news feed flash a LoadingState every time
+    // the user switches tabs. `keepPreviousData` keeps the previous
+    // category's data visible during the transition so the swap reads as a
+    // smooth content replacement instead of a flicker.
+    placeholderData: keepPreviousData,
   });
 }
 

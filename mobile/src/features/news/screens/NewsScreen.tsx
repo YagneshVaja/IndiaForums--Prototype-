@@ -166,9 +166,14 @@ export default function NewsScreen({ navigation, route }: Props) {
         </Pressable>
       ) : null}
 
-      {isLoading ? (
+      {isLoading && items.length === 0 ? (
+        // Only blank the screen for the *first* load. `keepPreviousData` on
+        // the articles query already holds the previous category's items
+        // visible during a tab swap, so once we've shown anything we never
+        // re-show LoadingState — that's what was causing the flicker on
+        // rapid category taps.
         <LoadingState />
-      ) : isError ? (
+      ) : isError && items.length === 0 ? (
         <ErrorState
           message={
             isOnline
