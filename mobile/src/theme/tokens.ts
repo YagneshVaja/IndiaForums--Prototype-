@@ -31,8 +31,8 @@ export interface ThemeColors {
 }
 
 export const lightColors: ThemeColors = {
-  bg: '#F8F5F0',
-  surface: '#F8F5F0',
+  bg: '#FFFFFF',
+  surface: '#F4F4F5',
   card: '#FFFFFF',
   cardElevated: '#FFFFFF',
   border: '#E2E2E2',
