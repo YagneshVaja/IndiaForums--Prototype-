@@ -3005,8 +3005,15 @@ export async function fetchForumTopics(
     params: { pageNumber, pageSize },
   });
 
+  // The endpoint returns two arrays on page 1: `globalAnnouncements` (pinned
+  // cross-forum stickies, priority=3) followed by `topics` (the forum's own
+  // listing). The website renders them as a single feed with announcements on
+  // top; we do the same so page 1 doesn't silently drop those 3–5 items.
+  // Page 2+ returns no globalAnnouncements, so this is a no-op there.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rawTopics: any[] = data?.topics || [];
+  const rawAnnouncements: any[] = data?.globalAnnouncements || [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawTopics: any[] = [...rawAnnouncements, ...(data?.topics || [])];
   const forumDetail = data?.forumDetail
     ? transformForum(data.forumDetail, {})
     : null;
