@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNewsArticles, useNewsGalleries, useNewsVideos } from './useNewsData';
 import { useTrendingMovies } from './useTrendingMovies';
+import { useWebStories } from '../../webstories/hooks/useWebStories';
 import {
   NEWS_CATEGORY_CONTENT_CAT,
   QUIZZES,
-  VISUAL_STORIES,
 } from '../data/newsStaticData';
 import {
   assembleNewsFeed,
@@ -13,7 +13,7 @@ import {
   interleaveByCat,
   type FeedItem,
 } from '../utils/assembleNewsFeed';
-import type { Article, Gallery, Movie, Video } from '../../../services/api';
+import type { Article, Gallery, Movie, Video, WebStorySummary } from '../../../services/api';
 
 export interface UseNewsFeedResult {
   items: FeedItem[];
@@ -59,6 +59,11 @@ export function useNewsFeed(category: string): UseNewsFeedResult {
   const videosQ    = useNewsVideos();
   const galleriesQ = useNewsGalleries();
   const moviesQ    = useTrendingMovies();
+  // Real backend web stories — same hook the Home tab uses, so the in-feed
+  // Visual Stories rail and the Home tab show the same playable stories.
+  // No category filter on the API, so the news feed shows the same stories
+  // for every News category tab.
+  const webStoriesQ = useWebStories();
 
   // `visibleCategory` is the category whose articles are currently rendered
   // in the feed — which is NOT always the one passed in. When the chip
@@ -139,6 +144,23 @@ export function useNewsFeed(category: string): UseNewsFeedResult {
     return out;
   }, [moviesQ.data]);
 
+  // Real web stories from the backend (same source the Home tab uses).
+  // Dedup defensively — pagination can occasionally re-emit a record across
+  // page boundaries when the underlying feed re-orders.
+  const webStories: WebStorySummary[] = useMemo(() => {
+    const seen = new Set<number>();
+    const out: WebStorySummary[] = [];
+    for (const page of webStoriesQ.data?.pages ?? []) {
+      for (const s of page.stories) {
+        if (!seen.has(s.id)) {
+          seen.add(s.id);
+          out.push(s);
+        }
+      }
+    }
+    return out;
+  }, [webStoriesQ.data]);
+
   // ── Category filtering for media pools ─────────────────────────────────
   // Articles already filter server-side (the /home/articles endpoint takes
   // `articleType`). Media pools don't expose a category filter on the API,
@@ -184,10 +206,10 @@ export function useNewsFeed(category: string): UseNewsFeedResult {
     return QUIZZES.filter((q) => q.category === visibleCategory);
   }, [visibleCategory]);
 
-  const filteredStories = useMemo(() => {
-    if (visibleCategory === 'all') return interleaveByCat(VISUAL_STORIES, (s) => s.category);
-    return VISUAL_STORIES.filter((s) => s.category === visibleCategory);
-  }, [visibleCategory]);
+  // The backend WebStorySummary has no category field — every News tab gets
+  // the same chronologically-ordered story list. That mirrors the Home tab,
+  // where there's also no per-category split.
+  const filteredStories = webStories;
 
   const items = useMemo(
     () =>

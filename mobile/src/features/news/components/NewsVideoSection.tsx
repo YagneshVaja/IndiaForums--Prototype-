@@ -3,9 +3,9 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import type { Video } from '../../../services/api';
-import { useThemeStore } from '../../../store/themeStore';
 import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
+import RailHeader from './RailHeader';
 
 interface Props {
   videos: Video[];
@@ -14,25 +14,13 @@ interface Props {
 }
 
 function NewsVideoSectionImpl({ videos, onVideoPress, onSeeAll }: Props) {
-  const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
 
   if (videos.length === 0) return null;
 
   return (
     <View style={styles.section}>
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Ionicons name="play-circle-outline" size={16} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Videos</Text>
-        </View>
-        {onSeeAll ? (
-          <Pressable onPress={onSeeAll} hitSlop={8}>
-            <Text style={styles.seeAll}>See All →</Text>
-          </Pressable>
-        ) : null}
-      </View>
-
+      <RailHeader icon="play-circle-outline" title="Videos" onSeeAll={onSeeAll} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -96,16 +84,6 @@ function makeStyles(c: ThemeColors) {
       borderBottomColor: c.border,
       marginVertical: 4,
     },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 14,
-      marginBottom: 12,
-    },
-    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    sectionTitle: { fontSize: 14, fontWeight: '800', color: c.text, letterSpacing: -0.2 },
-    seeAll: { fontSize: 12, fontWeight: '700', color: c.primary },
     scroll: { paddingHorizontal: 14, gap: 12 },
     card: { width: 140 },
     cardPressed: { opacity: 0.85 },

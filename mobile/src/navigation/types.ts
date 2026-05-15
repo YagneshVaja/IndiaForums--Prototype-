@@ -147,6 +147,14 @@ export type NewsStackParamList = {
     | { id: string | number; title?: string; thumbnail?: string | null };
   MovieDetail: { movie: import('../services/api').Movie };
   WebStories: undefined;
+  // Reachable from the in-feed Visual Stories rail. Same shape as the
+  // HomeStack route so the same WebStoryPlayerScreen renders here without
+  // any per-tab branching — tapping back returns to the News feed at the
+  // same scroll position.
+  WebStoryPlayer: {
+    stories: import('../services/api').WebStorySummary[];
+    index: number;
+  };
 };
 
 export type ForumsStackParamList = {

@@ -31,7 +31,7 @@ import NewsFeedList from '../components/NewsFeedList';
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
 import BrandRefreshIndicator from '../../../components/ui/BrandPullToRefresh';
-import type { Article, Gallery, Movie, Video } from '../../../services/api';
+import type { Article, Gallery, Movie, Video, WebStorySummary } from '../../../services/api';
 
 type Props = NativeStackScreenProps<NewsStackParamList, 'NewsMain'>;
 
@@ -172,13 +172,17 @@ export default function NewsScreen({ navigation, route }: Props) {
     [navigation],
   );
 
-  // Visual stories on this feed are static placeholder tiles (see
-  // VISUAL_STORIES in newsStaticData) — they don't carry real
-  // WebStorySummary ids, so they can't drive WebStoryPlayer directly.
-  // Tap navigates to the WebStories listing where real, playable stories
-  // live.
+  // Visual stories on this feed are real backend WebStorySummary records
+  // (same source the Home tab uses). Tap opens WebStoryPlayer at the
+  // matching index so the player can swipe through the surrounding stories.
+  // Each rail's `stories` slice is passed straight through so the player's
+  // index lookup matches the rail the user actually tapped.
   const handleStoryPress = useCallback(
-    () => navigation.navigate('WebStories'),
+    (story: WebStorySummary, railStories: WebStorySummary[]) => {
+      const index = railStories.findIndex((s) => s.id === story.id);
+      if (index < 0) return;
+      navigation.navigate('WebStoryPlayer', { stories: railStories, index });
+    },
     [navigation],
   );
 
@@ -297,12 +301,22 @@ function makeStyles(c: ThemeColors) {
     // Sticky dock positioned absolutely above the FlatList. zIndex below
     // AnimatedTopBar (10) so the brand row covers it when both are visible,
     // and above the list so categories remain tappable while scrolling.
+    //
+    // The View's `backgroundColor` is critical: this dock's own height grows
+    // and shrinks with the animated `paddingTop` (brandInset → safeTop), so
+    // its View covers the entire band from the top of the screen down to the
+    // bottom of the category row. Without a bg here, that paddingTop area is
+    // transparent — and as the brand row fades to opacity 0 on scroll, the
+    // FlatList content scrolling behind shows through the strip between the
+    // status bar and the category row. Filling the whole View paints the
+    // chrome surface for that band regardless of chromeProgress.
     catDock: {
       position: 'absolute',
       top: 0,
       left: 0,
       right: 0,
       zIndex: 5,
+      backgroundColor: c.card,
     },
     catRowWrap: {
       backgroundColor: c.card,

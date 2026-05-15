@@ -9,6 +9,7 @@ import VideoDetailScreen from '../features/videos/screens/VideoDetailScreen';
 import GalleryDetailScreen from '../features/galleries/screens/GalleryDetailScreen';
 import MovieDetailScreen from '../features/movies/screens/MovieDetailScreen';
 import WebStoriesScreen from '../features/webstories/screens/WebStoriesScreen';
+import WebStoryPlayerScreen from '../features/webstories/screens/WebStoryPlayerScreen';
 import { useThemeStore } from '../store/themeStore';
 
 function PlaceholderScreen({ route }: { route: { name: string } }) {
@@ -33,6 +34,7 @@ export default function NewsStack() {
       <Stack.Screen name="GalleryDetail" component={GalleryDetailScreen} />
       <Stack.Screen name="MovieDetail" component={MovieDetailScreen} />
       <Stack.Screen name="WebStories" component={WebStoriesScreen} />
+      <Stack.Screen name="WebStoryPlayer" component={WebStoryPlayerScreen} />
     </Stack.Navigator>
   );
 }

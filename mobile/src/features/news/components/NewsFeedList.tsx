@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Animated from 'react-native-reanimated';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import type { Article, Gallery, Movie, Video } from '../../../services/api';
+import type { Article, Gallery, Movie, Video, WebStorySummary } from '../../../services/api';
 import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import NewsHeroCard from './NewsHeroCard';
@@ -38,10 +38,10 @@ interface Props {
   onVideoPress?: (video: Video) => void;
   onGalleryPress?: (gallery: Gallery) => void;
   onMoviePress?: (movie: Movie) => void;
-  // Visual stories on the news feed are static placeholders, so this is a
-  // no-arg handler — the screen navigates the user to the WebStories listing
-  // rather than trying to play a non-existent backend story.
-  onStoryPress?: () => void;
+  // Visual stories are real backend records — the screen opens the
+  // WebStoryPlayer at the matching index, so it needs both the tapped
+  // story and the rail's slice (the player swipes through the slice).
+  onStoryPress?: (story: WebStorySummary, railStories: WebStorySummary[]) => void;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onScroll: any;
@@ -86,13 +86,19 @@ export default function NewsFeedList({
               onVideoPress={onVideoPress}
             />
           );
-        case 'rail-stories':
+        case 'rail-stories': {
+          const railStories = item.stories;
           return (
             <NewsVisualStoriesSection
-              stories={item.stories}
-              onStoryPress={onStoryPress}
+              stories={railStories}
+              onStoryPress={
+                onStoryPress
+                  ? (story) => onStoryPress(story, railStories)
+                  : undefined
+              }
             />
           );
+        }
         case 'card-quiz':
           return <NewsQuizSection quiz={item.quiz} />;
         case 'rail-photos':
@@ -171,7 +177,11 @@ export default function NewsFeedList({
       ListFooterComponent={listFooter}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{
-        paddingTop: topInset,
+        // Small extra gap above topInset so the first feed item has breathing
+        // room below the sticky category dock — without it the hero article
+        // image kisses the dock's bottom border, making the chrome and the
+        // content read as one unbroken slab.
+        paddingTop: topInset + 10,
         // Leave space for the bottom tab bar so the footer (spinner / Load
         // more button / "all caught up") is fully visible above it.
         paddingBottom: tabBarHeight + 24,

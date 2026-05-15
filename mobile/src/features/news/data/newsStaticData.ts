@@ -19,6 +19,7 @@ export const NEWS_CATEGORIES: NewsCategory[] = [
 // Subcategory chip ids are the API's defaultCategoryId as a string, so
 // `Number(subCat.id) === article.catId` is a direct filter. 'all' means no
 // subcategory filter — fall back to the parent's subCatIds.
+// Used by ArticlesFullListScreen to render the per-category sub-chip strip.
 export const NEWS_SUBCATEGORIES: Record<string, Array<{ id: string; label: string }>> = {
   television: [
     { id: 'all', label: 'ALL' },
@@ -141,38 +142,6 @@ export const QUIZZES: QuizItem[] = [
   },
 ];
 
-// ──────────────────────────────────────────────────────────────────────────
-// Visual stories (static seed). Stored flat with a `category` tag so the
-// News feed can pick a per-category subset and chunk it into rails.
-// ──────────────────────────────────────────────────────────────────────────
-export interface VisualStoryItem {
-  id: string;
-  category: string;
-  title: string;
-  subtitle: string;
-  emoji: string;
-  colors: [string, string];
-}
-
-export const VISUAL_STORIES: VisualStoryItem[] = [
-  // Television
-  { id: 'vs1',  category: 'television', title: 'BB18 Drama',    subtitle: '10 slides', emoji: '🎤', colors: ['#2d1b69', '#7c3aed'] },
-  { id: 'vs15', category: 'television', title: 'Anupamaa S3',   subtitle: '12 slides', emoji: '📺', colors: ['#1c3a5e', '#2563eb'] },
-  // Movies
-  { id: 'vs2',  category: 'movies',     title: 'Stree 3 Cast',  subtitle: '8 slides',  emoji: '🎬', colors: ['#7f1d1d', '#ef4444'] },
-  { id: 'vs5',  category: 'movies',     title: 'Cannes 2026',   subtitle: '9 slides',  emoji: '✨', colors: ['#0c4a6e', '#0ea5e9'] },
-  { id: 'vs6',  category: 'movies',     title: 'Pushpa 3 Buzz', subtitle: '6 slides',  emoji: '🌺', colors: ['#4a1942', '#9333ea'] },
-  { id: 'vs7',  category: 'movies',     title: 'Thalapathy 68', subtitle: '8 slides',  emoji: '🎭', colors: ['#14532d', '#15803d'] },
-  { id: 'vs10', category: 'movies',     title: 'SRK New Film',  subtitle: '5 slides',  emoji: '🌟', colors: ['#1a1a2e', '#0f3460'] },
-  { id: 'vs11', category: 'movies',     title: 'KGF 3 Teaser',  subtitle: '7 slides',  emoji: '💎', colors: ['#713f12', '#d97706'] },
-  { id: 'vs13', category: 'movies',     title: 'Avatar 3 World',subtitle: '8 slides',  emoji: '🌊', colors: ['#0c4a6e', '#0ea5e9'] },
-  // Digital / OTT
-  { id: 'vs4',  category: 'digital',    title: 'K-Drama 2026',  subtitle: '7 slides',  emoji: '👑', colors: ['#831843', '#db2777'] },
-  { id: 'vs8',  category: 'digital',    title: 'OTT Top Picks', subtitle: '11 slides', emoji: '🎞️', colors: ['#7f1d1d', '#b91c1c'] },
-  // Lifestyle
-  { id: 'vs14', category: 'lifestyle',  title: 'Celeb Diets',   subtitle: '6 slides',  emoji: '🥗', colors: ['#14532d', '#4ade80'] },
-  // Sports
-  { id: 'vs3',  category: 'sports',     title: 'IPL Moments',   subtitle: '12 slides', emoji: '🏏', colors: ['#14532d', '#16a34a'] },
-  { id: 'vs9',  category: 'sports',     title: 'India Cricket', subtitle: '9 slides',  emoji: '🏆', colors: ['#1e3a8a', '#f97316'] },
-  { id: 'vs12', category: 'sports',     title: 'WM42 Moments',  subtitle: '10 slides', emoji: '💪', colors: ['#7f1d1d', '#ef4444'] },
-];
+// Visual stories used to be a static seed here. They now come from the
+// real `useWebStories()` backend hook (same source the Home tab uses), so
+// the seed has been removed — see `useNewsFeed.ts` for the integration.

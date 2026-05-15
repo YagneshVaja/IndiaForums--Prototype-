@@ -1,5 +1,5 @@
-import type { Article, Gallery, Movie, Video } from '../../../services/api';
-import type { QuizItem, VisualStoryItem } from '../data/newsStaticData';
+import type { Article, Gallery, Movie, Video, WebStorySummary } from '../../../services/api';
+import type { QuizItem } from '../data/newsStaticData';
 
 // Round-robin pool items by category. The IndiaForums API typically returns
 // content category-clumped (e.g. 8 movies videos in a row, then 2 TV, then
@@ -10,8 +10,8 @@ import type { QuizItem, VisualStoryItem } from '../data/newsStaticData';
 //
 // Stable within a category (we keep original index order inside each
 // bucket), so React reconciliation stays efficient. The category key is
-// supplied by the caller because Video/Gallery use `cat` and
-// VisualStoryItem uses `category`.
+// supplied by the caller because each pool uses a different field name
+// (Video/Gallery use `cat`, QuizItem uses `category`).
 export function interleaveByCat<T>(items: T[], getCat: (item: T) => string | null | undefined): T[] {
   if (items.length === 0) return items;
   const buckets = new Map<string, T[]>();
@@ -67,18 +67,18 @@ export type FeedItem =
   | { kind: 'hero-article';    key: string; article: Article }
   | { kind: 'compact-article'; key: string; article: Article }
   | { kind: 'rail-videos';     key: string; videos: Video[] }
-  | { kind: 'rail-stories';    key: string; stories: VisualStoryItem[] }
+  | { kind: 'rail-stories';    key: string; stories: WebStorySummary[] }
   | { kind: 'card-quiz';       key: string; quiz: QuizItem }
   | { kind: 'rail-photos';     key: string; galleries: Gallery[] }
   | { kind: 'rail-movies';     key: string; movies: Movie[] };
 
 export interface FeedPools {
   videos: Video[];
-  // Visual stories are now stored flat (with a per-story `category` tag)
-  // instead of as pre-chunked groups, so the assembler can slice a fresh
-  // STORIES_SLICE-sized window each rail. This mirrors how videos / photos
-  // / movies are consumed and keeps category filtering simple.
-  stories: VisualStoryItem[];
+  // Real backend web stories from useWebStories(). Sliced into
+  // STORIES_SLICE-sized windows just like the videos / photos / movies
+  // pools. No category filter — the WebStorySummary API has no category
+  // field, so every News tab gets the same stories (matches Home).
+  stories: WebStorySummary[];
   quizzes: QuizItem[];
   galleries: Gallery[];
   movies: Movie[];

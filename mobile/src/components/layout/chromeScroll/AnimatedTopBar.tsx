@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, type LayoutChangeEvent } from 'react-native';
 import Animated, { useAnimatedStyle, interpolate, Extrapolation } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TopNavBrand } from '../TopNavBar';
 import { useChromeScroll } from './ChromeScrollContext';
 
@@ -26,12 +27,20 @@ interface Props extends TopNavBrandProps {
 export default function AnimatedTopBar({ onMeasure, children, ...brandProps }: Props) {
   const { chromeProgress } = useChromeScroll();
   const [height, setHeight] = useState(0);
+  const safeTop = useSafeAreaInsets().top;
+
+  // Translate by (height - safeTop) — *not* the full height — so the brand
+  // row's bottom edge lands at y = safeTop when fully collapsed, matching
+  // where the sticky category dock parks (its paddingTop animates to
+  // safeTop). Without this the brand row outraced the dock and a strip of
+  // feed content showed through between them mid-slide.
+  const collapseDistance = Math.max(0, height - safeTop);
 
   const animStyle = useAnimatedStyle(() => {
     const ty = interpolate(
       chromeProgress.value,
       [0, 1],
-      [0, -height],
+      [0, -collapseDistance],
       Extrapolation.CLAMP,
     );
     const opacity = interpolate(
@@ -44,7 +53,7 @@ export default function AnimatedTopBar({ onMeasure, children, ...brandProps }: P
       transform: [{ translateY: ty }],
       opacity,
     };
-  }, [height]);
+  }, [collapseDistance]);
 
   // pointerEvents is bound to the *visible* state to avoid swallowing
   // taps on content underneath while chrome is hidden.
