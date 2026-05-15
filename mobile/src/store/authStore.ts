@@ -11,9 +11,13 @@ import {
   setTokens,
 } from '../services/authStorage';
 
-// Group ids that grant moderator privileges. Mirrors the prototype:
-// indiaforums/src/contexts/AuthContext.jsx:19
-const MODERATOR_GROUP_IDS = new Set([3, 4, 5, 6]);
+// Group ids that grant moderator privileges. Mirrors the prototype
+// (indiaforums/src/contexts/AuthContext.jsx:19) plus groupId 25, which the
+// backend treats as a moderator (verified 2026-05-15 — was able to trash and
+// untrash posts). Server is the source of truth on permissions; this set just
+// controls whether moderator UI is shown — the backend will still 403 if the
+// user actually lacks rights.
+const MODERATOR_GROUP_IDS = new Set([3, 4, 5, 6, 25]);
 
 // Auth responses are flat — promote them into our StoredUser shape.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

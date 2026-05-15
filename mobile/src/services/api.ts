@@ -3837,7 +3837,10 @@ export async function trashTopic(topicId: number, forumId?: number): Promise<Mod
 
 export async function trashPost(args: { threadId: number; topicId: number }): Promise<ModResult> {
   try {
-    await apiClient.post('/forums/threads/trash', { threadIds: [args.threadId], topicId: args.topicId });
+    // Per-post trash. The bulk URL `/forums/threads/trash` returns 405 (route
+    // doesn't exist server-side); the per-post route mirrors the working
+    // `/forums/posts/{id}/untrash` shape and returns 200 with isSuccess:true.
+    await apiClient.post(`/forums/posts/${args.threadId}/trash`, { topicId: args.topicId });
     return { ok: true };
   } catch (err) {
     return { ok: false, error: wrapModError(err, 'Failed to trash post.') };
@@ -4239,7 +4242,10 @@ export async function getReportTypes(): Promise<ReportTypeEntry[]> {
     return (Array.isArray(list) ? list : [])
       .map(r => (typeof r === 'string'
         ? { reason: r }
-        : { reason: r.reportType || r.name || r.title || r.reason || '' }))
+        // `reportTypeName` is what the live `/reports/types` endpoint actually
+        // returns (paired with `reportTypeId`). The other keys are kept as
+        // safety nets in case the schema drifts.
+        : { reason: r.reportTypeName || r.reportType || r.name || r.title || r.reason || '' }))
       .filter(r => !!r.reason);
   } catch {
     // Fallback so the UI still works when the endpoint is unavailable.
