@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
@@ -7,17 +7,19 @@ import type { ThemeColors } from '../../../theme/tokens';
 
 interface Props {
   q: string;
-  onPress: () => void;
-  onRemove: () => void;
+  onPress: (q: string) => void;
+  onRemove: (q: string) => void;
 }
 
-export default function RecentRow({ q, onPress, onRemove }: Props) {
+function RecentRow({ q, onPress, onRemove }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
+  const handlePress = useCallback(() => onPress(q), [onPress, q]);
+  const handleRemove = useCallback(() => onRemove(q), [onRemove, q]);
   return (
     <View style={styles.row}>
       <Pressable
-        onPress={onPress}
+        onPress={handlePress}
         style={({ pressed }) => [styles.left, pressed && styles.pressed]}
         accessibilityRole="button"
         accessibilityLabel={`Search for ${q}`}
@@ -26,7 +28,7 @@ export default function RecentRow({ q, onPress, onRemove }: Props) {
         <Text style={styles.text} numberOfLines={1}>{q}</Text>
       </Pressable>
       <Pressable
-        onPress={onRemove}
+        onPress={handleRemove}
         hitSlop={10}
         style={styles.removeBtn}
         accessibilityRole="button"
@@ -37,6 +39,8 @@ export default function RecentRow({ q, onPress, onRemove }: Props) {
     </View>
   );
 }
+
+export default React.memo(RecentRow);
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({

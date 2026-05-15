@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import {
-  View, TextInput, Pressable, StyleSheet, Keyboard, Text,
+  View, TextInput, Pressable, StyleSheet, Keyboard, Text, ActivityIndicator,
   type NativeSyntheticEvent, type TextInputSubmitEditingEventData,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +16,8 @@ interface Props {
   onBack?: () => void;
   autoFocus?: boolean;
   placeholder?: string;
+  /** When true, a small spinner replaces the clear (X) affordance. */
+  loading?: boolean;
   /** Optional trailing icon shown to the right of the search input. */
   trailingIcon?: {
     name: React.ComponentProps<typeof Ionicons>['name'];
@@ -32,6 +34,7 @@ export default function SearchInputHeader({
   onBack,
   autoFocus,
   placeholder = 'Search movies, shows, celebrities…',
+  loading,
   trailingIcon,
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
@@ -74,7 +77,9 @@ export default function SearchInputHeader({
           placeholder={placeholder}
           placeholderTextColor={colors.textTertiary}
         />
-        {value.length > 0 ? (
+        {loading ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : value.length > 0 ? (
           <Pressable
             onPress={() => onChangeText('')}
             hitSlop={8}

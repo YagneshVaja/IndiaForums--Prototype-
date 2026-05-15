@@ -2,15 +2,13 @@ import { create } from 'zustand';
 import { Platform } from 'react-native';
 import type { MMKV } from 'react-native-mmkv';
 import {
-  suggest as apiSuggest,
-  searchResults as apiSearchResults,
-  type SuggestItemDto,
-  type SearchResultItemDto,
+  smart as apiSmart,
+  type SmartSearchSectionDto,
+  type SmartTrendingItemDto,
 } from '../services/searchApi';
 
 // ---------------------------------------------------------------------------
-// MMKV adapter — mirrors onboardingStore's pattern. Stores a single JSON
-// string under `search.recents.v1`.
+// MMKV adapter — recents persistence, same shape as before.
 // ---------------------------------------------------------------------------
 
 type StorageAdapter = {
@@ -41,7 +39,47 @@ function createStorage(): StorageAdapter {
 
 const storage = createStorage();
 const RECENTS_KEY = 'search.recents.v1';
+const TRENDING_KEY = 'search.trending.v1';
+const TRENDING_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
 const MAX_RECENTS = 10;
+const QUERY_CACHE_TTL_MS = 5 * 60 * 1000;    // 5min — entity matches don't age fast
+const QUERY_CACHE_MAX = 20;                  // bounded LRU; query strings are tiny
+
+interface QueryCacheEntry {
+  sections: SmartSearchSectionDto[];
+  fetchedAt: number;
+  isEmpty: boolean;
+}
+const queryCache = new Map<string, QueryCacheEntry>();
+
+function cacheKey(q: string): string {
+  return q.trim().toLowerCase();
+}
+
+function readQueryCache(q: string): QueryCacheEntry | null {
+  const key = cacheKey(q);
+  const hit = queryCache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.fetchedAt > QUERY_CACHE_TTL_MS) {
+    queryCache.delete(key);
+    return null;
+  }
+  // Touch for LRU ordering (Map iteration order = insertion order).
+  queryCache.delete(key);
+  queryCache.set(key, hit);
+  return hit;
+}
+
+function writeQueryCache(q: string, entry: QueryCacheEntry): void {
+  const key = cacheKey(q);
+  if (queryCache.has(key)) queryCache.delete(key);
+  queryCache.set(key, entry);
+  while (queryCache.size > QUERY_CACHE_MAX) {
+    const oldest = queryCache.keys().next().value;
+    if (oldest === undefined) break;
+    queryCache.delete(oldest);
+  }
+}
 
 export interface RecentSearch {
   q: string;
@@ -66,189 +104,199 @@ function writeRecents(list: RecentSearch[]): void {
   storage.set(RECENTS_KEY, JSON.stringify(list));
 }
 
+interface TrendingCache {
+  items: SmartTrendingItemDto[];
+  fetchedAt: number;
+}
+
+function readTrending(): SmartTrendingItemDto[] {
+  const raw = storage.getString(TRENDING_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as TrendingCache | null;
+    if (!parsed || !Array.isArray(parsed.items)) return [];
+    if (Date.now() - parsed.fetchedAt > TRENDING_TTL_MS) return [];
+    return parsed.items.filter((x): x is SmartTrendingItemDto =>
+      !!x && typeof x.query === 'string' && typeof x.searchCount === 'number',
+    );
+  } catch {
+    return [];
+  }
+}
+
+function writeTrending(items: SmartTrendingItemDto[]): void {
+  if (items.length === 0) return;
+  const cache: TrendingCache = { items, fetchedAt: Date.now() };
+  storage.set(TRENDING_KEY, JSON.stringify(cache));
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
 
-export type Status = 'idle' | 'loading' | 'success' | 'empty' | 'error';
+export type SearchStatus = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
 interface SearchState {
   query: string;
-  submittedQuery: string;
-
-  suggestions: SuggestItemDto[];
-  suggestStatus: Status;
-
-  results: SearchResultItemDto[];
-  searchLogId: number | null;
-  resultsStatus: Status;
-  activeEntityType: string | null;
-
+  status: SearchStatus;
+  sections: SmartSearchSectionDto[];
+  trending: SmartTrendingItemDto[];
+  activeContentTypeId: number | null;
   recents: RecentSearch[];
 
-  isPullRefreshing: boolean;
-
-  // Actions
   setQuery: (q: string) => void;
-  /** Update `query` without firing /suggest. Used by SearchResultsScreen
-   * where the typeahead dropdown is not visible. */
   setQueryQuiet: (q: string) => void;
-  fetchSuggestions: (q: string) => Promise<void>;
-  /** Submit a query and load full results.
-   * Pass `initialFilter` to land on results already filtered to that
-   * entityType (used by the browse tiles); otherwise the active filter
-   * resets to null. */
-  submit: (q: string, initialFilter?: string | null) => Promise<void>;
-  setEntityFilter: (type: string | null) => Promise<void>;
-  refreshResults: () => Promise<void>;
+  submit: (q: string) => Promise<void>;
+  setFilter: (contentTypeId: number | null) => void;
+  loadTrending: () => Promise<void>;
+  fetchSmart: (q: string) => Promise<void>;
 
   addRecent: (q: string) => void;
   removeRecent: (q: string) => void;
   clearRecents: () => void;
-  pullToRefresh: () => Promise<void>;
 }
 
-let suggestController: AbortController | null = null;
-let resultsController: AbortController | null = null;
-let suggestDebounce: ReturnType<typeof setTimeout> | null = null;
+let smartController: AbortController | null = null;
+let smartDebounce: ReturnType<typeof setTimeout> | null = null;
 
 export const useSearchStore = create<SearchState>((set, get) => ({
   query: '',
-  submittedQuery: '',
-
-  suggestions: [],
-  suggestStatus: 'idle',
-
-  results: [],
-  searchLogId: null,
-  resultsStatus: 'idle',
-  activeEntityType: null,
-
+  status: 'idle',
+  sections: [],
+  trending: readTrending(),
+  activeContentTypeId: null,
   recents: readRecents(),
-
-  isPullRefreshing: false,
 
   setQuery: (q) => {
     set({ query: q });
-    if (suggestDebounce) clearTimeout(suggestDebounce);
-    if (q.trim().length < 2) {
-      suggestController?.abort();
-      suggestController = null;
-      set({ suggestions: [], suggestStatus: 'idle' });
+    if (smartDebounce) clearTimeout(smartDebounce);
+    const trimmed = q.trim();
+    if (trimmed.length < 2) {
+      smartController?.abort();
+      smartController = null;
+      set({ sections: [], status: 'idle', activeContentTypeId: null });
       return;
     }
-    // Show loading immediately so the skeleton renders even while we wait
-    // for the debounce window. The actual fetch is delayed by 200ms.
-    set({ suggestStatus: 'loading' });
-    suggestDebounce = setTimeout(() => {
-      void get().fetchSuggestions(q);
+    // Cache fast-path — re-typing or backspacing into a previously-seen query
+    // skips the network entirely and renders instantly.
+    const cached = readQueryCache(trimmed);
+    if (cached) {
+      smartController?.abort();
+      smartController = null;
+      set({
+        sections: cached.sections,
+        status: cached.isEmpty ? 'empty' : 'success',
+      });
+      return;
+    }
+    set({ status: 'loading' });
+    smartDebounce = setTimeout(() => {
+      void get().fetchSmart(trimmed);
     }, 200);
   },
 
   setQueryQuiet: (q) => {
-    // Cancel any in-flight suggest from a prior screen so its late
-    // response can't repopulate the dropdown after the user moves on.
-    suggestController?.abort();
-    suggestController = null;
-    set({ query: q, suggestions: [], suggestStatus: 'idle' });
+    smartController?.abort();
+    smartController = null;
+    set({ query: q, sections: [], status: 'idle' });
   },
 
-  fetchSuggestions: async (q) => {
-    suggestController?.abort();
+  fetchSmart: async (q) => {
+    // Serve from cache when fresh — avoids redundant round-trips when the
+    // submit path or filter chip re-enters fetchSmart for a query we already
+    // resolved.
+    const cached = readQueryCache(q);
+    if (cached) {
+      smartController?.abort();
+      smartController = null;
+      set({
+        sections: cached.sections,
+        status: cached.isEmpty ? 'empty' : 'success',
+      });
+      return;
+    }
+    smartController?.abort();
     const ctrl = new AbortController();
-    suggestController = ctrl;
-    set({ suggestStatus: 'loading' });
+    smartController = ctrl;
+    set({ status: 'loading' });
     try {
-      const data = await apiSuggest(q, ctrl.signal);
-      // Bail if a newer request has superseded us.
-      if (suggestController !== ctrl) return;
-      set({ suggestions: data.suggestions, suggestStatus: 'success' });
-    } catch {
-      if (suggestController !== ctrl) return;
-      set({ suggestions: [], suggestStatus: 'error' });
+      const data = await apiSmart({ query: q, contentTypeId: 0 }, ctrl.signal);
+      if (smartController !== ctrl) return;
+      const isEmpty = data.sections.every((s) => s.items.length === 0);
+      const nextTrending = data.trendingSearches.length > 0
+        ? data.trendingSearches
+        : get().trending;
+      if (data.trendingSearches.length > 0) writeTrending(data.trendingSearches);
+      writeQueryCache(q, { sections: data.sections, fetchedAt: Date.now(), isEmpty });
+      set({
+        sections: data.sections,
+        trending: nextTrending,
+        status: isEmpty ? 'empty' : 'success',
+      });
+    } catch (e) {
+      if (smartController !== ctrl) return;
+      const code = (e as { code?: string } | null)?.code;
+      if (code === 'ERR_CANCELED' || code === 'CanceledError') return;
+      set({ status: 'error' });
     }
   },
 
-  submit: async (q, initialFilter) => {
+  submit: async (q) => {
     const trimmed = q.trim();
     if (!trimmed) return;
 
-    // Cancel any in-flight suggest — otherwise its late response would
-    // re-open the dropdown after we've cleared it below.
-    suggestController?.abort();
-    suggestController = null;
+    const state = get();
+    const sameQuery = state.query.trim() === trimmed;
+    set({ query: trimmed, activeContentTypeId: null });
 
-    resultsController?.abort();
-    const ctrl = new AbortController();
-    resultsController = ctrl;
-
-    const filter = initialFilter ?? null;
-    // Stale-while-revalidate: keep `results` and `searchLogId` from the
-    // previous query visible until the new fetch lands. Chip strip stays
-    // mounted (entityTypes is derived from `results`), so the user sees
-    // continuous content + a loading indicator instead of a flash of empty
-    // state. When the new data arrives below, results swap atomically.
-    set({
-      query: trimmed,
-      submittedQuery: trimmed,
-      activeEntityType: filter,
-      resultsStatus: 'loading',
-      // Clear typeahead — we're navigating away from it.
-      suggestions: [],
-      suggestStatus: 'idle',
-    });
-
-    try {
-      const data = await apiSearchResults(
-        { q: trimmed, entityType: filter },
-        ctrl.signal,
-      );
-      if (resultsController !== ctrl) return;
-      set({
-        results: data.results,
-        searchLogId: data.searchLogId,
-        resultsStatus: data.results.length === 0 ? 'empty' : 'success',
-      });
-      // Only learn recents from successful submits — don't pollute the
-      // list with queries that errored.
+    // Fast-path: the typeahead already has a final answer for this exact
+    // query (success with results, or known-empty). Just record the recent —
+    // no extra round-trip. This is what makes the keyboard "Search" key feel
+    // instant after the user has been typing.
+    if (sameQuery && (
+      (state.status === 'success' && state.sections.length > 0) ||
+      state.status === 'empty'
+    )) {
+      if (smartDebounce) {
+        clearTimeout(smartDebounce);
+        smartDebounce = null;
+      }
       get().addRecent(trimmed);
-    } catch {
-      if (resultsController !== ctrl) return;
-      set({ resultsStatus: 'error' });
+      return;
+    }
+
+    // A debounced fetch is pending or in flight for the same query. Let it
+    // resolve and just record the recent now.
+    if (sameQuery && state.status === 'loading') {
+      get().addRecent(trimmed);
+      return;
+    }
+
+    if (smartDebounce) {
+      clearTimeout(smartDebounce);
+      smartDebounce = null;
+    }
+    await get().fetchSmart(trimmed);
+    const finalStatus = get().status;
+    if (finalStatus === 'success' || finalStatus === 'empty') {
+      get().addRecent(trimmed);
     }
   },
 
-  setEntityFilter: async (type) => {
-    // Client-side filter only — never re-fetch on chip tap. The screen
-    // computes its displayed list from `results` + `activeEntityType`.
-    // Server-side type-filtered re-queries are reserved for explicit
-    // pull-to-refresh, which goes through refreshResults() directly.
-    set({ activeEntityType: type });
+  setFilter: (id) => {
+    set({ activeContentTypeId: id });
   },
 
-  refreshResults: async () => {
-    const { submittedQuery, activeEntityType } = get();
-    if (!submittedQuery) return;
-
-    resultsController?.abort();
-    const ctrl = new AbortController();
-    resultsController = ctrl;
-
-    set({ resultsStatus: 'loading' });
+  loadTrending: async () => {
+    if (get().trending.length > 0) return;
     try {
-      const data = await apiSearchResults(
-        { q: submittedQuery, entityType: activeEntityType },
-        ctrl.signal,
-      );
-      if (resultsController !== ctrl) return;
-      set({
-        results: data.results,
-        searchLogId: data.searchLogId,
-        resultsStatus: data.results.length === 0 ? 'empty' : 'success',
-      });
+      const data = await apiSmart({ contentTypeId: 0 });
+      if (data.trendingSearches.length > 0) {
+        writeTrending(data.trendingSearches);
+        set({ trending: data.trendingSearches });
+      }
     } catch {
-      if (resultsController !== ctrl) return;
-      set({ resultsStatus: 'error' });
+      // Empty-state trending is best-effort.
     }
   },
 
@@ -275,14 +323,5 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   clearRecents: () => {
     set({ recents: [] });
     writeRecents([]);
-  },
-
-  pullToRefresh: async () => {
-    set({ isPullRefreshing: true });
-    try {
-      await get().refreshResults();
-    } finally {
-      set({ isPullRefreshing: false });
-    }
   },
 }));

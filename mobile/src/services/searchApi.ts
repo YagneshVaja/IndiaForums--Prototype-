@@ -4,21 +4,65 @@ import { apiClient } from './api';
 // DTOs — mirror the Smart Search OpenAPI schemas exactly.
 // ---------------------------------------------------------------------------
 
-export interface SuggestItemDto {
-  phrase: string;
-  entityType: string | null;
-  entityId: number | null;
-  url: string | null;
-  imageUrl: string | null;
-  weight: number;
+export interface SmartSearchItemDto {
+  itemId: number;
+  title: string;
+  pageUrl: string | null;
+  updateChecksum: string | null;
+  thumbnailUrl: string | null;
+  contentType: string;
 }
 
-export interface SuggestResponseDto {
+export interface SmartSearchSectionDto {
+  section: string;
+  contentTypeId: number;
+  items: SmartSearchItemDto[];
+}
+
+export interface SmartTrendingItemDto {
   query: string;
-  suggestions: SuggestItemDto[];
+  searchCount: number;
 }
 
-export interface SearchResultItemDto {
+export interface SmartSearchResponseDto {
+  query: string;
+  contentTypeId: number;
+  sections: SmartSearchSectionDto[];
+  trendingSearches: SmartTrendingItemDto[];
+}
+
+export interface SmartSearchParams {
+  query?: string;
+  contentTypeId?: number;
+}
+
+/**
+ * Smart search — single endpoint that powers typeahead, full results, and
+ * trending. No query → trending-only. Query + contentTypeId=0 → up to 3 items
+ * per section across all types. Query + contentTypeId 1–9 → only that section.
+ */
+export async function smart(
+  { query, contentTypeId = 0 }: SmartSearchParams = {},
+  signal?: AbortSignal,
+): Promise<SmartSearchResponseDto> {
+  const q = (query ?? '').trim();
+  const res = await apiClient.get<SmartSearchResponseDto>('/search/smart', {
+    params: {
+      ...(q ? { query: q } : {}),
+      contentTypeId,
+    },
+    signal,
+  });
+  return res.data;
+}
+
+// ---------------------------------------------------------------------------
+// Legacy /search/results — kept for forum-name lookup in ForumListView.
+// /search/smart does not return Forum results, so we still need this endpoint
+// for that one consumer until forums get their own search API.
+// ---------------------------------------------------------------------------
+
+export interface LegacySearchResultItemDto {
   entityType: string;
   entityId: number;
   title: string;
@@ -28,59 +72,26 @@ export interface SearchResultItemDto {
   score: number;
 }
 
-export interface SearchResultsResponseDto {
+export interface LegacySearchResultsResponseDto {
   query: string;
   searchLogId: number | null;
-  results: SearchResultItemDto[];
+  results: LegacySearchResultItemDto[];
 }
 
-export interface TrackSearchClickResponseDto {
-  success: boolean;
-  suggestionLearned: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Endpoints
-// ---------------------------------------------------------------------------
-
-/**
- * Fast typeahead. No logging server-side. Returns up to 10 weight-ordered
- * suggestions. Pass the AbortSignal so older requests are cancelled when
- * the user keeps typing.
- */
-export async function suggest(
-  q: string,
-  signal?: AbortSignal,
-): Promise<SuggestResponseDto> {
-  const trimmed = q.trim();
-  if (!trimmed) return { query: '', suggestions: [] };
-  const res = await apiClient.get<SuggestResponseDto>('/search/suggest', {
-    params: { q: trimmed },
-    signal,
-  });
-  return res.data;
-}
-
-export interface SearchResultsParams {
+export interface LegacySearchResultsParams {
   q: string;
   entityType?: string | null;
   page?: number;
   pageSize?: number;
 }
 
-/**
- * Full scored results. Returns up to 50 items + a `searchLogId` used by
- * `trackClick` for learning. Live API currently returns the same payload
- * for page 1 and page 2 — we still send `page` so this client doesn't
- * need restructuring once pagination is fixed server-side.
- */
 export async function searchResults(
-  { q, entityType, page = 1, pageSize = 50 }: SearchResultsParams,
+  { q, entityType, page = 1, pageSize = 50 }: LegacySearchResultsParams,
   signal?: AbortSignal,
-): Promise<SearchResultsResponseDto> {
+): Promise<LegacySearchResultsResponseDto> {
   const trimmed = q.trim();
   if (!trimmed) return { query: '', searchLogId: null, results: [] };
-  const res = await apiClient.get<SearchResultsResponseDto>('/search/results', {
+  const res = await apiClient.get<LegacySearchResultsResponseDto>('/search/results', {
     params: {
       q: trimmed,
       ...(entityType ? { entityType } : {}),
@@ -90,29 +101,4 @@ export async function searchResults(
     signal,
   });
   return res.data;
-}
-
-export interface TrackSearchClickArgs {
-  searchLogId: number;
-  entityType: string;
-  entityId: number;
-}
-
-/**
- * Fire-and-forget click tracker. Caller does not await this — search
- * navigation must feel instant.
- */
-export async function trackClick(
-  args: TrackSearchClickArgs,
-): Promise<TrackSearchClickResponseDto | null> {
-  try {
-    const res = await apiClient.post<TrackSearchClickResponseDto>(
-      '/search/click',
-      args,
-    );
-    return res.data;
-  } catch {
-    // Click tracking is best-effort. Swallow.
-    return null;
-  }
 }

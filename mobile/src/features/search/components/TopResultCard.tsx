@@ -1,45 +1,51 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../store/themeStore';
 import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
-import type { SuggestItemDto } from '../../../services/searchApi';
-import { entityMetadataLine } from '../utils/entityMetadata';
-import { entityIcon } from '../utils/entityIcon';
+import type { SmartSearchItemDto } from '../../../services/searchApi';
+import {
+  entityIcon,
+  entityLabel,
+  normalizeContentType,
+} from '../utils/entityMetadata';
 import HighlightedText from './HighlightedText';
 
 interface Props {
-  item: SuggestItemDto;
+  item: SmartSearchItemDto;
   query: string;
-  onPress: () => void;
+  onPress: (item: SmartSearchItemDto) => void;
 }
 
-export default function SuggestionSpotlight({ item, query, onPress }: Props) {
+function TopResultCard({ item, query, onPress }: Props) {
+  const handlePress = useCallback(() => onPress(item), [onPress, item]);
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
-  const meta = entityMetadataLine(item.entityType);
+  const kind = normalizeContentType(item.contentType);
+  const meta = entityLabel(kind);
+
   return (
     <View style={styles.wrap}>
       <Text style={styles.kicker}>TOP RESULT</Text>
       <Pressable
-        onPress={onPress}
+        onPress={handlePress}
         style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
         accessibilityRole="button"
-        accessibilityLabel={`Open top result ${item.phrase}`}
+        accessibilityLabel={`Open top result ${item.title}`}
       >
-        {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.thumb} contentFit="cover" />
+        {item.thumbnailUrl ? (
+          <Image source={{ uri: item.thumbnailUrl }} style={styles.thumb} contentFit="cover" />
         ) : (
           <View style={[styles.thumb, styles.thumbFallback]}>
-            <Ionicons name={entityIcon(item.entityType)} size={28} color={colors.primary} />
+            <Ionicons name={entityIcon(kind)} size={28} color={colors.primary} />
           </View>
         )}
         <View style={styles.body}>
           <Text style={styles.meta} numberOfLines={1}>{meta}</Text>
           <HighlightedText
-            text={item.phrase}
+            text={item.title}
             match={query}
             style={styles.phrase}
             highlightStyle={styles.phraseMatch}
@@ -51,6 +57,8 @@ export default function SuggestionSpotlight({ item, query, onPress }: Props) {
     </View>
   );
 }
+
+export default React.memo(TopResultCard);
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({

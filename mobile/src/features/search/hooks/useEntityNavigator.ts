@@ -4,11 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 
 import type { SearchStackParamList } from '../../../navigation/types';
-import {
-  trackClick,
-  type SuggestItemDto,
-  type SearchResultItemDto,
-} from '../../../services/searchApi';
+import type { SmartSearchItemDto } from '../../../services/searchApi';
 import {
   fetchVideoDetails,
   type Celebrity,
@@ -17,52 +13,18 @@ import {
   type Movie,
 } from '../../../services/api';
 import type { UnsupportedEntitySheetHandle } from '../components/UnsupportedEntitySheet';
+import { normalizeContentType, type EntityKind } from '../utils/entityMetadata';
 
 type Nav = NativeStackNavigationProp<SearchStackParamList>;
 
-export type SearchEntityShape = {
-  entityType: string | null;
-  entityId: number | null;
-  title: string;
-  url: string | null;
-  imageUrl: string | null;
-};
-
-function fromSuggestion(s: SuggestItemDto): SearchEntityShape {
+function synthesizeCelebrity(item: SmartSearchItemDto): Celebrity {
   return {
-    entityType: s.entityType,
-    entityId: s.entityId,
-    title: s.phrase,
-    url: s.url,
-    imageUrl: s.imageUrl,
-  };
-}
-
-function fromResult(r: SearchResultItemDto): SearchEntityShape {
-  return {
-    entityType: r.entityType,
-    entityId: r.entityId,
-    title: r.title,
-    url: r.url,
-    imageUrl: r.imageUrl,
-  };
-}
-
-/**
- * Builds a minimal Celebrity from a search payload. CelebrityDetailScreen
- * only reads { id, name, thumbnail } off the route param — biography, fans,
- * rank, and category are refetched inside the screen via useCelebrityBiography
- * and useCelebrityFans. The defaults below (rank: 0, category: 'bollywood',
- * etc.) are placeholders the screen never displays.
- */
-function synthesizeCelebrity(e: SearchEntityShape): Celebrity {
-  return {
-    id: String(e.entityId ?? ''),
-    name: e.title,
+    id: String(item.itemId),
+    name: item.title,
     shortDesc: '',
-    thumbnail: e.imageUrl,
-    pageUrl: e.url ?? '',
-    shareUrl: e.url ? `https://www.indiaforums.com/${e.url}` : '',
+    thumbnail: item.thumbnailUrl,
+    pageUrl: item.pageUrl ?? '',
+    shareUrl: item.pageUrl ? `https://www.indiaforums.com/${item.pageUrl}` : '',
     category: 'bollywood',
     rank: 0,
     prevRank: 0,
@@ -71,20 +33,13 @@ function synthesizeCelebrity(e: SearchEntityShape): Celebrity {
   };
 }
 
-/**
- * Builds a minimal ForumTopic from a search payload. TopicDetailScreen drives
- * its post fetch off `topic.id` and merges the server's `topicDetail` over the
- * route param via `{ ...topic, ...firstPage.topicDetail }`, so the zeroed
- * fields below are placeholders that get replaced as soon as the first page
- * lands.
- */
-function synthesizeForumTopic(e: SearchEntityShape): ForumTopic {
+function synthesizeForumTopic(item: SmartSearchItemDto): ForumTopic {
   return {
-    id: e.entityId ?? 0,
+    id: item.itemId,
     forumId: 0,
     forumName: '',
     forumThumbnail: null,
-    title: e.title,
+    title: item.title,
     description: '',
     poster: '',
     posterId: 0,
@@ -99,29 +54,21 @@ function synthesizeForumTopic(e: SearchEntityShape): ForumTopic {
     locked: false,
     pinned: false,
     flairId: 0,
-    topicImage: e.imageUrl,
+    topicImage: item.thumbnailUrl,
     tags: [],
     linkTypeValue: '',
     poll: null,
   };
 }
 
-/**
- * Builds a minimal Movie from a search payload. MovieDetailScreen reads
- * { titleId, titleName, posterUrl } for the hero and refetches story / cast /
- * reviews on mount via useMovieDetail(titleId). The remaining fields are
- * intentionally zero/null — the screen guards rating display on
- * criticRatingCount/audienceRatingCount > 0 and falls back gracefully when
- * releaseDate and startYear are absent, so no broken zeros surface in the UI.
- */
-function synthesizeMovie(e: SearchEntityShape): Movie {
+function synthesizeMovie(item: SmartSearchItemDto): Movie {
   return {
-    titleId: e.entityId ?? 0,
-    titleName: e.title,
+    titleId: item.itemId,
+    titleName: item.title,
     startYear: null,
-    pageUrl: e.url ?? '',
-    posterUrl: e.imageUrl,
-    hasThumbnail: !!e.imageUrl,
+    pageUrl: item.pageUrl ?? '',
+    posterUrl: item.thumbnailUrl,
+    hasThumbnail: !!item.thumbnailUrl,
     releaseDate: null,
     titleShortDesc: null,
     titleTypeId: 0,
@@ -133,19 +80,13 @@ function synthesizeMovie(e: SearchEntityShape): Movie {
   };
 }
 
-/**
- * Builds a minimal Forum from a search payload. ForumThreadScreen drives its
- * topic-list fetch off `forum.id` and merges the server's `forumDetail` over
- * the route param via `firstPage?.forumDetail || forum`, so the zeroed fields
- * below are placeholders that get replaced as soon as the first page lands.
- */
-function synthesizeForum(e: SearchEntityShape): Forum {
+function synthesizeForum(item: SmartSearchItemDto): Forum {
   return {
-    id: e.entityId ?? 0,
-    name: e.title,
+    id: item.itemId,
+    name: item.title,
     description: '',
     categoryId: 0,
-    slug: e.url ?? '',
+    slug: item.pageUrl ?? '',
     topicCount: 0,
     postCount: 0,
     followCount: 0,
@@ -155,7 +96,7 @@ function synthesizeForum(e: SearchEntityShape): Forum {
     bg: '',
     emoji: '',
     bannerUrl: null,
-    thumbnailUrl: e.imageUrl,
+    thumbnailUrl: item.thumbnailUrl,
     locked: false,
     hot: false,
     priorityPosts: 0,
@@ -167,8 +108,7 @@ function synthesizeForum(e: SearchEntityShape): Forum {
 export interface UseEntityNavigator {
   sheetRef: React.MutableRefObject<UnsupportedEntitySheetHandle | null>;
   isResolving: boolean;
-  openSuggestion: (s: SuggestItemDto) => void;
-  openResult: (r: SearchResultItemDto, searchLogId: number | null) => void;
+  openItem: (item: SmartSearchItemDto) => void;
 }
 
 export function useEntityNavigator(): UseEntityNavigator {
@@ -176,65 +116,46 @@ export function useEntityNavigator(): UseEntityNavigator {
   const sheetRef = useRef<UnsupportedEntitySheetHandle | null>(null);
   const [isResolving, setIsResolving] = useState(false);
 
-  // Drop async results that arrive after unmount so we don't navigate the
-  // user to a screen they never asked for.
   const mountedRef = useRef(true);
   useEffect(() => () => { mountedRef.current = false; }, []);
 
-  // Mirror of `isResolving` accessible inside the closure without re-creating
-  // navigateNative. Used to drop spam taps on Video while a fetch is in flight.
   const resolvingRef = useRef(false);
 
   const navigateNative = useCallback(
-    async (e: SearchEntityShape) => {
-      const id = e.entityId;
-      if (id == null) {
-        sheetRef.current?.open({
-          title: e.title,
-          entityType: e.entityType ?? 'Item',
-          imageUrl: e.imageUrl,
-          url: e.url,
-        });
-        return;
-      }
+    async (item: SmartSearchItemDto) => {
+      const kind: EntityKind = normalizeContentType(item.contentType);
 
-      switch (e.entityType) {
+      switch (kind) {
         case 'Article':
-          // Pass thumbnailUrl + title from the search payload — the
-          // /articles/{id}/details endpoint frequently returns
-          // thumbnailUrl=null/undefined for articles, so the hero would
-          // otherwise be blank until ArticleDetailScreen falls back to the
-          // route param. Search has the image we need; just hand it over.
           navigation.push('ArticleDetail', {
-            id: String(id),
-            thumbnailUrl: e.imageUrl ?? undefined,
-            title: e.title,
+            id: String(item.itemId),
+            thumbnailUrl: item.thumbnailUrl ?? undefined,
+            title: item.title,
           });
           return;
         case 'Gallery':
           navigation.push('GalleryDetail', {
-            id,
-            title: e.title,
-            thumbnail: e.imageUrl,
+            id: item.itemId,
+            title: item.title,
+            thumbnail: item.thumbnailUrl,
           });
           return;
         case 'Video': {
-          if (resolvingRef.current) return; // ignore spam taps mid-fetch
+          if (resolvingRef.current) return;
           resolvingRef.current = true;
           setIsResolving(true);
           try {
-            const detail = await fetchVideoDetails(String(id));
+            const detail = await fetchVideoDetails(String(item.itemId));
             if (!mountedRef.current) return;
             if (!detail) throw new Error('Video not found');
-            // VideoDetail extends Video — assignable directly, no cast needed.
             navigation.push('VideoDetail', { video: detail });
           } catch {
             if (!mountedRef.current) return;
             sheetRef.current?.open({
-              title: e.title,
+              title: item.title,
               entityType: 'Video',
-              imageUrl: e.imageUrl,
-              url: e.url,
+              imageUrl: item.thumbnailUrl,
+              url: item.pageUrl,
             });
           } finally {
             resolvingRef.current = false;
@@ -244,59 +165,47 @@ export function useEntityNavigator(): UseEntityNavigator {
         }
         case 'Person':
           navigation.push('CelebrityProfile', {
-            celebrity: synthesizeCelebrity(e),
+            celebrity: synthesizeCelebrity(item),
           });
           return;
         case 'Topic':
           navigation.push('TopicDetail', {
-            topic: synthesizeForumTopic(e),
+            topic: synthesizeForumTopic(item),
           });
           return;
         case 'Forum':
           navigation.push('ForumThread', {
-            forum: synthesizeForum(e),
+            forum: synthesizeForum(item),
           });
           return;
         case 'Movie':
           navigation.push('MovieDetail', {
-            movie: synthesizeMovie(e),
+            movie: synthesizeMovie(item),
           });
           return;
+        case 'Show':
+        case 'Channel':
+        case 'Member':
+        case 'Unknown':
         default:
           sheetRef.current?.open({
-            title: e.title,
-            entityType: e.entityType ?? 'Item',
-            imageUrl: e.imageUrl,
-            url: e.url,
+            title: item.title,
+            entityType: item.contentType,
+            imageUrl: item.thumbnailUrl,
+            url: item.pageUrl,
           });
       }
     },
     [navigation],
   );
 
-  const openSuggestion = useCallback(
-    (s: SuggestItemDto) => {
+  const openItem = useCallback(
+    (item: SmartSearchItemDto) => {
       void Haptics.selectionAsync().catch(() => undefined);
-      void navigateNative(fromSuggestion(s));
+      void navigateNative(item);
     },
     [navigateNative],
   );
 
-  const openResult = useCallback(
-    (r: SearchResultItemDto, searchLogId: number | null) => {
-      void Haptics.selectionAsync().catch(() => undefined);
-      if (searchLogId != null) {
-        // Fire-and-forget — never await before navigating.
-        void trackClick({
-          searchLogId,
-          entityType: r.entityType,
-          entityId: r.entityId,
-        });
-      }
-      void navigateNative(fromResult(r));
-    },
-    [navigateNative],
-  );
-
-  return { sheetRef, isResolving, openSuggestion, openResult };
+  return { sheetRef, isResolving, openItem };
 }

@@ -166,7 +166,6 @@ export type ForumsStackParamList = {
 
 export type SearchStackParamList = {
   SearchMain: undefined;
-  SearchResults: undefined;
   ArticleDetail: { id: string; thumbnailUrl?: string; title?: string };
   CelebrityProfile: { celebrity: import('../services/api').Celebrity };
   VideoDetail: { video: import('../services/api').Video };
