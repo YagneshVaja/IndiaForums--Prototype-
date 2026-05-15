@@ -90,6 +90,7 @@ export default function ForumThreadScreen() {
     isError,
     error,
     refetch,
+    prefetchPage,
   } = useForumTopics(forum.id, currentPage);
 
   const firstPage = data?.pages[0];
@@ -480,6 +481,7 @@ export default function ForumThreadScreen() {
             itemLabel="topics"
             hidden={barHidden}
             onPageChange={handleJumpToPage}
+            onPrefetchPage={prefetchPage}
           />
         </View>
       )}
@@ -510,6 +512,7 @@ export default function ForumThreadScreen() {
         label="topics"
         onClose={() => setJumpSheetOpen(false)}
         onJump={handleJumpToPage}
+        onPrefetchPage={prefetchPage}
       />
 
       {toast && (

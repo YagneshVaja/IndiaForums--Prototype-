@@ -178,8 +178,8 @@ function LikerRow({ liker, styles, accent }: { liker: ThreadLiker; styles: Style
 
       {liker.badges.length > 0 && (
         <View style={styles.badges}>
-          {liker.badges.slice(0, 3).map(b => (
-            <Image key={b.id} source={{ uri: b.imageUrl }} style={styles.badgeImg} />
+          {liker.badges.slice(0, 3).map((b, i) => (
+            <Image key={`${b.id}-${i}`} source={{ uri: b.imageUrl }} style={styles.badgeImg} />
           ))}
           {liker.badges.length > 3 && (
             <Text style={styles.badgeExtra}>+{liker.badges.length - 3}</Text>

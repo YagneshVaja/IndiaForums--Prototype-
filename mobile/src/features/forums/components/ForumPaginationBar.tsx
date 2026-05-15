@@ -45,6 +45,10 @@ interface Props {
    */
   bottomInset?: number;
   onPageChange: (page: number) => void;
+  /** Warms the query cache for a page the user is about to commit to —
+   *  fires from Prev/Next press-in, scrubber drag previews, and inline
+   *  page-input drafts so the commit feels instant. */
+  onPrefetchPage?: (page: number) => void;
 }
 
 /**
@@ -69,6 +73,7 @@ export default function ForumPaginationBar({
   hidden,
   bottomInset = 0,
   onPageChange,
+  onPrefetchPage,
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
@@ -218,11 +223,13 @@ export default function ForumPaginationBar({
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={onPageChange}
+        onPreviewPage={onPrefetchPage}
       />
 
       <View style={styles.row}>
         <Pressable
           onPress={goPrev}
+          onPressIn={() => canPrev && onPrefetchPage?.(currentPage - 1)}
           disabled={!canPrev}
           style={({ pressed }) => [
             styles.sideBtn,
@@ -252,7 +259,16 @@ export default function ForumPaginationBar({
           <TextInput
             ref={inputRef}
             value={draft}
-            onChangeText={(t) => setDraft(t.replace(/[^0-9]/g, '').slice(0, 6))}
+            onChangeText={(t) => {
+              const cleaned = t.replace(/[^0-9]/g, '').slice(0, 6);
+              setDraft(cleaned);
+              // Warm the cache while the user is still typing — by the time
+              // they hit Go, the page is usually already loaded.
+              const n = parseInt(cleaned, 10);
+              if (Number.isFinite(n) && n >= 1 && n <= totalPages && n !== currentPage) {
+                onPrefetchPage?.(n);
+              }
+            }}
             onFocus={() => {
               editingRef.current = true;
               setEditing(true);
@@ -275,6 +291,7 @@ export default function ForumPaginationBar({
 
         <Pressable
           onPress={goNext}
+          onPressIn={() => canNext && onPrefetchPage?.(currentPage + 1)}
           disabled={!canNext}
           style={({ pressed }) => [
             styles.sideBtn,

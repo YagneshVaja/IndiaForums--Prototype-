@@ -40,22 +40,24 @@ const CUSTOM_ELEMENT_MODELS: Record<string, HTMLElementModel<string, HTMLContent
 };
 
 // `react-native-render-html`'s default <img> renderer uses RN's Image
-// component with no error handling AND reserves placeholder space from the
-// HTML-attribute dimensions. Backend posts on Bollywood topics often have:
-//   • broken <img> tags (404 smilies, images that return empty bodies) — the
-//     default shows a giant gray box with the alt text
-//   • slow images whose HTML-attribute width/height reserve a huge placeholder
-//     card for seconds before anything paints
-// Our replacement:
-//   • starts every image hidden (height:0, opacity:0) so there is no reserved
-//     space before the image actually has content
-//   • reveals only after onLoad fires with real dimensions — sizes the image
-//     at 100% width with the loaded image's own aspect ratio
-//   • on error OR onLoad with 0-dim source, returns null so nothing shows
-type ImgState =
-  | { status: 'pending' }
-  | { status: 'loaded'; aspectRatio: number }
-  | { status: 'failed' };
+// component with no error handling. Our replacement:
+//   • Smileys render as small inline glyphs.
+//   • Block images render at 100% width with an aspect ratio. We seed it from
+//     the HTML width/height attribs if the backend supplied them, otherwise
+//     from a safe default (1.5) so the image has reserved space and actually
+//     paints. Once expo-image's onLoad fires with real dimensions we refine
+//     the ratio to match the asset.
+//   • We hide ONLY on an explicit onError — the previous "hide until onLoad
+//     reports dimensions" pattern silently swallowed images on Android /
+//     inside the render-html context, since onLoad's source dims aren't
+//     always populated. That's what was making forum post images invisible.
+const DEFAULT_ASPECT_RATIO = 1.5;
+
+function parseDim(v: string | undefined): number | null {
+  if (!v) return null;
+  const n = parseFloat(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
 
 const HtmlImage: CustomBlockRenderer = ({ tnode }) => {
   const domNode = (tnode as { domNode?: { attribs?: Record<string, string> } }).domNode;
@@ -66,24 +68,29 @@ const HtmlImage: CustomBlockRenderer = ({ tnode }) => {
   const src = attrs.src || '';
   const alt = attrs.alt || '';
 
-   
-  const [state, setState] = useState<ImgState>({ status: 'pending' });
+  // Seed the aspect ratio from HTML attribs (if present), fall back to a
+  // sensible default; expo-image's onLoad can refine it once the asset lands.
+  const initialAspect = useMemo(() => {
+    const w = parseDim(attrs.width);
+    const h = parseDim(attrs.height);
+    if (w && h) return w / h;
+    return DEFAULT_ASPECT_RATIO;
+  }, [attrs.width, attrs.height]);
+
+  const [aspectRatio, setAspectRatio] = useState<number>(initialAspect);
+  const [failed, setFailed] = useState(false);
 
   // Proactively drop obviously-broken sources without wasting a network hit.
   if (!src) return null;
   if (src === 'about:blank') return null;
   if (/^data:image\/gif;base64,R0lGOD/i.test(src)) return null;
-  if (state.status === 'failed') return null;
+  if (failed) return null;
 
-  const handleError = () => setState({ status: 'failed' });
+  const handleError = () => setFailed(true);
   const handleLoad = (e: { source?: { width?: number; height?: number } }) => {
     const w = e?.source?.width;
     const h = e?.source?.height;
-    if (!w || !h) {
-      setState({ status: 'failed' });
-    } else {
-      setState({ status: 'loaded', aspectRatio: w / h });
-    }
+    if (w && h) setAspectRatio(w / h);
   };
 
   if (isSmileyImage(src, alt)) {
@@ -100,16 +107,11 @@ const HtmlImage: CustomBlockRenderer = ({ tnode }) => {
     );
   }
 
-  const style =
-    state.status === 'pending'
-      ? [styles.image, styles.imageHidden]
-      : [styles.image, { aspectRatio: state.aspectRatio }];
-
   return (
     <Image
       source={{ uri: src }}
-      style={style}
-      contentFit="cover"
+      style={[styles.image, { aspectRatio }]}
+      contentFit="contain"
       cachePolicy="memory-disk"
       transition={150}
       onError={handleError}
@@ -291,14 +293,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 8,
     marginVertical: 6,
-  },
-  // Applied while the image has not finished loading — collapses it fully so
-  // no placeholder box / reserved space appears. Overrides marginVertical so
-  // there's no residual gap either.
-  imageHidden: {
-    height: 0,
-    opacity: 0,
-    marginVertical: 0,
+    backgroundColor: 'transparent',
   },
   smiley: {
     width: 18,

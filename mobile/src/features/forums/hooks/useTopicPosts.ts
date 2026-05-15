@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { keepPreviousData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchTopicPosts, type TopicPostsPage } from '../../../services/api';
 
@@ -26,30 +26,33 @@ export function useTopicPosts(
     placeholderData: keepPreviousData,
   });
 
-  // Prefetch adjacent pages — primitive deps only.
+  // Imperative prefetch for pagination UI (scrubber drag, Prev/Next press-in,
+  // jump-input drafts). React Query dedupes by queryKey, so a burst of calls
+  // during a drag collapses into a single in-flight request.
+  const prefetchPage = useCallback(
+    (page: number) => {
+      if (!topicId || searchQuery) return;
+      if (!Number.isFinite(page) || page < 1) return;
+      queryClient.prefetchInfiniteQuery({
+        queryKey: ['topic-posts', topicId, searchQuery, page, sort],
+        queryFn: ({ pageParam }) =>
+          fetchTopicPosts(topicId, pageParam as number, TOPIC_POSTS_PAGE_SIZE, searchQuery, undefined, sort),
+        initialPageParam: page,
+        staleTime: 60 * 1000,
+      });
+    },
+    [topicId, searchQuery, sort, queryClient],
+  );
+
+  // Auto-prefetch a small ±2 window so chained Prev/Next stays instant.
   const hasNext = query.data?.pages[0]?.hasNextPage ?? false;
   useEffect(() => {
     if (!topicId || searchQuery) return;
-
-    if (hasNext) {
-      const nextPage = startPage + 1;
-      queryClient.prefetchInfiniteQuery({
-        queryKey: ['topic-posts', topicId, searchQuery, nextPage, sort],
-        queryFn: ({ pageParam }) =>
-          fetchTopicPosts(topicId, pageParam as number, TOPIC_POSTS_PAGE_SIZE, searchQuery, undefined, sort),
-        initialPageParam: nextPage,
-      });
+    for (let d = 1; d <= 2; d++) {
+      if (hasNext) prefetchPage(startPage + d);
+      if (startPage - d >= 1) prefetchPage(startPage - d);
     }
-    if (startPage > 1) {
-      const prevPage = startPage - 1;
-      queryClient.prefetchInfiniteQuery({
-        queryKey: ['topic-posts', topicId, searchQuery, prevPage, sort],
-        queryFn: ({ pageParam }) =>
-          fetchTopicPosts(topicId, pageParam as number, TOPIC_POSTS_PAGE_SIZE, searchQuery, undefined, sort),
-        initialPageParam: prevPage,
-      });
-    }
-  }, [topicId, searchQuery, startPage, sort, hasNext, queryClient]);
+  }, [topicId, searchQuery, startPage, sort, hasNext, prefetchPage]);
 
-  return query;
+  return { ...query, prefetchPage };
 }

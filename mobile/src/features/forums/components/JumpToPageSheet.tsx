@@ -23,6 +23,9 @@ interface Props {
   label?: string;
   onClose: () => void;
   onJump: (page: number) => void;
+  /** Warms the page cache as the user types or press-ins a tile — so the
+   *  jump commit feels instant on slow networks. */
+  onPrefetchPage?: (page: number) => void;
 }
 
 const COLUMNS = 5;
@@ -34,6 +37,7 @@ export default function JumpToPageSheet({
   label = 'topics',
   onClose,
   onJump,
+  onPrefetchPage,
 }: Props) {
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
@@ -93,7 +97,15 @@ export default function JumpToPageSheet({
                 placeholderTextColor={colors.textTertiary}
                 keyboardType="number-pad"
                 value={manualInput}
-                onChangeText={setManualInput}
+                onChangeText={(t) => {
+                  setManualInput(t);
+                  // Prefetch while typing — when the user hits Go, the data
+                  // is usually already in cache.
+                  const n = parseInt(t.trim(), 10);
+                  if (Number.isFinite(n) && n >= 1 && n <= totalPages && n !== currentPage) {
+                    onPrefetchPage?.(n);
+                  }
+                }}
                 onSubmitEditing={handleManualGo}
                 returnKeyType="go"
                 maxLength={String(totalPages).length}
@@ -126,6 +138,7 @@ export default function JumpToPageSheet({
                       pressed && !isCurrent && styles.pageBtnPressed,
                     ]}
                     onPress={() => onJump(p)}
+                    onPressIn={!isCurrent ? () => onPrefetchPage?.(p) : undefined}
                     accessibilityRole="button"
                     accessibilityLabel={`Page ${p}${isCurrent ? ', current' : ''}`}
                   >
@@ -142,6 +155,7 @@ export default function JumpToPageSheet({
             <Pressable
               style={styles.footerBtn}
               onPress={() => onJump(1)}
+              onPressIn={currentPage !== 1 ? () => onPrefetchPage?.(1) : undefined}
               disabled={currentPage === 1}
             >
               <Ionicons
@@ -162,6 +176,9 @@ export default function JumpToPageSheet({
             <Pressable
               style={styles.footerBtn}
               onPress={() => onJump(totalPages)}
+              onPressIn={
+                currentPage !== totalPages ? () => onPrefetchPage?.(totalPages) : undefined
+              }
               disabled={currentPage === totalPages}
             >
               <Text

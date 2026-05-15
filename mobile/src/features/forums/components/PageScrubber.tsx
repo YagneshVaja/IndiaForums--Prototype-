@@ -17,6 +17,10 @@ interface Props {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  /** Fires when the drag tooltip crosses into a new page — lets the parent
+   *  warm the cache for the page the user is hovering on, so committing the
+   *  drag feels instant. */
+  onPreviewPage?: (page: number) => void;
 }
 
 const TRACK_HEIGHT = 4;
@@ -35,6 +39,7 @@ export default function PageScrubber({
   currentPage,
   totalPages,
   onPageChange,
+  onPreviewPage,
 }: Props) {
   const styles = useThemedStyles(makeStyles);
 
@@ -65,6 +70,7 @@ export default function PageScrubber({
   const handlePreviewPage = (page: number) => {
     setPreviewPage(page);
     haptic();
+    onPreviewPage?.(page);
   };
 
   const handleCommit = (page: number) => {

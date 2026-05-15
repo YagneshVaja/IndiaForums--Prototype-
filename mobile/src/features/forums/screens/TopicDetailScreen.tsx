@@ -18,6 +18,7 @@ import { TopNavBack, type TopNavAction } from '../../../components/layout/TopNav
 import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
 import PostCard from '../components/PostCard';
+import PostHtml from '../components/PostHtml';
 import ReplyComposerSheet, { type QuotedPost } from '../components/ReplyComposerSheet';
 import ReactionPickerSheet, { type AnchorRect } from '../components/ReactionPickerSheet';
 import ReactionsSheet from '../components/ReactionsSheet';
@@ -127,6 +128,42 @@ function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams
   const [pickerAnchor, setPickerAnchor] = useState<AnchorRect | null>(null);
   const [reactionsFor, setReactionsFor] = useState<TopicPost | null>(null);
   const [miniCardFor, setMiniCardFor]   = useState<TopicPost | null>(null);
+
+  // Synthesizes a stub TopicPost from a tagged-user pill so UserMiniCard
+  // can open it. The mini card only requires `authorId` for its network
+  // fetch — every other field gets populated from the profile response.
+  const handlePressTaggedUser = useCallback((u: { id: number; name: string }) => {
+    setMiniCardFor({
+      id: 0,
+      topicId: topic.id,
+      authorId: u.id,
+      author: u.name,
+      realName: '',
+      rank: '',
+      userLevel: 0,
+      visitStreakCount: 0,
+      message: '',
+      time: '',
+      rawTime: '',
+      likes: 0,
+      avatarUrl: null,
+      avatarAccent: null,
+      countryCode: '',
+      badges: [],
+      isOp: false,
+      isEdited: false,
+      editedWhen: null,
+      editedBy: null,
+      editCount: 0,
+      postCount: null,
+      joinYear: null,
+      reactionJson: null,
+      taggedUsers: [],
+      ip: null,
+      hasMaturedContent: false,
+      moderatorNote: null,
+    });
+  }, [topic.id]);
   const [editHistoryFor, setEditHistoryFor] = useState<TopicPost | null>(null);
 
   const [editingId, setEditingId]   = useState<number | null>(null);
@@ -147,6 +184,14 @@ function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams
   const [currentPage, setCurrentPage] = useState(persistedTopicPage);
   const [jumpSheetOpen, setJumpSheetOpen] = useState(false);
   const [contributorsOpen, setContributorsOpen] = useState(false);
+  // Track topicImage load failure so we can hide the slot instead of showing
+  // a blank surface placeholder when the URL 404s.
+  const [topicImageBroken, setTopicImageBroken] = useState(false);
+  useEffect(() => {
+    // Reset broken state when the topic changes, otherwise navigating from a
+    // bad-image topic to a good-image one would keep the new image hidden.
+    setTopicImageBroken(false);
+  }, [topic.id]);
   const lastSavedScrollRef = useRef(0);
   // Hide-on-scroll for the bottom pagination dock — Safari / Twitter / iMessage
   // pattern. We track the previous scroll Y to detect direction; a small
@@ -191,13 +236,24 @@ function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams
     isError,
     error,
     refetch,
+    prefetchPage,
   } = useTopicPosts(topic.id, debouncedPostSearch, currentPage, sortBy);
 
   const firstPage = data?.pages[0];
-  const liveTopic: ForumTopic = useMemo(
-    () => (firstPage?.topicDetail ? { ...topic, ...firstPage.topicDetail } : topic),
-    [firstPage, topic],
-  );
+  const liveTopic: ForumTopic = useMemo(() => {
+    if (!firstPage?.topicDetail) return topic;
+    const merged: ForumTopic = { ...topic, ...firstPage.topicDetail };
+    // The posts endpoint's `topicDetail` sometimes omits `jsonData` (where
+    // tags live) and arrives with an empty tags array. The navigation `topic`
+    // came from the list endpoint which usually does include them — keep
+    // those rather than letting the merge wipe them out. Same fallback for
+    // poll / topicImage / description, which the detail occasionally omits.
+    if (merged.tags.length === 0 && topic.tags.length > 0) merged.tags = topic.tags;
+    if (!merged.poll && topic.poll) merged.poll = topic.poll;
+    if (!merged.topicImage && topic.topicImage) merged.topicImage = topic.topicImage;
+    if (!merged.description && topic.description) merged.description = topic.description;
+    return merged;
+  }, [firstPage, topic]);
   const forumFlairs = useMemo(() => firstPage?.flairs ?? [], [firstPage]);
 
   const { data: topPosters = [] } = useTopicTopPosters(topic.id, 12);
@@ -798,6 +854,7 @@ function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams
           onPressEdited={setEditHistoryFor}
           onPressAvatar={setMiniCardFor}
           onPressSettings={setPostSheetFor}
+          onPressTaggedUser={handlePressTaggedUser}
           isEditing={isEditingThis}
           editText={isEditingThis ? editText : ''}
           editSaving={isEditingThis && editSaving}
@@ -1006,6 +1063,22 @@ function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams
                   </Pressable>
                 )}
 
+                {!!liveTopic.description && (
+                  <View style={styles.description}>
+                    <PostHtml html={liveTopic.description} horizontalPadding={32} />
+                  </View>
+                )}
+
+                {!!liveTopic.topicImage && !topicImageBroken && (
+                  <Image
+                    source={{ uri: liveTopic.topicImage }}
+                    style={styles.topicImage}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    onError={() => setTopicImageBroken(true)}
+                  />
+                )}
+
                 {displayPoll && (
                   <PollWidget
                     poll={displayPoll}
@@ -1036,6 +1109,11 @@ function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams
                   regular reply card so it doesn't dominate the screen. */}
               {opPost ? renderPost({ item: opPost, index: 0 }) : null}
 
+              {/* Page-bg gutter so the OP card and the meta strip below
+                  read as distinct sections instead of blending into one
+                  card-colored block. */}
+              <View style={styles.sectionGap} />
+
               {/* Combined meta + sort row — avatars · stats · sort all in
                   one strip. Saves ~50px vs the previous two-row stack while
                   keeping the same information density. When the user is
@@ -1050,14 +1128,11 @@ function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams
                 ) : (
                   <>
                     {topPosters.length > 0 && (
-                      <Pressable
-                        style={styles.contributorsCluster}
+                      <AvatarCluster
+                        posters={topPosters}
+                        maxVisible={3}
                         onPress={() => setContributorsOpen(true)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${topPosters.length} contributors. Tap to view all.`}
-                      >
-                        <AvatarCluster posters={topPosters} maxVisible={3} />
-                      </Pressable>
+                      />
                     )}
                     <View style={styles.metaStatsCluster}>
                       <View style={styles.metaStat}>
@@ -1110,6 +1185,11 @@ function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams
                       <Text style={styles.sortChipText}>
                         {sortBy === 'date' ? 'Latest' : 'Top'}
                       </Text>
+                      <Ionicons
+                        name="swap-vertical"
+                        size={12}
+                        color={colors.primary}
+                      />
                     </Pressable>
                   </>
                 )}
@@ -1179,6 +1259,7 @@ function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams
             itemLabel="posts"
             hidden={paginationHidden}
             onPageChange={handleJumpToPage}
+            onPrefetchPage={prefetchPage}
           />
         </View>
       )}
@@ -1261,6 +1342,7 @@ function TopicDetailScreenBody({ routeParams }: { routeParams: TopicDetailParams
         label="posts"
         onClose={() => setJumpSheetOpen(false)}
         onJump={handleJumpToPage}
+        onPrefetchPage={prefetchPage}
       />
     </View>
   );
@@ -1450,6 +1532,10 @@ function makeStyles(c: ThemeColors) {
       fontWeight: '700',
       color: c.primary,
     },
+    sectionGap: {
+      height: 10,
+      backgroundColor: c.bg,
+    },
     metaSection: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -1476,11 +1562,6 @@ function makeStyles(c: ThemeColors) {
       fontSize: 12,
       fontWeight: '600',
       color: c.textTertiary,
-    },
-    contributorsCluster: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flexShrink: 0,
     },
     metaStatsCluster: {
       flexDirection: 'row',

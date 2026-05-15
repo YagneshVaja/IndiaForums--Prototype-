@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNewsArticles, useNewsGalleries, useNewsVideos } from './useNewsData';
 import { useTrendingMovies } from './useTrendingMovies';
 import {
@@ -59,6 +59,23 @@ export function useNewsFeed(category: string): UseNewsFeedResult {
   const videosQ    = useNewsVideos();
   const galleriesQ = useNewsGalleries();
   const moviesQ    = useTrendingMovies();
+
+  // `visibleCategory` is the category whose articles are currently rendered
+  // in the feed — which is NOT always the one passed in. When the chip
+  // changes, `useNewsArticles` swaps queryKey and serves the previous
+  // category's articles via `keepPreviousData` until the new fetch lands.
+  // If we drove pool filters off `category` during that window, the rails
+  // (videos / photos / movies / quizzes / stories) would swap to the new
+  // category while the article rows still show the old one — a visible
+  // mid-swap flicker on every chip tap. Holding pool filters on
+  // `visibleCategory` until articles actually update keeps the whole feed
+  // atomic.
+  const [visibleCategory, setVisibleCategory] = useState(category);
+  useEffect(() => {
+    if (articlesQ.data && !articlesQ.isPlaceholderData) {
+      setVisibleCategory(category);
+    }
+  }, [category, articlesQ.data, articlesQ.isPlaceholderData]);
 
   // Flatten + dedup paginated articles. Mirrors the previous behaviour so the
   // article stream is identical to the pre-redesign feed.
@@ -132,7 +149,7 @@ export function useNewsFeed(category: string): UseNewsFeedResult {
   // "trending movies", which only really makes sense inside ALL or the
   // MOVIES tab. For every other category the movies rail simply doesn't
   // appear in rotation.
-  const contentCat = NEWS_CATEGORY_CONTENT_CAT[category]; // undefined for 'all'
+  const contentCat = NEWS_CATEGORY_CONTENT_CAT[visibleCategory]; // undefined for 'all'
 
   // On the ALL tab we round-robin by category before slicing into rails.
   // The IF backend returns content category-clumped — without interleaving,
@@ -149,23 +166,28 @@ export function useNewsFeed(category: string): UseNewsFeedResult {
     return interleaveByCat(galleries, (g) => g.cat);
   }, [galleries, contentCat]);
 
+  // All three of these gate on `visibleCategory`, NOT `category`. Same reason
+  // as videos/galleries above: during the placeholder-data window between a
+  // chip tap and the new article fetch landing, articles still show the old
+  // category — so the rails must too, or you get a mid-swap flicker where
+  // (e.g.) the quizzes rail jumps to MOVIES while article rows still show TV.
   const filteredMovies = useMemo(() => {
-    if (category === 'all' || category === 'movies') return movies;
+    if (visibleCategory === 'all' || visibleCategory === 'movies') return movies;
     return [];
-  }, [movies, category]);
+  }, [movies, visibleCategory]);
 
   // Static pools are stored category-grouped in the file (easier to read).
   // For ALL, interleave so the first quiz/stories blocks aren't all-TV or
   // all-movies. For specific categories we filter to that subset.
   const filteredQuizzes = useMemo(() => {
-    if (category === 'all') return interleaveByCat(QUIZZES, (q) => q.category);
-    return QUIZZES.filter((q) => q.category === category);
-  }, [category]);
+    if (visibleCategory === 'all') return interleaveByCat(QUIZZES, (q) => q.category);
+    return QUIZZES.filter((q) => q.category === visibleCategory);
+  }, [visibleCategory]);
 
   const filteredStories = useMemo(() => {
-    if (category === 'all') return interleaveByCat(VISUAL_STORIES, (s) => s.category);
-    return VISUAL_STORIES.filter((s) => s.category === category);
-  }, [category]);
+    if (visibleCategory === 'all') return interleaveByCat(VISUAL_STORIES, (s) => s.category);
+    return VISUAL_STORIES.filter((s) => s.category === visibleCategory);
+  }, [visibleCategory]);
 
   const items = useMemo(
     () =>

@@ -9,8 +9,10 @@ import {
   REACTION_META,
   type ReactionCode,
   type TopicPost,
+  type TopicPostTaggedUser,
 } from '../../../services/api';
 import { countryFlag, formatCount } from '../utils/format';
+import { timeAgo } from '../../profile/utils/format';
 import {
   extractPreviewableUrls,
   extractSocialUrls,
@@ -39,6 +41,7 @@ interface Props {
   onPressEdited?: (post: TopicPost) => void;
   onPressAvatar?: (post: TopicPost) => void;
   onPressSettings?: (post: TopicPost) => void;
+  onPressTaggedUser?: (user: TopicPostTaggedUser) => void;
 
   isEditing?: boolean;
   editText?: string;
@@ -56,6 +59,7 @@ function PostCardImpl({
   isMine,
   onOpenReactionPicker, onPressReactionSummary,
   onReply, onQuote, onEdit, onPressEdited, onPressAvatar, onPressSettings,
+  onPressTaggedUser,
   isEditing, editText, editSaving, editError,
   onChangeEditText, onSaveEdit, onCancelEdit,
 }: Props) {
@@ -98,14 +102,14 @@ function PostCardImpl({
   const reactionLabel = reacted ? REACTION_META[reaction].label : 'Like';
 
   return (
-    <View style={[styles.card, post.isOp && styles.cardOp]}>
+    <View style={styles.card}>
       <View style={styles.header}>
         <Pressable
           onPress={onPressAvatar ? () => onPressAvatar(post) : undefined}
           disabled={!onPressAvatar}
           hitSlop={4}
         >
-          <View style={[styles.avatar, { backgroundColor: bg }, post.isOp && styles.avatarOp]}>
+          <View style={[styles.avatar, { backgroundColor: bg }]}>
             {post.avatarUrl ? (
               <Image
                 source={{ uri: post.avatarUrl }}
@@ -183,9 +187,9 @@ function PostCardImpl({
 
           {post.badges.length > 0 && (
             <View style={styles.badges}>
-              {post.badges.slice(0, 4).map(b => (
+              {post.badges.slice(0, 4).map((b, i) => (
                 <Image
-                  key={b.id}
+                  key={`${b.id}-${i}`}
                   source={{ uri: b.imageUrl }}
                   style={styles.badgeImg}
                   contentFit="cover"
@@ -259,12 +263,34 @@ function PostCardImpl({
         </>
       )}
 
-      {post.isEdited && post.editedWhen && (
+      {(post.isEdited || post.editedBy || post.editedWhen) && (
         <Pressable onPress={() => onPressEdited?.(post)} hitSlop={4}>
           <Text style={styles.editedLine}>
             Edited by {post.editedBy || post.author}
+            {post.editedWhen ? ` - ${timeAgo(post.editedWhen)}` : ''}
           </Text>
         </Pressable>
+      )}
+
+      {post.taggedUsers.length > 0 && (
+        <View style={styles.taggedUsersRow}>
+          {post.taggedUsers.map(u => (
+            <Pressable
+              key={u.id}
+              onPress={onPressTaggedUser ? () => onPressTaggedUser(u) : undefined}
+              disabled={!onPressTaggedUser}
+              hitSlop={4}
+              style={({ pressed }) => [
+                styles.taggedUserPill,
+                pressed && onPressTaggedUser && styles.taggedUserPillPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`View profile of ${u.name}`}
+            >
+              <Text style={styles.taggedUserText}>{u.name}</Text>
+            </Pressable>
+          ))}
+        </View>
       )}
 
       <View style={styles.footer}>
@@ -342,18 +368,6 @@ function makeStyles(c: ThemeColors) {
       borderRadius: 12,
       padding: 12,
     },
-    cardOp: {
-      backgroundColor: c.primarySoft,
-      // Left accent rail — Reddit / Slack pattern for "highlighted" or
-      // starter posts. Combined with the existing tinted background, OP
-      // pill, and avatar border, the OP now reads as the post that
-      // started the discussion at a single glance rather than just
-      // "reply #1". `paddingLeft` is reduced by the border width so the
-      // inner content stays visually aligned with non-OP cards.
-      borderLeftWidth: 3,
-      borderLeftColor: c.primary,
-      paddingLeft: 9,
-    },
     header: {
       flexDirection: 'row',
       alignItems: 'flex-start',
@@ -366,10 +380,6 @@ function makeStyles(c: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
-    },
-    avatarOp: {
-      borderWidth: 2,
-      borderColor: c.primary,
     },
     avatarImg: {
       width: '100%',
@@ -532,6 +542,28 @@ function makeStyles(c: ThemeColors) {
       fontStyle: 'italic',
       color: c.textTertiary,
       marginTop: 8,
+    },
+    taggedUsersRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 8,
+    },
+    taggedUserPill: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+    },
+    taggedUserPillPressed: {
+      opacity: 0.6,
+    },
+    taggedUserText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.text,
     },
     footer: {
       flexDirection: 'row',

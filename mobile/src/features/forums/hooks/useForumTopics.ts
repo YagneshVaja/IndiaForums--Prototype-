@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { keepPreviousData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchForumTopics, type ForumTopicsPage } from '../../../services/api';
 
@@ -19,33 +19,35 @@ export function useForumTopics(forumId: number | null, startPage = 1) {
     placeholderData: keepPreviousData,
   });
 
-  // Prefetch adjacent pages so Prev/Next render instantly. Deps are
-  // primitives only — `query.data` reference changes per fetch state and
-  // would re-fire this effect dozens of times per page transition.
+  // Imperative prefetch — exposed so UI affordances (scrubber drag, Prev/Next
+  // press-in, jump-input drafts) can warm a target page *before* the user
+  // commits. React Query dedupes by queryKey, so repeated calls during a
+  // drag/typing burst collapse into a single in-flight request.
+  const prefetchPage = useCallback(
+    (page: number) => {
+      if (!forumId || !Number.isFinite(page) || page < 1) return;
+      queryClient.prefetchInfiniteQuery({
+        queryKey: ['forum-topics', forumId, page],
+        queryFn: ({ pageParam }) =>
+          fetchForumTopics(forumId, pageParam as number, FORUM_TOPICS_PAGE_SIZE),
+        initialPageParam: page,
+        staleTime: 60 * 1000,
+      });
+    },
+    [forumId, queryClient],
+  );
+
+  // Auto-prefetch a small window (±2) around the current page so chained
+  // Prev/Next stays instant. Larger windows aren't worth the request churn —
+  // arbitrary jumps come in via `prefetchPage` from the pagination UI.
   const hasNext = query.data?.pages[0]?.hasNextPage ?? false;
   useEffect(() => {
     if (!forumId) return;
-
-    if (hasNext) {
-      const nextPage = startPage + 1;
-      queryClient.prefetchInfiniteQuery({
-        queryKey: ['forum-topics', forumId, nextPage],
-        queryFn: ({ pageParam }) =>
-          fetchForumTopics(forumId, pageParam as number, FORUM_TOPICS_PAGE_SIZE),
-        initialPageParam: nextPage,
-      });
+    for (let d = 1; d <= 2; d++) {
+      if (hasNext) prefetchPage(startPage + d);
+      if (startPage - d >= 1) prefetchPage(startPage - d);
     }
+  }, [forumId, startPage, hasNext, prefetchPage]);
 
-    if (startPage > 1) {
-      const prevPage = startPage - 1;
-      queryClient.prefetchInfiniteQuery({
-        queryKey: ['forum-topics', forumId, prevPage],
-        queryFn: ({ pageParam }) =>
-          fetchForumTopics(forumId, pageParam as number, FORUM_TOPICS_PAGE_SIZE),
-        initialPageParam: prevPage,
-      });
-    }
-  }, [forumId, startPage, hasNext, queryClient]);
-
-  return query;
+  return { ...query, prefetchPage };
 }

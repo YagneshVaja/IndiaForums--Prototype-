@@ -5,13 +5,20 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  type LayoutChangeEvent,
 } from 'react-native';
-import { useAnimatedScrollHandler } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  interpolate,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import type { NewsStackParamList } from '../../../navigation/types';
 import AnimatedTopBar from '../../../components/layout/chromeScroll/AnimatedTopBar';
+import { useChromeScroll } from '../../../components/layout/chromeScroll/ChromeScrollContext';
 import { useNotificationBell } from '../../../hooks/useNotificationBell';
 import { useScrollChrome } from '../../../components/layout/chromeScroll/useScrollChrome';
 import { useSideMenuStore } from '../../../store/sideMenuStore';
@@ -33,30 +40,55 @@ export default function NewsScreen({ navigation, route }: Props) {
   // pre-filtered to whatever chip was active on Home.
   const initialCategory = route.params?.initialCategory ?? 'all';
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  // `appliedCategory` is what actually drives data fetching. It trails
+  // `selectedCategory` by a short debounce so rapid chip tapping (A→B→C→D
+  // within a second) collapses to a single query for D instead of firing
+  // intermediate fetches that briefly flash their data into the feed.
+  const [appliedCategory, setAppliedCategory] = useState(initialCategory);
 
   useEffect(() => {
     const next = route.params?.initialCategory;
     if (next && next !== selectedCategory) {
       setSelectedCategory(next);
+      // Deep-link entry should swap data immediately — no debounce.
+      setAppliedCategory(next);
     }
     // One-shot sync on param change — not a feedback loop on local state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.params?.initialCategory]);
 
+  useEffect(() => {
+    if (selectedCategory === appliedCategory) return;
+    const t = setTimeout(() => setAppliedCategory(selectedCategory), 140);
+    return () => clearTimeout(t);
+  }, [selectedCategory, appliedCategory]);
+
   const styles = useThemedStyles(makeStyles);
 
   // Match the Forums AllTopicsView pattern exactly: pull `applyScroll` from
-  // useScrollChrome and build a fresh `useAnimatedScrollHandler` here, rather
-  // than using the prebuilt `scrollHandler`. Same chrome behaviour, but this
-  // is the proven-working combination with Animated.FlatList + onEndReached.
+  // useScrollChrome and build a fresh `useAnimatedScrollHandler` here. Same
+  // chrome behaviour, proven-working combination with Animated.FlatList +
+  // onEndReached.
   const { applyScroll: applyChromeScroll, resetChrome } = useScrollChrome();
+  const { chromeProgress } = useChromeScroll();
+  const safeTop = useSafeAreaInsets().top;
+
   const listScrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
       'worklet';
       applyChromeScroll(e);
     },
   });
-  const [topInset, setTopInset] = useState(0);
+
+  // brandInset = measured height of AnimatedTopBar (just the brand row now
+  // that the category strip lives outside it).
+  // catDockHeight = measured height of the sticky category dock itself.
+  // Together they define how far down the FlatList's content has to start so
+  // nothing is hidden behind the chrome when both are fully visible.
+  const [brandInset, setBrandInset] = useState(0);
+  const [catDockHeight, setCatDockHeight] = useState(0);
+  const totalInset = brandInset + catDockHeight;
+
   const { notifCount, openNotifications } = useNotificationBell();
 
   useFocusEffect(
@@ -64,6 +96,22 @@ export default function NewsScreen({ navigation, route }: Props) {
       resetChrome();
     }, [resetChrome]),
   );
+
+  // Sticky category dock — same pattern Forums uses for its sort bar
+  // (AllTopicsView.tsx). When chrome is fully visible (chromeProgress=0)
+  // the dock sits right below the brand row. As the user scrolls and the
+  // brand row translates up off-screen (chromeProgress → 1), the dock's
+  // paddingTop animates from `brandInset` to `safeTop` so it locks
+  // directly under the status bar. Categories therefore stay one tap away
+  // at every scroll position — the standard TOI / News18 / Hotstar pattern.
+  const catDockStyle = useAnimatedStyle(() => ({
+    paddingTop: interpolate(chromeProgress.value, [0, 1], [brandInset, safeTop]),
+  }));
+
+  const onCatDockLayout = useCallback((e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    if (h && h !== catDockHeight) setCatDockHeight(h);
+  }, [catDockHeight]);
 
   const isOnline = useIsOnline();
   const {
@@ -74,7 +122,7 @@ export default function NewsScreen({ navigation, route }: Props) {
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = useNewsFeed(selectedCategory);
+  } = useNewsFeed(appliedCategory);
 
   // Pull-to-refresh: invalidate every News-relevant query root in one shot.
   // Articles, videos, galleries, and trending-movies all live under distinct
@@ -152,39 +200,46 @@ export default function NewsScreen({ navigation, route }: Props) {
   return (
     <View style={styles.screen}>
       <AnimatedTopBar
-        onMeasure={setTopInset}
+        onMeasure={setBrandInset}
         onMenuPress={useSideMenuStore.getState().open}
         onNotificationsPress={openNotifications}
         notifCount={notifCount}
+      />
+
+      {/* Sticky category dock. Lives outside AnimatedTopBar so it stays
+          visible after the brand row collapses on scroll. zIndex sits
+          between the brand row (10) and the list, matching the Forums
+          sort-bar pattern. */}
+      <Animated.View
+        style={[styles.catDock, catDockStyle]}
+        pointerEvents="box-none"
       >
-        {/* Category tabs only — sub-chips were dropped in the redesign. The
-            interleaved feed favours one continuous filter axis; rare-language
-            filters (TAMIL, KOREAN, …) remain reachable via the legacy
-            ArticlesFullList screen for now. */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.catRow}
-          style={styles.catScroll}
-        >
-          {NEWS_CATEGORIES.map((cat) => {
-            const active = cat.id === selectedCategory;
-            return (
-              <Pressable
-                key={cat.id}
-                style={[styles.catTab, active && styles.catTabActive]}
-                onPress={() => setSelectedCategory(cat.id)}
-                accessibilityRole="button"
-                accessibilityLabel={cat.label}
-              >
-                <Text style={[styles.catTabText, active && styles.catTabTextActive]}>
-                  {cat.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </AnimatedTopBar>
+        <View style={styles.catRowWrap} onLayout={onCatDockLayout}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.catRow}
+            style={styles.catScroll}
+          >
+            {NEWS_CATEGORIES.map((cat) => {
+              const active = cat.id === selectedCategory;
+              return (
+                <Pressable
+                  key={cat.id}
+                  style={[styles.catTab, active && styles.catTabActive]}
+                  onPress={() => setSelectedCategory(cat.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={cat.label}
+                >
+                  <Text style={[styles.catTabText, active && styles.catTabTextActive]}>
+                    {cat.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Animated.View>
 
       {!isOnline ? (
         <Pressable style={styles.offlineBanner} onPress={() => refetch()}>
@@ -198,8 +253,7 @@ export default function NewsScreen({ navigation, route }: Props) {
         // Only blank the screen for the *first* load. `keepPreviousData` on
         // the articles query already holds the previous category's items
         // visible during a tab swap, so once we've shown anything we never
-        // re-show LoadingState — that's what was causing the flicker on
-        // rapid category taps.
+        // re-show LoadingState.
         <LoadingState />
       ) : isError && items.length === 0 ? (
         <ErrorState
@@ -213,7 +267,7 @@ export default function NewsScreen({ navigation, route }: Props) {
       ) : (
         <NewsFeedList
           items={items}
-          topInset={topInset}
+          topInset={totalInset}
           refreshing={refreshing}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
@@ -229,7 +283,7 @@ export default function NewsScreen({ navigation, route }: Props) {
         />
       )}
 
-      <BrandRefreshIndicator refreshing={refreshing} topInset={topInset} />
+      <BrandRefreshIndicator refreshing={refreshing} topInset={totalInset} />
     </View>
   );
 }
@@ -240,11 +294,24 @@ function makeStyles(c: ThemeColors) {
       flex: 1,
       backgroundColor: c.bg,
     },
-    catScroll: {
-      flexGrow: 0,
+    // Sticky dock positioned absolutely above the FlatList. zIndex below
+    // AnimatedTopBar (10) so the brand row covers it when both are visible,
+    // and above the list so categories remain tappable while scrolling.
+    catDock: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 5,
+    },
+    catRowWrap: {
       backgroundColor: c.card,
       borderBottomWidth: 1,
       borderBottomColor: c.border,
+    },
+    catScroll: {
+      flexGrow: 0,
+      backgroundColor: c.card,
     },
     catRow: {
       paddingHorizontal: 12,

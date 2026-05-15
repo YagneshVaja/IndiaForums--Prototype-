@@ -133,8 +133,8 @@ export default function UserMiniCard({
             </View>
           ) : badges.length > 0 ? (
             <View style={styles.badges}>
-              {badges.slice(0, 6).map(b => (
-                <Image key={b.id} source={{ uri: b.imageUrl }} style={styles.badgeImg} />
+              {badges.slice(0, 6).map((b, i) => (
+                <Image key={`${b.id}-${i}`} source={{ uri: b.imageUrl }} style={styles.badgeImg} />
               ))}
               {badges.length > 6 && (
                 <Text style={styles.badgeExtra}>+{badges.length - 6}</Text>
