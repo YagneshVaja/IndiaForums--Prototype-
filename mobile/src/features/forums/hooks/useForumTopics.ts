@@ -2,7 +2,11 @@ import { useCallback, useEffect } from 'react';
 import { keepPreviousData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchForumTopics, type ForumTopicsPage } from '../../../services/api';
 
-export const FORUM_TOPICS_PAGE_SIZE = 20;
+// Matches the indiaforums.com website's forum-topics page size. Using 20
+// here caused the mobile page 1 to silently drop the last 10 topics the
+// website shows (the API itself accepts any pageSize and returns the same
+// ordering — the website just requests 30 per page).
+export const FORUM_TOPICS_PAGE_SIZE = 30;
 
 export function useForumTopics(forumId: number | null, startPage = 1) {
   const queryClient = useQueryClient();
