@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, RefreshControl } from 'react-native'
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useQueryClient } from '@tanstack/react-query';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated from 'react-native-reanimated';
@@ -28,6 +29,7 @@ import ChannelsSection from '../components/ChannelsSection';
 import VideosHomeSection from '../components/VideosHomeSection';
 import QuizzesHomeSection from '../components/QuizzesHomeSection';
 import { useFeaturedBanners, useHomeArticles } from '../hooks/useHomeData';
+import { useHomeOrbPrefetch } from '../hooks/useHomeOrbPrefetch';
 import type { HomeStackParamList } from '../../../navigation/types';
 import type { Banner, Article, ForumTopic, Gallery } from '../../../services/api';
 
@@ -55,7 +57,9 @@ export default function HomeScreen() {
 
   const { scrollHandler, resetChrome } = useScrollChrome();
   const [topInset, setTopInset] = useState(0);
+  const tabBarHeight = useBottomTabBarHeight();
   const { notifCount, openNotifications } = useNotificationBell();
+  const { prefetch: prefetchOrb } = useHomeOrbPrefetch();
 
   useFocusEffect(
     useCallback(() => {
@@ -177,7 +181,7 @@ export default function HomeScreen() {
     () => (
       <View>
         <View style={styles.storiesWrap}>
-          <StoriesStrip />
+          <StoriesStrip onPrefetch={prefetchOrb} />
         </View>
 
         <View style={styles.carouselWrap}>
@@ -316,8 +320,6 @@ export default function HomeScreen() {
         <View style={styles.sectionGap}>
           <CelebrityRankingHomeSection />
         </View>
-
-        <View style={styles.spacer} />
       </View>
     ),
     [
@@ -347,7 +349,11 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={ListHeader}
         ListFooterComponent={ListFooter}
-        contentContainerStyle={{ ...styles.articlesBg, paddingTop: topInset }}
+        contentContainerStyle={{
+          ...styles.articlesBg,
+          paddingTop: topInset,
+          paddingBottom: tabBarHeight + 24,
+        }}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onScroll={scrollHandler as any}
         scrollEventThrottle={16}
@@ -397,7 +403,6 @@ function makeStyles(c: ThemeColors) {
     sectionGap: {
       marginTop: 12,
     },
-    spacer: { height: 32 },
     // Filler when the news list isn't capped — keeps a minimum gap between
     // the last ArticleCard and the next section's borderTop so the seam
     // isn't visually tight.

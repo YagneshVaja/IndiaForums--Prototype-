@@ -55,9 +55,34 @@ const CATEGORIES: readonly Category[] = [
   { id: 8, label: 'Web Stories',  icon: 'newspaper-variant',      size: 26, gradient: ['#43E2F5', '#00B4DB', '#003B5E'], shadowColor: '#00B4DB' },
 ];
 
+type PrefetchableLabel =
+  | 'Celebrities'
+  | 'Movies'
+  | 'Videos'
+  | 'Galleries'
+  | 'Shorts'
+  | 'Quizzes'
+  | 'Web Stories'
+  | 'Fan Fictions';
+
 interface Props {
   onItemPress?: (category: Category) => void;
+  // Fired on finger contact (onPressIn) before navigation — lets the home
+  // screen warm React Query cache for the destination so the next screen
+  // paints from cache instead of waiting on a network round-trip.
+  onPrefetch?: (orb: PrefetchableLabel) => void;
 }
+
+const PREFETCHABLE: ReadonlySet<string> = new Set<PrefetchableLabel>([
+  'Celebrities',
+  'Movies',
+  'Videos',
+  'Galleries',
+  'Shorts',
+  'Quizzes',
+  'Web Stories',
+  'Fan Fictions',
+]);
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -67,9 +92,10 @@ interface OrbProps {
   category: Category;
   styles: ReturnType<typeof makeStyles>;
   onPress: () => void;
+  onPressInExtra?: () => void;
 }
 
-function CategoryOrb({ category: c, styles, onPress }: OrbProps) {
+function CategoryOrb({ category: c, styles, onPress, onPressInExtra }: OrbProps) {
   // Reanimated spring on press — gives the orb a tactile, slightly bouncy
   // "squish" instead of a flat CSS scale. This is what makes Cred/Paytm
   // category buttons feel premium.
@@ -82,6 +108,7 @@ function CategoryOrb({ category: c, styles, onPress }: OrbProps) {
     <Pressable
       onPressIn={() => {
         scale.value = withSpring(0.9, { damping: 14, stiffness: 320 });
+        onPressInExtra?.();
       }}
       onPressOut={() => {
         scale.value = withSpring(1, { damping: 12, stiffness: 280 });
@@ -135,7 +162,7 @@ function CategoryOrb({ category: c, styles, onPress }: OrbProps) {
   );
 }
 
-export default function StoriesStrip({ onItemPress }: Props) {
+export default function StoriesStrip({ onItemPress, onPrefetch }: Props) {
   const navigation = useNavigation<Nav>();
   const mode = useThemeStore((s) => s.mode);
   const colors = useThemeStore((s) => s.colors);
@@ -193,14 +220,22 @@ export default function StoriesStrip({ onItemPress }: Props) {
         contentContainerStyle={styles.row}
         style={styles.strip}
       >
-        {CATEGORIES.map((c) => (
-          <CategoryOrb
-            key={c.id}
-            category={c}
-            styles={styles}
-            onPress={() => handlePress(c)}
-          />
-        ))}
+        {CATEGORIES.map((c) => {
+          const prefetchable = PREFETCHABLE.has(c.label);
+          return (
+            <CategoryOrb
+              key={c.id}
+              category={c}
+              styles={styles}
+              onPress={() => handlePress(c)}
+              onPressInExtra={
+                prefetchable && onPrefetch
+                  ? () => onPrefetch(c.label as PrefetchableLabel)
+                  : undefined
+              }
+            />
+          );
+        })}
       </ScrollView>
     </View>
   );
