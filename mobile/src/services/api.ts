@@ -4069,8 +4069,13 @@ export async function getTopicActionHistory(topicId: number): Promise<TopicActio
     const { data } = await apiClient.get('/forums/topics/history', {
       params: { topicId, actionId: 0, pageNumber: 1, pageSize: 30 },
     });
+    // The live endpoint returns the log array under `historyLogs`. The other
+    // keys are kept as defensive aliases in case the schema drifts; previously
+    // the mapper checked only those aliases and silently returned [] for
+    // every healthy response.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw: any[] = data?.logs ?? data?.results ?? data?.data ?? data ?? [];
+    const raw: any[] =
+      data?.historyLogs ?? data?.logs ?? data?.results ?? data?.data ?? [];
     return Array.isArray(raw) ? raw.map(r => ({
       action:      Number(r.action ?? 0),
       actionText:  r.actionText ?? `Action ${r.action ?? ''}`,
@@ -4083,6 +4088,13 @@ export async function getTopicActionHistory(topicId: number): Promise<TopicActio
 }
 
 export interface TopicAdminSettings {
+  /**
+   * Required by the server on every PUT /forums/topics/{id}/admin payload —
+   * even when only flipping flags like `priority` or `flairId`. Callers must
+   * pass the topic's current title; the server returns 400
+   * "Subject is required." otherwise.
+   */
+  subject?: string;
   priority?: number;
   titleTags?: string;
   locked?: boolean;
@@ -4108,6 +4120,54 @@ export async function restoreTopic(topicId: number): Promise<ModResult> {
     return { ok: true };
   } catch (err) {
     return { ok: false, error: wrapModError(err, 'Failed to restore topic.') };
+  }
+}
+
+export interface ForumTeam {
+  id: number;
+  name: string;
+  bgColor: string;
+  fgColor: string;
+  userCount: number;
+}
+
+/** GET /forums/{forumId}/teams — fetches the team roster for the Topic Settings sheet. */
+export async function getForumTeams(forumId: number): Promise<ForumTeam[]> {
+  try {
+    const { data } = await apiClient.get(`/forums/${forumId}/teams`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any[] = data?.teams ?? [];
+    return Array.isArray(raw)
+      ? raw.map(t => ({
+          id:        Number(t.teamId ?? 0),
+          name:      t.teamName ?? '',
+          bgColor:   t.backgroundColor || '#E5E7EB',
+          fgColor:   t.foregroundColor || '#1A1A1A',
+          userCount: Number(t.userCount ?? 0),
+        }))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Pre-flight check that a forum exists, used before `moveTopic` to avoid
+ * orphaning a topic to a non-existent destination forum (server-side T-1
+ * has no validation — see docs/backend-issues-topic-settings-2026-05-15.md).
+ * Returns the forum's name on success, or null if it doesn't exist.
+ */
+export async function checkForumExists(forumId: number): Promise<string | null> {
+  if (!Number.isFinite(forumId) || forumId <= 0) return null;
+  try {
+    const { data } = await apiClient.get(`/forums/${forumId}/topics`, {
+      params: { pageNumber: 1, pageSize: 1 },
+    });
+    const detail = data?.forumDetail;
+    if (!detail || !detail.forumId) return null;
+    return String(detail.forumName ?? '');
+  } catch {
+    return null;
   }
 }
 

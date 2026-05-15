@@ -8,7 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   closeTopic, openTopic, moveTopic, mergeTopic, trashTopic, restoreTopic,
   updateTopicSubject, updateTopicAdminSettings, getTopicActionHistory,
-  type Forum, type ForumTopic, type TopicActionLog,
+  getForumTeams, checkForumExists,
+  type Forum, type ForumTopic, type TopicActionLog, type ForumTeam,
 } from '../../../services/api';
 import { useThemeStore } from '../../../store/themeStore';
 import { useThemedStyles } from '../../../theme/useThemedStyles';
@@ -53,6 +54,8 @@ export default function ForumTopicSettingsSheet({
   const [hideSig, setHideSig]             = useState(false);
   const [historyLogs, setHistoryLogs]     = useState<TopicActionLog[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [teams, setTeams]                 = useState<ForumTeam[]>([]);
+  const [teamsLoading, setTeamsLoading]   = useState(false);
 
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
@@ -104,6 +107,7 @@ export default function ForumTopicSettingsSheet({
     setTargetTopicId('');
     setEditSubject('');
     setHistoryLogs([]);
+    setTeams([]);
   }
 
   function handleClose() {
@@ -133,6 +137,7 @@ export default function ForumTopicSettingsSheet({
     setActiveAction(key);
     if (key === 'edit' && topic) setEditSubject(topic.title);
     if (key === 'history' && topic) loadHistory(topic.id);
+    if (key === 'team') loadTeams();
   }
 
   async function loadHistory(topicId: number) {
@@ -141,6 +146,14 @@ export default function ForumTopicSettingsSheet({
     const logs = await getTopicActionHistory(topicId);
     setHistoryLogs(logs);
     setHistoryLoading(false);
+  }
+
+  async function loadTeams() {
+    setTeamsLoading(true);
+    setTeams([]);
+    const list = await getForumTeams(forum.id);
+    setTeams(list);
+    setTeamsLoading(false);
   }
 
   async function run<T extends { ok: boolean; error?: string }>(
@@ -176,8 +189,20 @@ export default function ForumTopicSettingsSheet({
       case 'move': {
         const toId = Number(targetForumId);
         if (!toId) { setError('Enter a valid target forum ID.'); return; }
-        run(() => moveTopic(topicId, toId),
-          activeAction === 'migrateFF' ? 'Topic migrated.' : 'Topic moved.');
+        // Pre-flight: the backend's /move handler doesn't validate that the
+        // destination forum exists (see T-1 in the triage doc — a typo here
+        // permanently orphans the topic). Verify the forum exists ourselves
+        // before committing the move.
+        run(
+          async () => {
+            const destName = await checkForumExists(toId);
+            if (!destName) {
+              return { ok: false, error: `Forum #${toId} doesn't exist. Double-check the ID.` };
+            }
+            return moveTopic(topicId, toId);
+          },
+          activeAction === 'migrateFF' ? 'Topic migrated.' : 'Topic moved.',
+        );
         break;
       }
       case 'merge': {
@@ -197,7 +222,14 @@ export default function ForumTopicSettingsSheet({
       case 'pin': {
         const isPinned = selectedTopic.pinned;
         run(
-          () => updateTopicAdminSettings(topicId, { priority: isPinned ? 0 : 1 }),
+          // The server's PUT /admin handler requires `subject` in every
+          // payload (even when only flipping priority). Without it the
+          // request returns 400 "Subject is required." — pass the current
+          // title through unchanged.
+          () => updateTopicAdminSettings(topicId, {
+            subject: selectedTopic.title,
+            priority: isPinned ? 0 : 1,
+          }),
           isPinned ? 'Topic unpinned.' : 'Topic pinned.',
         );
         break;
@@ -432,7 +464,29 @@ export default function ForumTopicSettingsSheet({
                   )}
 
                   {activeAction === 'team' && (
-                    <Text style={styles.emptyText}>No team members found.</Text>
+                    <View style={styles.teamList}>
+                      {teamsLoading && (
+                        <View style={styles.historyState}>
+                          <ActivityIndicator color={colors.primary} size="small" />
+                          <Text style={styles.historyStateText}>Loading teams…</Text>
+                        </View>
+                      )}
+                      {!teamsLoading && teams.length === 0 && (
+                        <Text style={styles.emptyText}>No teams found for this forum.</Text>
+                      )}
+                      {teams.map(team => (
+                        <View key={team.id} style={styles.teamRow}>
+                          <View style={[styles.teamChip, { backgroundColor: team.bgColor }]}>
+                            <Text style={[styles.teamChipText, { color: team.fgColor }]} numberOfLines={1}>
+                              {team.name}
+                            </Text>
+                          </View>
+                          <Text style={styles.teamCount}>
+                            {team.userCount} {team.userCount === 1 ? 'member' : 'members'}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
                   )}
 
                   {error && (
@@ -677,6 +731,35 @@ function makeStyles(c: ThemeColors) {
       color: c.textTertiary,
       textAlign: 'center',
       paddingVertical: 12,
+    },
+    teamList: {
+      gap: 8,
+      paddingVertical: 4,
+    },
+    teamRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      backgroundColor: c.surface,
+    },
+    teamChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+      flexShrink: 1,
+    },
+    teamChipText: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    teamCount: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.textTertiary,
     },
     errorBox: {
       flexDirection: 'row',
