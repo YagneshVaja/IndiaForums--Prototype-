@@ -1,5 +1,4 @@
 import { useCallback, useEffect } from 'react';
-import { InteractionManager } from 'react-native';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   fetchCelebrities,
@@ -101,13 +100,27 @@ export function useHomeOrbPrefetch() {
   const qc = useQueryClient();
 
   useEffect(() => {
-    const handle = InteractionManager.runAfterInteractions(() => {
+    // requestIdleCallback is the modern replacement for the deprecated
+    // InteractionManager.runAfterInteractions; fall back to setTimeout on
+    // runtimes that don't expose it.
+    const idle = (globalThis as { requestIdleCallback?: (cb: () => void) => number })
+      .requestIdleCallback;
+    const cancelIdle = (globalThis as { cancelIdleCallback?: (handle: number) => void })
+      .cancelIdleCallback;
+
+    const run = () => {
       (Object.keys(PREFETCHERS) as OrbDestination[]).reduce<Promise<unknown>>(
         (chain, orb) => chain.then(() => PREFETCHERS[orb](qc).catch(() => undefined)),
         Promise.resolve(undefined),
       );
-    });
-    return () => handle.cancel();
+    };
+
+    if (idle) {
+      const handle = idle(run);
+      return () => cancelIdle?.(handle);
+    }
+    const timeout = setTimeout(run, 0);
+    return () => clearTimeout(timeout);
   }, [qc]);
 
   const prefetch = useCallback(

@@ -6,7 +6,11 @@
 **Triaged against:** `https://api2.indiaforums.com/api/v1`
 **Test account:** `userId: 121342`, `groupId: 25` (moderator — confirmed by successful Trash + Untrash on this account).
 **Test target:** `topicId: 5374712` · `forumId: 9` (Bollywood) — *"War 2 opens below the mark.. first day business 30 crore"*.
-**Frontend entry point:** [mobile/src/features/forums/components/ForumTopicSettingsSheet.tsx](../mobile/src/features/forums/components/ForumTopicSettingsSheet.tsx)
+**Frontend entry points:** Two mobile UIs share these endpoints — fixing T-1 / T-2 / T-3 unblocks both:
+- [mobile/src/features/forums/components/ForumTopicSettingsSheet.tsx](../mobile/src/features/forums/components/ForumTopicSettingsSheet.tsx) — "Topic Settings" (11 rows, forum-level mod sheet)
+- [mobile/src/features/forums/components/TopicModActionsSheet.tsx](../mobile/src/features/forums/components/TopicModActionsSheet.tsx) — "Moderator Actions" (6 rows, per-topic mod sheet: Edit, Lock, Pin, Trash, Restore, History)
+
+All findings reproduce identically across both sheets and across multiple test topics (verified on `5374712` and `5374630`).
 
 ---
 

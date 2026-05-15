@@ -151,7 +151,13 @@ export default function TopicModActionsSheet({
         break;
       case 'pin':
         run(
-          () => updateTopicAdminSettings(topicId, { priority: topic.pinned ? 0 : 1 }),
+          // Server requires `subject` on every PUT /admin payload (even for
+          // priority-only flips); without it the request returns 400
+          // "Subject is required." See C-1 in the topic-settings triage doc.
+          () => updateTopicAdminSettings(topicId, {
+            subject: topic.title,
+            priority: topic.pinned ? 0 : 1,
+          }),
           topic.pinned ? 'Topic unpinned.' : 'Topic pinned.',
           'pin',
         );
