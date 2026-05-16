@@ -3,11 +3,13 @@ import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Movie } from '../../../services/api';
 import type { HomeStackParamList } from '../../../navigation/types';
 import { useThemeStore } from '../../../store/themeStore';
 import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
+import { prefetchMovieDetail } from '../../movies/utils/prefetchMovieDetail';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -24,8 +26,14 @@ const TITLE_TYPE_LABEL: Record<number, string> = {
 
 function FilmographyRowImpl({ movie }: Props) {
   const navigation = useNavigation<Nav>();
+  const queryClient = useQueryClient();
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
+
+  const handlePress = () => {
+    prefetchMovieDetail(queryClient, movie);
+    navigation.navigate('MovieDetail', { movie });
+  };
 
   const rating = movie.averageRating > 0
     ? movie.averageRating
@@ -42,7 +50,7 @@ function FilmographyRowImpl({ movie }: Props) {
 
   return (
     <Pressable
-      onPress={() => navigation.navigate('MovieDetail', { movie })}
+      onPress={handlePress}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel={movie.titleName}

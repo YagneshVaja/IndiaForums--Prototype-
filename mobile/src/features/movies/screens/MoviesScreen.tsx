@@ -21,9 +21,6 @@ import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
 import {
-  fetchMovieCast,
-  fetchMovieReviews,
-  fetchMovieDiscussionTopics,
   type Movie,
   type MovieMode,
 } from '../../../services/api';
@@ -32,6 +29,7 @@ import FeaturedMovieCard from '../components/FeaturedMovieCard';
 import MoviePosterCard from '../components/MoviePosterCard';
 import MoviesGridSkeleton from '../components/MoviesGridSkeleton';
 import { useMovies } from '../hooks/useMovies';
+import { prefetchMovieDetail } from '../utils/prefetchMovieDetail';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, 'Movies'>;
 
@@ -72,27 +70,11 @@ export default function MoviesScreen() {
 
   const handlePress = useCallback(
     (movie: Movie) => {
-      // Warm the cache for the detail screen the moment the user taps. By
-      // the time the navigation transition completes (~150ms) and they're
-      // looking at the hero, /cast and /reviews are usually back. Discussion
-      // (which can cold-start at ~12s on the backend's first call per cycle)
-      // gets a head-start equal to however long the user reads the page —
-      // by the time they scroll there, it's likely already loaded.
-      queryClient.prefetchQuery({
-        queryKey: ['movie', movie.titleId, 'cast'],
-        queryFn:  () => fetchMovieCast(movie.titleId, 1, 12),
-        staleTime: 5 * 60 * 1000,
-      });
-      queryClient.prefetchQuery({
-        queryKey: ['movie', movie.titleId, 'reviews'],
-        queryFn:  () => fetchMovieReviews(movie.titleId, 5, 5),
-        staleTime: 5 * 60 * 1000,
-      });
-      queryClient.prefetchQuery({
-        queryKey: ['movieDiscussion', movie.titleName, 6],
-        queryFn:  () => fetchMovieDiscussionTopics(movie.titleName, 6),
-        staleTime: 5 * 60 * 1000,
-      });
+      // Warm cast/reviews/discussion ahead of navigation. Discussion is the
+      // critical one — /search/results cold-starts at ~2s on the backend's
+      // first call per cycle, so starting the fetch on tile press overlaps
+      // that latency with the navigation transition + hero-reading time.
+      prefetchMovieDetail(queryClient, movie);
       navigation.navigate('MovieDetail', { movie });
     },
     [navigation, queryClient],

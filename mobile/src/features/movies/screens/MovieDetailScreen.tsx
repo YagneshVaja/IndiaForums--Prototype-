@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -24,7 +24,7 @@ import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { useAuthStore } from '../../../store/authStore';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
-import { deleteMovieReview, type MovieReview } from '../../../services/api';
+import { deleteMovieReview, fetchMovieDiscussionTopics, type MovieReview } from '../../../services/api';
 
 import MovieInfoCard from '../components/MovieInfoCard';
 import MovieRatingCard from '../components/MovieRatingCard';
@@ -85,6 +85,21 @@ export default function MovieDetailScreen() {
   const discussion = useMovieDiscussion(movie.titleName, 6, hasReachedDiscussion);
   const currentUserId = useAuthStore((s) => s.user?.userId ?? null);
   const queryClient = useQueryClient();
+
+  // Kick off the discussion fetch the instant the screen mounts, regardless
+  // of whether the tile-press prefetch ran (it may not, if we landed here
+  // from a deep link or an entry point that doesn't warm the cache). The
+  // useMovieDiscussion hook is `enabled`-gated to control RENDERING, not
+  // fetching — this prefetch overlaps the ~2s cold-start with the hero
+  // animation + the user's first scroll, so by the time the discussion
+  // section comes into view the data is already in cache.
+  useEffect(() => {
+    queryClient.prefetchQuery({
+      queryKey: ['movieDiscussion', movie.titleName, 6],
+      queryFn:  () => fetchMovieDiscussionTopics(movie.titleName, 6),
+      staleTime: 5 * 60 * 1000,
+    });
+  }, [queryClient, movie.titleName]);
 
   const scrollRef = useRef<ScrollView>(null);
   const sectionYRef = useRef<Record<TabId, number>>({
@@ -194,10 +209,9 @@ export default function MovieDetailScreen() {
     }
     setActiveTab((prev) => (prev === next ? prev : next));
 
-    // Prefetch a section's data when within 600px of its top so it's loaded
-    // by the time the user scrolls there. /search/smart can cold-start at
-    // ~12s on the backend's first call per cycle — UI shows a spinner during
-    // that wait, but the topics appear inline rather than forcing a tab tap.
+    // Light up a section's render gate when within 600px of its top so the
+    // content is visible by the time the user scrolls there. (The discussion
+    // network call itself fires earlier — see the mount-time prefetch above.)
     const newsY = sectionYRef.current.news;
     const discY = sectionYRef.current.discussion;
     if (newsY && y + 600 >= newsY) setHasReachedNews(true);

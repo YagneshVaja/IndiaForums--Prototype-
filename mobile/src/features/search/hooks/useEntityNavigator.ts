@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import type { SearchStackParamList } from '../../../navigation/types';
@@ -14,6 +15,7 @@ import {
 } from '../../../services/api';
 import type { UnsupportedEntitySheetHandle } from '../components/UnsupportedEntitySheet';
 import { normalizeContentType, type EntityKind } from '../utils/entityMetadata';
+import { prefetchMovieDetail } from '../../movies/utils/prefetchMovieDetail';
 
 type Nav = NativeStackNavigationProp<SearchStackParamList>;
 
@@ -113,6 +115,7 @@ export interface UseEntityNavigator {
 
 export function useEntityNavigator(): UseEntityNavigator {
   const navigation = useNavigation<Nav>();
+  const queryClient = useQueryClient();
   const sheetRef = useRef<UnsupportedEntitySheetHandle | null>(null);
   const [isResolving, setIsResolving] = useState(false);
 
@@ -178,11 +181,12 @@ export function useEntityNavigator(): UseEntityNavigator {
             forum: synthesizeForum(item),
           });
           return;
-        case 'Movie':
-          navigation.push('MovieDetail', {
-            movie: synthesizeMovie(item),
-          });
+        case 'Movie': {
+          const movie = synthesizeMovie(item);
+          prefetchMovieDetail(queryClient, movie);
+          navigation.push('MovieDetail', { movie });
           return;
+        }
         case 'Show':
         case 'Channel':
         case 'Member':
@@ -196,7 +200,7 @@ export function useEntityNavigator(): UseEntityNavigator {
           });
       }
     },
-    [navigation],
+    [navigation, queryClient],
   );
 
   const openItem = useCallback(

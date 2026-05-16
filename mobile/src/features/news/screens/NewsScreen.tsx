@@ -32,6 +32,7 @@ import LoadingState from '../../../components/ui/LoadingState';
 import ErrorState from '../../../components/ui/ErrorState';
 import BrandRefreshIndicator from '../../../components/ui/BrandPullToRefresh';
 import type { Article, Gallery, Movie, Video, WebStorySummary } from '../../../services/api';
+import { prefetchMovieDetail } from '../../movies/utils/prefetchMovieDetail';
 
 type Props = NativeStackScreenProps<NewsStackParamList, 'NewsMain'>;
 
@@ -168,8 +169,11 @@ export default function NewsScreen({ navigation, route }: Props) {
   );
 
   const handleMoviePress = useCallback(
-    (movie: Movie) => navigation.navigate('MovieDetail', { movie }),
-    [navigation],
+    (movie: Movie) => {
+      prefetchMovieDetail(queryClient, movie);
+      navigation.navigate('MovieDetail', { movie });
+    },
+    [navigation, queryClient],
   );
 
   // Visual stories on this feed are real backend WebStorySummary records

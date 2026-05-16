@@ -3,12 +3,14 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useQueryClient } from '@tanstack/react-query';
 import { useThemeStore } from '../../../store/themeStore';
 import { useThemedStyles } from '../../../theme/useThemedStyles';
 import type { ThemeColors } from '../../../theme/tokens';
 import type { HomeStackParamList } from '../../../navigation/types';
 import type { Movie } from '../../../services/api';
 import { useMovies } from '../../movies/hooks/useMovies';
+import { prefetchMovieDetail } from '../../movies/utils/prefetchMovieDetail';
 import MoviePosterHomeTile from './MoviePosterHomeTile';
 
 const PREVIEW_COUNT = 10;
@@ -20,6 +22,7 @@ export default function LatestMoviesHomeSection() {
   const colors = useThemeStore((s) => s.colors);
   const styles = useThemedStyles(makeStyles);
   const navigation = useNavigation<NavigationProp>();
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useMovies('latest');
 
@@ -29,8 +32,11 @@ export default function LatestMoviesHomeSection() {
   );
 
   const handleMoviePress = useCallback(
-    (movie: Movie) => navigation.navigate('MovieDetail', { movie }),
-    [navigation],
+    (movie: Movie) => {
+      prefetchMovieDetail(queryClient, movie);
+      navigation.navigate('MovieDetail', { movie });
+    },
+    [navigation, queryClient],
   );
 
   const handleSeeAll = useCallback(
