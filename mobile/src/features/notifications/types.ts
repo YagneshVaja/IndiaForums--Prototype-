@@ -6,6 +6,18 @@ export interface NotificationTemplateDto {
   notificationCount: number | string;
 }
 
+export interface NotificationUserDto {
+  userId: number | string;
+  userName: string | null;
+  avatarType: number | string | null;
+  avatarAccent: string | null;
+  lastVisitedDate: string | null;
+  privacy: number | string;
+  updateChecksum: string | null;
+  thumbnailUrl: string | null;
+  bannerUrl: string | null;
+}
+
 export interface NotificationDto {
   notificationId: number | string;
   userId: number | string;
@@ -19,7 +31,7 @@ export interface NotificationDto {
   // read: 1 = read, 0 = unread. API sometimes sends as string.
   read: number | string;
   title: string | null;
-  user: unknown;
+  user: NotificationUserDto | null;
   displayUserName: string | null;
 }
 

@@ -134,8 +134,9 @@ export function routeFromNotification(n: NotificationDto): NavTarget | null {
   // contentTypeId === 6 is media/photo — no dedicated mobile screen yet, return null
   // Other contentTypeId values are not yet documented in the OpenAPI spec.
 
-  // 3. templateId-based mapping — uses real backend template IDs from
-  // /user-notifications/notificationTemplates (verified on-device).
+  // 3. templateId-based mapping — uses real backend template IDs observed
+  // in the `notificationTemplates` array returned by GET /user-notifications
+  // (the spec doesn't enumerate these; verified on-device).
   const tplIdRaw = n.templateId;
   const tplId = typeof tplIdRaw === 'string' ? parseInt(tplIdRaw, 10) : tplIdRaw;
   const ctValue = n.contentTypeValue == null ? null : String(n.contentTypeValue);

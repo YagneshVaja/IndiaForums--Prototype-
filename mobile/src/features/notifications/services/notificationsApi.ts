@@ -12,9 +12,8 @@ interface ListParams {
   pn: number;
   ps: number;
   pr: number;
-  // Template filter (comma-separated template IDs) and page count.
+  // Template filter (comma-separated template IDs).
   t?: string;
-  pc?: number;
 }
 
 export function getNotifications(params: ListParams) {
